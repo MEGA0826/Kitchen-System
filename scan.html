@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6f8;
+text-align:center;
+margin:0;
+padding:20px;
+}
+
+.product{
+font-size:36px;
+font-weight:bold;
+margin:25px 0;
+}
+
+select{
+font-size:20px;
+padding:10px;
+width:80%;
+margin-bottom:25px;
+}
+
+button{
+width:90%;
+font-size:26px;
+padding:20px;
+margin:10px;
+border:none;
+border-radius:10px;
+color:white;
+}
+
+.produce{background:#ff9800;}
+.done{background:#4CAF50;}
+.waste{background:#f44336;}
+
+.message{
+font-size:30px;
+margin-top:40px;
+}
+
+/* Success animation */
+#msg.success {
+  animation: pop 0.4s ease-out;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="product" class="product"></div>
+
+<select id="worker"></select>
+
+<audio id="beep" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
+</audio>
+
+
+<button class="produce" onclick="send('produce')">
+Produce
+</button>
+
+<button class="done" onclick="send('done')">
+Finished
+</button>
+
+<button class="waste" onclick="send('waste')">
+Waste
+</button>
+
+<div id="msg" class="message"></div>
+
+<audio id="beep" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+
+
+<script>
+
+document.body.addEventListener("click", () => {
+  const beep = document.getElementById("beep");
+  beep.play().catch(() => {});
+}, { once: true });
+
+const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+
+const msg = document.getElementById("msg");
+msg.textContent = "Saved: " + action.toUpperCase();
+
+// Restart animation
+msg.classList.remove("success");
+void msg.offsetWidth; // force reflow
+msg.classList.add("success");
+
+window.addEventListener("load", () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code") || "";
+
+  // Show code instantly
+  document.getElementById("product").textContent = code;
+
+  // Fetch real product name in background
+  loadData(code);
+});
+
+function loadData(code) {
+  // Load cached workers instantly
+  const cached = localStorage.getItem("workers");
+  if (cached) {
+    updateWorkers(JSON.parse(cached));
+  }
+
+  // Fetch fresh data in background
+  fetch(`${API_URL}?code=${encodeURIComponent(code)}`)
+    .then(response => response.json())
+    .then(data => {
+      updateProduct(data.product);
+      updateWorkers(data.workers);
+    })
+    .catch(error => {
+      console.error("Fetch error:", error);
+      updateProduct("Connection error");
+    });
+}
+
+function updateProduct(name) {
+  document.getElementById("product").textContent = name;
+}
+
+function updateWorkers(workers) {
+  const workerSelect = document.getElementById("worker");
+  workerSelect.innerHTML = "";
+
+  workers.forEach(worker => {
+    const option = document.createElement("option");
+    option.value = worker;
+    option.textContent = worker;
+    workerSelect.appendChild(option);
+  });
+
+  // Cache workers
+  localStorage.setItem("workers", JSON.stringify(workers));
+}
+
+function saveScan(code, worker, action) {
+  fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
+    .then(response => response.text())
+    .then(result => {
+      console.log("Saved:", result);
+    })
+    .catch(error => {
+      console.error("Save error:", error);
+    });
+}
+
+function send(action) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code") || "";
+  const worker = document.getElementById("worker").value;
+
+  if (!worker) {
+    document.getElementById("msg").textContent = "Please select a worker.";
+    return;
+  }
+
+  // Sound + vibration
+  document.getElementById("beep").play().catch(() => {});
+
+  if (navigator.vibrate) navigator.vibrate(100);
+
+  // Save to backend
+  saveScan(code, worker, action);
+
+  // Success message + animation
+  const msg = document.getElementById("msg");
+  msg.textContent = "Saved: " + action.toUpperCase();
+
+  msg.classList.remove("success");
+  void msg.offsetWidth; // restart animation
+  msg.classList.add("success");
+
+  // Redirect after 1 second
+  setTimeout(() => {
+    window.location.href = "about:blank";
+  }, 1000);
+}
+
+
+
+</script>
+
+</body>
+
+</html>
