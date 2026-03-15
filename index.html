@@ -5,20 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kitchen System</title>
     <style>
-        /* Add your CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
-    <div id="animation-container">
-        <!-- Your animation here -->
-    </div>
+    <button onclick="handleClick()">Click Me!</button>
+
+    <audio id="buttonSound" src="sound_effect.mp3"></audio>
+
     <script>
-        function send() {
-            // Keep animation visible longer
-            setTimeout(function() {
-                // Logic to redirect can go here or be removed
-            }, 3000); // Increased display time to 3 seconds
-            // Add any sound playback improvement logic here
+        function handleClick() {
+            // Play sound
+            const sound = document.getElementById('buttonSound');
+            sound.play();
+
+            // Animation pop effect
+            const button = event.currentTarget;
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 200);
+
+            // Redirect after a delay
+            setTimeout(() => {
+                window.location.href = 'next_page.html';
+            }, 3000);
         }
     </script>
 </body>
