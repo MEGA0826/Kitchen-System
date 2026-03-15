@@ -83,7 +83,7 @@ document.body.addEventListener("click", () => {
 }, { once: true });
 
 // IMPORTANT: Replace this with your NEW Apps Script URL after redeploying
-const API_URL = "YOUR_NEW_WEB_APP_URL_HERE";
+const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
 // Load product + workers
 window.addEventListener("load", () => {
@@ -97,4 +97,90 @@ window.addEventListener("load", () => {
 });
 
 function loadData(code) {
-  // Load cached
+  // Load cached workers instantly
+  const cached = localStorage.getItem("workers");
+  if (cached) {
+    updateWorkers(JSON.parse(cached));
+  }
+
+  // Fetch fresh data in background
+  fetch(`${API_URL}?code=${encodeURIComponent(code)}`)
+    .then(response => response.json())
+    .then(data => {
+      updateProduct(data.product);
+      updateWorkers(data.workers);
+    })
+    .catch(error => {
+      console.error("Fetch error:", error);
+      updateProduct("Connection error");
+    });
+}
+function updateProduct(name) {
+  document.getElementById("product").textContent = name;
+}
+
+function updateWorkers(workers) {
+  const workerSelect = document.getElementById("worker");
+  workerSelect.innerHTML = "";
+
+  workers.forEach(worker => {
+    const option = document.createElement("option");
+    option.value = worker;
+    option.textContent = worker;
+    workerSelect.appendChild(option);
+  });
+
+  // Cache workers
+  localStorage.setItem("workers", JSON.stringify(workers));
+}
+
+function saveScan(code, worker, action) {
+  fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
+    .then(response => response.text())
+    .then(result => {
+      console.log("Saved:", result);
+    })
+    .catch(error => {
+      console.error("Save error:", error);
+    });
+}
+
+function send(action) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code") || "";
+  const worker = document.getElementById("worker").value;
+
+  if (!worker) {
+    document.getElementById("msg").textContent = "Please select a worker.";
+    return;
+  }
+
+  // Sound + vibration
+  document.getElementById("beep").play().catch(() => {});
+
+  if (navigator.vibrate) navigator.vibrate(100);
+
+  // Save to backend
+  saveScan(code, worker, action);
+
+  // Success message + animation
+  const msg = document.getElementById("msg");
+  msg.textContent = "Saved: " + action.toUpperCase();
+
+  msg.classList.remove("success");
+  void msg.offsetWidth; // restart animation
+  msg.classList.add("success");
+
+  // Redirect after 1 second
+  setTimeout(() => {
+    window.location.href = "about:blank";
+  }, 1000);
+}
+
+
+
+</script>
+
+</body>
+
+</html>
