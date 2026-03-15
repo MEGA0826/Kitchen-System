@@ -77,9 +77,13 @@ button {
 
 <script>
 // Unlock audio on first user interaction
+let audioUnlocked = false;
 document.body.addEventListener("click", () => {
-  const beep = document.getElementById("beep");
-  beep.play().catch(() => {});
+  if (!audioUnlocked) {
+    const beep = document.getElementById("beep");
+    beep.play().catch(() => {});
+    audioUnlocked = true;
+  }
 }, { once: true });
 
 // IMPORTANT: Replace this with your NEW Apps Script URL after redeploying
@@ -115,6 +119,7 @@ function loadData(code) {
       updateProduct("Connection error");
     });
 }
+
 function updateProduct(name) {
   document.getElementById("product").textContent = name;
 }
@@ -156,7 +161,9 @@ function send(action) {
   }
 
   // Sound + vibration
-  document.getElementById("beep").play().catch(() => {});
+  const beep = document.getElementById("beep");
+  beep.currentTime = 0; // Reset audio to start
+  beep.play().catch(() => console.log("Audio play failed"));
 
   if (navigator.vibrate) navigator.vibrate(100);
 
@@ -167,17 +174,16 @@ function send(action) {
   const msg = document.getElementById("msg");
   msg.textContent = "Saved: " + action.toUpperCase();
 
+  // Remove class and reflow to restart animation
   msg.classList.remove("success");
-  void msg.offsetWidth; // restart animation
+  void msg.offsetHeight; // Force reflow
   msg.classList.add("success");
 
-  // Redirect after 1 second
+  // Redirect after 1.5 seconds (let animation complete)
   setTimeout(() => {
     window.location.href = "about:blank";
-  }, 1000);
+  }, 1500);
 }
-
-
 
 </script>
 
