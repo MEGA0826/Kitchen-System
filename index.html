@@ -3,53 +3,82 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: #f4f6f8;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-    }
-    .product {
-      font-size: 36px;
-      font-weight: bold;
-      margin: 25px 0;
-    }
-    select {
-      font-size: 20px;
-      padding: 10px;
-      width: 80%;
-      margin-bottom: 25px;
-    }
-    button {
-      width: 90%;
-      font-size: 26px;
-      padding: 20px;
-      margin: 10px;
-      border: none;
-      border-radius: 10px;
-      color: white;
-      cursor: pointer;
-    }
-    .produce { background: #ff9800; }
-    .done    { background: #4CAF50; }
-    .waste   { background: #f44336; }
-    .cancel  { background: #9e9e9e; }
+  body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
 
-    .message {
-      font-size: 30px;
-      margin-top: 40px;
-    }
+/* Product name */
+.product {
+  font-size: 36px;
+  font-weight: bold;
+  margin: 25px 0;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
 
-    /* Success animation */
-    #msg.success {
-      animation: pop 0.4s ease-out forwards;
-    }
-    @keyframes pop {
-      0%   { transform: scale(0.8); opacity: 0; }
-      50%  { transform: scale(1.1); opacity: 1; }
-      100% { transform: scale(1);   opacity: 1; }
-    }
+.product.fade-in {
+  opacity: 0;
+  animation: fadeIn 0.25s forwards;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* Worker dropdown */
+select {
+  font-size: 20px;
+  padding: 10px;
+  width: 80%;
+  margin-bottom: 25px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* Buttons */
+button {
+  width: 90%;
+  font-size: 26px;
+  padding: 20px;
+  margin: 10px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.94);
+  opacity: 0.8;
+}
+
+/* Button colors */
+.produce { background: #ff9800; }
+.done    { background: #4CAF50; }
+.waste   { background: #f44336; }
+.cancel  { background: #9e9e9e; }
+
+/* Success message */
+.message {
+  font-size: 30px;
+  margin-top: 40px;
+}
+
+#msg.success {
+  animation: pop 0.35s ease-out forwards;
+}
+
+@keyframes pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
   </style>
 </head>
 <body>
@@ -68,116 +97,134 @@
 
   <div id="msg" class="message"></div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+<script>
+const API_URL = "YOUR_WEBAPP_URL";   // keep your existing value
 
-    // Unlock audio on first interaction
-    document.addEventListener("touchstart", unlockAudio, { once: true });
-    document.addEventListener("click", unlockAudio, { once: true });
-    function unlockAudio() {
-      const beep = document.getElementById("beep");
-      beep.play().catch(() => {});
-    }
+let PRODUCT_MAP = {};
+let CURRENT_CODE = "";
 
-    window.addEventListener("load", () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code") || "";
-      document.getElementById("product").textContent = code;
-      loadData(code);
-    });
+/* -----------------------------
+   1) PRELOAD PRODUCTS ONCE
+------------------------------ */
+async function preloadProducts() {
+  try {
+    const res = await fetch(`${API_URL}?action=allProducts`);
+    PRODUCT_MAP = await res.json();
+    console.log("Products loaded:", PRODUCT_MAP);
+  } catch (err) {
+    console.error("Product preload failed:", err);
+  }
+}
 
-    function loadData(code) {
-      const cached = localStorage.getItem("workers");
-      if (cached) updateWorkers(JSON.parse(cached));
+/* -----------------------------
+   2) WORKER AUTO‑REMEMBER
+------------------------------ */
+function loadSavedWorker() {
+  const saved = localStorage.getItem("worker");
+  if (saved) {
+    const select = document.getElementById("worker");
+    if (select) select.value = saved;
+  }
+}
 
-      fetch(`${API_URL}?code=${encodeURIComponent(code)}`)
-        .then(r => r.json())
-        .then(data => {
-          updateProduct(data.product);
-          updateWorkers(data.workers);
-        })
-        .catch(() => updateProduct("Connection error"));
-    }
+function saveWorker() {
+  const select = document.getElementById("worker");
+  if (select) {
+    localStorage.setItem("worker", select.value);
+  }
+}
 
-    function updateProduct(name) {
-      document.getElementById("product").textContent = name;
-    }
+/* -----------------------------
+   3) SHOW PRODUCT INSTANTLY
+------------------------------ */
+function showProductInstantly() {
+  const params = new URLSearchParams(window.location.search);
+  CURRENT_CODE = params.get("code") || "";
 
-    function updateWorkers(workers) {
-      const workerSelect = document.getElementById("worker");
-      workerSelect.innerHTML = "";
+  const name = PRODUCT_MAP[CURRENT_CODE] || CURRENT_CODE || "Unknown";
 
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Choose your name";
-      placeholder.disabled = true;
-      placeholder.selected = true;
-      workerSelect.appendChild(placeholder);
+  const el = document.querySelector(".product");
+  el.classList.remove("fade-in");
+  void el.offsetHeight; // restart animation
+  el.textContent = name;
+  el.classList.add("fade-in");
+}
 
-      workers.forEach(worker => {
-        const option = document.createElement("option");
-        option.value = worker;
-        option.textContent = worker;
-        workerSelect.appendChild(option);
-      });
+/* -----------------------------
+   4) SAVE SCAN (BACKGROUND)
+------------------------------ */
+function saveScan(code, worker, action) {
+  fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
+    .then(r => r.text())
+    .then(result => console.log("Saved:", result))
+    .catch(err => console.error("Save error:", err));
+}
 
-      localStorage.setItem("workers", JSON.stringify(workers));
-    }
+/* -----------------------------
+   5) BEEP SOUND
+------------------------------ */
+function playBeep() {
+  const beep = document.getElementById("beep");
+  beep.currentTime = 0;
+  const p = beep.play();
+  if (p) p.catch(() => {});
+}
 
-    function saveScan(code, worker, action) {
-      fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
-        .then(r => r.text())
-        .then(result => console.log("Saved:", result))
-        .catch(err => console.error("Save error:", err));
-    }
+/* -----------------------------
+   6) ACTION BUTTONS + AUTO‑SCAN‑AGAIN
+------------------------------ */
+function send(action) {
+  const worker = document.getElementById("worker").value;
 
-    function playBeep() {
-      const beep = document.getElementById("beep");
-      beep.currentTime = 0;
-      const p = beep.play();
-      if (p) p.catch(() => {});
-    }
+  if (!worker) {
+    document.getElementById("msg").textContent = "Please select a worker.";
+    return;
+  }
 
-    function send(action) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code") || "";
-      const worker = document.getElementById("worker").value;
+  playBeep();
+  if (navigator.vibrate) navigator.vibrate(100);
 
-      if (!worker) {
-        document.getElementById("msg").textContent = "Please select a worker.";
-        return;
-      }
+  saveScan(CURRENT_CODE, worker, action);
 
-      playBeep();
-      if (navigator.vibrate) navigator.vibrate(100);
+  const msg = document.getElementById("msg");
+  msg.textContent = "Saved: " + action.toUpperCase();
+  msg.classList.remove("success");
+  void msg.offsetHeight;
+  msg.classList.add("success");
 
-      saveScan(code, worker, action);
+  // AUTO‑SCAN‑AGAIN
+  setTimeout(() => {
+    window.location.href = "scan://restart"; 
+  }, 1000);
+}
 
-      const msg = document.getElementById("msg");
-      msg.textContent = "Saved: " + action.toUpperCase();
-      msg.classList.remove("success");
-      void msg.offsetHeight;
-      msg.classList.add("success");
+function cancelScan() {
+  playBeep();
+  if (navigator.vibrate) navigator.vibrate(50);
 
-      setTimeout(() => {
-        window.location.href = "about:blank";
-      }, 1500);
-    }
+  const msg = document.getElementById("msg");
+  msg.textContent = "Scan canceled";
+  msg.classList.remove("success");
+  void msg.offsetHeight;
+  msg.classList.add("success");
 
-    function cancelScan() {
-      playBeep();
-      if (navigator.vibrate) navigator.vibrate(50);
+  // AUTO‑SCAN‑AGAIN
+  setTimeout(() => {
+    window.location.href = "scan://restart";
+  }, 800);
+}
 
-      const msg = document.getElementById("msg");
-      msg.textContent = "Scan canceled";
-      msg.classList.remove("success");
-      void msg.offsetHeight;
-      msg.classList.add("success");
+/* -----------------------------
+   7) PAGE LOAD
+------------------------------ */
+window.onload = () => {
+  preloadProducts();
+  loadSavedWorker();
+  showProductInstantly();
+};
+</script>
 
-      setTimeout(() => {
-        window.location.href = "about:blank";
-      }, 1000);
-    }
-  </script>
+
+
 </body>
 </html>
