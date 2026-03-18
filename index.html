@@ -217,15 +217,18 @@ function showProductInstantly() {
   nameEl.textContent = name;
   nameEl.classList.add("fade-in");
 
-  const imgEl = document.getElementById("productImage");
-  imgEl.classList.remove("fade-in");
-  void imgEl.offsetHeight;
-  if (image) {
-    imgEl.src = image;
-  } else {
-    imgEl.src = "https://via.placeholder.com/170?text=No+Image";
-  }
-  imgEl.classList.add("fade-in");
+// Show product image
+const img = document.getElementById("productImage");
+
+if (image && image !== "") {
+    img.src = image;
+    img.style.display = "block";
+} else {
+    img.src = "";
+    img.style.display = "none";
+}
+
+
 }
 
 /* -----------------------------
