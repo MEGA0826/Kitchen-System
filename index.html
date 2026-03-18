@@ -4,86 +4,126 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
   body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  text-align: center;
-  margin: 0;
-  padding: 20px;
-}
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+  }
 
-/* Product name */
-.product {
-  font-size: 36px;
-  font-weight: bold;
-  margin: 25px 0;
-  opacity: 1;
-  transition: opacity 0.25s ease;
-}
+  .title {
+    font-size: 34px;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-bottom: 5px;
+  }
 
-.product.fade-in {
-  opacity: 0;
-  animation: fadeIn 0.25s forwards;
-}
+  .subtitle {
+    font-size: 22px;
+    color: #555;
+    margin-top: 0;
+    margin-bottom: 25px;
+  }
 
-@keyframes fadeIn {
-  to { opacity: 1; }
-}
+  .product-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+  }
 
-/* Worker dropdown */
-select {
-  font-size: 20px;
-  padding: 10px;
-  width: 80%;
-  margin-bottom: 25px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
+  .product-image {
+    width: 170px;
+    height: 170px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    background: #ddd;
+    opacity: 0;
+    animation: fadeIn 0.25s forwards;
+  }
 
-/* Buttons */
-button {
-  width: 90%;
-  font-size: 26px;
-  padding: 20px;
-  margin: 10px;
-  border: none;
-  border-radius: 12px;
-  color: white;
-  cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
+  /* Product name */
+  .product {
+    font-size: 32px;
+    font-weight: bold;
+    margin: 10px 0 20px 0;
+    opacity: 0;
+    animation: fadeIn 0.25s forwards;
+  }
 
-button:active {
-  transform: scale(0.94);
-  opacity: 0.8;
-}
+  .product.fade-in {
+    opacity: 0;
+    animation: fadeIn 0.25s forwards;
+  }
 
-/* Button colors */
-.produce { background: #ff9800; }
-.done    { background: #4CAF50; }
-.waste   { background: #f44336; }
-.cancel  { background: #9e9e9e; }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
 
-/* Success message */
-.message {
-  font-size: 30px;
-  margin-top: 40px;
-}
+  /* Worker dropdown */
+  select {
+    font-size: 20px;
+    padding: 10px;
+    width: 80%;
+    margin-bottom: 25px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
 
-#msg.success {
-  animation: pop 0.35s ease-out forwards;
-}
+  /* Buttons */
+  button {
+    width: 90%;
+    font-size: 26px;
+    padding: 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
 
-@keyframes pop {
-  0%   { transform: scale(0.6); opacity: 0; }
-  60%  { transform: scale(1.05); opacity: 1; }
-  100% { transform: scale(1); }
-}
+  button:active {
+    transform: scale(0.94);
+    opacity: 0.8;
+  }
 
+  /* Button colors */
+  .produce { background: #ff9800; }
+  .done    { background: #4CAF50; }
+  .waste   { background: #f44336; }
+  .cancel  { background: #9e9e9e; }
+
+  /* Success message */
+  .message {
+    font-size: 30px;
+    margin-top: 30px;
+    min-height: 40px;
+  }
+
+  #msg.success {
+    animation: pop 0.35s ease-out forwards;
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    60%  { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); }
+  }
   </style>
 </head>
 <body>
-  <div id="product" class="product"></div>
-  <select id="worker"></select>
+
+  <h1 class="title">Kitchen MEP System</h1>
+  <h2 class="subtitle">212 : Nooch Richti</h2>
+
+  <div class="product-container">
+    <img id="productImage" class="product-image" src="" alt="Product Image">
+    <div id="product" class="product"></div>
+  </div>
+
+  <select id="worker" onchange="saveWorker()"></select>
 
   <audio id="beep" preload="auto">
     <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
@@ -98,7 +138,7 @@ button:active {
   <div id="msg" class="message"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";   // keep your existing value
+const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
 let PRODUCT_MAP = {};
 let CURRENT_CODE = "";
@@ -117,7 +157,32 @@ async function preloadProducts() {
 }
 
 /* -----------------------------
-   2) WORKER AUTO‑REMEMBER
+   2) LOAD WORKERS ONCE
+------------------------------ */
+async function preloadWorkers() {
+  try {
+    // Call backend without action to get workers list
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    const workers = data.workers || [];
+
+    const select = document.getElementById("worker");
+    select.innerHTML = "";
+    workers.forEach(w => {
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = w;
+      select.appendChild(opt);
+    });
+
+    loadSavedWorker();
+  } catch (err) {
+    console.error("Worker preload failed:", err);
+  }
+}
+
+/* -----------------------------
+   3) WORKER AUTO‑REMEMBER
 ------------------------------ */
 function loadSavedWorker() {
   const saved = localStorage.getItem("worker");
@@ -135,23 +200,36 @@ function saveWorker() {
 }
 
 /* -----------------------------
-   3) SHOW PRODUCT INSTANTLY
+   4) SHOW PRODUCT INSTANTLY
 ------------------------------ */
 function showProductInstantly() {
   const params = new URLSearchParams(window.location.search);
   CURRENT_CODE = params.get("code") || "";
 
-  const name = PRODUCT_MAP[CURRENT_CODE] || CURRENT_CODE || "Unknown";
+  const productData = PRODUCT_MAP[CURRENT_CODE];
+  const name = productData && productData.name ? productData.name :
+               (typeof productData === "string" ? productData : CURRENT_CODE || "Unknown");
+  const image = productData && productData.image ? productData.image : "";
 
-  const el = document.querySelector(".product");
-  el.classList.remove("fade-in");
-  void el.offsetHeight; // restart animation
-  el.textContent = name;
-  el.classList.add("fade-in");
+  const nameEl = document.getElementById("product");
+  nameEl.classList.remove("fade-in");
+  void nameEl.offsetHeight;
+  nameEl.textContent = name;
+  nameEl.classList.add("fade-in");
+
+  const imgEl = document.getElementById("productImage");
+  imgEl.classList.remove("fade-in");
+  void imgEl.offsetHeight;
+  if (image) {
+    imgEl.src = image;
+  } else {
+    imgEl.src = "https://via.placeholder.com/170?text=No+Image";
+  }
+  imgEl.classList.add("fade-in");
 }
 
 /* -----------------------------
-   4) SAVE SCAN (BACKGROUND)
+   5) SAVE SCAN (BACKGROUND)
 ------------------------------ */
 function saveScan(code, worker, action) {
   fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
@@ -161,7 +239,7 @@ function saveScan(code, worker, action) {
 }
 
 /* -----------------------------
-   5) BEEP SOUND
+   6) BEEP SOUND
 ------------------------------ */
 function playBeep() {
   const beep = document.getElementById("beep");
@@ -171,7 +249,7 @@ function playBeep() {
 }
 
 /* -----------------------------
-   6) ACTION BUTTONS + AUTO‑SCAN‑AGAIN
+   7) ACTION BUTTONS + AUTO‑SCAN‑AGAIN
 ------------------------------ */
 function send(action) {
   const worker = document.getElementById("worker").value;
@@ -192,9 +270,8 @@ function send(action) {
   void msg.offsetHeight;
   msg.classList.add("success");
 
-  // AUTO‑SCAN‑AGAIN
   setTimeout(() => {
-    window.location.href = "scan://restart"; 
+    window.location.href = "scan://restart";
   }, 1000);
 }
 
@@ -208,23 +285,20 @@ function cancelScan() {
   void msg.offsetHeight;
   msg.classList.add("success");
 
-  // AUTO‑SCAN‑AGAIN
   setTimeout(() => {
     window.location.href = "scan://restart";
   }, 800);
 }
 
 /* -----------------------------
-   7) PAGE LOAD
+   8) PAGE LOAD
 ------------------------------ */
-window.onload = () => {
-  preloadProducts();
-  loadSavedWorker();
+window.onload = async () => {
+  await preloadProducts();
   showProductInstantly();
+  preloadWorkers();
 };
 </script>
-
-
 
 </body>
 </html>
