@@ -1,174 +1,122 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f4f6f8;
-    text-align: center;
-    margin: 0;
-    padding: 20px;
-  }
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
 
-  .title {
-    font-size: 34px;
-    font-weight: bold;
-    margin-top: 10px;
-    margin-bottom: 5px;
-  }
+.title {
+  font-size: 34px;
+  font-weight: bold;
+  margin-top: 10px;
+}
 
-  .subtitle {
-    font-size: 22px;
-    color: #555;
-    margin-top: 0;
-    margin-bottom: 25px;
-  }
+.subtitle {
+  font-size: 22px;
+  color: #555;
+  margin-bottom: 25px;
+}
 
-  .product-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 20px;
-  }
+.product-image {
+  width: 170px;
+  height: 170px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  display: none;
+}
 
-  .product-image {
-    width: 170px;
-    height: 170px;
-    object-fit: cover;
-    border-radius: 12px;
-    margin-bottom: 15px;
-    background: #ddd;
-    opacity: 0;
-    animation: fadeIn 0.25s forwards;
-  }
+.product {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
 
-  /* Product name */
-  .product {
-    font-size: 32px;
-    font-weight: bold;
-    margin: 10px 0 20px 0;
-    opacity: 0;
-    animation: fadeIn 0.25s forwards;
-  }
+select {
+  font-size: 20px;
+  padding: 10px;
+  width: 80%;
+  margin-bottom: 25px;
+  border-radius: 8px;
+}
 
-  .product.fade-in {
-    opacity: 0;
-    animation: fadeIn 0.25s forwards;
-  }
+button {
+  width: 90%;
+  font-size: 26px;
+  padding: 20px;
+  margin: 10px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+}
 
-  @keyframes fadeIn {
-    to { opacity: 1; }
-  }
+.produce { background: #ff9800; }
+.done    { background: #4CAF50; }
+.waste   { background: #f44336; }
+.cancel  { background: #9e9e9e; }
 
-  /* Worker dropdown */
-  select {
-    font-size: 20px;
-    padding: 10px;
-    width: 80%;
-    margin-bottom: 25px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-  }
-
-  /* Buttons */
-  button {
-    width: 90%;
-    font-size: 26px;
-    padding: 20px;
-    margin: 10px;
-    border: none;
-    border-radius: 12px;
-    color: white;
-    cursor: pointer;
-    transition: transform 0.15s ease, opacity 0.15s ease;
-  }
-
-  button:active {
-    transform: scale(0.94);
-    opacity: 0.8;
-  }
-
-  /* Button colors */
-  .produce { background: #ff9800; }
-  .done    { background: #4CAF50; }
-  .waste   { background: #f44336; }
-  .cancel  { background: #9e9e9e; }
-
-  /* Success message */
-  .message {
-    font-size: 30px;
-    margin-top: 30px;
-    min-height: 40px;
-  }
-
-  #msg.success {
-    animation: pop 0.35s ease-out forwards;
-  }
-
-  @keyframes pop {
-    0%   { transform: scale(0.6); opacity: 0; }
-    60%  { transform: scale(1.05); opacity: 1; }
-    100% { transform: scale(1); }
-  }
-  </style>
+.message {
+  font-size: 26px;
+  margin-top: 20px;
+}
+</style>
 </head>
+
 <body>
 
-  <h1 class="title">Kitchen MEP System</h1>
-  <h2 class="subtitle">212 : Nooch Richti</h2>
+<h1 class="title">Kitchen MEP System</h1>
+<h2 class="subtitle">212 : Nooch Richti</h2>
 
-  <div class="product-container">
-    <img id="productImage" class="product-image" src="" alt="Product Image">
-    <div id="product" class="product"></div>
-  </div>
+<img id="productImage" class="product-image">
+<div id="product" class="product">Loading...</div>
 
-  <select id="worker" onchange="saveWorker()"></select>
+<select id="worker"></select>
 
-  <audio id="beep" preload="auto">
-    <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
-    <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.mp3" type="audio/mpeg">
-  </audio>
+<button class="produce" onclick="send('produce')">In MEP List</button>
+<button class="done" onclick="send('done')">Finish MEP</button>
+<button class="waste" onclick="send('waste')">Waste</button>
+<button class="cancel" onclick="cancelScan()">Cancel</button>
 
-  <button class="produce" onclick="send('produce')">In MEP List</button>
-  <button class="done"    onclick="send('done')">Finish MEP</button>
-  <button class="waste"   onclick="send('waste')">Waste</button>
-  <button class="cancel"  onclick="cancelScan()">Cancel</button>
-
-  <div id="msg" class="message"></div>
+<div id="msg" class="message"></div>
 
 <script>
+
 const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
 let PRODUCT_MAP = {};
 let CURRENT_CODE = "";
 
 /* -----------------------------
-   1) PRELOAD PRODUCTS ONCE
+   LOAD PRODUCTS
 ------------------------------ */
 async function preloadProducts() {
   try {
     const res = await fetch(`${API_URL}?action=allProducts`);
     PRODUCT_MAP = await res.json();
-    console.log("Products loaded:", PRODUCT_MAP);
+    console.log("Products:", PRODUCT_MAP);
   } catch (err) {
-    console.error("Product preload failed:", err);
+    console.error("Product load error:", err);
   }
 }
 
 /* -----------------------------
-   2) LOAD WORKERS ONCE
+   LOAD WORKERS
 ------------------------------ */
 async function preloadWorkers() {
   try {
-    // Call backend without action to get workers list
     const res = await fetch(API_URL);
     const data = await res.json();
-    const workers = data.workers || [];
 
     const select = document.getElementById("worker");
     select.innerHTML = "";
-    workers.forEach(w => {
+
+    (data.workers || []).forEach(w => {
       const opt = document.createElement("option");
       opt.value = w;
       opt.textContent = w;
@@ -177,130 +125,99 @@ async function preloadWorkers() {
 
     loadSavedWorker();
   } catch (err) {
-    console.error("Worker preload failed:", err);
+    console.error("Worker load error:", err);
   }
 }
 
 /* -----------------------------
-   3) WORKER AUTO‑REMEMBER
+   SHOW PRODUCT
 ------------------------------ */
-function loadSavedWorker() {
-  const saved = localStorage.getItem("worker");
-  if (saved) {
-    const select = document.getElementById("worker");
-    if (select) select.value = saved;
-  }
-}
-
-function saveWorker() {
-  const select = document.getElementById("worker");
-  if (select) {
-    localStorage.setItem("worker", select.value);
-  }
-}
-
-/* -----------------------------
-   4) SHOW PRODUCT INSTANTLY
------------------------------- */
-function showProductInstantly() {
+function showProduct() {
   const params = new URLSearchParams(window.location.search);
   CURRENT_CODE = params.get("code") || "";
 
   const productData = PRODUCT_MAP[CURRENT_CODE];
-  const name = productData && productData.name ? productData.name :
-               (typeof productData === "string" ? productData : CURRENT_CODE || "Unknown");
-  const image = productData && productData.image ? productData.image : "";
 
-  const nameEl = document.getElementById("product");
-  nameEl.classList.remove("fade-in");
-  void nameEl.offsetHeight;
-  nameEl.textContent = name;
-  nameEl.classList.add("fade-in");
+  let name = CURRENT_CODE || "Unknown Product";
+  let image = "";
 
-// Show product image
-const img = document.getElementById("productImage");
+  if (productData) {
+    if (typeof productData === "string") {
+      name = productData;
+    } else {
+      name = productData.name || CURRENT_CODE;
+      image = productData.image || "";
+    }
+  }
 
-if (image && image !== "") {
+  document.getElementById("product").textContent = name;
+
+  const img = document.getElementById("productImage");
+  if (image) {
     img.src = image;
     img.style.display = "block";
-} else {
-    img.src = "";
+  } else {
     img.style.display = "none";
-}
-
-
+  }
 }
 
 /* -----------------------------
-   5) SAVE SCAN (BACKGROUND)
+   SAVE WORKER
 ------------------------------ */
-function saveScan(code, worker, action) {
-  fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
-    .then(r => r.text())
-    .then(result => console.log("Saved:", result))
-    .catch(err => console.error("Save error:", err));
+function saveWorker() {
+  const val = document.getElementById("worker").value;
+  localStorage.setItem("worker", val);
 }
 
-/* -----------------------------
-   6) BEEP SOUND
------------------------------- */
-function playBeep() {
-  const beep = document.getElementById("beep");
-  beep.currentTime = 0;
-  const p = beep.play();
-  if (p) p.catch(() => {});
+function loadSavedWorker() {
+  const saved = localStorage.getItem("worker");
+  if (saved) {
+    document.getElementById("worker").value = saved;
+  }
 }
 
+document.getElementById("worker").addEventListener("change", saveWorker);
+
 /* -----------------------------
-   7) ACTION BUTTONS + AUTO‑SCAN‑AGAIN
+   SEND DATA
 ------------------------------ */
 function send(action) {
   const worker = document.getElementById("worker").value;
 
   if (!worker) {
-    document.getElementById("msg").textContent = "Please select a worker.";
+    document.getElementById("msg").textContent = "Select worker";
     return;
   }
 
-  playBeep();
-  if (navigator.vibrate) navigator.vibrate(100);
+  fetch(`${API_URL}?code=${CURRENT_CODE}&worker=${worker}&action=${action}`)
+    .then(() => {
+      document.getElementById("msg").textContent = "Saved: " + action;
 
-  saveScan(CURRENT_CODE, worker, action);
-
-  const msg = document.getElementById("msg");
-  msg.textContent = "Saved: " + action.toUpperCase();
-  msg.classList.remove("success");
-  void msg.offsetHeight;
-  msg.classList.add("success");
-
-  setTimeout(() => {
-    window.location.href = "scan://restart";
-  }, 1000);
-}
-
-function cancelScan() {
-  playBeep();
-  if (navigator.vibrate) navigator.vibrate(50);
-
-  const msg = document.getElementById("msg");
-  msg.textContent = "Scan canceled";
-  msg.classList.remove("success");
-  void msg.offsetHeight;
-  msg.classList.add("success");
-
-  setTimeout(() => {
-    window.location.href = "scan://restart";
-  }, 800);
+      setTimeout(() => {
+        window.location.href = "scan://restart";
+      }, 800);
+    })
+    .catch(() => {
+      document.getElementById("msg").textContent = "Error saving";
+    });
 }
 
 /* -----------------------------
-   8) PAGE LOAD
+   CANCEL
+------------------------------ */
+function cancelScan() {
+  window.location.href = "scan://restart";
+}
+
+/* -----------------------------
+   START
 ------------------------------ */
 window.onload = async () => {
-  await preloadProducts();
-  showProductInstantly();
-  preloadWorkers();
+  await preloadProducts();   // FIX: wait for data
+  showProduct();             // then display
+  await preloadWorkers();
 };
+
 </script>
 
 </body>
