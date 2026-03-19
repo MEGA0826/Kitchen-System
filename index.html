@@ -51,4 +51,107 @@
 <img id="productImage" class="product-image" loading="lazy">
 <div id="product" class="product">Loading...</div>
 
-<select id="worker">
+<select id="worker"></select>
+
+<button class="produce" onclick="send('produce')">In MEP List</button>
+<button class="done" onclick="send('done')">Finish MEP</button>
+<button class="waste" onclick="send('waste')">Waste</button>
+<button class="cancel" onclick="cancelScan()">Cancel</button>
+
+<div id="msg" class="message"></div>
+
+<!-- App Logic -->
+<script defer>
+const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+
+let PRODUCT_MAP = {};
+let CURRENT_CODE = "";
+
+/* LOAD PRODUCTS */
+async function preloadProducts() {
+  try {
+    const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
+    PRODUCT_MAP = await res.json();
+  } catch (err) { console.error("Product load error:", err); }
+}
+
+/* LOAD WORKERS */
+async function preloadWorkers() {
+  try {
+    const res = await fetch(API_URL, { cache: "force-cache" });
+    const data = await res.json();
+
+    const select = document.getElementById("worker");
+    select.innerHTML = "";
+
+    (data.workers || []).forEach(w => {
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = w;
+      select.appendChild(opt);
+    });
+
+    loadSavedWorker();
+  } catch (err) { console.error("Worker load error:", err); }
+}
+
+/* SHOW PRODUCT */
+function showProduct() {
+  const params = new URLSearchParams(window.location.search);
+  CURRENT_CODE = params.get("code") || "";
+
+  const productData = PRODUCT_MAP[CURRENT_CODE];
+  let name = CURRENT_CODE || "Unknown Product";
+  let image = "";
+
+  if (productData) {
+    name = productData.name || productData || CURRENT_CODE;
+    image = productData.image || "";
+  }
+
+  document.getElementById("product").textContent = name;
+
+  const img = document.getElementById("productImage");
+  if (image) {
+    img.src = image;
+    img.style.display = "block";
+  }
+}
+
+/* SAVE WORKER */
+function saveWorker() {
+  localStorage.setItem("worker", document.getElementById("worker").value);
+}
+function loadSavedWorker() {
+  const saved = localStorage.getItem("worker");
+  if (saved) document.getElementById("worker").value = saved;
+}
+document.getElementById("worker").addEventListener("change", saveWorker);
+
+/* SEND DATA */
+function send(action) {
+  const worker = document.getElementById("worker").value;
+  if (!worker) return document.getElementById("msg").textContent = "Select worker";
+
+  fetch(`${API_URL}?code=${CURRENT_CODE}&worker=${worker}&action=${action}`)
+    .then(() => {
+      document.getElementById("msg").textContent = "Saved: " + action;
+      setTimeout(() => window.location.href = "scan://restart", 600);
+    })
+    .catch(() => document.getElementById("msg").textContent = "Error saving");
+}
+
+/* CANCEL */
+function cancelScan() {
+  window.location.href = "scan://restart";
+}
+
+/* START */
+window.addEventListener("DOMContentLoaded", async () => {
+  preloadProducts().then(showProduct);
+  preloadWorkers();
+});
+</script>
+
+</body>
+</html>
