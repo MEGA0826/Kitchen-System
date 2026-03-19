@@ -2,6 +2,8 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- 1. Inline critical CSS (removes render‑blocking request) -->
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -10,61 +12,26 @@ body {
   margin: 0;
   padding: 20px;
 }
-
-.title {
-  font-size: 34px;
-  font-weight: bold;
-  margin-top: 10px;
-}
-
-.subtitle {
-  font-size: 22px;
-  color: #555;
-  margin-bottom: 25px;
-}
-
+.title { font-size: 34px; font-weight: bold; margin-top: 10px; }
+.subtitle { font-size: 22px; color: #555; margin-bottom: 25px; }
 .product-image {
-  width: 170px;
-  height: 170px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  display: none;
+  width: 170px; height: 170px; object-fit: cover;
+  border-radius: 12px; margin-bottom: 15px; display: none;
 }
-
-.product {
-  font-size: 32px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-
+.product { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
 select {
-  font-size: 20px;
-  padding: 10px;
-  width: 80%;
-  margin-bottom: 25px;
-  border-radius: 8px;
+  font-size: 20px; padding: 10px; width: 80%;
+  margin-bottom: 25px; border-radius: 8px;
 }
-
 button {
-  width: 90%;
-  font-size: 26px;
-  padding: 20px;
-  margin: 10px;
-  border: none;
-  border-radius: 12px;
-  color: white;
+  width: 90%; font-size: 26px; padding: 20px;
+  margin: 10px; border: none; border-radius: 12px; color: white;
 }
-
 .produce { background: #ff9800; }
 .done    { background: #4CAF50; }
 .waste   { background: #f44336; }
 .cancel  { background: #9e9e9e; }
-
-.message {
-  font-size: 26px;
-  margin-top: 20px;
-}
+.message { font-size: 26px; margin-top: 20px; }
 </style>
 </head>
 
@@ -73,7 +40,7 @@ button {
 <h1 class="title">Kitchen MEP System</h1>
 <h2 class="subtitle">212 : Nooch Richti</h2>
 
-<img id="productImage" class="product-image">
+<img id="productImage" class="product-image" loading="lazy">
 <div id="product" class="product">Loading...</div>
 
 <select id="worker"></select>
@@ -85,32 +52,25 @@ button {
 
 <div id="msg" class="message"></div>
 
-<script>
-
+<!-- 2. Defer JS so page loads instantly -->
+<script defer>
 const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
 let PRODUCT_MAP = {};
 let CURRENT_CODE = "";
 
-/* -----------------------------
-   LOAD PRODUCTS
------------------------------- */
+/* LOAD PRODUCTS */
 async function preloadProducts() {
   try {
-    const res = await fetch(`${API_URL}?action=allProducts`);
+    const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
     PRODUCT_MAP = await res.json();
-    console.log("Products:", PRODUCT_MAP);
-  } catch (err) {
-    console.error("Product load error:", err);
-  }
+  } catch (err) { console.error("Product load error:", err); }
 }
 
-/* -----------------------------
-   LOAD WORKERS
------------------------------- */
+/* LOAD WORKERS */
 async function preloadWorkers() {
   try {
-    const res = await fetch(API_URL);
+    const res = await fetch(API_URL, { cache: "force-cache" });
     const data = await res.json();
 
     const select = document.getElementById("worker");
@@ -124,30 +84,21 @@ async function preloadWorkers() {
     });
 
     loadSavedWorker();
-  } catch (err) {
-    console.error("Worker load error:", err);
-  }
+  } catch (err) { console.error("Worker load error:", err); }
 }
 
-/* -----------------------------
-   SHOW PRODUCT
------------------------------- */
+/* SHOW PRODUCT */
 function showProduct() {
   const params = new URLSearchParams(window.location.search);
   CURRENT_CODE = params.get("code") || "";
 
   const productData = PRODUCT_MAP[CURRENT_CODE];
-
   let name = CURRENT_CODE || "Unknown Product";
   let image = "";
 
   if (productData) {
-    if (typeof productData === "string") {
-      name = productData;
-    } else {
-      name = productData.name || CURRENT_CODE;
-      image = productData.image || "";
-    }
+    name = productData.name || productData || CURRENT_CODE;
+    image = productData.image || "";
   }
 
   document.getElementById("product").textContent = name;
@@ -156,68 +107,42 @@ function showProduct() {
   if (image) {
     img.src = image;
     img.style.display = "block";
-  } else {
-    img.style.display = "none";
   }
 }
 
-/* -----------------------------
-   SAVE WORKER
------------------------------- */
+/* SAVE WORKER */
 function saveWorker() {
-  const val = document.getElementById("worker").value;
-  localStorage.setItem("worker", val);
+  localStorage.setItem("worker", document.getElementById("worker").value);
 }
-
 function loadSavedWorker() {
   const saved = localStorage.getItem("worker");
-  if (saved) {
-    document.getElementById("worker").value = saved;
-  }
+  if (saved) document.getElementById("worker").value = saved;
 }
-
 document.getElementById("worker").addEventListener("change", saveWorker);
 
-/* -----------------------------
-   SEND DATA
------------------------------- */
+/* SEND DATA */
 function send(action) {
   const worker = document.getElementById("worker").value;
-
-  if (!worker) {
-    document.getElementById("msg").textContent = "Select worker";
-    return;
-  }
+  if (!worker) return document.getElementById("msg").textContent = "Select worker";
 
   fetch(`${API_URL}?code=${CURRENT_CODE}&worker=${worker}&action=${action}`)
     .then(() => {
       document.getElementById("msg").textContent = "Saved: " + action;
-
-      setTimeout(() => {
-        window.location.href = "scan://restart";
-      }, 800);
+      setTimeout(() => window.location.href = "scan://restart", 600);
     })
-    .catch(() => {
-      document.getElementById("msg").textContent = "Error saving";
-    });
+    .catch(() => document.getElementById("msg").textContent = "Error saving");
 }
 
-/* -----------------------------
-   CANCEL
------------------------------- */
+/* CANCEL */
 function cancelScan() {
   window.location.href = "scan://restart";
 }
 
-/* -----------------------------
-   START
------------------------------- */
-window.onload = async () => {
-  await preloadProducts();   // FIX: wait for data
-  showProduct();             // then display
-  await preloadWorkers();
-};
-
+/* START */
+window.addEventListener("DOMContentLoaded", async () => {
+  preloadProducts().then(showProduct);
+  preloadWorkers();
+});
 </script>
 
 </body>
