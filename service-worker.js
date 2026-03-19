@@ -1,5 +1,4 @@
 const CACHE_NAME = "mep-cache-v1";
-
 const ROOT = "/Kitchen-System";
 
 const ASSETS = [
