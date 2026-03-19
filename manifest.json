@@ -1,7 +1,7 @@
 {
   "name": "Kitchen MEP System",
   "short_name": "MEP",
-  "start_url": "/index.html",
+  "start_url": "/Kitchen-System/index.html",
   "display": "standalone",
   "background_color": "#f4f6f8",
   "theme_color": "#4CAF50",
