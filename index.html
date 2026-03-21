@@ -7,15 +7,12 @@
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js");
     }
   </script>
-
   <style>
-    /* ── Reset & Tokens ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -28,73 +25,83 @@
       --muted:     #888880;
       --amber:     #e8a020;
       --amber-dim: rgba(232,160,32,0.12);
+      --amber-brd: rgba(232,160,32,0.25);
       --green:     #5dca8a;
       --green-dim: rgba(93,202,138,0.12);
+      --green-brd: rgba(93,202,138,0.20);
       --red:       #e86050;
       --red-dim:   rgba(232,96,80,0.12);
-      --gray:      #6b6b66;
+      --red-brd:   rgba(232,96,80,0.20);
       --gray-dim:  rgba(255,255,255,0.06);
       --radius:    14px;
       --radius-sm: 8px;
     }
 
     html, body {
-      min-height: 100%;
+      height: 100%;
       background: var(--bg);
       color: var(--text);
       font-family: 'DM Mono', monospace;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Layout ── */
+    /* ── Page: fills screen, no scroll ── */
     .page {
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
+      height: 100dvh;
       max-width: 480px;
       margin: 0 auto;
-      padding: 0 20px 16px;
+      padding: 0 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     /* ── Header ── */
     .header {
-      padding: 12px 0 12px;
+      padding: 12px 0 10px;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid var(--border);
-    }
-    .header-brand {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+      flex-shrink: 0;
     }
     .brand-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 22px;
-      letter-spacing: -0.3px;
+      font-size: 20px;
       line-height: 1;
-      color: var(--text);
     }
-    .brand-name em {
-      font-style: italic;
-      color: var(--amber);
-    }
+    .brand-name em { font-style: italic; color: var(--amber); }
     .brand-sub {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--muted);
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      margin-top: 4px;
+      margin-top: 3px;
     }
-    .header-status {
+    .header-right {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 11px;
+      gap: 8px;
+    }
+    .dashboard-link {
+      font-size: 10px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      transition: color .15s, border-color .15s;
+    }
+    .dashboard-link:hover { color: var(--amber); border-color: var(--amber); }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
       color: var(--green);
       letter-spacing: 0.5px;
-      margin-top: 6px;
     }
     .status-dot {
       width: 6px; height: 6px;
@@ -102,94 +109,83 @@
       background: var(--green);
       animation: blink 2.4s ease-in-out infinite;
     }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     /* ── Product Card ── */
     .product-card {
-      margin-top: 14px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      overflow: hidden;
-      animation: slideUp 0.35s ease both;
+      padding: 12px 14px;
       display: flex;
       flex-direction: row;
-      align-items: stretch;
-      min-height: 80px;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      animation: slideUp .3s ease both;
     }
     @keyframes slideUp {
-      from { opacity:0; transform: translateY(12px); }
+      from { opacity:0; transform: translateY(10px); }
       to   { opacity:1; transform: translateY(0); }
     }
 
-    /* Image: small square on the right of the card */
-    .product-image-wrap {
-      width: 72px;
-      min-width: 72px;
-      height: 72px;
-      align-self: center;
-      margin: 10px 10px 10px 0;
-      border-radius: 8px;
-      overflow: hidden;
-      order: 2;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--surface2);
-    }
-    .product-image-wrap img {
-      width: 72px;
-      height: 72px;
-      object-fit: cover;
-      display: block;
-      border-radius: 8px;
-    }
-    .product-image-wrap .img-placeholder {
-      font-size: 24px;
-      opacity: 0.2;
-    }
-
-    .product-info {
-      padding: 12px 16px 12px;
-      flex: 1;
-      order: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
+    /* Left: text */
+    .product-info { flex: 1; min-width: 0; }
     .product-label {
-      font-size: 10px;
+      font-size: 9px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 8px;
+      margin-bottom: 5px;
     }
     .product-name {
       font-family: 'Instrument Serif', serif;
       font-size: 22px;
       line-height: 1.15;
-      color: var(--text);
-      min-height: 34px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .product-code {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--muted);
-      margin-top: 6px;
+      margin-top: 4px;
       letter-spacing: 1px;
     }
 
-    /* ── Worker Select ── */
-    .field-wrap {
-      margin-top: 12px;
-      animation: slideUp 0.35s 0.08s ease both;
+    /* Right: image — fixed 64×64, never grows */
+    .product-img {
+      width: 64px;
+      height: 64px;
+      min-width: 64px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--surface2);
+      display: block;
+      flex-shrink: 0;
     }
+    .product-img-ph {
+      width: 64px;
+      height: 64px;
+      min-width: 64px;
+      border-radius: 8px;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      opacity: .25;
+      flex-shrink: 0;
+    }
+
+    /* ── Worker Select ── */
+    .field-wrap { flex-shrink: 0; animation: slideUp .3s .07s ease both; }
     .field-label {
-      font-size: 10px;
+      font-size: 9px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       display: block;
     }
     .worker-select {
@@ -199,164 +195,119 @@
       border: 1px solid var(--border2);
       border-radius: var(--radius-sm);
       font-family: 'DM Mono', monospace;
-      font-size: 15px;
-      padding: 10px 16px;
+      font-size: 14px;
+      padding: 9px 14px;
       appearance: none;
       -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 16px center;
+      background-position: right 14px center;
       cursor: pointer;
-      transition: border-color 0.15s;
+      transition: border-color .15s;
     }
-    .worker-select:focus {
-      outline: none;
-      border-color: var(--amber);
-    }
+    .worker-select:focus { outline: none; border-color: var(--amber); }
 
     /* ── Action Buttons ── */
     .actions {
-      margin-top: 12px;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      animation: slideUp 0.35s 0.16s ease both;
+      flex: 1;
+      animation: slideUp .3s .14s ease both;
     }
 
     .btn {
       border: none;
       border-radius: var(--radius);
       font-family: 'DM Mono', monospace;
-      font-size: 13px;
       font-weight: 500;
       letter-spacing: 0.5px;
       text-transform: uppercase;
       cursor: pointer;
-      padding: 14px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
-      transition: transform 0.12s, opacity 0.12s;
-      position: relative;
-      overflow: hidden;
+      justify-content: center;
+      gap: 6px;
+      transition: transform .12s, opacity .12s;
+      width: 100%;
+      height: 100%;
     }
     .btn:active { transform: scale(0.96); }
-    .btn-icon {
-      font-size: 22px;
-      line-height: 1;
-    }
-    .btn-label {
-      font-size: 12px;
-      letter-spacing: 1px;
-    }
+    .btn-icon  { font-size: 20px; line-height: 1; }
+    .btn-label { font-size: 11px; letter-spacing: 1px; }
 
     .btn-produce {
       background: var(--amber-dim);
       color: var(--amber);
-      border: 1px solid rgba(232,160,32,0.25);
-      grid-column: 1 / -1; /* full width — primary action */
+      border: 1px solid var(--amber-brd);
+      grid-column: 1 / -1;
       flex-direction: row;
-      justify-content: center;
-      padding: 16px 20px;
+      gap: 10px;
     }
-    .btn-produce .btn-icon { font-size: 18px; }
-    .btn-produce .btn-label { font-size: 14px; }
+    .btn-produce .btn-icon  { font-size: 16px; }
+    .btn-produce .btn-label { font-size: 13px; }
 
-    .btn-done {
-      background: var(--green-dim);
-      color: var(--green);
-      border: 1px solid rgba(93,202,138,0.2);
-    }
-    .btn-waste {
-      background: var(--red-dim);
-      color: var(--red);
-      border: 1px solid rgba(232,96,80,0.2);
-    }
+    .btn-done  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .btn-waste { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+
     .btn-cancel {
       background: var(--gray-dim);
       color: var(--muted);
       border: 1px solid var(--border);
       grid-column: 1 / -1;
       flex-direction: row;
-      justify-content: center;
-      padding: 10px 20px;
+      gap: 8px;
       border-radius: var(--radius-sm);
+      flex: none;
+      padding: 9px;
+      height: auto;
     }
-    .btn-cancel .btn-icon { font-size: 16px; }
+    .btn-cancel .btn-icon { font-size: 13px; }
 
-    /* ── Feedback Message ── */
+    /* ── Feedback ── */
     .feedback {
-      margin-top: 10px;
-      min-height: 32px;
+      min-height: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: slideUp 0.35s 0.22s ease both;
+      flex-shrink: 0;
     }
     .feedback-inner {
-      font-size: 13px;
+      font-size: 12px;
       letter-spacing: 0.5px;
-      padding: 10px 20px;
+      padding: 6px 16px;
       border-radius: 40px;
       display: none;
     }
-    .feedback-inner.visible { display: inline-flex; align-items: center; gap: 8px; }
-    .feedback-inner.success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(93,202,138,0.2); }
-    .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(232,96,80,0.2); }
-    .feedback-inner.info    { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(232,160,32,0.2); }
+    .feedback-inner.visible { display: inline-flex; align-items: center; gap: 6px; }
+    .feedback-inner.success { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .feedback-inner.info    { background: var(--amber-dim);  color: var(--amber); border: 1px solid var(--amber-brd); }
 
-    /* ── Loading skeleton ── */
+    /* ── Skeleton ── */
     .skeleton {
-      height: 36px;
+      height: 26px; width: 55%;
       border-radius: 6px;
-      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+      background: linear-gradient(90deg, var(--surface2) 25%, #2e2e28 50%, var(--surface2) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.4s infinite;
     }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
-
-    /* ── Dashboard link ── */
-    .dashboard-link {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      text-decoration: none;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 5px 10px;
-      border: 1px solid var(--border2);
-      border-radius: var(--radius-sm);
-      transition: color .15s, border-color .15s;
-      margin-right: 10px;
-    }
-    .dashboard-link:hover {
-      color: var(--amber);
-      border-color: var(--amber);
-    }
-
-    /* ── Divider ── */
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 6px 0 0;
-    }
   </style>
 </head>
 <body>
-
 <div class="page">
 
   <!-- Header -->
   <header class="header">
-    <div class="header-brand">
+    <div>
       <div class="brand-name">Kitchen <em>MEP</em></div>
       <div class="brand-sub">212 · Nooch Richti</div>
     </div>
-    <div class="header-status">
+    <div class="header-right">
       <a href="https://mega0826.github.io/Kitchen-System/dashboard.html" class="dashboard-link">⊞ Dashboard</a>
-      <span class="status-dot"></span>
-      LIVE
+      <div class="live-badge"><span class="status-dot"></span>LIVE</div>
     </div>
   </header>
 
@@ -364,43 +315,36 @@
   <div class="product-card" id="productCard">
     <div class="product-info">
       <div class="product-label">Scanned product</div>
-      <div class="product-name" id="product">
-        <div class="skeleton" style="width:60%;height:30px;margin-bottom:6px;"></div>
-      </div>
+      <div class="product-name" id="product"><div class="skeleton"></div></div>
       <div class="product-code" id="productCode"></div>
     </div>
-    <div class="product-image-wrap" id="imageWrap">
-      <span class="img-placeholder" id="imgPlaceholder">&#127859;</span>
-      <img id="productImage" loading="lazy" alt="" style="display:none;"
-           onload="this.style.display='block';document.getElementById('imgPlaceholder').style.display='none'">
-    </div>
+    <!-- Image always on the right, fixed 64×64 -->
+    <img id="productImage" class="product-img" alt="" style="display:none;">
+    <div id="imgPlaceholder" class="product-img-ph">🍽</div>
   </div>
 
   <!-- Worker -->
   <div class="field-wrap">
     <label class="field-label" for="worker">Staff member</label>
     <select class="worker-select" id="worker">
-      <option value="">Loading workers…</option>
+      <option value="">Loading…</option>
     </select>
   </div>
 
-  <!-- Actions -->
+  <!-- Action Buttons — flex:1 fills remaining height -->
   <div class="actions">
     <button class="btn btn-produce" onclick="send('produce')">
       <span class="btn-icon">📋</span>
       <span class="btn-label">Add to MEP List</span>
     </button>
-
     <button class="btn btn-done" onclick="send('done')">
       <span class="btn-icon">✓</span>
       <span class="btn-label">Finish MEP</span>
     </button>
-
     <button class="btn btn-waste" onclick="send('waste')">
       <span class="btn-icon">⚠</span>
       <span class="btn-label">Waste</span>
     </button>
-
     <button class="btn btn-cancel" onclick="cancelScan()">
       <span class="btn-icon">←</span>
       <span class="btn-label">Cancel</span>
@@ -413,122 +357,86 @@
   </div>
 
 </div>
-
 <script>
   const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
   let PRODUCT_MAP = {};
   let CURRENT_CODE = "";
 
-  /* ── Show feedback ── */
   function showMsg(text, type = "info") {
     const el = document.getElementById("msg");
     el.textContent = text;
     el.className = `feedback-inner visible ${type}`;
   }
 
-  /* ── Load products ── */
   async function preloadProducts() {
     try {
-      const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
+      const res  = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
       const data = await res.json();
-      if (Array.isArray(data)) {
-        data.forEach(item => {
-          if (!item) return;
-          const code = item.code || item.Code || item.barcode || item.Barcode;
-          if (code) PRODUCT_MAP[code] = item;
-        });
-      } else {
-        PRODUCT_MAP = data || {};
-      }
+      PRODUCT_MAP = (!data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
     } catch (err) {
-      console.error("Product load error:", err);
       document.getElementById("product").textContent = "Error loading";
     }
   }
 
-  /* ── Load workers ── */
   async function preloadWorkers() {
     try {
-      const res = await fetch(`${API_URL}?action=workers`, { cache: "force-cache" });
-      const data = await res.json();
-      const select = document.getElementById("worker");
+      const res     = await fetch(`${API_URL}?action=workers`, { cache: "force-cache" });
+      const data    = await res.json();
+      const select  = document.getElementById("worker");
+      const workers = data.workers || [];
       select.innerHTML = "";
-
-      const workers = data.workers || data.Workers || data || [];
       workers.forEach(w => {
-        const opt = document.createElement("option");
-        opt.value = w;
-        opt.textContent = w;
-        select.appendChild(opt);
+        const o = document.createElement("option");
+        o.value = o.textContent = w;
+        select.appendChild(o);
       });
-      loadSavedWorker();
+      const saved = localStorage.getItem("worker");
+      if (saved) select.value = saved;
     } catch (err) {
       console.error("Worker load error:", err);
     }
   }
 
-  /* ── Show product ── */
   function showProduct() {
-    const params = new URLSearchParams(window.location.search);
-    CURRENT_CODE = params.get("code") || "";
-
-    const pd    = PRODUCT_MAP[CURRENT_CODE];
-    const name  = pd ? (pd.name || pd.Name || pd.title || CURRENT_CODE) : (CURRENT_CODE || "Unknown product");
-    const image = pd ? (pd.image || pd.Image || "") : "";
+    CURRENT_CODE = new URLSearchParams(window.location.search).get("code") || "";
+    const pd    = PRODUCT_MAP[CURRENT_CODE] || {};
+    const name  = pd.name || CURRENT_CODE || "Unknown product";
+    const image = pd.image || "";
 
     document.getElementById("product").textContent = name;
-    if (CURRENT_CODE) {
-      document.getElementById("productCode").textContent = "CODE · " + CURRENT_CODE;
-    }
+    if (CURRENT_CODE) document.getElementById("productCode").textContent = "CODE · " + CURRENT_CODE;
 
     const img = document.getElementById("productImage");
     const ph  = document.getElementById("imgPlaceholder");
+
     if (image) {
+      img.onload  = () => { img.style.display = "block"; ph.style.display = "none"; };
+      img.onerror = () => { img.style.display = "none";  ph.style.display = "flex"; };
       img.src = image;
-      // onload handler on the <img> reveals it and hides placeholder
     } else {
       img.style.display = "none";
-      if (ph) ph.style.display = "block";
+      ph.style.display  = "flex";
     }
   }
 
-  /* ── Worker persistence ── */
-  function saveWorker() {
+  document.getElementById("worker").addEventListener("change", () => {
     localStorage.setItem("worker", document.getElementById("worker").value);
-  }
-  function loadSavedWorker() {
-    const saved = localStorage.getItem("worker");
-    const select = document.getElementById("worker");
-    if (saved && select.options.length > 0) select.value = saved;
-  }
-  document.getElementById("worker").addEventListener("change", saveWorker);
+  });
 
-  /* ── Send action ── */
   function send(action) {
     const worker = document.getElementById("worker").value;
     if (!worker) { showMsg("Select a staff member first", "error"); return; }
-
-    const labels = { produce: "Added to MEP List", done: "MEP Finished ✓", waste: "Marked as Waste" };
     showMsg("Saving…", "info");
-
-    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
-    fetch(url)
-      .then(() => {
-        showMsg(labels[action] || "Saved", "success");
-        setTimeout(() => { window.location.href = "scan://restart"; }, 700);
-      })
+    const labels = { produce: "Added to MEP List ✓", done: "MEP Finished ✓", waste: "Marked as Waste" };
+    fetch(`${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
+      .then(() => { showMsg(labels[action] || "Saved", "success"); setTimeout(() => { window.location.href = "scan://restart"; }, 700); })
       .catch(() => showMsg("Network error — try again", "error"));
   }
 
-  /* ── Cancel ── */
-  function cancelScan() {
-    window.location.href = "scan://restart";
-  }
+  function cancelScan() { window.location.href = "scan://restart"; }
 
-  /* ── Init ── */
   window.addEventListener("DOMContentLoaded", async () => {
-    // Save the full scan URL (with ?code=) so dashboard can return to it
     if (window.location.search.includes("code=")) {
       sessionStorage.setItem("lastScanUrl", window.location.href);
     }
