@@ -295,6 +295,25 @@
     }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 
+    /* ── Dashboard link ── */
+    .dashboard-link {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      transition: color .15s, border-color .15s;
+      margin-right: 10px;
+    }
+    .dashboard-link:hover {
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+
     /* ── Divider ── */
     .divider {
       height: 1px;
@@ -314,6 +333,7 @@
       <div class="brand-sub">212 · Nooch Richti</div>
     </div>
     <div class="header-status">
+      <a href="dashboard.html" class="dashboard-link">⊞ Dashboard</a>
       <span class="status-dot"></span>
       LIVE
     </div>
