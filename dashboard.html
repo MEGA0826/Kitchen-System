@@ -80,11 +80,11 @@
     .feed-title-txt { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
     .refresh-btn { font-family: var(--mono); font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 5px 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all .15s; }
     .refresh-btn:hover { color: var(--amber); border-color: var(--amber-brd); }
-    .feed-row { display: grid; grid-template-columns: 110px 120px 1fr 80px; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .feed-row { display: grid; grid-template-columns: 100px 100px 80px 1fr; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
     .feed-row:last-child { border-bottom: none; }
     .feed-row.hdr { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); background: var(--surface2); padding: 8px 18px; }
     .feed-time { color: var(--muted); }
-    .action-badge { display: inline-flex; align-items: center; justify-content: center; padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; }
+    .action-badge { display: inline-flex; align-self: center; align-items: center; justify-content: center; padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; }
     .action-badge.produce { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
     .action-badge.done    { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .action-badge.waste   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
@@ -572,12 +572,26 @@ function fmt(raw) {
 // ── KDS ──────────────────────────────────────────────────────
 function buildScanStats() {
   scanStats = {};
+  // todayScanStats: only today's scans — used for MEP available/inProgress calcs
+  // scanStats: all-time — used for bar charts, feed counts
+  const todayStr = new Date().toISOString().slice(0, 10);
   allScans.forEach(s => {
     const c = s.code || "";
     if (!scanStats[c]) scanStats[c] = { produce:0, done:0, waste:0, used:0, total:0 };
     const a = s.action || "";
     if (a in scanStats[c]) scanStats[c][a]++;
     scanStats[c].total++;
+  });
+  // Build todayScanStats separately
+  window.todayScanStats = {};
+  allScans.forEach(s => {
+    if (!s.timestamp) return;
+    const d = new Date(s.timestamp).toISOString().slice(0, 10);
+    if (d !== todayStr) return;
+    const c = s.code || "";
+    if (!window.todayScanStats[c]) window.todayScanStats[c] = { produce:0, done:0, waste:0, used:0 };
+    const a = s.action || "";
+    if (a in window.todayScanStats[c]) window.todayScanStats[c][a]++;
   });
 }
 
@@ -654,15 +668,18 @@ function buildMepAlerts() {
   Object.entries(allProducts).forEach(([code, p]) => {
     if (!p.mepMax && !p.tagesziel) return;
 
-    const st           = scanStats[code] || {};
+    const st           = (window.todayScanStats || {})[code] || {};
     const produceCount = st.produce || 0;
     const doneCount    = st.done    || 0;
-    const inProgress   = Math.max(0, produceCount - doneCount);
     const name         = p.name      || code;
     const gnSize       = p.gnSize    || "";
     const gnWeight     = p.gnWeight  || 0;
     const tagesziel    = p.tagesziel || 0;
     const mepMax       = p.mepMax    || 0;
+    // Match server logic: inProgress = mepMax - done when no produce scans
+    const inProgress   = (produceCount === 0 && mepMax > 0)
+      ? Math.max(0, mepMax - doneCount)
+      : Math.max(0, produceCount - doneCount);
 
     const wasteCount     = st.waste    || 0;
     const available      = Math.max(0, doneCount - wasteCount);
@@ -816,7 +833,7 @@ function renderFeed() {
     return `<div class="feed-row">
       <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
       <span style="font-size:12px">${s.worker||"—"}</span>
-      <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
+      <span class="action-badge ${s.action||""}" style="justify-self:start">${s.action||"—"}</span>
       <span style="font-size:12px">${name}</span>
     </div>`;
   }).join("");
@@ -864,7 +881,7 @@ function renderInventory(rows) {
     const wuNum  = r.weightUnit !== null ? Number(r.weightUnit) : null;
     const totKg  = (qty !== null && wuNum !== null) ? (qty * wuNum).toFixed(1) + " kg" : "—";
 
-    const st       = scanStats[r.code] || {};
+    const st       = (window.todayScanStats || {})[r.code] || {};
     const mepAvail = Math.max(0, (st.done||0) - (st.waste||0) - (st.used||0));
     const p        = allProducts[r.code] || {};
     const gnSize   = p.gnSize || "";
@@ -919,13 +936,14 @@ function renderProductGrid(entries) {
     return;
   }
   document.getElementById("product-grid").innerHTML = entries.map(([code,p]) => {
-    const st       = scanStats[code] || {};
-    const done     = st.done   || 0;
-    const waste    = st.waste  || 0;
-    const used     = st.used   || 0;
+    // Use today-only scan counts for MEP status (matches server logic)
+    const st       = (window.todayScanStats || {})[code] || {};
+    const done     = st.done    || 0;
+    const waste    = st.waste   || 0;
+    const used     = st.used    || 0;
     const produce  = st.produce || 0;
     const avail    = Math.max(0, done - waste - used);
-    // When no produce scans exist (button removed), inProg = mepMax - done
+    // When no produce scans exist (button removed), inProg = mepMax - done (same as server)
     const inProg   = (produce === 0 && p.mepMax > 0)
       ? Math.max(0, p.mepMax - done)
       : Math.max(0, produce - done);
