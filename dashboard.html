@@ -3,476 +3,536 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Manager Dashboard — 212 Nooch Richti</title>
+  <title>Kitchen MEP — 212 Nooch Richti</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0f0f0d; --surface: #1a1a16; --surface2: #242420; --surface3: #2e2e28;
-      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
-      --text: #f0ede6; --muted: #888880; --faint: #555550;
-      --amber: #e8a020; --amber-dim: rgba(232,160,32,0.13); --amber-brd: rgba(232,160,32,0.28);
-      --green: #5dca8a; --green-dim: rgba(93,202,138,0.12); --green-brd: rgba(93,202,138,0.25);
-      --red: #e86050; --red-dim: rgba(232,96,80,0.12); --red-brd: rgba(232,96,80,0.22);
-      --blue: #60a8e8; --blue-dim: rgba(96,168,232,0.12); --blue-brd: rgba(96,168,232,0.22);
-      --radius: 14px; --radius-sm: 8px;
-      --mono: 'DM Mono', monospace; --serif: 'Instrument Serif', serif;
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js");
     }
-    html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
+  </script>
 
-    /* HEADER */
-    .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 100; }
-    .logo { font-family: var(--serif); font-size: 22px; letter-spacing: -0.3px; }
-    .logo em { font-style: italic; color: var(--amber); }
-    .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
-    .header-right { display: flex; align-items: center; gap: 16px; }
-    .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); letter-spacing: 1px; }
-    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2.4s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-    .clock { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
-    .back-btn { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); transition: color .15s, border-color .15s; }
-    .back-btn:hover { color: var(--text); border-color: var(--amber); }
+  <style>
+    /* ── Reset & Tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* NAV */
-    .nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); }
-    .tab { padding: 11px 20px; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+    :root {
+      --bg:        #0f0f0d;
+      --surface:   #1a1a16;
+      --surface2:  #242420;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #f0ede6;
+      --muted:     #888880;
+      --amber:     #e8a020;
+      --amber-dim: rgba(232,160,32,0.12);
+      --green:     #5dca8a;
+      --green-dim: rgba(93,202,138,0.12);
+      --red:       #e86050;
+      --red-dim:   rgba(232,96,80,0.12);
+      --gray:      #6b6b66;
+      --gray-dim:  rgba(255,255,255,0.06);
+      --radius:    14px;
+      --radius-sm: 8px;
+    }
 
-    /* BODY */
-    .body { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      -webkit-font-smoothing: antialiased;
+    }
 
-    /* PANELS */
-    .panel { display: none; animation: fadeIn .25s ease; }
-    .panel.active { display: block; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    /* ── Layout ── */
+    .page {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 20px 40px;
+    }
 
-    /* SECTION */
-    .section-title { font-family: var(--serif); font-size: 26px; margin-bottom: 6px; }
-    .section-sub { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 24px; }
+    /* ── Header ── */
+    .header {
+      padding: 22px 0 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 26px;
+      letter-spacing: -0.3px;
+      line-height: 1;
+      color: var(--text);
+    }
+    .brand-name em {
+      font-style: italic;
+      color: var(--amber);
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-    /* STAT CARDS */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 32px; }
-    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
-    .stat-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-    .stat-value { font-family: var(--serif); font-size: 38px; line-height: 1; }
-    .stat-value.amber { color: var(--amber); }
-    .stat-value.green { color: var(--green); }
-    .stat-value.red   { color: var(--red); }
-    .stat-value.blue  { color: var(--blue); }
-    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    /* ── Product Card ── */
+    .product-card {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: slideUp 0.35s ease both;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      min-height: 110px;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform: translateY(12px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
 
-    /* CHARTS */
-    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 20px 14px; margin-bottom: 24px; }
-    .chart-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
-    .bars { display: flex; flex-direction: column; gap: 10px; }
-    .bar-row { display: grid; grid-template-columns: 130px 1fr 40px; align-items: center; gap: 10px; }
-    .bar-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
-    .bar-count { font-size: 11px; color: var(--muted); text-align: right; }
+    /* Image: square on the right */
+    .product-image-wrap {
+      width: 110px;
+      min-width: 110px;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-left: 1px solid var(--border);
+      order: 2;
+      position: relative;
+    }
+    .product-image-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* Placeholder icon when no image */
+    .product-image-wrap .img-placeholder {
+      font-size: 32px;
+      opacity: 0.2;
+    }
 
-    /* FEED */
-    .feed-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-top: 24px; }
-    .feed-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
-    .feed-title-txt { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-    .refresh-btn { font-family: var(--mono); font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 5px 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all .15s; }
-    .refresh-btn:hover { color: var(--amber); border-color: var(--amber-brd); }
-    .feed-row { display: grid; grid-template-columns: 150px 1fr 90px 80px; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
-    .feed-row:last-child { border-bottom: none; }
-    .feed-row.hdr { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); background: var(--surface2); padding: 8px 18px; }
-    .feed-time { color: var(--muted); }
-    .action-badge { display: inline-flex; align-items: center; justify-content: center; padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; }
-    .action-badge.produce { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
-    .action-badge.done    { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
-    .action-badge.waste   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .product-info {
+      padding: 18px 20px 16px;
+      flex: 1;
+      order: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .product-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .product-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 28px;
+      line-height: 1.15;
+      color: var(--text);
+      min-height: 34px;
+    }
+    .product-code {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
 
-    /* INVENTORY */
-    .inv-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .search-input { flex: 1; min-width: 200px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 13px; padding: 10px 14px; }
-    .search-input::placeholder { color: var(--faint); }
-    .search-input:focus { outline: none; border-color: var(--amber); }
-    .inv-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-    .inv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .inv-table th { background: var(--surface2); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; }
-    .inv-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    .inv-table tr:last-child td { border-bottom: none; }
-    .inv-table tr:hover td { background: var(--surface2); }
-    .stock-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
-    .stock-ok  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
-    .stock-low { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
-    .stock-out { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    /* ── Worker Select ── */
+    .field-wrap {
+      margin-top: 20px;
+      animation: slideUp 0.35s 0.08s ease both;
+    }
+    .field-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .worker-select {
+      width: 100%;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Mono', monospace;
+      font-size: 15px;
+      padding: 13px 16px;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .worker-select:focus {
+      outline: none;
+      border-color: var(--amber);
+    }
 
-    /* PRODUCT GRID */
-    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
-    .product-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s, transform .12s; }
-    .product-card:hover { border-color: var(--border2); transform: translateY(-2px); }
-    .product-card:active { transform: scale(0.98); }
-    .product-thumb { width: 100%; height: 130px; object-fit: cover; display: block; }
-    .product-thumb-ph { width: 100%; height: 130px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 32px; opacity: .3; }
-    .product-body { padding: 12px 14px; }
-    .product-name-card { font-family: var(--serif); font-size: 16px; line-height: 1.2; margin-bottom: 4px; }
-    .product-code-card { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); }
+    /* ── Action Buttons ── */
+    .actions {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      animation: slideUp 0.35s 0.16s ease both;
+    }
 
-    /* MODAL */
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity .2s; }
-    .modal-backdrop.open { opacity: 1; pointer-events: all; }
-    .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); width: 100%; max-width: 460px; overflow: hidden; transform: translateY(14px); transition: transform .2s; }
-    .modal-backdrop.open .modal { transform: translateY(0); }
-    .modal-img-ph { width: 100%; height: 180px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 48px; opacity: .25; }
-    .modal-img { width: 100%; height: 220px; object-fit: cover; display: none; }
-    .modal-img.shown { display: block; }
-    .modal-body { padding: 22px 22px 26px; }
-    .modal-code { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
-    .modal-name { font-family: var(--serif); font-size: 28px; line-height: 1.1; margin-bottom: 18px; }
-    .modal-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .modal-stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; text-align: center; }
-    .modal-stat-val { font-family: var(--serif); font-size: 22px; }
-    .modal-stat-lbl { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
-    .modal-close { width: 100%; padding: 12px; background: var(--surface2); border: none; border-top: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: color .15s; }
-    .modal-close:hover { color: var(--text); }
+    .btn {
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.12s, opacity 0.12s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-icon {
+      font-size: 26px;
+      line-height: 1;
+    }
+    .btn-label {
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
 
-    /* UTILS */
-    .skeleton { height: 20px; border-radius: 6px; background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; margin-bottom: 8px; }
+    .btn-produce {
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(232,160,32,0.25);
+      grid-column: 1 / -1; /* full width — primary action */
+      flex-direction: row;
+      justify-content: center;
+      padding: 22px 20px;
+    }
+    .btn-produce .btn-icon { font-size: 22px; }
+    .btn-produce .btn-label { font-size: 14px; }
+
+    .btn-done {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(93,202,138,0.2);
+    }
+    .btn-waste {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(232,96,80,0.2);
+    }
+    .btn-cancel {
+      background: var(--gray-dim);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      grid-column: 1 / -1;
+      flex-direction: row;
+      justify-content: center;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+    }
+    .btn-cancel .btn-icon { font-size: 16px; }
+
+    /* ── Feedback Message ── */
+    .feedback {
+      margin-top: 20px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: slideUp 0.35s 0.22s ease both;
+    }
+    .feedback-inner {
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      padding: 10px 20px;
+      border-radius: 40px;
+      display: none;
+    }
+    .feedback-inner.visible { display: inline-flex; align-items: center; gap: 8px; }
+    .feedback-inner.success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(93,202,138,0.2); }
+    .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(232,96,80,0.2); }
+    .feedback-inner.info    { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(232,160,32,0.2); }
+
+    /* ── Loading skeleton ── */
+    .skeleton {
+      height: 36px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
-    .empty-state { padding: 40px 24px; text-align: center; color: var(--muted); font-size: 13px; }
-    .empty-icon { font-size: 34px; margin-bottom: 10px; opacity: .35; }
-    .error-msg { background: var(--red-dim); border: 1px solid var(--red-brd); color: var(--red); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; margin-bottom: 20px; }
 
-    @media (max-width: 600px) {
-      .body, .nav, .header { padding-left: 16px; padding-right: 16px; }
-      .tab { padding: 10px 12px; font-size: 10px; }
-      .feed-row { grid-template-columns: 90px 1fr 70px; }
-      .feed-row span:nth-child(3) { display: none; }
-      .stats-grid { grid-template-columns: 1fr 1fr; }
-      .bar-row { grid-template-columns: 90px 1fr 36px; }
+    /* ── Dashboard link ── */
+    .dashboard-link {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      transition: color .15s, border-color .15s;
+      margin-right: 10px;
+    }
+    .dashboard-link:hover {
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 0 0;
     }
   </style>
 </head>
 <body>
 
-<header class="header">
-  <div>
-    <div class="logo">Kitchen <em>MEP</em> — Dashboard</div>
-    <div class="logo-sub">212 · Nooch Richti · Manager View</div>
-  </div>
-  <div class="header-right">
-    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-    <div class="clock" id="clock">--:--:--</div>
-    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn" id="back-btn" onclick="goBack(event)">← Scan</a>
-  </div>
-</header>
+<div class="page">
 
-<nav class="nav">
-  <button class="tab active" data-tab="kds" onclick="switchTab(this)">KDS · Stats</button>
-  <button class="tab" data-tab="inventory" onclick="switchTab(this)">Inventory · Lager</button>
-  <button class="tab" data-tab="products" onclick="switchTab(this)">Products · Rezepte</button>
-</nav>
-
-<div class="body">
-
-  <!-- KDS -->
-  <div class="panel active" id="panel-kds">
-    <div class="section-title">Kitchen Display</div>
-    <div class="section-sub">Today's activity · Heutige Aktivität</div>
-
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Total Scans · Gesamt</div><div class="stat-value blue" id="s-total">—</div></div>
-      <div class="stat-card"><div class="stat-label">In MEP List · Produziert</div><div class="stat-value amber" id="s-produce">—</div></div>
-      <div class="stat-card"><div class="stat-label">Finished · Fertig</div><div class="stat-value green" id="s-done">—</div></div>
-      <div class="stat-card"><div class="stat-label">Waste · Abfall</div><div class="stat-value red" id="s-waste">—</div></div>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="brand-name">Kitchen <em>MEP</em></div>
+      <div class="brand-sub">212 · Nooch Richti</div>
     </div>
-
-    <div class="chart-wrap">
-      <div class="chart-title">Top products by scan count · Meistgescannte Produkte</div>
-      <div class="bars" id="product-bars"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+    <div class="header-status">
+      <a href="https://mega0826.github.io/Kitchen-System/dashboard.html" class="dashboard-link">⊞ Dashboard</a>
+      <span class="status-dot"></span>
+      LIVE
     </div>
+  </header>
 
-    <div class="chart-wrap">
-      <div class="chart-title">Activity by worker · Aktivität nach Mitarbeiter</div>
-      <div class="bars" id="worker-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
-    </div>
-
-    <div class="feed-wrap">
-      <div class="feed-header">
-        <span class="feed-title-txt">Recent scans · Letzte Scans</span>
-        <button class="refresh-btn" onclick="loadKDS()">↺ Refresh</button>
+  <!-- Product Card -->
+  <div class="product-card" id="productCard">
+    <div class="product-info">
+      <div class="product-label">Scanned product</div>
+      <div class="product-name" id="product">
+        <div class="skeleton" style="width:60%;height:30px;margin-bottom:6px;"></div>
       </div>
-      <div id="scan-feed">
-        <div class="feed-row hdr"><span>Time · Zeit</span><span>Worker</span><span>Code</span><span>Action</span></div>
-        <div class="empty-state"><div class="skeleton" style="width:55%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div>
-      </div>
+      <div class="product-code" id="productCode"></div>
+    </div>
+    <div class="product-image-wrap" id="imageWrap">
+      <span class="img-placeholder" id="imgPlaceholder">&#127859;</span>
+      <img id="productImage" loading="lazy" alt=""
+           style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"
+           onload="this.style.display='block';document.getElementById('imgPlaceholder').style.display='none'">
     </div>
   </div>
 
-  <!-- INVENTORY -->
-  <div class="panel" id="panel-inventory">
-    <div class="section-title">Inventory</div>
-    <div class="section-sub">Lagerbestand · Stock overview</div>
-    <div class="inv-controls">
-      <input class="search-input" id="inv-search" type="text" placeholder="Search / Suchen…" oninput="filterInventory()">
-    </div>
-    <div id="inv-content">
-      <div class="inv-table-wrap"><div class="empty-state"><div class="skeleton" style="width:50%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div></div>
-    </div>
+  <!-- Worker -->
+  <div class="field-wrap">
+    <label class="field-label" for="worker">Staff member</label>
+    <select class="worker-select" id="worker">
+      <option value="">Loading workers…</option>
+    </select>
   </div>
 
-  <!-- PRODUCTS -->
-  <div class="panel" id="panel-products">
-    <div class="section-title">Products & Recipes</div>
-    <div class="section-sub">Produkte & Rezepte · Click for scan stats</div>
-    <div class="inv-controls">
-      <input class="search-input" id="prod-search" type="text" placeholder="Search product… / Produkt suchen…" oninput="filterProducts()">
-    </div>
-    <div class="product-grid" id="product-grid">
-      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
-      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
-      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
-    </div>
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn btn-produce" onclick="send('produce')">
+      <span class="btn-icon">📋</span>
+      <span class="btn-label">Add to MEP List</span>
+    </button>
+
+    <button class="btn btn-done" onclick="send('done')">
+      <span class="btn-icon">✓</span>
+      <span class="btn-label">Finish MEP</span>
+    </button>
+
+    <button class="btn btn-waste" onclick="send('waste')">
+      <span class="btn-icon">⚠</span>
+      <span class="btn-label">Waste</span>
+    </button>
+
+    <button class="btn btn-cancel" onclick="cancelScan()">
+      <span class="btn-icon">←</span>
+      <span class="btn-label">Cancel</span>
+    </button>
   </div>
 
-</div>
-
-<!-- MODAL -->
-<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <div id="m-img-ph" class="modal-img-ph">🍽</div>
-    <img id="m-img" class="modal-img" alt="" onload="this.classList.add('shown');document.getElementById('m-img-ph').style.display='none'">
-    <div class="modal-body">
-      <div class="modal-code" id="m-code"></div>
-      <div class="modal-name" id="m-name"></div>
-      <div class="modal-stats">
-        <div class="modal-stat"><div class="modal-stat-val amber" id="m-produce">—</div><div class="modal-stat-lbl">MEP List</div></div>
-        <div class="modal-stat"><div class="modal-stat-val green" id="m-done">—</div><div class="modal-stat-lbl">Finished</div></div>
-        <div class="modal-stat"><div class="modal-stat-val red"   id="m-waste">—</div><div class="modal-stat-lbl">Waste</div></div>
-      </div>
-    </div>
-    <button class="modal-close" onclick="closeModal()">Close · Schliessen</button>
+  <!-- Feedback -->
+  <div class="feedback">
+    <div class="feedback-inner" id="msg"></div>
   </div>
+
 </div>
 
 <script>
-// ── Back navigation ─────────────────────────────────────────
-// Returns to the exact scan URL the user came from (preserves ?code=)
-// Falls back to the plain index page if nothing was saved
-function goBack(e) {
-  e.preventDefault();
-  const saved = sessionStorage.getItem("lastScanUrl");
-  window.location.href = saved || "https://mega0826.github.io/Kitchen-System/index.html";
-}
+  const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
-const API = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+  let PRODUCT_MAP = {};
+  let CURRENT_CODE = "";
 
-let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
-
-// Clock
-setInterval(() => {
-  document.getElementById("clock").textContent =
-    new Date().toLocaleTimeString("de-CH", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-}, 1000);
-
-// Tab switch
-function switchTab(btn) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  btn.classList.add("active");
-  document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
-}
-
-// Fetch
-async function get(params) {
-  const res = await fetch(API + "?" + new URLSearchParams(params));
-  return res.json();
-}
-
-// Format time
-function fmt(raw) {
-  const d = new Date(raw);
-  return isNaN(d) ? raw : d.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"})
-    + " · " + d.toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"});
-}
-
-// ── KDS ──────────────────────────────────────────────────────
-async function loadKDS() {
-  try {
-    const data = await get({ action: "scans" });
-    allScans = Array.isArray(data.scans) ? data.scans : [];
-    buildStats();
-    renderStats();
-    renderProductBars();
-    renderWorkerBars();
-    renderFeed();
-  } catch(e) {
-    document.getElementById("scan-feed").innerHTML = `<div class="error-msg">Error loading scans: ${e.message}</div>`;
+  /* ── Show feedback ── */
+  function showMsg(text, type = "info") {
+    const el = document.getElementById("msg");
+    el.textContent = text;
+    el.className = `feedback-inner visible ${type}`;
   }
-}
 
-function buildStats() {
-  scanStats = {};
-  allScans.forEach(s => {
-    const c = s.code || "";
-    if (!scanStats[c]) scanStats[c] = { produce:0, done:0, waste:0, total:0 };
-    if (s.action in scanStats[c]) scanStats[c][s.action]++;
-    scanStats[c].total++;
+  /* ── Load products ── */
+  async function preloadProducts() {
+    try {
+      const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          if (!item) return;
+          const code = item.code || item.Code || item.barcode || item.Barcode;
+          if (code) PRODUCT_MAP[code] = item;
+        });
+      } else {
+        PRODUCT_MAP = data || {};
+      }
+    } catch (err) {
+      console.error("Product load error:", err);
+      document.getElementById("product").textContent = "Error loading";
+    }
+  }
+
+  /* ── Load workers ── */
+  async function preloadWorkers() {
+    try {
+      const res = await fetch(`${API_URL}?action=workers`, { cache: "force-cache" });
+      const data = await res.json();
+      const select = document.getElementById("worker");
+      select.innerHTML = "";
+
+      const workers = data.workers || data.Workers || data || [];
+      workers.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = w;
+        opt.textContent = w;
+        select.appendChild(opt);
+      });
+      loadSavedWorker();
+    } catch (err) {
+      console.error("Worker load error:", err);
+    }
+  }
+
+  /* ── Show product ── */
+  function showProduct() {
+    const params = new URLSearchParams(window.location.search);
+    CURRENT_CODE = params.get("code") || "";
+
+    const pd    = PRODUCT_MAP[CURRENT_CODE];
+    const name  = pd ? (pd.name || pd.Name || pd.title || CURRENT_CODE) : (CURRENT_CODE || "Unknown product");
+    const image = pd ? (pd.image || pd.Image || "") : "";
+
+    document.getElementById("product").textContent = name;
+    if (CURRENT_CODE) {
+      document.getElementById("productCode").textContent = "CODE · " + CURRENT_CODE;
+    }
+
+    const img = document.getElementById("productImage");
+    const ph  = document.getElementById("imgPlaceholder");
+    if (image) {
+      img.src = image;
+      // onload handler on the <img> reveals it and hides placeholder
+    } else {
+      img.style.display = "none";
+      if (ph) ph.style.display = "block";
+    }
+  }
+
+  /* ── Worker persistence ── */
+  function saveWorker() {
+    localStorage.setItem("worker", document.getElementById("worker").value);
+  }
+  function loadSavedWorker() {
+    const saved = localStorage.getItem("worker");
+    const select = document.getElementById("worker");
+    if (saved && select.options.length > 0) select.value = saved;
+  }
+  document.getElementById("worker").addEventListener("change", saveWorker);
+
+  /* ── Send action ── */
+  function send(action) {
+    const worker = document.getElementById("worker").value;
+    if (!worker) { showMsg("Select a staff member first", "error"); return; }
+
+    const labels = { produce: "Added to MEP List", done: "MEP Finished ✓", waste: "Marked as Waste" };
+    showMsg("Saving…", "info");
+
+    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
+    fetch(url)
+      .then(() => {
+        showMsg(labels[action] || "Saved", "success");
+        setTimeout(() => { window.location.href = "scan://restart"; }, 700);
+      })
+      .catch(() => showMsg("Network error — try again", "error"));
+  }
+
+  /* ── Cancel ── */
+  function cancelScan() {
+    window.location.href = "scan://restart";
+  }
+
+  /* ── Init ── */
+  window.addEventListener("DOMContentLoaded", async () => {
+    // Save the full scan URL (with ?code=) so dashboard can return to it
+    if (window.location.search.includes("code=")) {
+      sessionStorage.setItem("lastScanUrl", window.location.href);
+    }
+    await preloadProducts();
+    showProduct();
+    preloadWorkers();
   });
-}
-
-function renderStats() {
-  document.getElementById("s-total").textContent   = allScans.length;
-  document.getElementById("s-produce").textContent = allScans.filter(s=>s.action==="produce").length;
-  document.getElementById("s-done").textContent    = allScans.filter(s=>s.action==="done").length;
-  document.getElementById("s-waste").textContent   = allScans.filter(s=>s.action==="waste").length;
-}
-
-function bar(label, val, max, color) {
-  const pct = max > 0 ? Math.round(val/max*100) : 0;
-  return `<div class="bar-row">
-    <div class="bar-name" title="${label}">${label}</div>
-    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--${color})"></div></div>
-    <div class="bar-count">${val}</div>
-  </div>`;
-}
-
-function renderProductBars() {
-  const sorted = Object.entries(scanStats)
-    .map(([code,s]) => ({ label:(allProducts[code]||{}).name||code, val:s.total }))
-    .sort((a,b)=>b.val-a.val).slice(0,8);
-  const max = sorted[0]?.val || 1;
-  const colors = ["amber","green","red","blue","amber","green","red","blue"];
-  document.getElementById("product-bars").innerHTML = sorted.length
-    ? sorted.map((p,i) => bar(p.label, p.val, max, colors[i])).join("")
-    : `<div class="empty-state"><div class="empty-icon">📊</div>No scan data yet</div>`;
-}
-
-function renderWorkerBars() {
-  const wm = {};
-  allScans.forEach(s => { const w = s.worker||"?"; wm[w]=(wm[w]||0)+1; });
-  const sorted = Object.entries(wm).sort((a,b)=>b[1]-a[1]);
-  const max = sorted[0]?.[1] || 1;
-  document.getElementById("worker-bars").innerHTML = sorted.length
-    ? sorted.map(([w,n]) => bar(w, n, max, "blue")).join("")
-    : `<div class="empty-state"><div class="empty-icon">👤</div>No worker data yet</div>`;
-}
-
-function renderFeed() {
-  const rows = [...allScans].reverse().slice(0,30).map(s =>
-    `<div class="feed-row">
-      <span class="feed-time">${fmt(s.timestamp)}</span>
-      <span>${s.worker||"—"}</span>
-      <span style="color:var(--muted);font-size:11px">${s.code||"—"}</span>
-      <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
-    </div>`).join("");
-  document.getElementById("scan-feed").innerHTML =
-    `<div class="feed-row hdr"><span>Time · Zeit</span><span>Worker</span><span>Code</span><span>Action</span></div>`
-    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
-}
-
-// ── INVENTORY ────────────────────────────────────────────────
-async function loadInventory() {
-  try {
-    const data = await get({ action: "inventory" });
-    allInventory = Array.isArray(data.inventory) ? data.inventory : [];
-    renderInventory(allInventory);
-  } catch(e) {
-    document.getElementById("inv-content").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
-  }
-}
-
-function stockClass(qty, min) {
-  qty = Number(qty)||0; min = Number(min)||0;
-  if (qty <= 0)   return ["out","Out of stock · Leer"];
-  if (qty <= min) return ["low","Low · Niedrig"];
-  return             ["ok","OK"];
-}
-
-function renderInventory(rows) {
-  if (!rows.length) {
-    document.getElementById("inv-content").innerHTML =
-      `<div class="empty-state"><div class="empty-icon">📦</div>No inventory data.<br>Check your "Lager" sheet.</div>`;
-    return;
-  }
-  const trs = rows.map(r => {
-    const [cls,lbl] = stockClass(r.quantity, r.minimum);
-    return `<tr>
-      <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
-      <td>${r.name||"—"}</td>
-      <td style="color:var(--muted)">${r.unit||"—"}</td>
-      <td>${Number(r.quantity)||0}</td>
-      <td style="color:var(--muted)">${r.minimum||"—"}</td>
-      <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
-    </tr>`;
-  }).join("");
-  document.getElementById("inv-content").innerHTML = `
-    <div class="inv-table-wrap"><table class="inv-table">
-      <thead><tr><th>Code</th><th>Product · Produkt</th><th>Unit · Einheit</th><th>Qty · Menge</th><th>Min</th><th>Status</th></tr></thead>
-      <tbody>${trs}</tbody>
-    </table></div>`;
-}
-
-function filterInventory() {
-  const q = document.getElementById("inv-search").value.toLowerCase();
-  renderInventory(allInventory.filter(r =>
-    (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q)));
-}
-
-// ── PRODUCTS ─────────────────────────────────────────────────
-async function loadProducts() {
-  try {
-    const data = await get({ action: "allProducts" });
-    allProducts = (data && !data.error) ? data : {};
-    renderProductGrid(Object.entries(allProducts));
-  } catch(e) {
-    document.getElementById("product-grid").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
-  }
-}
-
-function renderProductGrid(entries) {
-  if (!entries.length) {
-    document.getElementById("product-grid").innerHTML =
-      `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
-    return;
-  }
-  document.getElementById("product-grid").innerHTML = entries.map(([code,p]) => {
-    const img = p.image
-      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
-      : `<div class="product-thumb-ph">🍽</div>`;
-    return `<div class="product-card" onclick="openModal('${code}')">
-      ${img}
-      <div class="product-body">
-        <div class="product-name-card">${p.name||code}</div>
-        <div class="product-code-card">CODE · ${code}</div>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-function filterProducts() {
-  const q = document.getElementById("prod-search").value.toLowerCase();
-  renderProductGrid(Object.entries(allProducts).filter(([code,p]) =>
-    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)));
-}
-
-// ── MODAL ─────────────────────────────────────────────────────
-function openModal(code) {
-  const p = allProducts[code]||{}, st = scanStats[code]||{produce:0,done:0,waste:0};
-  document.getElementById("m-code").textContent    = "CODE · " + code;
-  document.getElementById("m-name").textContent    = p.name||code;
-  document.getElementById("m-produce").textContent = st.produce;
-  document.getElementById("m-done").textContent    = st.done;
-  document.getElementById("m-waste").textContent   = st.waste;
-  const img = document.getElementById("m-img");
-  const ph  = document.getElementById("m-img-ph");
-  img.classList.remove("shown");
-  ph.style.display = "flex";
-  if (p.image) { img.src = p.image; } else { img.src = ""; }
-  document.getElementById("modal").classList.add("open");
-}
-function closeModal() { document.getElementById("modal").classList.remove("open"); }
-
-// ── INIT ──────────────────────────────────────────────────────
-Promise.allSettled([loadKDS(), loadProducts(), loadInventory()]);
-setInterval(loadKDS, 60_000);
 </script>
 </body>
 </html>
