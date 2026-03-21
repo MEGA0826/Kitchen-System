@@ -266,7 +266,7 @@
     /* ── Action Buttons ── */
     .actions {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
       flex: 1;
       animation: slideUp .3s .14s ease both;
@@ -293,22 +293,22 @@
     .btn-icon  { font-size: 24px; line-height: 1; }
     .btn-label { font-size: 15px; letter-spacing: 0.5px; }
 
+    /* Row 1: produce (left) | done (right) */
     .btn-produce {
       background: var(--amber-dim);
       color: var(--amber);
       border: 1px solid var(--amber-brd);
-      grid-column: 1 / -1;
-      flex-direction: row;
-      gap: 10px;
+      flex-direction: column;
     }
-    .btn-produce .btn-icon  { font-size: 20px; }
-    .btn-produce .btn-label { font-size: 15px; }
+    .btn-produce .btn-icon  { font-size: 22px; }
+    .btn-produce .btn-label { font-size: 14px; }
 
-    /* 3 equal columns: Finish | Used | Waste */
+    /* Row 2: used (left) | waste (right) */
     .btn-done  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .btn-used  { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-brd); }
     .btn-waste { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
 
+    /* Row 3: cancel full width */
     .btn-cancel {
       background: var(--gray-dim);
       color: var(--muted);
@@ -322,6 +322,11 @@
       height: auto;
     }
     .btn-cancel .btn-icon { font-size: 13px; }
+    /* Finish button dimmed when nothing in MEP list */
+    .btn-done.inactive {
+      opacity: 0.3;
+      pointer-events: none;
+    }
 
     /* ── Feedback ── */
     .feedback {
@@ -570,6 +575,18 @@
     if (gnWeight) listText += ` = ${listWt} kg`;
     listText += `</strong>`;
     labelList.innerHTML = listText;
+
+    // Deactivate "Finish MEP" when nothing is in the MEP list
+    const btnDone = document.querySelector(".btn-done");
+    if (btnDone) {
+      if (inProg === 0) {
+        btnDone.classList.add("inactive");
+        btnDone.title = "Nothing in MEP list to finish";
+      } else {
+        btnDone.classList.remove("inactive");
+        btnDone.title = "";
+      }
+    }
 
     if (data.listFull) {
       dotList.className = "mep-dot green";
