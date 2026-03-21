@@ -35,8 +35,9 @@
     .back-btn:hover { color: var(--text); border-color: var(--amber); }
 
     /* NAV */
-    .nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); }
-    .tab { padding: 11px 20px; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
+    .nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); overflow-x: auto; overflow-y: visible; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; }
+    .nav::-webkit-scrollbar { display: none; }
+    .tab { padding: 11px 20px; white-space: nowrap; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
     .tab:hover { color: var(--text); }
     .tab.active { color: var(--amber); border-bottom-color: var(--amber); }
 
@@ -405,7 +406,12 @@
         <div class="form-grid">
           <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pf-code" placeholder="e.g. P-001"></div>
           <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pf-name" placeholder="e.g. Karotten gewürfelt"></div>
-          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="pf-kategorie" placeholder="e.g. Gemüse"></div>
+          <datalist id="dl-prod-cat">
+            <option value="Gemüse"><option value="Trockenwaren"><option value="TK Produkte">
+            <option value="Fleisch"><option value="Fisch"><option value="Milchprodukte">
+            <option value="Früchte"><option value="Gewürze"><option value="Saucen &amp; Öle">
+          </datalist>
+          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="pf-kategorie" placeholder="e.g. Gemüse" list="dl-prod-cat"></div>
           <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="pf-mepmax" placeholder="2" min="0"></div>
           <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="pf-gnsize" placeholder="GN1/1"></div>
           <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="pf-gnweight" placeholder="4" min="0" step="0.1"></div>
@@ -445,17 +451,43 @@
       <div class="admin-list" id="admin-inv-list"></div>
       <div class="admin-form" id="inv-form">
         <div class="admin-form-title" id="if-form-title">Add / update stock item</div>
+        <!-- Datalists for autocomplete -->
+        <datalist id="dl-inv-cat">
+          <option value="Gemüse">
+          <option value="Trockenwaren">
+          <option value="TK Produkte">
+          <option value="Fleisch">
+          <option value="Fisch">
+          <option value="Milchprodukte">
+          <option value="Früchte">
+          <option value="Gewürze">
+          <option value="Getränke">
+          <option value="Saucen &amp; Öle">
+        </datalist>
+        <datalist id="dl-inv-unit">
+          <option value="kg">
+          <option value="g">
+          <option value="l">
+          <option value="ml">
+          <option value="Stück">
+          <option value="Bund">
+          <option value="Pkg">
+          <option value="Dose">
+        </datalist>
+        <datalist id="dl-inv-lieferant"></datalist>
+        <datalist id="dl-inv-code"></datalist>
+
         <div class="form-grid">
-          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. P-001"></div>
-          <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from product"></div>
-          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse"></div>
-          <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l"></div>
+          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
+          <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from Lager"></div>
+          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse" list="dl-inv-cat"></div>
+          <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l" list="dl-inv-unit"></div>
           <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
           <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="if-weight" placeholder="1" min="0" step="0.01"></div>
           <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
           <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="if-max" placeholder="50" min="0" step="0.1"></div>
           <div class="form-field"><label class="form-label">Kosten/Unit (CHF)</label><input class="form-input" type="number" id="if-kosten" placeholder="2.50" min="0" step="0.01"></div>
-          <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Transgourmet"></div>
+          <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Transgourmet" list="dl-inv-lieferant"></div>
           <div class="form-field"><label class="form-label">Last ordered</label><input class="form-input" type="date" id="if-lastorder"></div>
           <div class="form-field"><label class="form-label">Notes</label><input class="form-input" id="if-notizen" placeholder="e.g. Kühl lagern"></div>
         </div>
@@ -703,7 +735,7 @@ function buildMepAlerts() {
       ${expiredCard > 0 ? `<div class="mep-stat-row"><span class="mep-stat-label" style="color:var(--red)">⚠ Shelf life</span><span class="mep-stat-val red">${expiredCard} batch${expiredCard>1?"es":""} over ${shelfLifeCard}d old</span></div>` : ""}
       <div class="mep-stat-row">
         <span class="mep-stat-label">To produce</span>
-        <span class="mep-stat-val ${listFull?"green":"amber"}">${inProgress}${gnLabel}${gnWeight?" · "+gnWeight+" kg/GN = "+listWeight+" kg":""}</span>
+        <span class="mep-stat-val ${listFull?"green":"amber"}">${tagesziel>0 ? Math.max(0,tagesziel-available) : inProgress}${gnLabel}${gnWeight&&(tagesziel>0?(Math.max(0,tagesziel-available)):inProgress)>0?" = "+((tagesziel>0?Math.max(0,tagesziel-available):inProgress)*gnWeight)+" kg":""}</span>
       </div>`;
 
     if (tagesziel > 0) {
@@ -712,10 +744,6 @@ function buildMepAlerts() {
       <div class="mep-stat-row">
         <span class="mep-stat-label">Daily target</span>
         <span class="mep-stat-val muted">${tagesziel}${gnLabel}</span>
-      </div>
-      <div class="mep-stat-row">
-        <span class="mep-stat-label">Still needed</span>
-        <span class="mep-stat-val ${stillNeeded===0?"green":"amber"}">${stillNeeded}${gnLabel}${gnWeight&&stillNeeded>0?" = "+rohwareNeeded+" kg Rohware":""}</span>
       </div>`;
     }
 
@@ -845,7 +873,7 @@ function renderInventory(rows) {
       <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
       <td>${r.name||"—"}</td>
       <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
-      <td style="font-weight:500">${qtyDisplay}</td>
+      <td style="font-weight:500">${qtyDisplay}${qtyDisplay !== "—" && r.unit ? " "+r.unit : ""}</td>
       <td style="color:var(--muted)">${r.unit||"—"}</td>
       <td style="color:var(--muted)">${totKg}</td>
       <td style="color:var(--muted)">${minDisplay}</td>
@@ -897,7 +925,10 @@ function renderProductGrid(entries) {
     const used     = st.used   || 0;
     const produce  = st.produce || 0;
     const avail    = Math.max(0, done - waste - used);
-    const inProg   = Math.max(0, produce - done);
+    // When no produce scans exist (button removed), inProg = mepMax - done
+    const inProg   = (produce === 0 && p.mepMax > 0)
+      ? Math.max(0, p.mepMax - done)
+      : Math.max(0, produce - done);
     const gnLabel  = p.gnSize ? " " + p.gnSize : "";
 
     const img = p.image
@@ -1268,17 +1299,18 @@ function clearInvForm() {
   document.getElementById("if-cancel").style.display   = "none";
 }
 
-// Auto-fill name from product when code is entered
+// Auto-fill from existing inventory or product when code is entered
 document.getElementById("if-code")?.addEventListener("blur", () => {
   const code = document.getElementById("if-code").value.trim();
+  if (!code) return;
   const existing = allInventory.find(x => x.code === code);
-  if (existing) {
-    editInvItem(code);
-    return;
-  }
-  if (code && allProducts[code] && !document.getElementById("if-name").value) {
-    document.getElementById("if-name").value = allProducts[code].name || "";
-    document.getElementById("if-unit").value = allProducts[code].gnSize || "";
+  if (existing) { editInvItem(code); return; }
+  // Auto-fill name + category from Produkt sheet if code matches
+  const p = allProducts[code];
+  if (p) {
+    if (!document.getElementById("if-name").value)      document.getElementById("if-name").value      = p.name      || "";
+    if (!document.getElementById("if-kategorie").value) document.getElementById("if-kategorie").value = p.kategorie || "";
+    if (!document.getElementById("if-unit").value)      document.getElementById("if-unit").value      = p.gnSize    || "";
   }
 });
 
@@ -1320,10 +1352,40 @@ async function saveInvItem() {
 function loadAdminTab() {
   renderAdminProducts();
   renderAdminInventory();
+  populateInvDataLists();
   adminCall({ action: "workers" }).then(d => {
     allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
     renderAdminWorkers();
   });
+}
+
+function populateInvDataLists() {
+  // Supplier list from existing inventory
+  const suppliers = [...new Set(allInventory.map(r => r.lieferant||"").filter(Boolean))].sort();
+  const dlSup = document.getElementById("dl-inv-lieferant");
+  if (dlSup) dlSup.innerHTML = suppliers.map(s => `<option value="${s}">`).join("");
+
+  // Extra categories from existing data
+  const cats = [...new Set([
+    ...allInventory.map(r => r.kategorie||""),
+    ...Object.values(allProducts).map(p => p.kategorie||"")
+  ].filter(Boolean))].sort();
+  ["dl-inv-cat","dl-prod-cat"].forEach(id => {
+    const dl = document.getElementById(id);
+    if (!dl) return;
+    const existing = [...dl.options].map(o => o.value);
+    cats.filter(c => !existing.includes(c)).forEach(c => {
+      const o = document.createElement("option");
+      o.value = c; dl.appendChild(o);
+    });
+  });
+
+  // Code suggestions from existing inventory
+  const dlCode = document.getElementById("dl-inv-code");
+  if (dlCode) dlCode.innerHTML = allInventory
+    .filter(r => r.code)
+    .map(r => `<option value="${r.code}" label="${r.name||""}">`)
+    .join("");
 }
 
 
