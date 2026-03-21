@@ -329,12 +329,19 @@
     <div class="admin-section">
       <div class="admin-section-title">Products</div>
       <div class="admin-section-sub">Produkt sheet</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <input class="form-input" id="admin-prod-search" placeholder="Search product…" oninput="renderAdminProducts()" style="flex:1;min-width:160px">
+        <select class="form-input" id="admin-prod-cat" onchange="renderAdminProducts()" style="flex:1;min-width:140px">
+          <option value="">All categories</option>
+        </select>
+      </div>
       <div class="admin-list" id="admin-product-list"></div>
       <div class="admin-form" id="product-form">
         <div class="admin-form-title" id="product-form-title">Add new product</div>
         <div class="form-grid">
           <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pf-code" placeholder="e.g. P-001"></div>
           <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pf-name" placeholder="e.g. Karotten gewürfelt"></div>
+          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="pf-kategorie" placeholder="e.g. Gemüse"></div>
           <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="pf-mepmax" placeholder="2" min="0"></div>
           <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="pf-gnsize" placeholder="GN1/1"></div>
           <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="pf-gnweight" placeholder="4" min="0" step="0.1"></div>
@@ -458,10 +465,22 @@ function fmt(raw) {
 }
 
 // ── KDS ──────────────────────────────────────────────────────
+function buildScanStats() {
+  scanStats = {};
+  allScans.forEach(s => {
+    const c = s.code || "";
+    if (!scanStats[c]) scanStats[c] = { produce:0, done:0, waste:0, used:0, total:0 };
+    const a = s.action || "";
+    if (a in scanStats[c]) scanStats[c][a]++;
+    scanStats[c].total++;
+  });
+}
+
 async function loadKDS() {
   try {
     const data = await get({ action: "scans" });
     allScans = Array.isArray(data.scans) ? data.scans : [];
+    buildScanStats();
     buildStats();
     buildMepAlerts();
     renderStats();
@@ -696,12 +715,12 @@ function renderFeed() {
     return `<div class="feed-row">
       <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
       <span style="font-size:12px">${s.worker||"—"}</span>
-      <span style="font-size:12px">${name}</span>
       <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
+      <span style="font-size:12px">${name}</span>
     </div>`;
   }).join("");
   document.getElementById("scan-feed").innerHTML =
-    `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Product</span><span>Action</span></div>`
+    `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Action</span><span>Product</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
 }
 
@@ -923,14 +942,40 @@ async function adminCall(params) {
 
 // ── Products admin ────────────────────────────────────────────
 function renderAdminProducts() {
-  const list = document.getElementById("admin-product-list");
+  const list    = document.getElementById("admin-product-list");
+  const catSel  = document.getElementById("admin-prod-cat");
   if (!list) return;
-  const entries = Object.entries(allProducts).filter(([,p]) => p.name && p.name !== "(deleted)");
-  if (!entries.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products yet</div>`; return; }
+
+  let entries = Object.entries(allProducts).filter(([,p]) => p.name && p.name !== "(deleted)");
+
+  // Build category dropdown options
+  const cats = [...new Set(entries.map(([,p]) => p.kategorie || "").filter(Boolean))].sort();
+  const curCat = catSel ? catSel.value : "";
+  if (catSel) {
+    catSel.innerHTML = `<option value="">All categories (${entries.length})</option>`
+      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  }
+
+  // Filter by category
+  if (curCat) entries = entries.filter(([,p]) => (p.kategorie||"") === curCat);
+
+  // Filter by search
+  const q = (document.getElementById("admin-prod-search")?.value || "").toLowerCase();
+  if (q) entries = entries.filter(([code,p]) =>
+    (p.name||"").toLowerCase().includes(q) ||
+    code.toLowerCase().includes(q) ||
+    (p.kategorie||"").toLowerCase().includes(q)
+  );
+
+  if (!entries.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products found</div>`;
+    return;
+  }
+
   list.innerHTML = entries.map(([code, p]) => `
     <div class="admin-item">
       <div style="flex:1;min-width:0">
-        <div class="admin-item-name">${p.name}</div>
+        <div class="admin-item-name">${p.name} ${p.kategorie ? `<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${p.kategorie}</span>` : ""}</div>
         <div class="admin-item-sub">${code} · Max ${p.mepMax||"—"} ${p.gnSize||""} · Target ${p.tagesziel||"—"} · ${p.gnWeight||"—"} kg/GN · Shelf ${p.shelfLife||2}d</div>
       </div>
       <div class="admin-item-actions">
@@ -945,6 +990,7 @@ function editProduct(code) {
   document.getElementById("pf-code").value      = code;
   document.getElementById("pf-code").readOnly   = true;
   document.getElementById("pf-name").value      = p.name      || "";
+  document.getElementById("pf-kategorie").value = p.kategorie || "";
   document.getElementById("pf-mepmax").value    = p.mepMax    ?? "";
   document.getElementById("pf-gnsize").value    = p.gnSize    || "";
   document.getElementById("pf-gnweight").value  = p.gnWeight  ?? "";
@@ -957,7 +1003,7 @@ function editProduct(code) {
 }
 
 function clearProductForm() {
-  ["pf-code","pf-name","pf-mepmax","pf-gnsize","pf-gnweight","pf-tagesziel","pf-shelf","pf-drive"]
+  ["pf-code","pf-name","pf-kategorie","pf-mepmax","pf-gnsize","pf-gnweight","pf-tagesziel","pf-shelf","pf-drive"]
     .forEach(id => { document.getElementById(id).value = ""; });
   document.getElementById("pf-code").readOnly = false;
   document.getElementById("product-form-title").textContent = "Add new product";
@@ -975,6 +1021,7 @@ async function saveProduct() {
     const data = await adminCall({
       action     : "saveProduct",
       code, name,
+      kategorie  : document.getElementById("pf-kategorie").value.trim(),
       mepMax     : document.getElementById("pf-mepmax").value,
       gnSize     : document.getElementById("pf-gnsize").value,
       gnWeight   : document.getElementById("pf-gnweight").value,
