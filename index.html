@@ -178,40 +178,41 @@
       flex-shrink: 0;
     }
 
-    /* ── MEP Status bar ── */
-    .mep-bar {
-      margin-top: 6px;
+    /* ── MEP Status rows ── */
+    .mep-status {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .mep-row {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .mep-track {
-      flex: 1;
-      height: 6px;
-      background: var(--surface2);
-      border-radius: 3px;
-      overflow: hidden;
+    .mep-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
-    .mep-fill {
-      height: 100%;
-      border-radius: 3px;
-      background: var(--green);
-      transition: width .4s ease;
-    }
-    .mep-fill.full { background: var(--red); }
-    .mep-label {
-      font-size: 11px;
+    .mep-dot.green { background: var(--green); }
+    .mep-dot.amber { background: var(--amber); }
+    .mep-dot.red   { background: var(--red); }
+    .mep-row-label {
+      font-size: 12px;
       color: var(--muted);
-      white-space: nowrap;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
     }
-    .mep-label.full { color: var(--red); }
+    .mep-row-label strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .mep-row-label.full strong { color: var(--red); }
 
-    /* Full overlay on the action buttons */
-    .btn.blocked {
-      opacity: 0.35;
-      pointer-events: none;
-    }
+    /* Block produce button */
+    .btn.blocked { opacity: 0.35; pointer-events: none; }
+
+    /* Full MEP list message inside actions grid */
     .mep-full-msg {
       display: none;
       grid-column: 1 / -1;
@@ -219,9 +220,9 @@
       border: 1px solid var(--red-brd);
       color: var(--red);
       border-radius: var(--radius);
-      padding: 14px;
+      padding: 12px;
       text-align: center;
-      font-size: 15px;
+      font-size: 14px;
       letter-spacing: 0.5px;
     }
     .mep-full-msg.visible { display: block; }
@@ -365,9 +366,15 @@
       <div class="product-label">Scanned product</div>
       <div class="product-name" id="product"><div class="skeleton"></div></div>
       <div class="product-code" id="productCode"></div>
-      <div class="mep-bar" id="mepBar" style="display:none">
-        <div class="mep-track"><div class="mep-fill" id="mepFill" style="width:0%"></div></div>
-        <span class="mep-label" id="mepLabel"></span>
+      <div class="mep-status" id="mepStatus" style="display:none">
+        <div class="mep-row">
+          <span class="mep-dot green" id="mepDotDone"></span>
+          <span class="mep-row-label" id="mepLabelDone"></span>
+        </div>
+        <div class="mep-row">
+          <span class="mep-dot amber" id="mepDotList"></span>
+          <span class="mep-row-label" id="mepLabelList"></span>
+        </div>
       </div>
     </div>
     <!-- Image always on the right, fixed 64×64 -->
@@ -464,46 +471,53 @@
   }
 
   function updateMepUI(data) {
-    const bar     = document.getElementById("mepBar");
-    const fill    = document.getElementById("mepFill");
-    const label   = document.getElementById("mepLabel");
+    const status  = document.getElementById("mepStatus");
     const fullMsg = document.getElementById("mepFullMsg");
     const btnProd = document.querySelector(".btn-produce");
-    const btnDone = document.querySelector(".btn-done");
 
-    // No max set — hide bar, allow all
+    // No MEP config — hide everything
     if (!data.mepMax || data.mepMax === 0) {
-      bar.style.display = "none";
+      status.style.display = "none";
       fullMsg.classList.remove("visible");
       if (btnProd) btnProd.classList.remove("blocked");
-      if (btnDone) btnDone.classList.remove("blocked");
       return;
     }
 
-    bar.style.display = "flex";
-    const pct = Math.min(100, Math.round((data.doneCount / data.mepMax) * 100));
-    fill.style.width = pct + "%";
+    status.style.display = "flex";
 
-    // Build label: "1 / 2 GN1/1 (4 kg) = 8 kg total"
-    let labelText = `${data.doneCount} / ${data.mepMax}`;
-    if (data.gnSize)   labelText += ` ${data.gnSize}`;
-    if (data.gnWeight) labelText += ` · ${data.gnWeight} kg/GN = ${data.totalWeight} kg`;
+    const inProg    = data.inProgress  !== undefined ? data.inProgress  : Math.max(0, (data.produceCount||0) - (data.doneCount||0));
+    const done      = data.doneCount   || 0;
+    const gnSize    = data.gnSize      || "";
+    const gnWeight  = data.gnWeight    || 0;
+    const listWt    = gnWeight ? inProg * gnWeight : (data.listWeight || 0);
+    const doneWt    = gnWeight ? done   * gnWeight : (data.doneWeight  || 0);
 
-    if (data.isFull) {
-      fill.classList.add("full");
-      label.classList.add("full");
-      label.textContent = labelText + " — VOLL";
+    // Row 1 — Finished (green dot)
+    const labelDone = document.getElementById("mepLabelDone");
+    const dotDone   = document.getElementById("mepDotDone");
+    let doneText    = `<strong>Finished: ${done}${gnSize ? " " + gnSize : ""}</strong>`;
+    if (gnWeight)   doneText += ` = ${doneWt} kg`;
+    labelDone.innerHTML = doneText;
+    dotDone.className   = "mep-dot green";
+
+    // Row 2 — In MEP list (amber, red when full)
+    const labelList = document.getElementById("mepLabelList");
+    const dotList   = document.getElementById("mepDotList");
+    let listText    = `<strong>To produce: ${inProg}${gnSize ? " " + gnSize : ""}</strong>`;
+    if (gnWeight)   listText += ` · ${gnWeight} kg/GN = ${listWt} kg`;
+    labelList.innerHTML  = listText;
+
+    if (data.listFull) {
+      dotList.className        = "mep-dot red";
+      labelList.classList.add("full");
+      fullMsg.textContent      = "Full MEP List";
       fullMsg.classList.add("visible");
-      fullMsg.textContent = `MEP voll — ${data.mepMax} × ${data.gnSize || "GN"}${data.gnWeight ? " (" + data.totalWeight + " kg)" : ""} erreicht`;
       if (btnProd) btnProd.classList.add("blocked");
-      if (btnDone) btnDone.classList.add("blocked");
     } else {
-      fill.classList.remove("full");
-      label.classList.remove("full");
-      label.textContent = labelText;
+      dotList.className        = "mep-dot amber";
+      labelList.classList.remove("full");
       fullMsg.classList.remove("visible");
       if (btnProd) btnProd.classList.remove("blocked");
-      if (btnDone) btnDone.classList.remove("blocked");
     }
   }
 
@@ -537,10 +551,9 @@
     const worker = document.getElementById("worker").value;
     if (!worker) { showMsg("Select a staff member first", "error"); return; }
 
-    // Client-side check: if already shown as full, don't even send
-    const fullMsg = document.getElementById("mepFullMsg");
-    if ((action === "produce" || action === "done") && fullMsg.classList.contains("visible")) {
-      showMsg("MEP voll — Maximum bereits erreicht", "error");
+    // Client-side block: produce button already shown as blocked
+    if (action === "produce" && document.querySelector(".btn-produce")?.classList.contains("blocked")) {
+      showMsg("Full MEP List — cannot add more", "error");
       return;
     }
 
@@ -550,13 +563,13 @@
     fetch(`${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
       .then(r => r.json())
       .then(data => {
-        if (data.status === "mep_full") {
-          // Server confirmed full — update UI and show message
+        // Server blocked produce — list is full
+        if (data.status === "list_full") {
           updateMepUI(data);
-          showMsg("MEP voll — Maximum bereits erreicht", "error");
+          showMsg("Full MEP List — cannot add more", "error");
           return;
         }
-        // Update MEP bar with fresh counts from server response
+        // Update bar with fresh server counts
         if (data.mepMax !== undefined) updateMepUI(data);
         showMsg(labels[action] || "Gespeichert", "success");
         setTimeout(() => { window.location.href = "scan://restart"; }, 700);
