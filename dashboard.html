@@ -145,6 +145,11 @@
     .product-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s, transform .12s; }
     .product-card:hover { border-color: var(--border2); transform: translateY(-2px); }
     .product-card:active { transform: scale(0.98); }
+    .prod-stats { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .prod-stat { font-size: 11px; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.3px; }
+    .prod-stat.green { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .prod-stat.amber { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
+    .prod-stat.red   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
     .product-thumb { width: 100%; height: 130px; object-fit: cover; display: block; }
     .product-thumb-ph { width: 100%; height: 130px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 32px; opacity: .3; }
     .product-body { padding: 12px 14px; }
@@ -585,10 +590,10 @@ function renderFeed() {
   const rows = [...allScans].reverse().slice(0,30).map(s => {
     const p    = allProducts[s.code] || {};
     const name = p.name || s.code || "—";
-    return `<div class="feed-row">
+    return `<div class="feed-row" style="cursor:pointer" onclick="goToProduct('${s.code}')" title="View ${name}">
       <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
       <span style="font-size:12px">${s.worker||"—"}</span>
-      <span style="font-size:12px">${name}</span>
+      <span style="font-size:12px;color:var(--amber)">${name}</span>
       <span style="color:var(--muted);font-size:10px">${s.code||"—"}</span>
       <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
     </div>`;
@@ -596,6 +601,17 @@ function renderFeed() {
   document.getElementById("scan-feed").innerHTML =
     `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Product</span><span>Code</span><span>Action</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
+}
+
+function goToProduct(code) {
+  // Switch to Products tab
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  const prodTab = document.querySelector("[data-tab='products']");
+  if (prodTab) prodTab.classList.add("active");
+  document.getElementById("panel-products").classList.add("active");
+  // Open product modal
+  if (allProducts[code]) openModal(code);
 }
 
 // ── INVENTORY ────────────────────────────────────────────────
@@ -623,22 +639,27 @@ function renderInventory(rows) {
     return;
   }
   const trs = rows.map(r => {
-    const qty = parseFloat(r.quantity) || 0;
-    const min = parseFloat(r.minimum)  || 0;
-    const [cls,lbl] = stockClass(qty, min);
-    // MEP available: check scanStats for finished - wasted
-    const st     = scanStats[r.code] || {};
-    const mepAvail = Math.max(0, (st.done||0) - (st.waste||0));
-    const p      = allProducts[r.code] || {};
-    const gnSize = p.gnSize || "";
-    const mepStr = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "—";
-    const qtyDisplay = qty > 0 ? qty : (r.quantity !== undefined ? parseFloat(r.quantity) : "—");
+    // quantity may be null (empty cell), 0, or a real number
+    const qty    = r.quantity !== null && r.quantity !== undefined ? Number(r.quantity) : null;
+    const min    = r.minimum  !== null && r.minimum  !== undefined ? Number(r.minimum)  : null;
+    const qtyNum = isNaN(qty) ? 0 : (qty || 0);
+    const minNum = isNaN(min) ? 0 : (min || 0);
+    const [cls,lbl] = stockClass(qtyNum, minNum);
+
+    const qtyDisplay = qty === null || isNaN(qty) ? "—" : qty;
+    const minDisplay = min === null || isNaN(min) || min === 0 ? "—" : min;
+
+    const st       = scanStats[r.code] || {};
+    const mepAvail = Math.max(0, (st.done||0) - (st.waste||0) - (st.used||0));
+    const p        = allProducts[r.code] || {};
+    const gnSize   = p.gnSize || "";
+    const mepStr   = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "—";
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
       <td>${r.name||"—"}</td>
       <td style="color:var(--muted)">${r.unit||"—"}</td>
       <td style="font-weight:500">${qtyDisplay}</td>
-      <td style="color:var(--muted)">${min > 0 ? min : "—"}</td>
+      <td style="color:var(--muted)">${minDisplay}</td>
       <td style="color:var(--green)">${mepStr}</td>
       <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
     </tr>`;
@@ -674,14 +695,32 @@ function renderProductGrid(entries) {
     return;
   }
   document.getElementById("product-grid").innerHTML = entries.map(([code,p]) => {
+    const st       = scanStats[code] || {};
+    const done     = st.done   || 0;
+    const waste    = st.waste  || 0;
+    const used     = st.used   || 0;
+    const produce  = st.produce || 0;
+    const avail    = Math.max(0, done - waste - used);
+    const inProg   = Math.max(0, produce - done);
+    const gnLabel  = p.gnSize ? " " + p.gnSize : "";
+
     const img = p.image
-      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
-      : `<div class="product-thumb-ph">🍽</div>`;
+      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" style="height:80px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
+      : `<div class="product-thumb-ph" style="height:80px">🍽</div>`;
+
+    const statsHtml = p.mepMax ? `
+      <div class="prod-stats">
+        <span class="prod-stat green">✓ ${avail}${gnLabel}</span>
+        <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
+        <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
+      </div>` : "";
+
     return `<div class="product-card" onclick="openModal('${code}')">
       ${img}
       <div class="product-body">
         <div class="product-name-card">${p.name||code}</div>
         <div class="product-code-card">CODE · ${code}</div>
+        ${statsHtml}
       </div>
     </div>`;
   }).join("");
