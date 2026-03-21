@@ -98,26 +98,30 @@
 
     /* LOAD PRODUCTS */
     async function preloadProducts() {
-  try {
-    const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
-    const data = await res.json();
+      try {
+        const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
+        const data = await res.json();
 
-    // Convert array → map
-    const map = {};
-    data.forEach(item => {
-      if (!item) return;
-      const code = item.code || item.Code || item.barcode || item.Barcode;
-      if (code) map[code] = item;
-    });
-
-    PRODUCT_MAP = map;
-
-  } catch (err) {
-    console.error("Product load error:", err);
-    document.getElementById("product").textContent = "Error loading products";
-  }
-}
-
+        // If backend returns an array, convert to map
+        if (Array.isArray(data)) {
+          const map = {};
+          data.forEach(item => {
+            if (!item) return;
+            const code = item.code || item.Code || item.barcode || item.Barcode;
+            if (code) {
+              map[code] = item;
+            }
+          });
+          PRODUCT_MAP = map;
+        } else {
+          // Already a map
+          PRODUCT_MAP = data || {};
+        }
+      } catch (err) {
+        console.error("Product load error:", err);
+        document.getElementById("product").textContent = "Error loading products";
+      }
+    }
 
     /* LOAD WORKERS */
     async function preloadWorkers() {
