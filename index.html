@@ -1,230 +1,493 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kitchen MEP — 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 
-  <!-- Register service worker -->
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js");
     }
   </script>
 
-  <!-- Inline CSS -->
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
+    /* ── Reset & Tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f0f0d;
+      --surface:   #1a1a16;
+      --surface2:  #242420;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #f0ede6;
+      --muted:     #888880;
+      --amber:     #e8a020;
+      --amber-dim: rgba(232,160,32,0.12);
+      --green:     #5dca8a;
+      --green-dim: rgba(93,202,138,0.12);
+      --red:       #e86050;
+      --red-dim:   rgba(232,96,80,0.12);
+      --gray:      #6b6b66;
+      --gray-dim:  rgba(255,255,255,0.06);
+      --radius:    14px;
+      --radius-sm: 8px;
     }
-    .title {
-      font-size: 34px;
-      font-weight: bold;
-      margin-top: 10px;
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      -webkit-font-smoothing: antialiased;
     }
-    .subtitle {
-      font-size: 22px;
-      color: #555;
-      margin-bottom: 25px;
+
+    /* ── Layout ── */
+    .page {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 20px 40px;
     }
-    .product-image {
-      width: 170px;
-      height: 170px;
+
+    /* ── Header ── */
+    .header {
+      padding: 22px 0 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 26px;
+      letter-spacing: -0.3px;
+      line-height: 1;
+      color: var(--text);
+    }
+    .brand-name em {
+      font-style: italic;
+      color: var(--amber);
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── Product Card ── */
+    .product-card {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: slideUp 0.35s ease both;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform: translateY(12px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    .product-image-wrap {
+      width: 100%;
+      height: 200px;
+      background: var(--surface2);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+    .product-image-wrap.has-image { display: flex; }
+    .product-image-wrap img {
+      width: 100%; height: 100%;
       object-fit: cover;
-      border-radius: 12px;
-      margin-bottom: 15px;
+    }
+
+    .product-info {
+      padding: 20px 20px 16px;
+    }
+    .product-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .product-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 32px;
+      line-height: 1.1;
+      color: var(--text);
+      min-height: 38px;
+    }
+    .product-code {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Worker Select ── */
+    .field-wrap {
+      margin-top: 20px;
+      animation: slideUp 0.35s 0.08s ease both;
+    }
+    .field-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .worker-select {
+      width: 100%;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Mono', monospace;
+      font-size: 15px;
+      padding: 13px 16px;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .worker-select:focus {
+      outline: none;
+      border-color: var(--amber);
+    }
+
+    /* ── Action Buttons ── */
+    .actions {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      animation: slideUp 0.35s 0.16s ease both;
+    }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.12s, opacity 0.12s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-icon {
+      font-size: 26px;
+      line-height: 1;
+    }
+    .btn-label {
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    .btn-produce {
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(232,160,32,0.25);
+      grid-column: 1 / -1; /* full width — primary action */
+      flex-direction: row;
+      justify-content: center;
+      padding: 22px 20px;
+    }
+    .btn-produce .btn-icon { font-size: 22px; }
+    .btn-produce .btn-label { font-size: 14px; }
+
+    .btn-done {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(93,202,138,0.2);
+    }
+    .btn-waste {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(232,96,80,0.2);
+    }
+    .btn-cancel {
+      background: var(--gray-dim);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      grid-column: 1 / -1;
+      flex-direction: row;
+      justify-content: center;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+    }
+    .btn-cancel .btn-icon { font-size: 16px; }
+
+    /* ── Feedback Message ── */
+    .feedback {
+      margin-top: 20px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: slideUp 0.35s 0.22s ease both;
+    }
+    .feedback-inner {
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      padding: 10px 20px;
+      border-radius: 40px;
       display: none;
     }
-    .product {
-      font-size: 32px;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-    select {
-      font-size: 20px;
-      padding: 10px;
-      width: 80%;
-      margin-bottom: 25px;
-      border-radius: 8px;
-    }
-    button {
-      width: 90%;
-      font-size: 26px;
-      padding: 20px;
-      margin: 10px;
-      border: none;
-      border-radius: 12px;
-      color: white;
-      cursor: pointer;
-    }
-    .produce { background: #ff9800; }
-    .done    { background: #4CAF50; }
-    .waste   { background: #f44336; }
-    .cancel  { background: #9e9e9e; }
+    .feedback-inner.visible { display: inline-flex; align-items: center; gap: 8px; }
+    .feedback-inner.success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(93,202,138,0.2); }
+    .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(232,96,80,0.2); }
+    .feedback-inner.info    { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(232,160,32,0.2); }
 
-    .message {
-      font-size: 26px;
-      margin-top: 20px;
-      min-height: 32px;
+    /* ── Loading skeleton ── */
+    .skeleton {
+      height: 36px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 0 0;
     }
   </style>
 </head>
 <body>
-  <h1 class="title">Kitchen MEP System</h1>
-  <h2 class="subtitle">212 : Nooch Richti</h2>
 
-  <img id="productImage" class="product-image" loading="lazy">
-  <div id="product" class="product">Loading...</div>
+<div class="page">
 
-  <select id="worker"></select>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="brand-name">Kitchen <em>MEP</em></div>
+      <div class="brand-sub">212 · Nooch Richti</div>
+    </div>
+    <div class="header-status">
+      <span class="status-dot"></span>
+      LIVE
+    </div>
+  </header>
 
-  <button class="produce" onclick="send('produce')">In MEP List</button>
-  <button class="done"    onclick="send('done')">Finish MEP</button>
-  <button class="waste"   onclick="send('waste')">Waste</button>
-  <button class="cancel"  onclick="cancelScan()">Cancel</button>
+  <!-- Product Card -->
+  <div class="product-card" id="productCard">
+    <div class="product-image-wrap" id="imageWrap">
+      <img id="productImage" loading="lazy" alt="">
+    </div>
+    <div class="product-info">
+      <div class="product-label">Scanned product</div>
+      <div class="product-name" id="product">
+        <div class="skeleton" style="width:60%;height:34px;margin-bottom:6px;"></div>
+      </div>
+      <div class="product-code" id="productCode"></div>
+    </div>
+  </div>
 
-  <div id="msg" class="message"></div>
+  <!-- Worker -->
+  <div class="field-wrap">
+    <label class="field-label" for="worker">Staff member</label>
+    <select class="worker-select" id="worker">
+      <option value="">Loading workers…</option>
+    </select>
+  </div>
 
-  <!-- App Logic -->
-  <script defer>
-    // TODO: make sure this is your CURRENT deployed web app URL
-    const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn btn-produce" onclick="send('produce')">
+      <span class="btn-icon">📋</span>
+      <span class="btn-label">Add to MEP List</span>
+    </button>
 
-    let PRODUCT_MAP = {};
-    let CURRENT_CODE = "";
+    <button class="btn btn-done" onclick="send('done')">
+      <span class="btn-icon">✓</span>
+      <span class="btn-label">Finish MEP</span>
+    </button>
 
-    /* LOAD PRODUCTS */
-    async function preloadProducts() {
-      try {
-        const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
-        const data = await res.json();
+    <button class="btn btn-waste" onclick="send('waste')">
+      <span class="btn-icon">⚠</span>
+      <span class="btn-label">Waste</span>
+    </button>
 
-        // If backend returns an array, convert to map
-        if (Array.isArray(data)) {
-          const map = {};
-          data.forEach(item => {
-            if (!item) return;
-            const code = item.code || item.Code || item.barcode || item.Barcode;
-            if (code) {
-              map[code] = item;
-            }
-          });
-          PRODUCT_MAP = map;
-        } else {
-          // Already a map
-          PRODUCT_MAP = data || {};
-        }
-      } catch (err) {
-        console.error("Product load error:", err);
-        document.getElementById("product").textContent = "Error loading products";
-      }
-    }
+    <button class="btn btn-cancel" onclick="cancelScan()">
+      <span class="btn-icon">←</span>
+      <span class="btn-label">Cancel</span>
+    </button>
+  </div>
 
-    /* LOAD WORKERS */
-    async function preloadWorkers() {
-      try {
-        const res = await fetch(API_URL, { cache: "force-cache" });
-        const data = await res.json();
-        const select = document.getElementById("worker");
-        select.innerHTML = "";
+  <!-- Feedback -->
+  <div class="feedback">
+    <div class="feedback-inner" id="msg"></div>
+  </div>
 
-        const workers = data.workers || data.Workers || data || [];
-        (workers || []).forEach(w => {
-          const opt = document.createElement("option");
-          opt.value = w;
-          opt.textContent = w;
-          select.appendChild(opt);
+</div>
+
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+
+  let PRODUCT_MAP = {};
+  let CURRENT_CODE = "";
+
+  /* ── Show feedback ── */
+  function showMsg(text, type = "info") {
+    const el = document.getElementById("msg");
+    el.textContent = text;
+    el.className = `feedback-inner visible ${type}`;
+  }
+
+  /* ── Load products ── */
+  async function preloadProducts() {
+    try {
+      const res = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          if (!item) return;
+          const code = item.code || item.Code || item.barcode || item.Barcode;
+          if (code) PRODUCT_MAP[code] = item;
         });
-
-        loadSavedWorker();
-      } catch (err) {
-        console.error("Worker load error:", err);
-      }
-    }
-
-    /* SHOW PRODUCT */
-    function showProduct() {
-      const params = new URLSearchParams(window.location.search);
-      CURRENT_CODE = params.get("code") || "";
-
-      const productData = PRODUCT_MAP[CURRENT_CODE];
-      let name = CURRENT_CODE || "Unknown Product";
-      let image = "";
-
-      if (productData) {
-        name = productData.name || productData.Name || productData.title || CURRENT_CODE;
-        image = productData.image || productData.Image || "";
-      }
-
-      document.getElementById("product").textContent = name;
-
-      const img = document.getElementById("productImage");
-      if (image) {
-        img.src = image;
-        img.style.display = "block";
       } else {
-        img.src = "";
-        img.style.display = "none";
+        PRODUCT_MAP = data || {};
       }
+    } catch (err) {
+      console.error("Product load error:", err);
+      document.getElementById("product").textContent = "Error loading";
     }
+  }
 
-    /* SAVE WORKER */
-    function saveWorker() {
-      const value = document.getElementById("worker").value;
-      localStorage.setItem("worker", value);
-    }
-
-    function loadSavedWorker() {
-      const saved = localStorage.getItem("worker");
+  /* ── Load workers ── */
+  async function preloadWorkers() {
+    try {
+      const res = await fetch(API_URL, { cache: "force-cache" });
+      const data = await res.json();
       const select = document.getElementById("worker");
-      if (saved && select.options.length > 0) {
-        select.value = saved;
-      }
+      select.innerHTML = "";
+
+      const workers = data.workers || data.Workers || data || [];
+      workers.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = w;
+        opt.textContent = w;
+        select.appendChild(opt);
+      });
+      loadSavedWorker();
+    } catch (err) {
+      console.error("Worker load error:", err);
+    }
+  }
+
+  /* ── Show product ── */
+  function showProduct() {
+    const params = new URLSearchParams(window.location.search);
+    CURRENT_CODE = params.get("code") || "";
+
+    const pd = PRODUCT_MAP[CURRENT_CODE];
+    const name = pd ? (pd.name || pd.Name || pd.title || CURRENT_CODE) : (CURRENT_CODE || "Unknown product");
+    const image = pd ? (pd.image || pd.Image || "") : "";
+
+    document.getElementById("product").textContent = name;
+    if (CURRENT_CODE) {
+      document.getElementById("productCode").textContent = "CODE · " + CURRENT_CODE;
     }
 
-    document.getElementById("worker").addEventListener("change", saveWorker);
-
-    /* SEND DATA */
-    function send(action) {
-      const worker = document.getElementById("worker").value;
-      const msgEl = document.getElementById("msg");
-
-      if (!worker) {
-        msgEl.textContent = "Select worker";
-        return;
-      }
-
-      const url =
-        `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}` +
-        `&worker=${encodeURIComponent(worker)}` +
-        `&action=${encodeURIComponent(action)}`;
-
-      fetch(url)
-        .then(() => {
-          msgEl.textContent = "Saved: " + action;
-          setTimeout(() => {
-            window.location.href = "scan://restart";
-          }, 600);
-        })
-        .catch(() => {
-          msgEl.textContent = "Error saving";
-        });
+    const wrap = document.getElementById("imageWrap");
+    const img  = document.getElementById("productImage");
+    if (image) {
+      img.src = image;
+      wrap.classList.add("has-image");
+    } else {
+      wrap.classList.remove("has-image");
     }
+  }
 
-    /* CANCEL */
-    function cancelScan() {
-      window.location.href = "scan://restart";
-    }
+  /* ── Worker persistence ── */
+  function saveWorker() {
+    localStorage.setItem("worker", document.getElementById("worker").value);
+  }
+  function loadSavedWorker() {
+    const saved = localStorage.getItem("worker");
+    const select = document.getElementById("worker");
+    if (saved && select.options.length > 0) select.value = saved;
+  }
+  document.getElementById("worker").addEventListener("change", saveWorker);
 
-    /* START */
-    window.addEventListener("DOMContentLoaded", async () => {
-      await preloadProducts();
-      showProduct();
-      preloadWorkers();
-    });
-  </script>
+  /* ── Send action ── */
+  function send(action) {
+    const worker = document.getElementById("worker").value;
+    if (!worker) { showMsg("Select a staff member first", "error"); return; }
+
+    const labels = { produce: "Added to MEP List", done: "MEP Finished ✓", waste: "Marked as Waste" };
+    showMsg("Saving…", "info");
+
+    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
+    fetch(url)
+      .then(() => {
+        showMsg(labels[action] || "Saved", "success");
+        setTimeout(() => { window.location.href = "scan://restart"; }, 700);
+      })
+      .catch(() => showMsg("Network error — try again", "error"));
+  }
+
+  /* ── Cancel ── */
+  function cancelScan() {
+    window.location.href = "scan://restart";
+  }
+
+  /* ── Init ── */
+  window.addEventListener("DOMContentLoaded", async () => {
+    await preloadProducts();
+    showProduct();
+    preloadWorkers();
+  });
+</script>
 </body>
 </html>
