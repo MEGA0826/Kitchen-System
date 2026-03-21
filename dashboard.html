@@ -115,8 +115,9 @@
     .alert-delete-bg { position: absolute; inset: 0; background: #c0392b; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: #fff; border-radius: var(--radius); opacity: 0; transition: opacity .1s; }
     .alert-wrap.revealing .alert-delete-bg { opacity: 1; }
     .mep-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; position: relative; transition: transform .15s ease; will-change: transform; cursor: grab; user-select: none; }
-    .mep-alert.over { background: #7a1a1a; border: 1px solid #a33; color: #fdd; }
-    .mep-alert.full { background: #5a4000; border: 1px solid #a07010; color: #fde89a; }
+    .mep-alert.over  { background: #7a1a1a; border: 1px solid #a33; color: #fdd; }
+    .mep-alert.full  { background: #5a4000; border: 1px solid #a07010; color: #fde89a; }
+    .mep-alert.green { background: #1a3d1a; border: 1px solid #2d7a2d; color: #aaffaa; }
     .mep-alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
     .mep-alert-body { display: flex; flex-direction: column; gap: 2px; }
     .mep-alert-title { font-weight: 500; letter-spacing: 0.3px; }
@@ -221,6 +222,16 @@
       <div class="stat-card"><div class="stat-label">In MEP list</div><div class="stat-value amber" id="s-produce">—</div></div>
       <div class="stat-card"><div class="stat-label">Finished</div><div class="stat-value green" id="s-done">—</div></div>
       <div class="stat-card"><div class="stat-label">Waste</div><div class="stat-value red" id="s-waste">—</div></div>
+      <div class="stat-card" style="grid-column:1/-1">
+        <div class="stat-label">Total MEP today</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
+          <div class="stat-value green" id="s-mep-pct">—</div>
+          <div style="font-size:12px;color:var(--muted)" id="s-mep-sub"></div>
+        </div>
+        <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:10px;overflow:hidden">
+          <div id="s-mep-bar" style="height:100%;border-radius:3px;background:var(--green);transition:width .5s ease;width:0%"></div>
+        </div>
+      </div>
     </div>
 
     <div class="chart-wrap">
@@ -363,6 +374,35 @@ function renderStats() {
   document.getElementById("s-produce").textContent = allScans.filter(s=>s.action==="produce").length;
   document.getElementById("s-done").textContent    = allScans.filter(s=>s.action==="done").length;
   document.getElementById("s-waste").textContent   = allScans.filter(s=>s.action==="waste").length;
+
+  // Total MEP % = sum(available) / sum(tagesziel) × 100
+  // Only count products that have a tagesziel > 0
+  let totalAvailable = 0;
+  let totalTarget    = 0;
+  Object.entries(allProducts).forEach(([code, p]) => {
+    if (!p.tagesziel || p.tagesziel === 0) return;
+    const st         = scanStats[code] || {};
+    const done       = st.done   || 0;
+    const waste      = st.waste  || 0;
+    const available  = Math.max(0, done - waste);
+    totalAvailable  += available;
+    totalTarget     += p.tagesziel;
+  });
+
+  const pct     = totalTarget > 0 ? Math.round((totalAvailable / totalTarget) * 100) : 0;
+  const pctEl   = document.getElementById("s-mep-pct");
+  const subEl   = document.getElementById("s-mep-sub");
+  const barEl   = document.getElementById("s-mep-bar");
+
+  if (totalTarget > 0) {
+    pctEl.textContent = pct + "%";
+    subEl.textContent = `${totalAvailable} of ${totalTarget} GN available`;
+    barEl.style.width = Math.min(100, pct) + "%";
+    barEl.style.background = pct >= 100 ? "var(--red)" : pct >= 80 ? "var(--amber)" : "var(--green)";
+  } else {
+    pctEl.textContent = "—";
+    subEl.textContent = "No daily targets set";
+  }
 }
 
 function buildMepAlerts() {
@@ -418,7 +458,7 @@ function buildMepAlerts() {
         sub:   `${doneCount} finished, target was ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
     } else if (listFull && !goalMet) {
       const listKg = gnWeight ? ` · ${listWeight} kg in preparation` : "";
-      alerts.push({ type:"full", icon:"i",
+      alerts.push({ type:"green", icon:"✓",
         title: `MEP list full — ${name}`,
         sub:   `${inProgress} of ${mepMax}${gnSize?" "+gnSize:""}${listKg}` });
     }
