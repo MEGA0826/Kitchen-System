@@ -160,7 +160,7 @@
   <div class="header-right">
     <div class="live-badge"><span class="live-dot"></span>LIVE</div>
     <div class="clock" id="clock">--:--:--</div>
-    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Scan</a>
+    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn" id="back-btn" onclick="goBack(event)">← Scan</a>
   </div>
 </header>
 
@@ -253,6 +253,15 @@
 </div>
 
 <script>
+// ── Back navigation ─────────────────────────────────────────
+// Returns to the exact scan URL the user came from (preserves ?code=)
+// Falls back to the plain index page if nothing was saved
+function goBack(e) {
+  e.preventDefault();
+  const saved = sessionStorage.getItem("lastScanUrl");
+  window.location.href = saved || "https://mega0826.github.io/Kitchen-System/index.html";
+}
+
 const API = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
 let allScans = [], allProducts = {}, allInventory = [], scanStats = {};

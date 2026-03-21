@@ -504,6 +504,10 @@
 
   /* ── Init ── */
   window.addEventListener("DOMContentLoaded", async () => {
+    // Save the full scan URL (with ?code=) so dashboard can return to it
+    if (window.location.search.includes("code=")) {
+      sessionStorage.setItem("lastScanUrl", window.location.href);
+    }
     await preloadProducts();
     showProduct();
     preloadWorkers();
