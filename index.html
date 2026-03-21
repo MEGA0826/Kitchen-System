@@ -310,6 +310,21 @@
       height: auto;
     }
     .btn-cancel .btn-icon { font-size: 13px; }
+    .btn-undo {
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid var(--amber-brd);
+      grid-column: 1 / -1;
+      flex-direction: row;
+      gap: 8px;
+      border-radius: var(--radius-sm);
+      flex: none;
+      padding: 9px;
+      height: auto;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .btn-undo .btn-icon { font-size: 16px; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
     /* Finish button dimmed when nothing in MEP list */
     .btn-done.inactive {
       opacity: 0.3;
@@ -434,9 +449,13 @@
       <span class="btn-icon">⚠</span>
       <span class="btn-label">Waste</span>
     </button>
-    <button class="btn btn-cancel" onclick="cancelScan()">
+    <button class="btn btn-cancel" id="btnCancel" onclick="cancelScan()" style="display:none">
       <span class="btn-icon">←</span>
       <span class="btn-label">Cancel</span>
+    </button>
+    <button class="btn btn-undo" id="btnUndo" onclick="undoAction()" style="display:none">
+      <span class="btn-icon">↩</span>
+      <span class="btn-label" id="undoLabel">Undo (5)</span>
     </button>
     <div class="mep-full-msg" id="mepFullMsg">Daily target covered ✓</div>
   </div>
@@ -608,6 +627,10 @@
     localStorage.setItem("worker", document.getElementById("worker").value);
   });
 
+  let _lastAction  = null;   // last successfully saved action
+  let _undoTimer   = null;   // countdown interval
+  let _redirectTimer = null; // auto-redirect timeout
+
   function send(action) {
     const worker = document.getElementById("worker").value;
     if (!worker) { showMsg("Select a staff member first", "error"); return; }
@@ -624,18 +647,65 @@
           return;
         }
         if (data.status === "over_produce") {
-          const p    = PRODUCT_MAP[CURRENT_CODE] || {};
-          const name = p.name || CURRENT_CODE;
-          showOverPopup(name, data);
-          showMsg("MEP Finished ✓", "success");
-          setTimeout(() => { window.location.href = "scan://restart"; }, 2500);
+          const p = PRODUCT_MAP[CURRENT_CODE] || {};
+          showOverPopup(p.name || CURRENT_CODE, data);
+          showMsg("MEP Finished ✓  —  tap Undo to reverse", "success");
+          startUndo(action);
           return;
         }
-
-        showMsg(labels[action] || "Saved", "success");
-        setTimeout(() => { window.location.href = "scan://restart"; }, 700);
+        showMsg((labels[action] || "Saved") + "  —  tap Undo to reverse", "success");
+        startUndo(action);
       })
       .catch(() => showMsg("Network error — try again", "error"));
+  }
+
+  function startUndo(action) {
+    _lastAction = action;
+    clearInterval(_undoTimer);
+    clearTimeout(_redirectTimer);
+
+    const btn   = document.getElementById("btnUndo");
+    const label = document.getElementById("undoLabel");
+    btn.style.display = "grid";
+    let secs = 5;
+    label.textContent = `Undo (${secs})`;
+
+    _undoTimer = setInterval(() => {
+      secs--;
+      label.textContent = `Undo (${secs})`;
+      if (secs <= 0) {
+        clearInterval(_undoTimer);
+        btn.style.display = "none";
+        _lastAction = null;
+        window.location.href = "scan://restart";
+      }
+    }, 1000);
+  }
+
+  function undoAction() {
+    if (!_lastAction) return;
+    clearInterval(_undoTimer);
+    clearTimeout(_redirectTimer);
+    document.getElementById("btnUndo").style.display = "none";
+
+    const worker = document.getElementById("worker").value;
+    showMsg("Undoing…", "info");
+
+    fetch(`${API_URL}?action=undoScan&code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&lastAction=${encodeURIComponent(_lastAction)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { showMsg("Undo failed: " + data.error, "error"); return; }
+        _lastAction = null;
+        // Reload MEP status to reflect undo
+        loadMepStatus(CURRENT_CODE);
+        showMsg("Action undone ✓", "success");
+        // Stay on page so user can act again
+        setTimeout(() => {
+          const el = document.getElementById("msg");
+          if (el) el.className = "feedback-inner";
+        }, 2000);
+      })
+      .catch(() => showMsg("Network error — undo failed", "error"));
   }
 
   function showOverPopup(name, data) {
@@ -649,9 +719,15 @@
     document.getElementById("overPopup").classList.remove("visible");
   }
 
-  function cancelScan() { window.location.href = "scan://restart"; }
+  function cancelScan() {
+    clearInterval(_undoTimer);
+    clearTimeout(_redirectTimer);
+    document.getElementById("btnUndo").style.display  = "none";
+    window.location.href = "scan://restart";
+  }
 
   window.addEventListener("DOMContentLoaded", async () => {
+    document.getElementById("btnCancel").style.display = "grid";
     if (window.location.search.includes("code=")) {
       sessionStorage.setItem("lastScanUrl", window.location.href);
     }
