@@ -216,20 +216,17 @@
     }
     .mep-row-label.full strong { color: var(--green); }
 
-    /* Block produce button */
-    .btn.blocked { opacity: 0.35; pointer-events: none; }
-
     /* Full MEP list message inside actions grid */
     .mep-full-msg {
       display: none;
       grid-column: 1 / -1;
-      background: var(--red-dim);
-      border: 1px solid var(--red-brd);
-      color: var(--red);
+      background: var(--green-dim);
+      border: 1px solid var(--green-brd);
+      color: var(--green);
       border-radius: var(--radius);
-      padding: 12px;
+      padding: 10px;
       text-align: center;
-      font-size: 14px;
+      font-size: 13px;
       letter-spacing: 0.5px;
     }
     .mep-full-msg.visible { display: block; }
@@ -293,17 +290,8 @@
     .btn-icon  { font-size: 24px; line-height: 1; }
     .btn-label { font-size: 15px; letter-spacing: 0.5px; }
 
-    /* Row 1: produce (left) | done (right) */
-    .btn-produce {
-      background: var(--amber-dim);
-      color: var(--amber);
-      border: 1px solid var(--amber-brd);
-      flex-direction: column;
-    }
-    .btn-produce .btn-icon  { font-size: 22px; }
-    .btn-produce .btn-label { font-size: 14px; }
-
-    /* Row 2: used (left) | waste (right) */
+    /* Row 1: done (left) | used (right)
+       Row 2: waste (left) | cancel (right — or full width) */
     .btn-done  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .btn-used  { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-brd); }
     .btn-waste { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
@@ -434,10 +422,6 @@
 
   <!-- Action Buttons — flex:1 fills remaining height -->
   <div class="actions">
-    <button class="btn btn-produce" onclick="send('produce')">
-      <span class="btn-icon">📋</span>
-      <span class="btn-label">Add to MEP List</span>
-    </button>
     <button class="btn btn-done" onclick="send('done')">
       <span class="btn-icon">✓</span>
       <span class="btn-label">Finish</span>
@@ -454,7 +438,7 @@
       <span class="btn-icon">←</span>
       <span class="btn-label">Cancel</span>
     </button>
-    <div class="mep-full-msg" id="mepFullMsg">MEP voll — Maximum erreicht</div>
+    <div class="mep-full-msg" id="mepFullMsg">Daily target covered ✓</div>
   </div>
 
   <!-- Feedback -->
@@ -529,12 +513,10 @@
   function updateMepUI(data) {
     const status  = document.getElementById("mepStatus");
     const fullMsg = document.getElementById("mepFullMsg");
-    const btnProd = document.querySelector(".btn-produce");
 
     if (!data.mepMax || data.mepMax === 0) {
       status.style.display = "none";
       fullMsg.classList.remove("visible");
-      if (btnProd) btnProd.classList.remove("blocked");
       return;
     }
 
@@ -591,14 +573,12 @@
     if (data.listFull) {
       dotList.className = "mep-dot green";
       labelList.classList.add("full");
-      fullMsg.textContent = "Full MEP List";
+      fullMsg.textContent = "Daily target covered ✓";
       fullMsg.classList.add("visible");
-      if (btnProd) btnProd.classList.add("blocked");
     } else {
       dotList.className = "mep-dot amber";
       labelList.classList.remove("full");
       fullMsg.classList.remove("visible");
-      if (btnProd) btnProd.classList.remove("blocked");
     }
   }
 
@@ -632,21 +612,15 @@
     const worker = document.getElementById("worker").value;
     if (!worker) { showMsg("Select a staff member first", "error"); return; }
 
-    if (action === "produce" && document.querySelector(".btn-produce")?.classList.contains("blocked")) {
-      showMsg("Target already covered — no more needed", "error");
-      return;
-    }
-
     showMsg("Saving…", "info");
-    const labels = { produce: "Added to MEP List ✓", done: "MEP Finished ✓", waste: "Waste recorded ✓", used: "Sent to service ✓" };
+    const labels = { done: "MEP Finished ✓", waste: "Waste recorded ✓", used: "Sent to service ✓" };
 
     fetch(`${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
       .then(r => r.json())
       .then(data => {
         if (data.mepMax !== undefined) updateMepUI(data);
-
         if (data.status === "list_full") {
-          showMsg(data.message || "Cannot add more", "error");
+          showMsg(data.message || "Target already covered", "info");
           return;
         }
         if (data.status === "over_produce") {
