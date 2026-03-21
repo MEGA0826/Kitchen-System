@@ -79,7 +79,7 @@
     .feed-title-txt { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
     .refresh-btn { font-family: var(--mono); font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 5px 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all .15s; }
     .refresh-btn:hover { color: var(--amber); border-color: var(--amber-brd); }
-    .feed-row { display: grid; grid-template-columns: 110px 140px 1fr 70px 75px; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .feed-row { display: grid; grid-template-columns: 110px 120px 1fr 80px; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
     .feed-row:last-child { border-bottom: none; }
     .feed-row.hdr { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); background: var(--surface2); padding: 8px 18px; }
     .feed-time { color: var(--muted); }
@@ -594,12 +594,11 @@ function renderFeed() {
       <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
       <span style="font-size:12px">${s.worker||"—"}</span>
       <span style="font-size:12px;color:var(--amber)">${name}</span>
-      <span style="color:var(--muted);font-size:10px">${s.code||"—"}</span>
       <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
     </div>`;
   }).join("");
   document.getElementById("scan-feed").innerHTML =
-    `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Product</span><span>Code</span><span>Action</span></div>`
+    `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Product</span><span>Action</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
 }
 
@@ -657,8 +656,8 @@ function renderInventory(rows) {
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
       <td>${r.name||"—"}</td>
-      <td style="color:var(--muted)">${r.unit||"—"}</td>
       <td style="font-weight:500">${qtyDisplay}</td>
+      <td style="color:var(--muted)">${r.unit||"—"}</td>
       <td style="color:var(--muted)">${minDisplay}</td>
       <td style="color:var(--green)">${mepStr}</td>
       <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
@@ -666,7 +665,7 @@ function renderInventory(rows) {
   }).join("");
   document.getElementById("inv-content").innerHTML = `
     <div class="inv-table-wrap"><table class="inv-table">
-      <thead><tr><th>Code</th><th>Product</th><th>Unit</th><th>Stock qty</th><th>Min</th><th>MEP available</th><th>Status</th></tr></thead>
+      <thead><tr><th>Code</th><th>Product</th><th>Stock qty</th><th>Unit</th><th>Min</th><th>MEP available</th><th>Status</th></tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
 }
