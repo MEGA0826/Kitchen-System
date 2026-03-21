@@ -297,19 +297,7 @@
     .btn-waste { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
 
     /* Row 3: cancel full width */
-    .btn-cancel {
-      background: var(--gray-dim);
-      color: var(--muted);
-      border: 1px solid var(--border);
-      grid-column: 1 / -1;
-      flex-direction: row;
-      gap: 8px;
-      border-radius: var(--radius-sm);
-      flex: none;
-      padding: 9px;
-      height: auto;
-    }
-    .btn-cancel .btn-icon { font-size: 13px; }
+
     .btn-undo {
       background: var(--amber-dim);
       color: var(--amber);
@@ -449,10 +437,7 @@
       <span class="btn-icon">⚠</span>
       <span class="btn-label">Waste</span>
     </button>
-    <button class="btn btn-cancel" id="btnCancel" onclick="cancelScan()" style="display:none">
-      <span class="btn-icon">←</span>
-      <span class="btn-label">Cancel</span>
-    </button>
+
     <button class="btn btn-undo" id="btnUndo" onclick="undoAction()" style="display:none">
       <span class="btn-icon">↩</span>
       <span class="btn-label" id="undoLabel">Undo (5)</span>
@@ -568,16 +553,21 @@
     labelDone.innerHTML = doneText;
     dotDone.className   = "mep-dot green";
 
-    // Row 2 — To produce (one compact line)
-    const labelList = document.getElementById("mepLabelList");
-    const dotList   = document.getElementById("mepDotList");
-    let listText = `<strong>To produce: ${inProg}`;
+    // Row 2 — To produce: target - available (or inProg if no target)
+    const tagesziel2 = data.tagesziel || 0;
+    const toProduce  = tagesziel2 > 0
+      ? Math.max(0, tagesziel2 - avail)
+      : inProg;
+    const toProdWt   = gnWeight * toProduce;
+    const labelList  = document.getElementById("mepLabelList");
+    const dotList    = document.getElementById("mepDotList");
+    let listText = `<strong>To produce: ${toProduce}`;
     if (gnSize)   listText += ` ${gnSize}`;
-    if (gnWeight) listText += ` = ${listWt} kg`;
+    if (gnWeight && toProduce > 0) listText += ` = ${toProdWt} kg`;
     listText += `</strong>`;
     labelList.innerHTML = listText;
 
-    // Deactivate "Finish MEP" when nothing is in the MEP list
+    // Deactivate "Finish" when nothing in MEP list
     const btnDone = document.querySelector(".btn-done");
     if (btnDone) {
       if (inProg === 0) {
@@ -589,7 +579,35 @@
       }
     }
 
-    if (data.listFull) {
+    // Deactivate "Used" and "Waste" when available = 0
+    const btnUsed  = document.querySelector(".btn-used");
+    const btnWaste = document.querySelector(".btn-waste");
+    if (btnUsed) {
+      if (avail === 0) {
+        btnUsed.classList.add("inactive");
+        btnUsed.title = "Nothing available to use";
+      } else {
+        btnUsed.classList.remove("inactive");
+        btnUsed.title = "";
+      }
+    }
+    if (btnWaste) {
+      if (avail === 0) {
+        btnWaste.classList.add("inactive");
+        btnWaste.title = "Nothing available to waste";
+      } else {
+        btnWaste.classList.remove("inactive");
+        btnWaste.title = "";
+      }
+    }
+
+    // Show "covered" message when available meets either target or mepMax
+    const tagesziel = data.tagesziel || 0;
+    const mepMax    = data.mepMax    || 0;
+    const covered   = (tagesziel > 0 && avail >= tagesziel) ||
+                      (tagesziel === 0 && mepMax > 0 && avail >= mepMax);
+
+    if (data.listFull || covered) {
       dotList.className = "mep-dot green";
       labelList.classList.add("full");
       fullMsg.textContent = "Daily target covered ✓";
@@ -722,12 +740,12 @@
   function cancelScan() {
     clearInterval(_undoTimer);
     clearTimeout(_redirectTimer);
-    document.getElementById("btnUndo").style.display  = "none";
+    const u = document.getElementById("btnUndo");
+    if (u) u.style.display = "none";
     window.location.href = "scan://restart";
   }
 
   window.addEventListener("DOMContentLoaded", async () => {
-    document.getElementById("btnCancel").style.display = "grid";
     if (window.location.search.includes("code=")) {
       sessionStorage.setItem("lastScanUrl", window.location.href);
     }
