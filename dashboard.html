@@ -79,7 +79,7 @@
     .feed-title-txt { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
     .refresh-btn { font-family: var(--mono); font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 5px 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all .15s; }
     .refresh-btn:hover { color: var(--amber); border-color: var(--amber-brd); }
-    .feed-row { display: grid; grid-template-columns: 150px 1fr 90px 80px; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .feed-row { display: grid; grid-template-columns: 110px 140px 1fr 70px 75px; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
     .feed-row:last-child { border-bottom: none; }
     .feed-row.hdr { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); background: var(--surface2); padding: 8px 18px; }
     .feed-time { color: var(--muted); }
@@ -87,6 +87,7 @@
     .action-badge.produce { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
     .action-badge.done    { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .action-badge.waste   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .action-badge.used    { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-brd); }
 
     /* ── MEP Overview panel ── */
     .mep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; margin-bottom: 28px; }
@@ -339,8 +340,13 @@ async function get(params) {
 // Format time
 function fmt(raw) {
   const d = new Date(raw);
-  return isNaN(d) ? raw : d.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"})
-    + " · " + d.toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"});
+  if (isNaN(d)) return raw;
+  const dd  = String(d.getDate()).padStart(2, "0");
+  const mm  = String(d.getMonth() + 1).padStart(2, "0");
+  const yy  = String(d.getFullYear()).slice(2);
+  const hh  = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}.${mm}.${yy} ${hh}:${min}`;
 }
 
 // ── KDS ──────────────────────────────────────────────────────
@@ -576,15 +582,19 @@ function renderWorkerBars() {
 }
 
 function renderFeed() {
-  const rows = [...allScans].reverse().slice(0,30).map(s =>
-    `<div class="feed-row">
-      <span class="feed-time">${fmt(s.timestamp)}</span>
-      <span>${s.worker||"—"}</span>
-      <span style="color:var(--muted);font-size:11px">${s.code||"—"}</span>
+  const rows = [...allScans].reverse().slice(0,30).map(s => {
+    const p    = allProducts[s.code] || {};
+    const name = p.name || s.code || "—";
+    return `<div class="feed-row">
+      <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
+      <span style="font-size:12px">${s.worker||"—"}</span>
+      <span style="font-size:12px">${name}</span>
+      <span style="color:var(--muted);font-size:10px">${s.code||"—"}</span>
       <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
-    </div>`).join("");
+    </div>`;
+  }).join("");
   document.getElementById("scan-feed").innerHTML =
-    `<div class="feed-row hdr"><span>Time</span><span>Worker</span><span>Code</span><span>Action</span></div>`
+    `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Product</span><span>Code</span><span>Action</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
 }
 
@@ -622,12 +632,13 @@ function renderInventory(rows) {
     const p      = allProducts[r.code] || {};
     const gnSize = p.gnSize || "";
     const mepStr = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "—";
+    const qtyDisplay = qty > 0 ? qty : (r.quantity !== undefined ? parseFloat(r.quantity) : "—");
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
       <td>${r.name||"—"}</td>
       <td style="color:var(--muted)">${r.unit||"—"}</td>
-      <td>${qty}</td>
-      <td style="color:var(--muted)">${min||"—"}</td>
+      <td style="font-weight:500">${qtyDisplay}</td>
+      <td style="color:var(--muted)">${min > 0 ? min : "—"}</td>
       <td style="color:var(--green)">${mepStr}</td>
       <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
     </tr>`;
