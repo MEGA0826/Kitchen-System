@@ -321,6 +321,75 @@
     </div>
   </div>
 
+  <!-- ── ADMIN PANEL ── -->
+  <div class="panel" id="panel-admin">
+    <div class="section-title">Admin</div>
+    <div class="section-sub" style="margin-bottom:24px">Manage without opening Google Sheets</div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">Products</div>
+      <div class="admin-section-sub">Produkt sheet</div>
+      <div class="admin-list" id="admin-product-list"></div>
+      <div class="admin-form" id="product-form">
+        <div class="admin-form-title" id="product-form-title">Add new product</div>
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pf-code" placeholder="e.g. P-001"></div>
+          <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pf-name" placeholder="e.g. Karotten gewürfelt"></div>
+          <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="pf-mepmax" placeholder="2" min="0"></div>
+          <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="pf-gnsize" placeholder="GN1/1"></div>
+          <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="pf-gnweight" placeholder="4" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="pf-tagesziel" placeholder="3" min="0"></div>
+          <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="pf-shelf" placeholder="2" min="1"></div>
+          <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="pf-drive" placeholder="paste Google Drive link"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveProduct()">Save product</button>
+          <button class="btn-edit" onclick="clearProductForm()" style="display:none" id="pf-cancel">Cancel edit</button>
+        </div>
+        <div class="admin-msg" id="pf-msg"></div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">Workers</div>
+      <div class="admin-section-sub">Settings sheet</div>
+      <div class="admin-list" id="admin-worker-list"></div>
+      <div class="admin-form" id="worker-form">
+        <div class="admin-form-title" id="wf-form-title">Add new worker</div>
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="wf-name" placeholder="e.g. Marco"></div>
+          <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="wf-role" placeholder="e.g. Chef de Partie"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveWorkerAdmin()">Save worker</button>
+          <button class="btn-edit" onclick="clearWorkerForm()" style="display:none" id="wf-cancel">Cancel edit</button>
+        </div>
+        <div class="admin-msg" id="wf-msg"></div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">Inventory</div>
+      <div class="admin-section-sub">Lager sheet</div>
+      <div class="admin-list" id="admin-inv-list"></div>
+      <div class="admin-form" id="inv-form">
+        <div class="admin-form-title" id="if-form-title">Add / update stock item</div>
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. P-001"></div>
+          <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from product"></div>
+          <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l"></div>
+          <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveInvItem()">Save item</button>
+          <button class="btn-edit" onclick="clearInvForm()" style="display:none" id="if-cancel">Cancel edit</button>
+        </div>
+        <div class="admin-msg" id="if-msg"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- MODAL -->
@@ -367,6 +436,7 @@ function switchTab(btn) {
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
   document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+  if (btn.dataset.tab === "admin") loadAdminTab();
 }
 
 // Fetch
@@ -623,10 +693,10 @@ function renderFeed() {
   const rows = [...allScans].reverse().slice(0,30).map(s => {
     const p    = allProducts[s.code] || {};
     const name = p.name || s.code || "—";
-    return `<div class="feed-row" style="cursor:pointer" onclick="goToProduct('${s.code}')" title="View ${name}">
+    return `<div class="feed-row">
       <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
       <span style="font-size:12px">${s.worker||"—"}</span>
-      <span style="font-size:12px;color:var(--amber)">${name}</span>
+      <span style="font-size:12px">${name}</span>
       <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
     </div>`;
   }).join("");
@@ -635,16 +705,6 @@ function renderFeed() {
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
 }
 
-function goToProduct(code) {
-  // Switch to Products tab
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  const prodTab = document.querySelector("[data-tab='products']");
-  if (prodTab) prodTab.classList.add("active");
-  document.getElementById("panel-products").classList.add("active");
-  // Open product modal
-  if (allProducts[code]) openModal(code);
-}
 
 // ── INVENTORY ────────────────────────────────────────────────
 async function loadInventory() {
@@ -996,7 +1056,7 @@ function clearWorkerForm() {
   document.getElementById("wf-cancel").style.display   = "none";
 }
 
-async function saveWorker() {
+async function saveWorkerAdmin() {
   const name = document.getElementById("wf-name").value.trim();
   if (!name) { adminMsg("wf-msg", "Name is required", "err"); return; }
   const btn = document.querySelector("#admin-worker-list ~ .admin-form .btn-save");
@@ -1079,7 +1139,7 @@ document.getElementById("if-code")?.addEventListener("blur", () => {
   }
 });
 
-async function saveInventoryItem() {
+async function saveInvItem() {
   const code = document.getElementById("if-code").value.trim();
   if (!code) { adminMsg("if-msg", "Code is required", "err"); return; }
   const btn = document.querySelector("#admin-inv-list ~ .admin-form .btn-save");
@@ -1106,18 +1166,14 @@ async function saveInventoryItem() {
 }
 
 // ── Load admin data when tab is opened ────────────────────────
-const _origSwitchTab = switchTab;
-function switchTab(btn) {
-  _origSwitchTab(btn);
-  if (btn.dataset.tab === "admin") {
-    renderAdminProducts();
-    renderAdminInventory();
-    // Load workers with full data
-    adminCall({ action: "workers" }).then(d => {
-      allWorkersAdmin = d.workers || [];
-      renderAdminWorkers();
-    });
-  }
+// Hook into the existing switchTab by patching the admin tab button onclick
+function loadAdminTab() {
+  renderAdminProducts();
+  renderAdminInventory();
+  adminCall({ action: "workers" }).then(d => {
+    allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
+    renderAdminWorkers();
+  });
 }
 
 </script>
