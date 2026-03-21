@@ -181,6 +181,38 @@
     .empty-icon { font-size: 34px; margin-bottom: 10px; opacity: .35; }
     .error-msg { background: var(--red-dim); border: 1px solid var(--red-brd); color: var(--red); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; margin-bottom: 20px; }
 
+    /* ── Admin panel ── */
+    .admin-section { margin-bottom: 28px; }
+    .admin-section-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    .admin-section-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
+    .admin-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+    .admin-form-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 12px; letter-spacing: 0.3px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-grid.wide { grid-template-columns: 1fr; }
+    .form-field { display: flex; flex-direction: column; gap: 4px; }
+    .form-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .form-input { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 13px; padding: 8px 10px; width: 100%; transition: border-color .15s; }
+    .form-input:focus { outline: none; border-color: var(--amber); }
+    .form-input[type=number] { -moz-appearance: textfield; }
+    .form-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-save { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); border-radius: var(--radius-sm); padding: 8px 16px; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: opacity .15s; }
+    .btn-save:hover { opacity: .8; }
+    .btn-save:disabled { opacity: .35; cursor: default; }
+    .admin-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .admin-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .admin-item-name { flex: 1; font-size: 13px; color: var(--text); }
+    .admin-item-sub { font-size: 11px; color: var(--muted); }
+    .admin-item-actions { display: flex; gap: 6px; }
+    .btn-edit { background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm); padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer; transition: color .15s, border-color .15s; }
+    .btn-edit:hover { color: var(--amber); border-color: var(--amber-brd); }
+    .btn-del { background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm); padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer; transition: color .15s, border-color .15s; }
+    .btn-del:hover { color: var(--red); border-color: var(--red-brd); }
+    .admin-msg { font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); display: none; margin-top: 8px; }
+    .admin-msg.ok  { display: block; background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .admin-msg.err { display: block; background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .toggle-active { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .toggle-active input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--amber); }
+
     @media (max-width: 600px) {
       .body, .nav, .header { padding-left: 16px; padding-right: 16px; }
       .tab { padding: 10px 12px; font-size: 10px; }
@@ -209,6 +241,7 @@
   <button class="tab active" data-tab="kds" onclick="switchTab(this)">KDS · Stats</button>
   <button class="tab" data-tab="inventory" onclick="switchTab(this)">Inventory</button>
   <button class="tab" data-tab="products" onclick="switchTab(this)">Products</button>
+  <button class="tab" data-tab="admin" onclick="switchTab(this)">⚙ Admin</button>
 </nav>
 
 <div class="body">
@@ -810,6 +843,281 @@ function swipeEnd(e, idx) {
     setTimeout(() => { if (el) el.style.transition = ''; }, 220);
   }
   _sw[idx].dx = 0;
+}
+
+
+// ── Admin helpers ─────────────────────────────────────────────
+function adminMsg(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = "admin-msg " + type;
+  setTimeout(() => el.className = "admin-msg", 3000);
+}
+
+async function adminCall(params) {
+  const url = API + "?" + new URLSearchParams(params);
+  const res  = await fetch(url);
+  return res.json();
+}
+
+// ── Products admin ────────────────────────────────────────────
+function renderAdminProducts() {
+  const list = document.getElementById("admin-product-list");
+  if (!list) return;
+  const entries = Object.entries(allProducts).filter(([,p]) => p.name && p.name !== "(deleted)");
+  if (!entries.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products yet</div>`; return; }
+  list.innerHTML = entries.map(([code, p]) => `
+    <div class="admin-item">
+      <div style="flex:1;min-width:0">
+        <div class="admin-item-name">${p.name}</div>
+        <div class="admin-item-sub">${code} · Max ${p.mepMax||"—"} ${p.gnSize||""} · Target ${p.tagesziel||"—"} · ${p.gnWeight||"—"} kg/GN · Shelf ${p.shelfLife||2}d</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn-edit" onclick="editProduct('${code}')">Edit</button>
+        <button class="btn-del"  onclick="delProduct('${code}')">Remove</button>
+      </div>
+    </div>`).join("");
+}
+
+function editProduct(code) {
+  const p = allProducts[code] || {};
+  document.getElementById("pf-code").value      = code;
+  document.getElementById("pf-code").readOnly   = true;
+  document.getElementById("pf-name").value      = p.name      || "";
+  document.getElementById("pf-mepmax").value    = p.mepMax    ?? "";
+  document.getElementById("pf-gnsize").value    = p.gnSize    || "";
+  document.getElementById("pf-gnweight").value  = p.gnWeight  ?? "";
+  document.getElementById("pf-tagesziel").value = p.tagesziel ?? "";
+  document.getElementById("pf-shelf").value     = p.shelfLife ?? "";
+  document.getElementById("pf-drive").value     = "";
+  document.getElementById("product-form-title").textContent = "Edit product — " + code;
+  document.getElementById("pf-cancel").style.display = "inline-flex";
+  document.getElementById("product-form").scrollIntoView({ behavior: "smooth" });
+}
+
+function clearProductForm() {
+  ["pf-code","pf-name","pf-mepmax","pf-gnsize","pf-gnweight","pf-tagesziel","pf-shelf","pf-drive"]
+    .forEach(id => { document.getElementById(id).value = ""; });
+  document.getElementById("pf-code").readOnly = false;
+  document.getElementById("product-form-title").textContent = "Add new product";
+  document.getElementById("pf-cancel").style.display = "none";
+}
+
+async function saveProduct() {
+  const code = document.getElementById("pf-code").value.trim();
+  const name = document.getElementById("pf-name").value.trim();
+  if (!code || !name) { adminMsg("pf-msg", "Code and Name are required", "err"); return; }
+  const btn = document.querySelector("#product-form .btn-save");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    const data = await adminCall({
+      action     : "saveProduct",
+      code, name,
+      mepMax     : document.getElementById("pf-mepmax").value,
+      gnSize     : document.getElementById("pf-gnsize").value,
+      gnWeight   : document.getElementById("pf-gnweight").value,
+      tagesziel  : document.getElementById("pf-tagesziel").value,
+      shelfLife  : document.getElementById("pf-shelf").value,
+      driveLink  : document.getElementById("pf-drive").value,
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("pf-msg", "Saved ✓", "ok");
+    clearProductForm();
+    await loadProducts();
+    renderAdminProducts();
+  } catch(e) {
+    adminMsg("pf-msg", "Error: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save product";
+  }
+}
+
+async function delProduct(code) {
+  if (!confirm(`Remove "${allProducts[code]?.name || code}" from product list?`)) return;
+  const data = await adminCall({ action: "deleteProduct", code });
+  if (data.error) { alert("Error: " + data.error); return; }
+  await loadProducts();
+  renderAdminProducts();
+}
+
+// Auto-fill inventory name from product when code is typed
+document.getElementById("pf-code")?.addEventListener("blur", () => {
+  const code = document.getElementById("pf-code").value.trim();
+  if (code && allProducts[code]) {
+    document.getElementById("pf-name").value = allProducts[code].name;
+  }
+});
+
+// ── Workers admin ─────────────────────────────────────────────
+let allWorkersAdmin = [];
+
+async function loadWorkersAdmin() {
+  try {
+    const data = await adminCall({ action: "allWorkers" });
+    // allWorkers not yet in API — fall back to workers list + build from Settings
+    allWorkersAdmin = data.workers || [];
+    renderAdminWorkers();
+  } catch(e) { console.error(e); }
+}
+
+function renderAdminWorkers() {
+  const list = document.getElementById("admin-worker-list");
+  if (!list) return;
+  // Build from allScans worker names + workers list
+  const names = new Set([
+    ...(allWorkersAdmin.map ? allWorkersAdmin.map(w => typeof w === "string" ? w : w.name) : []),
+  ]);
+  if (!names.size) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers yet</div>`; return; }
+  list.innerHTML = [...names].map(name => `
+    <div class="admin-item">
+      <div style="flex:1"><div class="admin-item-name">${name}</div></div>
+      <div class="admin-item-actions">
+        <button class="btn-edit" onclick="editWorker('${name}')">Edit</button>
+        <button class="btn-del"  onclick="delWorker('${name}')">Deactivate</button>
+      </div>
+    </div>`).join("");
+}
+
+function editWorker(name) {
+  document.getElementById("wf-name").value    = name;
+  document.getElementById("wf-name").readOnly = true;
+  document.getElementById("wf-form-title").textContent = "Edit worker — " + name;
+  document.getElementById("wf-cancel").style.display = "inline-flex";
+}
+
+function clearWorkerForm() {
+  document.getElementById("wf-name").value    = "";
+  document.getElementById("wf-role").value    = "";
+  document.getElementById("wf-name").readOnly = false;
+  document.getElementById("wf-form-title").textContent = "Add new worker";
+  document.getElementById("wf-cancel").style.display   = "none";
+}
+
+async function saveWorker() {
+  const name = document.getElementById("wf-name").value.trim();
+  if (!name) { adminMsg("wf-msg", "Name is required", "err"); return; }
+  const btn = document.querySelector("#admin-worker-list ~ .admin-form .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const data = await adminCall({
+      action : "saveWorker",
+      name,
+      role   : document.getElementById("wf-role").value.trim(),
+      active : "true",
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("wf-msg", "Saved ✓", "ok");
+    clearWorkerForm();
+    allWorkersAdmin = [...new Set([...allWorkersAdmin, name])];
+    renderAdminWorkers();
+  } catch(e) {
+    adminMsg("wf-msg", "Error: " + e.message, "err");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Save worker"; }
+  }
+}
+
+async function delWorker(name) {
+  if (!confirm(`Deactivate worker "${name}"? They won't appear in the scanner dropdown.`)) return;
+  const data = await adminCall({ action: "deleteWorker", name });
+  if (data.error) { alert("Error: " + data.error); return; }
+  adminMsg("wf-msg", `${name} deactivated ✓`, "ok");
+  allWorkersAdmin = allWorkersAdmin.filter(w => (typeof w === "string" ? w : w.name) !== name);
+  renderAdminWorkers();
+}
+
+// ── Inventory admin ───────────────────────────────────────────
+function renderAdminInventory() {
+  const list = document.getElementById("admin-inv-list");
+  if (!list) return;
+  if (!allInventory.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items yet</div>`; return; }
+  list.innerHTML = allInventory.map(r => `
+    <div class="admin-item">
+      <div style="flex:1;min-width:0">
+        <div class="admin-item-name">${r.name||r.code}</div>
+        <div class="admin-item-sub">${r.code} · ${r.quantity ?? "—"} ${r.unit||""} · min ${r.minimum ?? "—"}</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button>
+      </div>
+    </div>`).join("");
+}
+
+function editInvItem(code) {
+  const r = allInventory.find(x => x.code === code) || {};
+  document.getElementById("if-code").value    = code;
+  document.getElementById("if-code").readOnly = true;
+  document.getElementById("if-name").value    = r.name     || (allProducts[code]?.name || "");
+  document.getElementById("if-unit").value    = r.unit     || "";
+  document.getElementById("if-qty").value     = r.quantity ?? "";
+  document.getElementById("if-min").value     = r.minimum  ?? "";
+  document.getElementById("if-form-title").textContent  = "Edit — " + (r.name || code);
+  document.getElementById("if-cancel").style.display    = "inline-flex";
+}
+
+function clearInvForm() {
+  ["if-code","if-name","if-unit","if-qty","if-min"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("if-code").readOnly = false;
+  document.getElementById("if-form-title").textContent = "Add / update stock item";
+  document.getElementById("if-cancel").style.display   = "none";
+}
+
+// Auto-fill name from product when code is entered
+document.getElementById("if-code")?.addEventListener("blur", () => {
+  const code = document.getElementById("if-code").value.trim();
+  const existing = allInventory.find(x => x.code === code);
+  if (existing) {
+    editInvItem(code);
+    return;
+  }
+  if (code && allProducts[code] && !document.getElementById("if-name").value) {
+    document.getElementById("if-name").value = allProducts[code].name || "";
+    document.getElementById("if-unit").value = allProducts[code].gnSize || "";
+  }
+});
+
+async function saveInventoryItem() {
+  const code = document.getElementById("if-code").value.trim();
+  if (!code) { adminMsg("if-msg", "Code is required", "err"); return; }
+  const btn = document.querySelector("#admin-inv-list ~ .admin-form .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const data = await adminCall({
+      action   : "saveInventory",
+      code,
+      name     : document.getElementById("if-name").value.trim(),
+      unit     : document.getElementById("if-unit").value.trim(),
+      quantity : document.getElementById("if-qty").value,
+      minimum  : document.getElementById("if-min").value,
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("if-msg", "Saved ✓", "ok");
+    clearInvForm();
+    await loadInventory();
+    renderAdminInventory();
+  } catch(e) {
+    adminMsg("if-msg", "Error: " + e.message, "err");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Save item"; }
+  }
+}
+
+// ── Load admin data when tab is opened ────────────────────────
+const _origSwitchTab = switchTab;
+function switchTab(btn) {
+  _origSwitchTab(btn);
+  if (btn.dataset.tab === "admin") {
+    renderAdminProducts();
+    renderAdminInventory();
+    // Load workers with full data
+    adminCall({ action: "workers" }).then(d => {
+      allWorkersAdmin = d.workers || [];
+      renderAdminWorkers();
+    });
+  }
 }
 
 </script>
