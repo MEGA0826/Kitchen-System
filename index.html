@@ -53,12 +53,12 @@
       flex-direction: column;
       max-width: 480px;
       margin: 0 auto;
-      padding: 0 20px 40px;
+      padding: 0 20px 16px;
     }
 
     /* ── Header ── */
     .header {
-      padding: 22px 0 18px;
+      padding: 12px 0 12px;
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
@@ -71,7 +71,7 @@
     }
     .brand-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 26px;
+      font-size: 22px;
       letter-spacing: -0.3px;
       line-height: 1;
       color: var(--text);
@@ -106,36 +106,57 @@
 
     /* ── Product Card ── */
     .product-card {
-      margin-top: 24px;
+      margin-top: 14px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
       animation: slideUp 0.35s ease both;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      min-height: 80px;
     }
     @keyframes slideUp {
       from { opacity:0; transform: translateY(12px); }
       to   { opacity:1; transform: translateY(0); }
     }
 
+    /* Image: small square on the right of the card */
     .product-image-wrap {
-      width: 100%;
-      height: 200px;
-      background: var(--surface2);
-      display: none;
+      width: 72px;
+      min-width: 72px;
+      height: 72px;
+      align-self: center;
+      margin: 10px 10px 10px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      order: 2;
+      flex-shrink: 0;
+      display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
     }
-    .product-image-wrap.has-image { display: flex; }
     .product-image-wrap img {
-      width: 100%; height: 100%;
+      width: 72px;
+      height: 72px;
       object-fit: cover;
+      display: block;
+      border-radius: 8px;
+    }
+    .product-image-wrap .img-placeholder {
+      font-size: 24px;
+      opacity: 0.2;
     }
 
     .product-info {
-      padding: 20px 20px 16px;
+      padding: 12px 16px 12px;
+      flex: 1;
+      order: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
     .product-label {
       font-size: 10px;
@@ -146,21 +167,21 @@
     }
     .product-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 32px;
-      line-height: 1.1;
+      font-size: 22px;
+      line-height: 1.15;
       color: var(--text);
-      min-height: 38px;
+      min-height: 34px;
     }
     .product-code {
       font-size: 11px;
       color: var(--muted);
-      margin-top: 8px;
+      margin-top: 6px;
       letter-spacing: 1px;
     }
 
     /* ── Worker Select ── */
     .field-wrap {
-      margin-top: 20px;
+      margin-top: 12px;
       animation: slideUp 0.35s 0.08s ease both;
     }
     .field-label {
@@ -179,7 +200,7 @@
       border-radius: var(--radius-sm);
       font-family: 'DM Mono', monospace;
       font-size: 15px;
-      padding: 13px 16px;
+      padding: 10px 16px;
       appearance: none;
       -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -195,10 +216,10 @@
 
     /* ── Action Buttons ── */
     .actions {
-      margin-top: 24px;
+      margin-top: 12px;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 8px;
       animation: slideUp 0.35s 0.16s ease both;
     }
 
@@ -211,7 +232,7 @@
       letter-spacing: 0.5px;
       text-transform: uppercase;
       cursor: pointer;
-      padding: 20px 14px;
+      padding: 14px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -222,7 +243,7 @@
     }
     .btn:active { transform: scale(0.96); }
     .btn-icon {
-      font-size: 26px;
+      font-size: 22px;
       line-height: 1;
     }
     .btn-label {
@@ -237,9 +258,9 @@
       grid-column: 1 / -1; /* full width — primary action */
       flex-direction: row;
       justify-content: center;
-      padding: 22px 20px;
+      padding: 16px 20px;
     }
-    .btn-produce .btn-icon { font-size: 22px; }
+    .btn-produce .btn-icon { font-size: 18px; }
     .btn-produce .btn-label { font-size: 14px; }
 
     .btn-done {
@@ -259,15 +280,15 @@
       grid-column: 1 / -1;
       flex-direction: row;
       justify-content: center;
-      padding: 14px 20px;
+      padding: 10px 20px;
       border-radius: var(--radius-sm);
     }
     .btn-cancel .btn-icon { font-size: 16px; }
 
     /* ── Feedback Message ── */
     .feedback {
-      margin-top: 20px;
-      min-height: 44px;
+      margin-top: 10px;
+      min-height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -341,15 +362,17 @@
 
   <!-- Product Card -->
   <div class="product-card" id="productCard">
-    <div class="product-image-wrap" id="imageWrap">
-      <img id="productImage" loading="lazy" alt="">
-    </div>
     <div class="product-info">
       <div class="product-label">Scanned product</div>
       <div class="product-name" id="product">
-        <div class="skeleton" style="width:60%;height:34px;margin-bottom:6px;"></div>
+        <div class="skeleton" style="width:60%;height:30px;margin-bottom:6px;"></div>
       </div>
       <div class="product-code" id="productCode"></div>
+    </div>
+    <div class="product-image-wrap" id="imageWrap">
+      <span class="img-placeholder" id="imgPlaceholder">&#127859;</span>
+      <img id="productImage" loading="lazy" alt="" style="display:none;"
+           onload="this.style.display='block';document.getElementById('imgPlaceholder').style.display='none'">
     </div>
   </div>
 
@@ -450,8 +473,8 @@
     const params = new URLSearchParams(window.location.search);
     CURRENT_CODE = params.get("code") || "";
 
-    const pd = PRODUCT_MAP[CURRENT_CODE];
-    const name = pd ? (pd.name || pd.Name || pd.title || CURRENT_CODE) : (CURRENT_CODE || "Unknown product");
+    const pd    = PRODUCT_MAP[CURRENT_CODE];
+    const name  = pd ? (pd.name || pd.Name || pd.title || CURRENT_CODE) : (CURRENT_CODE || "Unknown product");
     const image = pd ? (pd.image || pd.Image || "") : "";
 
     document.getElementById("product").textContent = name;
@@ -459,13 +482,14 @@
       document.getElementById("productCode").textContent = "CODE · " + CURRENT_CODE;
     }
 
-    const wrap = document.getElementById("imageWrap");
-    const img  = document.getElementById("productImage");
+    const img = document.getElementById("productImage");
+    const ph  = document.getElementById("imgPlaceholder");
     if (image) {
       img.src = image;
-      wrap.classList.add("has-image");
+      // onload handler on the <img> reveals it and hides placeholder
     } else {
-      wrap.classList.remove("has-image");
+      img.style.display = "none";
+      if (ph) ph.style.display = "block";
     }
   }
 
