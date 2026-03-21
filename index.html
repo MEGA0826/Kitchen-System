@@ -475,7 +475,6 @@
     const fullMsg = document.getElementById("mepFullMsg");
     const btnProd = document.querySelector(".btn-produce");
 
-    // No MEP config — hide everything
     if (!data.mepMax || data.mepMax === 0) {
       status.style.display = "none";
       fullMsg.classList.remove("visible");
@@ -485,36 +484,46 @@
 
     status.style.display = "flex";
 
-    const inProg    = data.inProgress  !== undefined ? data.inProgress  : Math.max(0, (data.produceCount||0) - (data.doneCount||0));
-    const done      = data.doneCount   || 0;
-    const gnSize    = data.gnSize      || "";
-    const gnWeight  = data.gnWeight    || 0;
-    const listWt    = gnWeight ? inProg * gnWeight : (data.listWeight || 0);
-    const doneWt    = gnWeight ? done   * gnWeight : (data.doneWeight  || 0);
+    const gnSize   = data.gnSize   || "";
+    const gnWeight = data.gnWeight || 0;
 
-    // Row 1 — Finished (green dot)
+    // inProgress: items in MEP list right now (produce - done)
+    const inProg  = data.inProgress !== undefined
+      ? data.inProgress
+      : Math.max(0, (data.produceCount||0) - (data.doneCount||0));
+
+    // available: finished MEPs still usable (done - waste)
+    // Use server field if present, otherwise fall back to doneCount
+    const avail   = data.available !== undefined
+      ? data.available
+      : (data.doneCount || 0);
+
+    const listWt  = gnWeight * inProg;
+    const availWt = gnWeight * avail;
+
+    // Row 1 — Available (green dot)
     const labelDone = document.getElementById("mepLabelDone");
     const dotDone   = document.getElementById("mepDotDone");
-    let doneText    = `<strong>Finished: ${done}${gnSize ? " " + gnSize : ""}</strong>`;
-    if (gnWeight)   doneText += ` = ${doneWt} kg`;
+    let doneText    = `<strong>Available: ${avail}${gnSize ? " " + gnSize : ""}</strong>`;
+    if (gnWeight)   doneText += ` = ${availWt} kg`;
     labelDone.innerHTML = doneText;
     dotDone.className   = "mep-dot green";
 
-    // Row 2 — In MEP list (amber, red when full)
+    // Row 2 — To produce (amber dot, green when full list)
     const labelList = document.getElementById("mepLabelList");
     const dotList   = document.getElementById("mepDotList");
     let listText    = `<strong>To produce: ${inProg}${gnSize ? " " + gnSize : ""}</strong>`;
     if (gnWeight)   listText += ` · ${gnWeight} kg/GN = ${listWt} kg`;
-    labelList.innerHTML  = listText;
+    labelList.innerHTML = listText;
 
     if (data.listFull) {
-      dotList.className        = "mep-dot red";
+      dotList.className = "mep-dot green";
       labelList.classList.add("full");
-      fullMsg.textContent      = "Full MEP List";
+      fullMsg.textContent = "Full MEP List";
       fullMsg.classList.add("visible");
       if (btnProd) btnProd.classList.add("blocked");
     } else {
-      dotList.className        = "mep-dot amber";
+      dotList.className = "mep-dot amber";
       labelList.classList.remove("full");
       fullMsg.classList.remove("visible");
       if (btnProd) btnProd.classList.remove("blocked");
@@ -558,7 +567,7 @@
     }
 
     showMsg("Saving…", "info");
-    const labels = { produce: "In MEP Liste ✓", done: "MEP Fertig ✓", waste: "Waste erfasst" };
+    const labels = { produce: "Added to MEP List ✓", done: "MEP Finished ✓", waste: "Waste recorded ✓" };
 
     fetch(`${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
       .then(r => r.json())
