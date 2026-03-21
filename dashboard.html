@@ -241,6 +241,8 @@
   <button class="tab active" data-tab="kds" onclick="switchTab(this)">KDS · Stats</button>
   <button class="tab" data-tab="inventory" onclick="switchTab(this)">Inventory</button>
   <button class="tab" data-tab="products" onclick="switchTab(this)">Products</button>
+  <button class="tab" data-tab="recipes" onclick="switchTab(this)">Recipes</button>
+  <button class="tab" data-tab="orders" onclick="switchTab(this)">Orders</button>
   <button class="tab" data-tab="admin" onclick="switchTab(this)">⚙ Admin</button>
 </nav>
 
@@ -321,6 +323,68 @@
     </div>
   </div>
 
+  <!-- ── RECIPES PANEL ── -->
+  <div class="panel" id="panel-recipes">
+    <div class="section-title">Recipes</div>
+    <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products</div>
+
+    <!-- Requirements summary -->
+    <div style="margin-bottom:24px">
+      <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
+      <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
+    </div>
+
+    <!-- Recipe editor -->
+    <div class="admin-section-title" style="margin-bottom:10px">Edit recipes</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <select class="form-input" id="recipe-mep-filter" onchange="renderRecipeList()" style="flex:1">
+        <option value="">All MEP products</option>
+      </select>
+    </div>
+    <div id="recipe-list" style="margin-bottom:16px"></div>
+
+    <div class="admin-form">
+      <div class="admin-form-title">Add ingredient to recipe</div>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">MEP Product *</label>
+          <select class="form-input" id="rf-mep"><option value="">Select MEP product…</option></select>
+        </div>
+        <div class="form-field"><label class="form-label">Raw Material *</label>
+          <select class="form-input" id="rf-rm"><option value="">Select raw material…</option></select>
+        </div>
+        <div class="form-field"><label class="form-label">Quantity per GN</label>
+          <input class="form-input" type="number" id="rf-menge" placeholder="3" min="0" step="0.01">
+        </div>
+        <div class="form-field"><label class="form-label">Unit</label>
+          <input class="form-input" id="rf-einheit" placeholder="kg / l / pcs">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" onclick="saveRecipe()">Add ingredient</button>
+      </div>
+      <div class="admin-msg" id="rf-msg"></div>
+    </div>
+  </div>
+
+  <!-- ── ORDER PANEL ── -->
+  <div class="panel" id="panel-orders">
+    <div class="section-title">Orders</div>
+    <div class="section-sub" style="margin-bottom:20px">Items below minimum — what to reorder</div>
+
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()">
+      <select class="search-input" id="order-cat" onchange="renderOrders()" style="flex:0 1 160px">
+        <option value="">All categories</option>
+      </select>
+    </div>
+
+    <div id="order-content">
+      <div class="empty-state"><div class="empty-icon">📦</div>No items to order</div>
+    </div>
+
+    <div id="order-summary" style="margin-top:16px;font-size:12px;color:var(--muted)"></div>
+  </div>
+
   <!-- ── ADMIN PANEL ── -->
   <div class="panel" id="panel-admin">
     <div class="section-title">Admin</div>
@@ -384,9 +448,16 @@
         <div class="form-grid">
           <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. P-001"></div>
           <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from product"></div>
+          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse"></div>
           <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l"></div>
           <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="if-weight" placeholder="1" min="0" step="0.01"></div>
           <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="if-max" placeholder="50" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Kosten/Unit (CHF)</label><input class="form-input" type="number" id="if-kosten" placeholder="2.50" min="0" step="0.01"></div>
+          <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Transgourmet"></div>
+          <div class="form-field"><label class="form-label">Last ordered</label><input class="form-input" type="date" id="if-lastorder"></div>
+          <div class="form-field"><label class="form-label">Notes</label><input class="form-input" id="if-notizen" placeholder="e.g. Kühl lagern"></div>
         </div>
         <div class="form-actions">
           <button class="btn-save" onclick="saveInvItem()">Save item</button>
@@ -444,6 +515,8 @@ function switchTab(btn) {
   btn.classList.add("active");
   document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
   if (btn.dataset.tab === "admin") loadAdminTab();
+  if (btn.dataset.tab === "orders")  renderOrders();
+  if (btn.dataset.tab === "recipes") { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
 }
 
 // Fetch
@@ -731,6 +804,7 @@ async function loadInventory() {
     const data = await get({ action: "inventory" });
     allInventory = Array.isArray(data.inventory) ? data.inventory : [];
     renderInventory(allInventory);
+    renderOrders();
   } catch(e) {
     document.getElementById("inv-content").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
   }
@@ -759,6 +833,8 @@ function renderInventory(rows) {
 
     const qtyDisplay = qty === null || isNaN(qty) ? "—" : qty;
     const minDisplay = min === null || isNaN(min) || min === 0 ? "—" : min;
+    const wuNum  = r.weightUnit !== null ? Number(r.weightUnit) : null;
+    const totKg  = (qty !== null && wuNum !== null) ? (qty * wuNum).toFixed(1) + " kg" : "—";
 
     const st       = scanStats[r.code] || {};
     const mepAvail = Math.max(0, (st.done||0) - (st.waste||0) - (st.used||0));
@@ -768,16 +844,22 @@ function renderInventory(rows) {
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
       <td>${r.name||"—"}</td>
+      <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
       <td style="font-weight:500">${qtyDisplay}</td>
       <td style="color:var(--muted)">${r.unit||"—"}</td>
+      <td style="color:var(--muted)">${totKg}</td>
       <td style="color:var(--muted)">${minDisplay}</td>
+      <td style="color:var(--muted)">${r.maximum !== null ? r.maximum : "—"}</td>
+      <td style="color:var(--muted)">${r.kostenUnit !== null ? "CHF " + Number(r.kostenUnit).toFixed(2) : "—"}</td>
+      <td style="color:var(--muted)">${(r.quantity !== null && r.kostenUnit !== null) ? "CHF " + (r.quantity * r.kostenUnit).toFixed(2) : "—"}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.lieferant||"—"}</td>
       <td style="color:var(--green)">${mepStr}</td>
       <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
     </tr>`;
   }).join("");
   document.getElementById("inv-content").innerHTML = `
     <div class="inv-table-wrap"><table class="inv-table">
-      <thead><tr><th>Code</th><th>Product</th><th>Stock qty</th><th>Unit</th><th>Min</th><th>MEP available</th><th>Status</th></tr></thead>
+      <thead><tr><th>Code</th><th>Product</th><th>Cat.</th><th>Qty</th><th>Unit</th><th>Total kg</th><th>Min</th><th>Max</th><th>CHF/Unit</th><th>Total CHF</th><th>Supplier</th><th>MEP avail.</th><th>Status</th></tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
 }
@@ -785,7 +867,10 @@ function renderInventory(rows) {
 function filterInventory() {
   const q = document.getElementById("inv-search").value.toLowerCase();
   renderInventory(allInventory.filter(r =>
-    (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q)));
+    (r.name||"").toLowerCase().includes(q) ||
+    (r.code||"").toLowerCase().includes(q) ||
+    (r.kategorie||"").toLowerCase().includes(q) ||
+    (r.lieferant||"").toLowerCase().includes(q)));
 }
 
 // ── PRODUCTS ─────────────────────────────────────────────────
@@ -861,7 +946,7 @@ function openModal(code) {
 function closeModal() { document.getElementById("modal").classList.remove("open"); }
 
 // ── INIT ──────────────────────────────────────────────────────
-Promise.allSettled([loadKDS(), loadProducts(), loadInventory()]);
+Promise.allSettled([loadKDS(), loadProducts(), loadInventory(), loadRecipes()]);
 setInterval(loadKDS, 60_000);
 // ── Swipeable alerts ─────────────────────────────────────────
 const _sw = {};
@@ -1141,32 +1226,43 @@ function renderAdminInventory() {
   const list = document.getElementById("admin-inv-list");
   if (!list) return;
   if (!allInventory.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items yet</div>`; return; }
-  list.innerHTML = allInventory.map(r => `
-    <div class="admin-item">
+  list.innerHTML = allInventory.map(r => {
+    const totKg = (r.quantity !== null && r.weightUnit !== null)
+      ? ` · ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
+    return `<div class="admin-item">
       <div style="flex:1;min-width:0">
-        <div class="admin-item-name">${r.name||r.code}</div>
-        <div class="admin-item-sub">${r.code} · ${r.quantity ?? "—"} ${r.unit||""} · min ${r.minimum ?? "—"}</div>
+        <div class="admin-item-name">${r.name||r.code}${r.kategorie ? ` <span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>` : ""}</div>
+        <div class="admin-item-sub">${r.code} · ${r.quantity ?? "—"} ${r.unit||""}${totKg} · min ${r.minimum ?? "—"}${r.lieferant ? " · " + r.lieferant : ""}</div>
       </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 function editInvItem(code) {
   const r = allInventory.find(x => x.code === code) || {};
-  document.getElementById("if-code").value    = code;
-  document.getElementById("if-code").readOnly = true;
-  document.getElementById("if-name").value    = r.name     || (allProducts[code]?.name || "");
-  document.getElementById("if-unit").value    = r.unit     || "";
-  document.getElementById("if-qty").value     = r.quantity ?? "";
-  document.getElementById("if-min").value     = r.minimum  ?? "";
-  document.getElementById("if-form-title").textContent  = "Edit — " + (r.name || code);
-  document.getElementById("if-cancel").style.display    = "inline-flex";
+  document.getElementById("if-code").value       = code;
+  document.getElementById("if-code").readOnly    = true;
+  document.getElementById("if-name").value       = r.name       || (allProducts[code]?.name || "");
+  document.getElementById("if-kategorie").value  = r.kategorie  || (allProducts[code]?.kategorie || "");
+  document.getElementById("if-unit").value       = r.unit       || "";
+  document.getElementById("if-qty").value        = r.quantity   ?? "";
+  document.getElementById("if-weight").value     = r.weightUnit ?? "";
+  document.getElementById("if-min").value        = r.minimum    ?? "";
+  document.getElementById("if-max").value        = r.maximum    ?? "";
+  document.getElementById("if-kosten").value    = r.kostenUnit ?? "";
+  document.getElementById("if-lieferant").value  = r.lieferant  || "";
+  document.getElementById("if-lastorder").value  = r.lastOrder  || "";
+  document.getElementById("if-notizen").value    = r.notizen    || "";
+  document.getElementById("if-form-title").textContent = "Edit — " + (r.name || code);
+  document.getElementById("if-cancel").style.display   = "inline-flex";
 }
 
 function clearInvForm() {
-  ["if-code","if-name","if-unit","if-qty","if-min"].forEach(id => document.getElementById(id).value = "");
+  ["if-code","if-name","if-kategorie","if-unit","if-qty","if-weight","if-min","if-max","if-kosten","if-lieferant","if-lastorder","if-notizen"]
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
   document.getElementById("if-code").readOnly = false;
   document.getElementById("if-form-title").textContent = "Add / update stock item";
   document.getElementById("if-cancel").style.display   = "none";
@@ -1193,12 +1289,19 @@ async function saveInvItem() {
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
     const data = await adminCall({
-      action   : "saveInventory",
+      action     : "saveInventory",
       code,
-      name     : document.getElementById("if-name").value.trim(),
-      unit     : document.getElementById("if-unit").value.trim(),
-      quantity : document.getElementById("if-qty").value,
-      minimum  : document.getElementById("if-min").value,
+      name       : document.getElementById("if-name").value.trim(),
+      kategorie  : document.getElementById("if-kategorie").value.trim(),
+      unit       : document.getElementById("if-unit").value.trim(),
+      quantity   : document.getElementById("if-qty").value,
+      weightUnit : document.getElementById("if-weight").value,
+      minimum    : document.getElementById("if-min").value,
+      maximum    : document.getElementById("if-max").value,
+      kostenUnit : document.getElementById("if-kosten").value,
+      lieferant  : document.getElementById("if-lieferant").value.trim(),
+      lastOrder  : document.getElementById("if-lastorder").value,
+      notizen    : document.getElementById("if-notizen").value.trim(),
     });
     if (data.error) throw new Error(data.error);
     adminMsg("if-msg", "Saved ✓", "ok");
@@ -1221,6 +1324,240 @@ function loadAdminTab() {
     allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
     renderAdminWorkers();
   });
+}
+
+
+// ── Orders ───────────────────────────────────────────────────
+function renderOrders() {
+  const container = document.getElementById("order-content");
+  const summary   = document.getElementById("order-summary");
+  const catSel    = document.getElementById("order-cat");
+  if (!container) return;
+
+  let items = allInventory.filter(r => {
+    const qty = r.quantity !== null ? Number(r.quantity) : null;
+    const min = r.minimum  !== null ? Number(r.minimum)  : null;
+    return qty !== null && min !== null && qty < min;
+  });
+
+  // Build category dropdown
+  const cats = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
+  const curCat = catSel ? catSel.value : "";
+  if (catSel) {
+    catSel.innerHTML = `<option value="">All categories</option>`
+      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  }
+
+  const q = (document.getElementById("order-search")?.value || "").toLowerCase();
+  if (curCat) items = items.filter(r => (r.kategorie||"") === curCat);
+  if (q)      items = items.filter(r =>
+    (r.name||"").toLowerCase().includes(q) ||
+    (r.lieferant||"").toLowerCase().includes(q) ||
+    (r.kategorie||"").toLowerCase().includes(q)
+  );
+
+  if (!items.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All stock above minimum</div>`;
+    if (summary) summary.textContent = "";
+    return;
+  }
+
+  // Group by supplier
+  const bySupplier = {};
+  items.forEach(r => {
+    const sup = r.lieferant || "No supplier";
+    if (!bySupplier[sup]) bySupplier[sup] = [];
+    bySupplier[sup].push(r);
+  });
+
+  container.innerHTML = Object.entries(bySupplier).map(([sup, rows]) => `
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">${sup}</div>
+      <div class="inv-table-wrap"><table class="inv-table">
+        <thead><tr>
+          <th>Product</th><th>Category</th><th>Current</th><th>Min</th>
+          <th style="color:var(--red)">Order qty</th><th>Total kg</th><th style="color:var(--amber)">Est. CHF</th><th>Notes</th>
+        </tr></thead>
+        <tbody>${rows.map(r => {
+          const qty      = Number(r.quantity);
+          const min      = Number(r.minimum);
+          const max      = r.maximum !== null ? Number(r.maximum) : null;
+          const kosten   = r.kostenUnit !== null ? Number(r.kostenUnit) : null;
+          // Order to max if set, otherwise order to min
+          const orderQty = max !== null ? Math.max(0, max - qty) : Math.ceil(min - qty);
+          const wuNum    = r.weightUnit !== null ? Number(r.weightUnit) : null;
+          const totKg    = wuNum ? (orderQty * wuNum).toFixed(1) + " kg" : "—";
+          const totChf   = kosten ? "CHF " + (orderQty * kosten).toFixed(2) : "—";
+          const urgency  = qty <= 0 ? "color:var(--red);font-weight:500" : "color:var(--amber)";
+          return `<tr>
+            <td>${r.name||r.code}</td>
+            <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
+            <td>${qty} ${r.unit||""}</td>
+            <td style="color:var(--muted)">${min}${max!==null?" / "+max:""} ${r.unit||""}</td>
+            <td style="${urgency}">${orderQty} ${r.unit||""}</td>
+            <td style="color:var(--muted)">${totKg}</td>
+            <td style="color:var(--amber)">${totChf}</td>
+            <td style="font-size:11px;color:var(--muted)">${r.notizen||"—"}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>
+    </div>`).join("");
+
+  if (summary) {
+    summary.textContent = `${items.length} item${items.length>1?"s":""} to reorder across ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length>1?"s":""}`;
+  }
+}
+
+
+// ── Recipes ───────────────────────────────────────────────────
+let allRecipes = [];
+
+async function loadRecipes() {
+  try {
+    const data = await adminCall({ action: "getRecipes" });
+    allRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+  } catch(e) { console.error("loadRecipes:", e); }
+}
+
+async function loadRequirements() {
+  const el = document.getElementById("req-content");
+  if (!el) return;
+  try {
+    const data = await adminCall({ action: "getRequirements" });
+    const reqs = Array.isArray(data.requirements) ? data.requirements : [];
+    if (!reqs.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`;
+      return;
+    }
+    // Group by MEP product
+    const byMep = {};
+    reqs.forEach(r => {
+      if (!byMep[r.mepCode]) byMep[r.mepCode] = { name: r.mepName, stillNeeded: r.stillNeeded, items: [] };
+      byMep[r.mepCode].items.push(r);
+    });
+    el.innerHTML = Object.entries(byMep).map(([code, g]) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">
+          ${g.name} <span style="font-size:11px;color:var(--amber);margin-left:6px">need ${g.stillNeeded} more GN today</span>
+        </div>
+        <div class="inv-table-wrap"><table class="inv-table">
+          <thead><tr><th>Raw material</th><th>Need</th><th>In stock</th><th>Status</th></tr></thead>
+          <tbody>${g.items.map(r => `<tr>
+            <td>${r.rmName}</td>
+            <td style="font-weight:500">${r.required} ${r.unit}</td>
+            <td style="color:${r.sufficient?"var(--green)":"var(--red)"}">${r.inStock} ${r.unit}</td>
+            <td>${r.sufficient
+              ? `<span class="stock-pill stock-ok">OK</span>`
+              : `<span class="stock-pill stock-out">Short ${r.shortage.toFixed(1)} ${r.unit}</span>`}</td>
+          </tr>`).join("")}</tbody>
+        </table></div>
+      </div>`).join("");
+  } catch(e) {
+    el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function renderRecipeList() {
+  const el        = document.getElementById("recipe-list");
+  const filterSel = document.getElementById("recipe-mep-filter");
+  if (!el) return;
+
+  // Build MEP filter dropdown
+  const mepCodes = [...new Set(allRecipes.map(r => r.mepCode))].sort();
+  const curFilter = filterSel ? filterSel.value : "";
+  if (filterSel) {
+    filterSel.innerHTML = `<option value="">All MEP products (${mepCodes.length})</option>`
+      + mepCodes.map(c => {
+          const p = allProducts[c];
+          return `<option value="${c}" ${c===curFilter?"selected":""}>${p ? p.name : c}</option>`;
+        }).join("");
+  }
+
+  let recipes = curFilter ? allRecipes.filter(r => r.mepCode === curFilter) : allRecipes;
+
+  if (!recipes.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px">No recipes yet. Add ingredients below.</div>`;
+    return;
+  }
+
+  // Group by MEP code
+  const grouped = {};
+  recipes.forEach(r => {
+    if (!grouped[r.mepCode]) grouped[r.mepCode] = [];
+    grouped[r.mepCode].push(r);
+  });
+
+  el.innerHTML = Object.entries(grouped).map(([mepCode, rows]) => {
+    const p = allProducts[mepCode] || {};
+    return `<div class="admin-form" style="margin-bottom:10px">
+      <div class="admin-form-title">${p.name || mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></div>
+      ${rows.map(r => {
+        const inv = allInventory.find(x => x.code === r.rmCode) || {};
+        return `<div class="admin-item" style="margin-top:6px">
+          <div style="flex:1">
+            <span style="font-size:13px">${inv.name || r.rmCode}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN · ${r.rmCode}</span>
+          </div>
+          <button class="btn-del" onclick="deleteRecipeRow('${mepCode}','${r.rmCode}')">Remove</button>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }).join("");
+}
+
+function populateRecipeDropdowns() {
+  const mepSel = document.getElementById("rf-mep");
+  const rmSel  = document.getElementById("rf-rm");
+  if (mepSel) {
+    mepSel.innerHTML = `<option value="">Select MEP product…</option>`
+      + Object.entries(allProducts)
+          .filter(([,p]) => p.name && p.name !== "(deleted)")
+          .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
+          .map(([code,p]) => `<option value="${code}">${p.name} (${code})</option>`).join("");
+  }
+  if (rmSel) {
+    rmSel.innerHTML = `<option value="">Select raw material…</option>`
+      + allInventory
+          .filter(r => r.code)
+          .sort((a,b) => (a.name||"").localeCompare(b.name||""))
+          .map(r => `<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+  }
+  // Auto-fill unit from selected RM
+  rmSel?.addEventListener("change", () => {
+    const code = rmSel.value;
+    const inv  = allInventory.find(x => x.code === code);
+    if (inv && !document.getElementById("rf-einheit").value) {
+      document.getElementById("rf-einheit").value = inv.unit || "";
+    }
+  });
+}
+
+async function saveRecipe() {
+  const mepCode = document.getElementById("rf-mep").value;
+  const rmCode  = document.getElementById("rf-rm").value;
+  const menge   = document.getElementById("rf-menge").value;
+  if (!mepCode || !rmCode) { adminMsg("rf-msg", "Select MEP product and raw material", "err"); return; }
+  const btn = document.querySelector("#panel-recipes .admin-form .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const data = await adminCall({ action:"saveRecipe", mepCode, rmCode, menge,
+      einheit: document.getElementById("rf-einheit").value.trim() });
+    if (data.error) throw new Error(data.error);
+    adminMsg("rf-msg", "Saved ✓", "ok");
+    await loadRecipes();
+    renderRecipeList();
+    loadRequirements();
+  } catch(e) { adminMsg("rf-msg", "Error: " + e.message, "err"); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "Add ingredient"; } }
+}
+
+async function deleteRecipeRow(mepCode, rmCode) {
+  if (!confirm("Remove this ingredient from the recipe?")) return;
+  const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
+  if (data.error) { alert("Error: " + data.error); return; }
+  await loadRecipes();
+  renderRecipeList();
+  loadRequirements();
 }
 
 </script>
