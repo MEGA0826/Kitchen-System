@@ -47,7 +47,7 @@
 
     /* ── Page: fills screen, no scroll ── */
     .page {
-      height: 100dvh;
+      height: 100vh; height: 100dvh;
       max-width: 480px;
       margin: 0 auto;
       padding: 0 16px 12px;
@@ -67,7 +67,7 @@
     }
     .brand-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 20px;
+      font-size: 24px;
       line-height: 1;
     }
     .brand-name em { font-style: italic; color: var(--amber); }
@@ -84,7 +84,7 @@
       gap: 8px;
     }
     .dashboard-link {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--muted);
       text-decoration: none;
       letter-spacing: 1px;
@@ -132,22 +132,22 @@
     /* Left: text */
     .product-info { flex: 1; min-width: 0; }
     .product-label {
-      font-size: 9px;
-      letter-spacing: 2px;
+      font-size: 11px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
       margin-bottom: 5px;
     }
     .product-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 22px;
+      font-size: 26px;
       line-height: 1.15;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .product-code {
-      font-size: 10px;
+      font-size: 12px;
       color: var(--muted);
       margin-top: 4px;
       letter-spacing: 1px;
@@ -181,8 +181,8 @@
     /* ── Worker Select ── */
     .field-wrap { flex-shrink: 0; animation: slideUp .3s .07s ease both; }
     .field-label {
-      font-size: 9px;
-      letter-spacing: 2px;
+      font-size: 11px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
       margin-bottom: 6px;
@@ -235,7 +235,7 @@
     }
     .btn:active { transform: scale(0.96); }
     .btn-icon  { font-size: 20px; line-height: 1; }
-    .btn-label { font-size: 11px; letter-spacing: 1px; }
+    .btn-label { font-size: 13px; letter-spacing: 0.5px; }
 
     .btn-produce {
       background: var(--amber-dim);
@@ -246,7 +246,7 @@
       gap: 10px;
     }
     .btn-produce .btn-icon  { font-size: 16px; }
-    .btn-produce .btn-label { font-size: 13px; }
+    .btn-produce .btn-label { font-size: 15px; }
 
     .btn-done  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .btn-waste { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
