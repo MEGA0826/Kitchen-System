@@ -186,7 +186,7 @@
 <header class="header">
   <div>
     <div class="logo">Kitchen <em>MEP</em> — Dashboard</div>
-    <div class="logo-sub">212 · Nooch Richti · Manager View</div>
+    <div class="logo-sub">212 · Nooch Richti · Manager</div>
   </div>
   <div class="header-right">
     <div class="live-badge"><span class="live-dot"></span>LIVE</div>
@@ -197,8 +197,8 @@
 
 <nav class="nav">
   <button class="tab active" data-tab="kds" onclick="switchTab(this)">KDS · Stats</button>
-  <button class="tab" data-tab="inventory" onclick="switchTab(this)">Inventory · Lager</button>
-  <button class="tab" data-tab="products" onclick="switchTab(this)">Products · Rezepte</button>
+  <button class="tab" data-tab="inventory" onclick="switchTab(this)">Inventory</button>
+  <button class="tab" data-tab="products" onclick="switchTab(this)">Products</button>
 </nav>
 
 <div class="body">
@@ -206,18 +206,18 @@
   <!-- KDS -->
   <div class="panel active" id="panel-kds">
     <div class="section-title">Kitchen Display</div>
-    <div class="section-sub">Today's activity · Heutige Aktivität</div>
+    <div class="section-sub">Today's activity</div>
 
     <div class="mep-alerts" id="mep-alerts"></div>
 
-    <div class="section-sub" style="margin-bottom:14px">MEP overview · Tagesübersicht</div>
+    <div class="section-sub" style="margin-bottom:14px">MEP overview — today</div>
     <div class="mep-grid" id="mep-grid"></div>
 
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Total Scans · Gesamt</div><div class="stat-value blue" id="s-total">—</div></div>
-      <div class="stat-card"><div class="stat-label">In MEP List · Produziert</div><div class="stat-value amber" id="s-produce">—</div></div>
-      <div class="stat-card"><div class="stat-label">Finished · Fertig</div><div class="stat-value green" id="s-done">—</div></div>
-      <div class="stat-card"><div class="stat-label">Waste · Abfall</div><div class="stat-value red" id="s-waste">—</div></div>
+      <div class="stat-card"><div class="stat-label">Total scans</div><div class="stat-value blue" id="s-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">In MEP list</div><div class="stat-value amber" id="s-produce">—</div></div>
+      <div class="stat-card"><div class="stat-label">Finished</div><div class="stat-value green" id="s-done">—</div></div>
+      <div class="stat-card"><div class="stat-label">Waste</div><div class="stat-value red" id="s-waste">—</div></div>
     </div>
 
     <div class="chart-wrap">
@@ -232,11 +232,11 @@
 
     <div class="feed-wrap">
       <div class="feed-header">
-        <span class="feed-title-txt">Recent scans · Letzte Scans</span>
+        <span class="feed-title-txt">Recent scans</span>
         <button class="refresh-btn" onclick="loadKDS()">↺ Refresh</button>
       </div>
       <div id="scan-feed">
-        <div class="feed-row hdr"><span>Time · Zeit</span><span>Worker</span><span>Code</span><span>Action</span></div>
+        <div class="feed-row hdr"><span>Time</span><span>Worker</span><span>Code</span><span>Action</span></div>
         <div class="empty-state"><div class="skeleton" style="width:55%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div>
       </div>
     </div>
@@ -245,9 +245,9 @@
   <!-- INVENTORY -->
   <div class="panel" id="panel-inventory">
     <div class="section-title">Inventory</div>
-    <div class="section-sub">Lagerbestand · Stock overview</div>
+    <div class="section-sub">Stock overview</div>
     <div class="inv-controls">
-      <input class="search-input" id="inv-search" type="text" placeholder="Search / Suchen…" oninput="filterInventory()">
+      <input class="search-input" id="inv-search" type="text" placeholder="Search…" oninput="filterInventory()">
     </div>
     <div id="inv-content">
       <div class="inv-table-wrap"><div class="empty-state"><div class="skeleton" style="width:50%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div></div>
@@ -256,10 +256,10 @@
 
   <!-- PRODUCTS -->
   <div class="panel" id="panel-products">
-    <div class="section-title">Products & Recipes</div>
-    <div class="section-sub">Produkte & Rezepte · Click for scan stats</div>
+    <div class="section-title">Products</div>
+    <div class="section-sub">Click any product for scan stats</div>
     <div class="inv-controls">
-      <input class="search-input" id="prod-search" type="text" placeholder="Search product… / Produkt suchen…" oninput="filterProducts()">
+      <input class="search-input" id="prod-search" type="text" placeholder="Search product…" oninput="filterProducts()">
     </div>
     <div class="product-grid" id="product-grid">
       <div class="skeleton" style="height:200px;border-radius:14px;"></div>
@@ -284,7 +284,7 @@
         <div class="modal-stat"><div class="modal-stat-val red"   id="m-waste">—</div><div class="modal-stat-lbl">Waste</div></div>
       </div>
     </div>
-    <button class="modal-close" onclick="closeModal()">Close · Schliessen</button>
+    <button class="modal-close" onclick="closeModal()">Close</button>
   </div>
 </div>
 
@@ -392,16 +392,28 @@ function buildMepAlerts() {
     const listFull       = mepMax > 0 && inProgress >= mepMax;
 
     // ── Alert banners ──────────────────────────────────────
+    const shelfLife = p.shelfLife || 2;
+    const expiredBatch = (allScans || []).filter(s => {
+      if (s.code !== code || s.action !== "done") return false;
+      const age = (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24);
+      return age > shelfLife;
+    }).length;
+    if (expiredBatch > 0) {
+      alerts.push({ type:"over", icon:"⚠",
+        title: `Check shelf life — ${name}`,
+        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} finished over ${shelfLife} day${shelfLife>1?"s":""} ago — check if still usable` });
+    }
+
     if (overDone) {
       const excess   = doneCount - tagesziel;
-      const excessKg = gnWeight ? ` (${excess * gnWeight} kg zu viel)` : "";
+      const excessKg = gnWeight ? ` (${excess * gnWeight} kg too much)` : "";
       alerts.push({ type:"over", icon:"⚠",
-        title: `Zu viel MEP — ${name}`,
-        sub:   `${doneCount} fertig, Ziel war ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
+        title: `Too much MEP — ${name}`,
+        sub:   `${doneCount} finished, target was ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
     } else if (listFull && !goalMet) {
-      const listKg = gnWeight ? ` · ${listWeight} kg in Vorbereitung` : "";
+      const listKg = gnWeight ? ` · ${listWeight} kg in preparation` : "";
       alerts.push({ type:"full", icon:"i",
-        title: `MEP Liste voll — ${name}`,
+        title: `MEP list full — ${name}`,
         sub:   `${inProgress} of ${mepMax}${gnSize?" "+gnSize:""}${listKg}` });
     }
 
@@ -410,27 +422,35 @@ function buildMepAlerts() {
     let tagHtml   = "";
     if (overDone) {
       cardClass = "over";
-      tagHtml   = `<span class="mep-tag over">⚠ Zu viel</span>`;
+      tagHtml   = `<span class="mep-tag over">⚠ Over target</span>`;
     } else if (goalMet) {
       cardClass = "goal";
-      tagHtml   = `<span class="mep-tag goal">✓ Ziel erreicht</span>`;
+      tagHtml   = `<span class="mep-tag goal">✓ Goal reached</span>`;
     } else if (listFull) {
-      tagHtml   = `<span class="mep-tag prog">In Vorbereitung</span>`;
+      tagHtml   = `<span class="mep-tag prog">In preparation</span>`;
     } else if (doneCount === 0 && inProgress === 0) {
-      tagHtml   = `<span class="mep-tag idle">Noch nicht gestartet</span>`;
+      tagHtml   = `<span class="mep-tag idle">Not started yet</span>`;
     } else {
-      tagHtml   = `<span class="mep-tag prog">In Bearbeitung</span>`;
+      tagHtml   = `<span class="mep-tag prog">In progress</span>`;
     }
 
     const gnLabel = gnSize ? ` ${gnSize}` : "";
 
+    const shelfLifeCard = p.shelfLife || 2;
+    const expiredCard = (allScans || []).filter(s => {
+      if (s.code !== code || s.action !== "done") return false;
+      const age = (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24);
+      return age > shelfLifeCard;
+    }).length;
+
     let rows = `
       <div class="mep-stat-row">
-        <span class="mep-stat-label">Finished · Fertig</span>
+        <span class="mep-stat-label">Available</span>
         <span class="mep-stat-val ${goalMet&&!overDone?"green":overDone?"red":""}">${doneCount}${gnLabel}${gnWeight?" = "+doneWeight+" kg":""}</span>
       </div>
+      ${expiredCard > 0 ? `<div class="mep-stat-row"><span class="mep-stat-label" style="color:var(--red)">⚠ Shelf life</span><span class="mep-stat-val red">${expiredCard} batch${expiredCard>1?"es":""} over ${shelfLifeCard}d old</span></div>` : ""}
       <div class="mep-stat-row">
-        <span class="mep-stat-label">To produce · In Liste</span>
+        <span class="mep-stat-label">To produce</span>
         <span class="mep-stat-val ${listFull?"red":"amber"}">${inProgress}${gnLabel}${gnWeight?" · "+gnWeight+" kg/GN = "+listWeight+" kg":""}</span>
       </div>`;
 
@@ -438,11 +458,11 @@ function buildMepAlerts() {
       rows += `
       <div class="mep-divider"></div>
       <div class="mep-stat-row">
-        <span class="mep-stat-label">Daily target · Tagesziel</span>
+        <span class="mep-stat-label">Daily target</span>
         <span class="mep-stat-val muted">${tagesziel}${gnLabel}</span>
       </div>
       <div class="mep-stat-row">
-        <span class="mep-stat-label">Still needed · Noch nötig</span>
+        <span class="mep-stat-label">Still needed</span>
         <span class="mep-stat-val ${stillNeeded===0?"green":"amber"}">${stillNeeded}${gnLabel}${gnWeight&&stillNeeded>0?" = "+rohwareNeeded+" kg Rohware":""}</span>
       </div>`;
     }
@@ -514,7 +534,7 @@ function renderFeed() {
       <span><span class="action-badge ${s.action||""}">${s.action||"—"}</span></span>
     </div>`).join("");
   document.getElementById("scan-feed").innerHTML =
-    `<div class="feed-row hdr"><span>Time · Zeit</span><span>Worker</span><span>Code</span><span>Action</span></div>`
+    `<div class="feed-row hdr"><span>Time</span><span>Worker</span><span>Code</span><span>Action</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
 }
 
@@ -530,9 +550,9 @@ async function loadInventory() {
 }
 
 function stockClass(qty, min) {
-  qty = Number(qty)||0; min = Number(min)||0;
-  if (qty <= 0)   return ["out","Out of stock · Leer"];
-  if (qty <= min) return ["low","Low · Niedrig"];
+  qty = parseFloat(qty)||0; min = parseFloat(min)||0;
+  if (qty <= 0)   return ["out","Out of stock"];
+  if (qty <= min) return ["low","Low stock"];
   return             ["ok","OK"];
 }
 
@@ -543,19 +563,21 @@ function renderInventory(rows) {
     return;
   }
   const trs = rows.map(r => {
-    const [cls,lbl] = stockClass(r.quantity, r.minimum);
+    const qty = parseFloat(r.quantity) || 0;
+    const min = parseFloat(r.minimum)  || 0;
+    const [cls,lbl] = stockClass(qty, min);
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
       <td>${r.name||"—"}</td>
       <td style="color:var(--muted)">${r.unit||"—"}</td>
-      <td>${Number(r.quantity)||0}</td>
-      <td style="color:var(--muted)">${r.minimum||"—"}</td>
+      <td>${qty}</td>
+      <td style="color:var(--muted)">${min||"—"}</td>
       <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
     </tr>`;
   }).join("");
   document.getElementById("inv-content").innerHTML = `
     <div class="inv-table-wrap"><table class="inv-table">
-      <thead><tr><th>Code</th><th>Product · Produkt</th><th>Unit · Einheit</th><th>Qty · Menge</th><th>Min</th><th>Status</th></tr></thead>
+      <thead><tr><th>Code</th><th>Product</th><th>Unit</th><th>Qty</th><th>Min</th><th>Status</th></tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
 }
