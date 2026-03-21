@@ -333,7 +333,7 @@
       <div class="brand-sub">212 · Nooch Richti</div>
     </div>
     <div class="header-status">
-      <a href="?page=dashboard" class="dashboard-link">⊞ Dashboard</a>
+      <a href="https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec?page=dashboard" class="dashboard-link">⊞ Dashboard</a>
       <span class="status-dot"></span>
       LIVE
     </div>
@@ -427,7 +427,7 @@
   /* ── Load workers ── */
   async function preloadWorkers() {
     try {
-      const res = await fetch(API_URL, { cache: "force-cache" });
+      const res = await fetch(`${API_URL}?action=workers`, { cache: "force-cache" });
       const data = await res.json();
       const select = document.getElementById("worker");
       select.innerHTML = "";
