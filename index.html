@@ -334,6 +334,34 @@
     .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
     .feedback-inner.info    { background: var(--amber-dim);  color: var(--amber); border: 1px solid var(--amber-brd); }
 
+    /* ── Over-produce popup ── */
+    .popup-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .popup-overlay.visible { display: flex; }
+    .popup-box {
+      background: var(--surface);
+      border: 1px solid var(--red-brd);
+      border-radius: var(--radius);
+      padding: 24px 22px 20px;
+      width: 100%;
+      max-width: 340px;
+      text-align: center;
+      animation: slideUp .25s ease both;
+    }
+    .popup-icon { font-size: 32px; margin-bottom: 10px; }
+    .popup-title { font-family: 'Instrument Serif', serif; font-size: 22px; color: var(--red); margin-bottom: 6px; }
+    .popup-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+    .popup-btn { width: 100%; padding: 12px; background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); border-radius: var(--radius-sm); font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: opacity .15s; }
+    .popup-btn:active { opacity: 0.7; }
+
     /* ── Skeleton ── */
     .skeleton {
       height: 26px; width: 55%;
@@ -416,6 +444,16 @@
     <div class="feedback-inner" id="msg"></div>
   </div>
 
+</div>
+
+<!-- Over-produce popup -->
+<div class="popup-overlay" id="overPopup">
+  <div class="popup-box">
+    <div class="popup-icon">⚠</div>
+    <div class="popup-title">Over Produce!</div>
+    <div class="popup-sub" id="overPopupSub">You have finished more than the daily target.</div>
+    <button class="popup-btn" onclick="closeOverPopup()">OK — Understood</button>
+  </div>
 </div>
 <script>
   const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
@@ -560,9 +598,8 @@
     const worker = document.getElementById("worker").value;
     if (!worker) { showMsg("Select a staff member first", "error"); return; }
 
-    // Client-side block: produce button already shown as blocked
     if (action === "produce" && document.querySelector(".btn-produce")?.classList.contains("blocked")) {
-      showMsg("Full MEP List — cannot add more", "error");
+      showMsg("Target already covered — no more needed", "error");
       return;
     }
 
@@ -572,18 +609,36 @@
     fetch(`${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
       .then(r => r.json())
       .then(data => {
-        // Server blocked produce — list is full
+        if (data.mepMax !== undefined) updateMepUI(data);
+
         if (data.status === "list_full") {
-          updateMepUI(data);
-          showMsg("Full MEP List — cannot add more", "error");
+          showMsg(data.message || "Cannot add more", "error");
           return;
         }
-        // Update bar with fresh server counts
-        if (data.mepMax !== undefined) updateMepUI(data);
-        showMsg(labels[action] || "Gespeichert", "success");
+        if (data.status === "over_produce") {
+          const p    = PRODUCT_MAP[CURRENT_CODE] || {};
+          const name = p.name || CURRENT_CODE;
+          showOverPopup(name, data);
+          showMsg("MEP Finished ✓", "success");
+          setTimeout(() => { window.location.href = "scan://restart"; }, 2500);
+          return;
+        }
+
+        showMsg(labels[action] || "Saved", "success");
         setTimeout(() => { window.location.href = "scan://restart"; }, 700);
       })
       .catch(() => showMsg("Network error — try again", "error"));
+  }
+
+  function showOverPopup(name, data) {
+    const gnLabel = data.gnSize ? " " + data.gnSize : "";
+    const sub = `${name}: ${data.available}${gnLabel} finished — daily target is ${data.tagesziel}${gnLabel}.`;
+    document.getElementById("overPopupSub").textContent = sub;
+    document.getElementById("overPopup").classList.add("visible");
+  }
+
+  function closeOverPopup() {
+    document.getElementById("overPopup").classList.remove("visible");
   }
 
   function cancelScan() { window.location.href = "scan://restart"; }
