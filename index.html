@@ -32,6 +32,9 @@
       --red:       #e86050;
       --red-dim:   rgba(232,96,80,0.12);
       --red-brd:   rgba(232,96,80,0.20);
+      --blue:      #60a8e8;
+      --blue-dim:  rgba(96,168,232,0.12);
+      --blue-brd:  rgba(96,168,232,0.22);
       --gray-dim:  rgba(255,255,255,0.06);
       --radius:    14px;
       --radius-sm: 8px;
@@ -116,58 +119,58 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 12px;
+      padding: 10px 14px 10px 14px;
+      position: relative;
       flex-shrink: 0;
       animation: slideUp .3s ease both;
+      min-height: 80px;
     }
     @keyframes slideUp {
       from { opacity:0; transform: translateY(10px); }
       to   { opacity:1; transform: translateY(0); }
     }
 
-    /* Left: text */
-    .product-info { flex: 1; min-width: 0; }
+    /* Text side — leaves right padding for the image */
+    .product-info { padding-right: 82px; }
     .product-label {
-      font-size: 12px;
+      font-size: 11px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .product-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 30px;
+      font-size: 28px;
       line-height: 1.15;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .product-code {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--muted);
-      margin-top: 4px;
+      margin-top: 3px;
       letter-spacing: 1px;
     }
 
-    /* Right: image — fixed 64×64, never grows */
+    /* Image — absolute top-right corner of the card */
     .product-img {
-      width: 72px;
-      height: 72px;
-      min-width: 72px;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 68px;
+      height: 68px;
       border-radius: 8px;
       object-fit: cover;
-      background: var(--surface2);
       display: block;
-      flex-shrink: 0;
     }
     .product-img-ph {
-      width: 72px;
-      height: 72px;
-      min-width: 72px;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 68px;
+      height: 68px;
       border-radius: 8px;
       background: var(--surface2);
       display: flex;
@@ -175,23 +178,24 @@
       justify-content: center;
       font-size: 22px;
       opacity: .25;
-      flex-shrink: 0;
     }
 
     /* ── MEP Status rows ── */
     .mep-status {
-      margin-top: 8px;
+      margin-top: 6px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
     }
     .mep-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .mep-dot {
-      width: 8px; height: 8px;
+      width: 7px; height: 7px;
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -199,15 +203,18 @@
     .mep-dot.amber { background: var(--amber); }
     .mep-dot.red   { background: var(--red); }
     .mep-row-label {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
       letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .mep-row-label strong {
       color: var(--text);
       font-weight: 500;
     }
-    .mep-row-label.full strong { color: var(--red); }
+    .mep-row-label.full strong { color: var(--green); }
 
     /* Block produce button */
     .btn.blocked { opacity: 0.35; pointer-events: none; }
@@ -259,7 +266,7 @@
     /* ── Action Buttons ── */
     .actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
       flex: 1;
       animation: slideUp .3s .14s ease both;
@@ -297,7 +304,9 @@
     .btn-produce .btn-icon  { font-size: 20px; }
     .btn-produce .btn-label { font-size: 15px; }
 
+    /* 3 equal columns: Finish | Used | Waste */
     .btn-done  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .btn-used  { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-brd); }
     .btn-waste { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
 
     .btn-cancel {
@@ -426,7 +435,11 @@
     </button>
     <button class="btn btn-done" onclick="send('done')">
       <span class="btn-icon">✓</span>
-      <span class="btn-label">Finish MEP</span>
+      <span class="btn-label">Finish</span>
+    </button>
+    <button class="btn btn-used" onclick="send('used')">
+      <span class="btn-icon">→</span>
+      <span class="btn-label">Used</span>
     </button>
     <button class="btn btn-waste" onclick="send('waste')">
       <span class="btn-icon">⚠</span>
@@ -539,19 +552,23 @@
     const listWt  = gnWeight * inProg;
     const availWt = gnWeight * avail;
 
-    // Row 1 — Available (green dot)
+    // Row 1 — Available (one compact line)
     const labelDone = document.getElementById("mepLabelDone");
     const dotDone   = document.getElementById("mepDotDone");
-    let doneText    = `<strong>Available: ${avail}${gnSize ? " " + gnSize : ""}</strong>`;
-    if (gnWeight)   doneText += ` = ${availWt} kg`;
+    let doneText = `<strong>Available: ${avail}`;
+    if (gnSize)   doneText += ` ${gnSize}`;
+    if (gnWeight) doneText += ` = ${availWt} kg`;
+    doneText += `</strong>`;
     labelDone.innerHTML = doneText;
     dotDone.className   = "mep-dot green";
 
-    // Row 2 — To produce (amber dot, green when full list)
+    // Row 2 — To produce (one compact line)
     const labelList = document.getElementById("mepLabelList");
     const dotList   = document.getElementById("mepDotList");
-    let listText    = `<strong>To produce: ${inProg}${gnSize ? " " + gnSize : ""}</strong>`;
-    if (gnWeight)   listText += ` · ${gnWeight} kg/GN = ${listWt} kg`;
+    let listText = `<strong>To produce: ${inProg}`;
+    if (gnSize)   listText += ` ${gnSize}`;
+    if (gnWeight) listText += ` = ${listWt} kg`;
+    listText += `</strong>`;
     labelList.innerHTML = listText;
 
     if (data.listFull) {
@@ -604,7 +621,7 @@
     }
 
     showMsg("Saving…", "info");
-    const labels = { produce: "Added to MEP List ✓", done: "MEP Finished ✓", waste: "Waste recorded ✓" };
+    const labels = { produce: "Added to MEP List ✓", done: "MEP Finished ✓", waste: "Waste recorded ✓", used: "Sent to service ✓" };
 
     fetch(`${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
       .then(r => r.json())
