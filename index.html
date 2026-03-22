@@ -123,7 +123,7 @@
       position: relative;
       flex-shrink: 0;
       animation: slideUp .3s ease both;
-      min-height: 80px;
+      min-height: 100px;
     }
     @keyframes slideUp {
       from { opacity:0; transform: translateY(10px); }
@@ -131,7 +131,7 @@
     }
 
     /* Text side — leaves right padding for the image */
-    .product-info { padding-right: 82px; }
+    .product-info { padding-right: 152px; }
     .product-label {
       font-size: 11px;
       letter-spacing: 1.5px;
@@ -154,13 +154,13 @@
       letter-spacing: 1px;
     }
 
-    /* Image — absolute top-right corner of the card */
+    /* Image — absolute top-right, double wide */
     .product-img {
       position: absolute;
       top: 8px;
       right: 8px;
-      width: 68px;
-      height: 68px;
+      width: 136px;
+      height: 80px;
       border-radius: 8px;
       object-fit: cover;
       display: block;
@@ -169,8 +169,8 @@
       position: absolute;
       top: 8px;
       right: 8px;
-      width: 68px;
-      height: 68px;
+      width: 136px;
+      height: 80px;
       border-radius: 8px;
       background: var(--surface2);
       display: flex;
@@ -567,15 +567,17 @@
     listText += `</strong>`;
     labelList.innerHTML = listText;
 
-    // Deactivate "Finish" when nothing in MEP list
+    // Finish is active when there is work in the MEP list (inProg > 0)
+    // Also keep active when toProduce > 0 — items are being made
     const btnDone = document.querySelector(".btn-done");
     if (btnDone) {
-      if (inProg === 0) {
-        btnDone.classList.add("inactive");
-        btnDone.title = "Nothing in MEP list to finish";
-      } else {
+      const canFinish = inProg > 0 || toProduce > 0;
+      if (canFinish) {
         btnDone.classList.remove("inactive");
         btnDone.title = "";
+      } else {
+        btnDone.classList.add("inactive");
+        btnDone.title = "Nothing in MEP list to finish";
       }
     }
 
@@ -583,7 +585,7 @@
     const btnUsed  = document.querySelector(".btn-used");
     const btnWaste = document.querySelector(".btn-waste");
     if (btnUsed) {
-      if (avail === 0) {
+      if (avail < 1) {
         btnUsed.classList.add("inactive");
         btnUsed.title = "Nothing available to use";
       } else {
@@ -601,19 +603,19 @@
       }
     }
 
-    // Show "covered" message when available meets either target or mepMax
+    // "Daily target covered" only when available has reached the target
     const tagesziel = data.tagesziel || 0;
     const mepMax    = data.mepMax    || 0;
-    const covered   = (tagesziel > 0 && avail >= tagesziel) ||
-                      (tagesziel === 0 && mepMax > 0 && avail >= mepMax);
+    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+    const covered   = targetQty > 0 && avail >= targetQty;
 
-    if (data.listFull || covered) {
+    if (covered) {
       dotList.className = "mep-dot green";
       labelList.classList.add("full");
       fullMsg.textContent = "Daily target covered ✓";
       fullMsg.classList.add("visible");
     } else {
-      dotList.className = "mep-dot amber";
+      dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
       labelList.classList.remove("full");
       fullMsg.classList.remove("visible");
     }
@@ -685,7 +687,7 @@
     const btn   = document.getElementById("btnUndo");
     const label = document.getElementById("undoLabel");
     btn.style.display = "grid";
-    let secs = 5;
+    let secs = 3;
     label.textContent = `Undo (${secs})`;
 
     _undoTimer = setInterval(() => {
