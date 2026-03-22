@@ -619,16 +619,21 @@ async function loadKDS() {
   try {
     const data = await get({ action: "scans" });
     allScans = Array.isArray(data.scans) ? data.scans : [];
-    buildScanStats();
-    buildStats();
-    buildMepAlerts();
-    renderStats();
-    renderProductBars();
-    renderWorkerBars();
-    renderFeed();
+    try { sessionStorage.setItem("dash_scans", JSON.stringify(allScans)); } catch(e) {}
+    _renderKDS();
   } catch(e) {
     document.getElementById("scan-feed").innerHTML = `<div class="error-msg">Error loading scans: ${e.message}</div>`;
   }
+}
+
+function _renderKDS() {
+  buildScanStats();
+  buildStats();
+  buildMepAlerts();
+  renderStats();
+  renderProductBars();
+  renderWorkerBars();
+  renderFeed();
 }
 
 function buildStats() {
@@ -974,7 +979,8 @@ function filterInventory() {
 async function loadProducts() {
   try {
     const data = await get({ action: "allProducts" });
-    allProducts = (data && !data.error) ? data : {};
+    allProducts = (data && !data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
+    try { sessionStorage.setItem("dash_products", JSON.stringify(allProducts)); } catch(e) {}
     renderProductGrid(Object.entries(allProducts));
   } catch(e) {
     document.getElementById("product-grid").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
@@ -1047,20 +1053,27 @@ function openModal(code) {
 function closeModal() { document.getElementById("modal").classList.remove("open"); }
 
 // ── INIT ──────────────────────────────────────────────────────
-// Show cached data instantly while fresh loads in background
+// Show cached data instantly — user sees data in <100ms
 (function() {
-  const cachedProds = sessionStorage.getItem("dash_products");
-  const cachedInv   = sessionStorage.getItem("dash_inventory");
-  if (cachedProds) {
-    try { allProducts = JSON.parse(cachedProds); renderProductGrid(Object.entries(allProducts)); } catch(e) {}
-  }
-  if (cachedInv) {
-    try { allInventory = JSON.parse(cachedInv); renderInventory(allInventory); } catch(e) {}
-  }
+  const cp = sessionStorage.getItem("dash_products");
+  const ci = sessionStorage.getItem("dash_inventory");
+  const cs = sessionStorage.getItem("dash_scans");
+  if (cp) { try { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); } catch(e) {} }
+  if (ci) { try { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); } catch(e) {} }
+  if (cs) { try { allScans     = JSON.parse(cs); _renderKDS(); } catch(e) {} }
 })();
 
-Promise.allSettled([loadKDS(), loadProducts(), loadInventory(), loadRecipes()]);
-setInterval(loadKDS, 60_000);
+// Load KDS first (most important), then stagger others to avoid concurrent Apps Script queuing
+loadKDS();
+loadProducts();
+setTimeout(loadInventory, 800);   // slight stagger
+setTimeout(loadRecipes,  1600);   // slight stagger
+setInterval(async () => {
+  const prevLen = allScans.length;
+  await loadKDS();
+  // Only re-render product grid if scan data changed (new scans came in)
+  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
+}, 60_000);
 // ── Swipeable alerts ─────────────────────────────────────────
 const _sw = {};
 
