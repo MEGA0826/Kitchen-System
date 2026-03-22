@@ -405,67 +405,61 @@
     }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 
-    /* ── Scanner home state ── */
-    .scan-home {
+    /* ── Scanner home ── */
+    .scan-home { flex:1; display:flex; flex-direction:column; gap:10px; padding:4px 0; }
+    .scan-home-video-wrap {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      padding: 24px;
-      text-align: center;
-    }
-    .scan-home-icon {
-      width: 100px;
-      height: 100px;
-      border: 2px solid var(--amber-brd);
-      border-radius: var(--radius);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48px;
-      background: var(--amber-dim);
       position: relative;
+      border-radius: var(--radius);
       overflow: hidden;
+      background: #000;
+      min-height: 200px;
     }
-    .scan-home-icon::before,
-    .scan-home-icon::after {
-      content: '';
+    /* Corner frame markers */
+    .scan-corner {
       position: absolute;
-      left: 0; right: 0;
+      width: 22px; height: 22px;
+      border-color: var(--amber);
+      border-style: solid;
+      z-index: 2;
+    }
+    .scan-corner.tl { top:16px;  left:16px;  border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+    .scan-corner.tr { top:16px;  right:16px; border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
+    .scan-corner.bl { bottom:16px; left:16px;  border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
+    .scan-corner.br { bottom:16px; right:16px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+    /* Animated scan line */
+    .scan-line {
+      position: absolute;
+      left: 16px; right: 16px;
       height: 2px;
       background: var(--amber);
-      opacity: 0;
-      animation: scanline 2s ease-in-out infinite;
+      opacity: 0.8;
+      z-index: 2;
+      animation: scanmove 2s ease-in-out infinite;
     }
-    .scan-home-icon::after { animation-delay: 1s; }
-    @keyframes scanline {
-      0%   { top: 10%;  opacity: 0; }
-      10%  { opacity: 0.8; }
-      90%  { opacity: 0.8; }
-      100% { top: 90%; opacity: 0; }
+    @keyframes scanmove {
+      0%   { top: 16px; }
+      50%  { top: calc(100% - 16px); }
+      100% { top: 16px; }
     }
-    .scan-home-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 24px;
-      color: var(--text);
-    }
-    .scan-home-sub {
-      font-size: 12px;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      line-height: 1.6;
+    .scan-hint-text {
+      position: absolute;
+      bottom: 12px; left: 0; right: 0;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      z-index: 2;
     }
     .btn-scan-camera {
-      width: 100%;
-      padding: 16px;
+      padding: 14px;
       background: var(--amber-dim);
       color: var(--amber);
       border: 1px solid var(--amber-brd);
       border-radius: var(--radius);
       font-family: 'DM Mono', monospace;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 500;
       letter-spacing: 1px;
       text-transform: uppercase;
@@ -474,59 +468,11 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
+      width: 100%;
       transition: opacity .15s;
     }
     .btn-scan-camera:active { opacity: 0.7; }
-    /* QR scanner overlay */
-    .scanner-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: #000;
-      z-index: 100;
-      flex-direction: column;
-    }
-    .scanner-overlay.visible { display: flex; }
-    #scanner-video {
-      flex: 1;
-      width: 100%;
-      object-fit: cover;
-    }
-    .scanner-frame {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -60%);
-      width: 220px;
-      height: 220px;
-      border: 2px solid var(--amber);
-      border-radius: 16px;
-      box-shadow: 0 0 0 2000px rgba(0,0,0,0.5);
-    }
-    .scanner-cancel {
-      padding: 20px;
-      text-align: center;
-      background: #000;
-      color: var(--muted);
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      cursor: pointer;
-      border: none;
-      width: 100%;
-    }
-    .scanner-hint {
-      position: absolute;
-      top: calc(50% + 60px);
-      left: 50%;
-      transform: translateX(-50%);
-      color: #fff;
-      font-size: 12px;
-      letter-spacing: 0.5px;
-      opacity: 0.7;
-      white-space: nowrap;
-    }
+    .scan-msg { font-size:12px; color:var(--red); text-align:center; min-height:18px; }
   </style>
 </head>
 <body>
@@ -544,17 +490,24 @@
     </div>
   </header>
 
-  <!-- Scanner home state (shown when no ?code= param) -->
+  <!-- Scanner home state — inline camera, no overlay needed -->
   <div class="scan-home" id="scanHome" style="display:none">
-    <div class="scan-home-icon">📷</div>
-    <div>
-      <div class="scan-home-title">Scan a product</div>
-      <div class="scan-home-sub">Point the camera at a QR code<br>or tap the button below</div>
+    <div class="scan-home-video-wrap" id="scanVideoWrap">
+      <video id="scanner-video-inline" autoplay playsinline muted
+             style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius);display:block"></video>
+      <!-- scan frame corners -->
+      <div class="scan-corner tl"></div>
+      <div class="scan-corner tr"></div>
+      <div class="scan-corner bl"></div>
+      <div class="scan-corner br"></div>
+      <div class="scan-line" id="scanLine"></div>
+      <div class="scan-hint-text">Point at a QR code</div>
     </div>
-    <button class="btn-scan-camera" onclick="openScanner()">
-      <span style="font-size:20px">⬡</span>
-      <span>Open camera to scan</span>
+    <button class="btn-scan-camera" id="btnRetry" onclick="startInlineScanner()" style="display:none">
+      <span style="font-size:18px">⟳</span>
+      <span>Tap to start camera</span>
     </button>
+    <div class="scan-msg" id="scanMsg"></div>
   </div>
 
   <!-- Product Card (shown after scan) -->
@@ -578,15 +531,12 @@
     <div id="imgPlaceholder" class="product-img-ph">🍽</div>
   </div>
 
-  <!-- QR scanner overlay -->
-  <div class="scanner-overlay" id="scannerOverlay">
-    <video id="scanner-video" autoplay playsinline muted></video>
-    <div class="scanner-frame"></div>
-    <div class="scanner-hint">Align QR code within the frame</div>
-    <div style="display:flex;background:#000;gap:0">
-      <button class="scanner-cancel" onclick="closeScanner()" style="flex:1">✕ Cancel</button>
-      <button id="btnToggleCamera" class="scanner-cancel" onclick="toggleCamera()" style="flex:1;border-left:1px solid #333">⇄ Front cam</button>
-    </div>
+  <!-- Camera toggle button (shown in scan home footer) -->
+  <div id="scanControls" style="display:none;gap:8px;padding:0 0 8px">
+    <button id="btnToggleCamera" onclick="toggleCamera()"
+      style="flex:1;padding:10px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+      ⇄ Front cam
+    </button>
   </div>
 
   <!-- Worker -->
@@ -947,22 +897,21 @@
     window.location.href = "scan://restart";
   }
 
-  // ── QR Scanner via camera ────────────────────────────────────
-  let _scanStream = null;
+  // ── QR Scanner — inline video in page ───────────────────────
+  let _scanStream   = null;
   let _scanInterval = null;
-
-  // Camera preference — stored in localStorage so it persists
   let _cameraFacing = localStorage.getItem("cameraFacing") || "environment";
 
   function toggleCamera() {
     _cameraFacing = _cameraFacing === "environment" ? "user" : "environment";
     localStorage.setItem("cameraFacing", _cameraFacing);
-    if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
-    clearInterval(_scanInterval);
-    const btn = document.getElementById("btnToggleCamera");
-    if (btn) btn.textContent = _cameraFacing === "user" ? "⇄ Rear cam" : "⇄ Front cam";
-    // Re-open with new camera
-    openScanner();
+    stopInlineScanner();
+    startInlineScanner();
+  }
+
+  function updateToggleLabel() {
+    const lbl = document.getElementById("btnToggleCameraLabel");
+    if (lbl) lbl.textContent = _cameraFacing === "user" ? "Rear cam" : "Front cam";
   }
 
   async function startCameraStream() {
@@ -995,24 +944,31 @@
     }
   }
 
-  function openScanner() {
-    const overlay = document.getElementById("scannerOverlay");
-    const btn = document.getElementById("btnToggleCamera");
-    if (btn) btn.textContent = _cameraFacing === "user" ? "⇄ Rear cam" : "⇄ Front cam";
-    overlay.classList.add("visible");
+  function openScanner() { startInlineScanner(); }
 
-    // getUserMedia must be called synchronously within the user gesture
+  function startInlineScanner() {
+    const video  = document.getElementById("scanner-video-inline");
+    const retry  = document.getElementById("btnRetry");
+    const msg    = document.getElementById("scanMsg");
+    const ctrl   = document.getElementById("scanControls");
+    if (!video) return;
+    if (msg) msg.textContent = "";
+
     navigator.mediaDevices.getUserMedia({ video: { facingMode: _cameraFacing } })
     .then(stream => {
       _scanStream = stream;
-      const video = document.getElementById("scanner-video");
       video.srcObject = stream;
       video.play();
+      if (retry) retry.style.display = "none";
+      if (ctrl) ctrl.style.display = "flex";
+      updateToggleLabel();
+      // Start decoding
       if ("BarcodeDetector" in window) {
         const detector = new BarcodeDetector({ formats: ["qr_code"] });
         _scanInterval = setInterval(() => {
+          if (video.readyState < 2) return;
           detector.detect(video).then(codes => {
-            if (codes.length > 0) { closeScanner(); handleScannedUrl(codes[0].rawValue); }
+            if (codes.length > 0) { stopInlineScanner(); handleScannedUrl(codes[0].rawValue); }
           }).catch(() => {});
         }, 300);
       } else {
@@ -1020,15 +976,16 @@
       }
     })
     .catch(err => {
-      closeScanner();
-      if (err.name === "NotAllowedError") {
-        showMsg("Tap Allow when browser asks for camera permission", "error");
-      } else if (err.name === "NotFoundError") {
-        showMsg("No camera found on this device", "error");
-      } else {
-        showMsg("Camera error: " + err.message, "error");
-      }
+      if (retry) retry.style.display = "flex";
+      if (msg)   msg.textContent = err.name === "NotAllowedError"
+        ? "Camera permission needed — tap Tap to start camera"
+        : "Camera error: " + err.message;
     });
+  }
+
+  function stopInlineScanner() {
+    clearInterval(_scanInterval);
+    if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
   }
 
   function loadJsQR(video) {
@@ -1051,11 +1008,7 @@
     document.head.appendChild(script);
   }
 
-  function closeScanner() {
-    clearInterval(_scanInterval);
-    if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
-    document.getElementById("scannerOverlay").classList.remove("visible");
-  }
+  function closeScanner() { stopInlineScanner(); }
 
   function handleScannedUrl(raw) {
     // If it's a full URL containing ?code=, extract and navigate
@@ -1079,8 +1032,8 @@
       document.getElementById("actionsWrap").style.display  = "none";
       preloadProducts();
       preloadWorkers();
-      // Open camera automatically — browser will prompt for permission if needed
-      openScanner();
+      // Start inline camera — show retry button if permission not yet granted
+      startInlineScanner();
       return;
     }
 
