@@ -117,9 +117,14 @@
     .alert-delete-bg { position: absolute; inset: 0; background: #c0392b; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: #fff; border-radius: var(--radius); opacity: 0; transition: opacity .1s; }
     .alert-wrap.revealing .alert-delete-bg { opacity: 1; }
     .mep-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; position: relative; transition: transform .15s ease; will-change: transform; cursor: grab; user-select: none; }
-    .mep-alert.over  { background: #7a1a1a; border: 1px solid #a33; color: #fdd; }
-    .mep-alert.full  { background: #5a4000; border: 1px solid #a07010; color: #fde89a; }
-    .mep-alert.green { background: #1a3d1a; border: 1px solid #2d7a2d; color: #aaffaa; }
+    .mep-alert.red    { background: #7a1a1a; border: 1px solid #c44; color: #fdd; }
+    .mep-alert.over   { background: #7a1a1a; border: 1px solid #a33; color: #fdd; }
+    .mep-alert.yellow { background: #5a4000; border: 1px solid #c09020; color: #ffe08a; }
+    .mep-alert.full   { background: #5a4000; border: 1px solid #a07010; color: #fde89a; }
+    .mep-alert.green  { background: #1a3d1a; border: 1px solid #2d7a2d; color: #aaffaa; }
+    .mep-alert.blue   { background: #1a2d4a; border: 1px solid #2060a0; color: #aad4ff; }
+    .mep-alert { cursor: pointer; }
+    .mep-alert:hover  { filter: brightness(1.12); }
     .mep-alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
     .mep-alert-body { display: flex; flex-direction: column; gap: 2px; }
     .mep-alert-title { font-weight: 500; letter-spacing: 0.3px; }
@@ -252,7 +257,10 @@
   <!-- KDS -->
   <div class="panel active" id="panel-kds">
     <div class="section-title">Kitchen Display</div>
-    <div class="section-sub">Today's activity</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-sub" style="margin-bottom:0">Today's activity</div>
+      <button onclick="clearAllAlerts()" style="font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red-brd)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">Clear all</button>
+    </div>
 
     <div class="mep-alerts" id="mep-alerts"></div>
 
@@ -693,6 +701,9 @@ function buildMepAlerts() {
     const listFull       = mepMax > 0 && inProgress >= mepMax;
 
     // ── Alert banners ──────────────────────────────────────
+    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+
+    // Shelf life
     const shelfLife = p.shelfLife || 2;
     const expiredBatch = (allScans || []).filter(s => {
       if (s.code !== code || s.action !== "done") return false;
@@ -700,22 +711,48 @@ function buildMepAlerts() {
       return age > shelfLife;
     }).length;
     if (expiredBatch > 0) {
-      alerts.push({ type:"over", icon:"⚠",
+      alerts.push({ type:"yellow", icon:"⚠", code,
         title: `Check shelf life — ${name}`,
-        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} finished over ${shelfLife} day${shelfLife>1?"s":""} ago — check if still usable` });
+        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} over ${shelfLife}d — verify usability` });
     }
 
+    // Too much MEP — yellow (attention, not critical)
     if (overDone) {
-      const excess   = doneCount - tagesziel;
-      const excessKg = gnWeight ? ` (${excess * gnWeight} kg too much)` : "";
-      alerts.push({ type:"over", icon:"⚠",
+      const excess   = available - tagesziel;
+      const excessKg = gnWeight ? ` (${(excess * gnWeight).toFixed(1)} kg over)` : "";
+      alerts.push({ type:"yellow", icon:"⚠", code,
         title: `Too much MEP — ${name}`,
-        sub:   `${doneCount} finished, target was ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
-    } else if (listFull && !goalMet) {
-      const listKg = gnWeight ? ` · ${listWeight} kg in preparation` : "";
-      alerts.push({ type:"green", icon:"✓",
-        title: `MEP list full — ${name}`,
-        sub:   `${inProgress} of ${mepMax}${gnSize?" "+gnSize:""}${listKg}` });
+        sub:   `${available} available, target is ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
+    }
+
+    // MEP target reached — green (good news)
+    if (goalMet && !overDone) {
+      alerts.push({ type:"green", icon:"✓", code,
+        title: `Target reached — ${name}`,
+        sub:   `${available}${gnSize?" "+gnSize:""} available · daily target met` });
+    }
+
+    // MEP list full but available = 0 — red urgent (needs prep asap)
+    if (listFull && available === 0 && !goalMet) {
+      const listKg = gnWeight ? ` · ${(listWeight).toFixed(1)} kg in prep` : "";
+      alerts.push({ type:"red", icon:"🚨", code,
+        title: `⚠ Prepare now — ${name}`,
+        sub:   `MEP list full but nothing available${listKg}` });
+    }
+
+    // Raw material shortage alert
+    if (gnWeight > 0 && targetQty > 0) {
+      const neededKg = targetQty * gnWeight;
+      const invItem  = allInventory.find(r => r.code === code);
+      if (invItem && invItem.quantity !== null) {
+        const inStock = Number(invItem.quantity) * (invItem.weightUnit || 1);
+        if (inStock < neededKg) {
+          const shortKg = (neededKg - inStock).toFixed(1);
+          alerts.push({ type:"blue", icon:"📦", code,
+            title: `Low stock — ${name}`,
+            sub:   `Need ${neededKg} kg for daily target, only ${inStock.toFixed(1)} kg in stock · ${shortKg} kg short` });
+        }
+      }
     }
 
     // ── Per-product card ───────────────────────────────────
@@ -765,7 +802,7 @@ function buildMepAlerts() {
     }
 
     cards.push(`
-      <div class="mep-card ${cardClass}">
+      <div class="mep-card ${cardClass}" id="mep-card-${code}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
           <span class="mep-card-name">${name}</span>
           ${tagHtml}
@@ -775,15 +812,17 @@ function buildMepAlerts() {
   });
 
   // Render alerts
-  alertBox.innerHTML = alerts.map((a,i) => `
-    <div class="alert-wrap" id="aw-${i}">
+  alertBox.innerHTML = alerts.map((a,idx) => `
+    <div class="alert-wrap" id="aw-${idx}">
       <div class="alert-delete-bg">Delete</div>
-      <div class="mep-alert ${a.type}" id="al-${i}" data-idx="${i}">
+      <div class="mep-alert ${a.type}" id="al-${idx}" data-idx="${idx}"
+           onclick="alertClick('${a.code||''}')">
         <span class="mep-alert-icon">${a.icon}</span>
         <div class="mep-alert-body">
           <span class="mep-alert-title">${a.title}</span>
           <span class="mep-alert-sub">${a.sub}</span>
         </div>
+        <span style="margin-left:auto;font-size:10px;opacity:.5;flex-shrink:0">tap ›</span>
       </div>
     </div>`).join("");
   initSwipe();
@@ -1414,10 +1453,28 @@ function renderOrders() {
   const catSel    = document.getElementById("order-cat");
   if (!container) return;
 
+  // Standard reorder: stock below minimum
   let items = allInventory.filter(r => {
     const qty = r.quantity !== null ? Number(r.quantity) : null;
     const min = r.minimum  !== null ? Number(r.minimum)  : null;
     return qty !== null && min !== null && qty < min;
+  }).map(r => ({ ...r, _reason: "below_min" }));
+
+  // Safety stock: raw material not enough for 1 day's MEP max target
+  // For each MEP product with gnWeight, find matching lager item
+  Object.entries(allProducts).forEach(([mepCode, p]) => {
+    if (!p.gnWeight || !p.mepMax) return;
+    const targetQty  = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
+    const neededKg   = targetQty * p.gnWeight;
+    // Find matching lager item by code
+    const invItem = allInventory.find(r => r.code === mepCode);
+    if (!invItem || invItem.quantity === null) return;
+    const inStockKg = Number(invItem.quantity) * (invItem.weightUnit || 1);
+    if (inStockKg < neededKg && !items.find(x => x.code === mepCode)) {
+      items.push({ ...invItem, _reason: "safety_stock",
+        _neededKg: neededKg, _inStockKg: inStockKg,
+        _shortKg: (neededKg - inStockKg).toFixed(1) });
+    }
   });
 
   // Build category dropdown
@@ -1459,22 +1516,24 @@ function renderOrders() {
           <th style="color:var(--red)">Order qty</th><th>Total kg</th><th style="color:var(--amber)">Est. CHF</th><th>Notes</th>
         </tr></thead>
         <tbody>${rows.map(r => {
-          const qty      = Number(r.quantity);
-          const min      = Number(r.minimum);
-          const max      = r.maximum !== null ? Number(r.maximum) : null;
+          const qty      = Number(r.quantity) || 0;
+          const min      = r.minimum  !== null ? Number(r.minimum)  : 0;
+          const max      = r.maximum  !== null ? Number(r.maximum)  : null;
           const kosten   = r.kostenUnit !== null ? Number(r.kostenUnit) : null;
-          // Order to max if set, otherwise order to min
           const orderQty = max !== null ? Math.max(0, max - qty) : Math.ceil(min - qty);
           const wuNum    = r.weightUnit !== null ? Number(r.weightUnit) : null;
           const totKg    = wuNum ? (orderQty * wuNum).toFixed(1) + " kg" : "—";
           const totChf   = kosten ? "CHF " + (orderQty * kosten).toFixed(2) : "—";
           const urgency  = qty <= 0 ? "color:var(--red);font-weight:500" : "color:var(--amber)";
+          const reasonBadge = r._reason === "safety_stock"
+            ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);padding:1px 6px;border-radius:10px;margin-left:4px">safety stock</span>`
+            : "";
           return `<tr>
-            <td>${r.name||r.code}</td>
+            <td>${r.name||r.code}${reasonBadge}</td>
             <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
             <td>${qty} ${r.unit||""}</td>
             <td style="color:var(--muted)">${min}${max!==null?" / "+max:""} ${r.unit||""}</td>
-            <td style="${urgency}">${orderQty} ${r.unit||""}</td>
+            <td style="${urgency}">${orderQty > 0 ? orderQty+" "+r.unit : "—"}</td>
             <td style="color:var(--muted)">${totKg}</td>
             <td style="color:var(--amber)">${totChf}</td>
             <td style="font-size:11px;color:var(--muted)">${r.notizen||"—"}</td>
@@ -1638,6 +1697,25 @@ async function deleteRecipeRow(mepCode, rmCode) {
   await loadRecipes();
   renderRecipeList();
   loadRequirements();
+}
+
+
+// ── Alert helpers ─────────────────────────────────────────────
+function clearAllAlerts() {
+  const box = document.getElementById("mep-alerts");
+  if (box) box.innerHTML = "";
+}
+
+function alertClick(code) {
+  if (!code) return;
+  // If it's a raw material shortage, switch to Orders tab
+  // Otherwise scroll to the MEP card for this product
+  const card = document.getElementById("mep-card-" + code);
+  if (card) {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.style.outline = "2px solid var(--amber)";
+    setTimeout(() => card.style.outline = "", 2000);
+  }
 }
 
 </script>
