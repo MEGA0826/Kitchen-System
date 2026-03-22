@@ -327,7 +327,8 @@
       color: var(--amber);
       border: 1px solid var(--amber-brd);
       border-radius: var(--radius-sm);
-      padding: 11px 16px;
+      padding: 0 16px;
+      height: 42px;
       animation: pulse 1s ease-in-out infinite;
       width: 100%;
     }
@@ -340,9 +341,9 @@
       pointer-events: none;
     }
 
-    /* ── Feedback ── */
-    .feedback {
-      min-height: 28px;
+    /* ── Status row (feedback + undo share same slot) ── */
+    .status-row {
+      height: 42px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -354,11 +355,13 @@
       padding: 6px 16px;
       border-radius: 40px;
       display: none;
+      width: 100%;
+      justify-content: center;
     }
     .feedback-inner.visible { display: inline-flex; align-items: center; gap: 6px; }
     .feedback-inner.success { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
-    .feedback-inner.info    { background: var(--amber-dim);  color: var(--amber); border: 1px solid var(--amber-brd); }
+    .feedback-inner.info    { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
 
     /* ── Over-produce popup ── */
     .popup-overlay {
@@ -503,72 +506,74 @@
     <div class="scan-msg" id="scanMsg"></div>
   </div>
 
-  <!-- Product Card (shown after scan) -->
-  <div class="product-card" id="productCard" style="display:none">
-    <div class="product-info">
-      <div class="product-label">Scanned product</div>
-      <div class="product-name" id="product"><div class="skeleton"></div></div>
-      <div class="product-code" id="productCode"></div>
-      <div class="mep-status" id="mepStatus" style="display:none">
-        <div class="mep-row">
-          <span class="mep-dot green" id="mepDotDone"></span>
-          <span class="mep-row-label" id="mepLabelDone"></span>
-        </div>
-        <div class="mep-row">
-          <span class="mep-dot amber" id="mepDotList"></span>
-          <span class="mep-row-label" id="mepLabelList"></span>
+  <!-- Product + Actions screen (shown after scan) -->
+  <div id="productScreen" style="display:none;flex:1;display:none;flex-direction:column;gap:8px;overflow:hidden">
+
+    <!-- Product card — compact fixed height -->
+    <div class="product-card" id="productCard">
+      <div class="product-info">
+        <div class="product-label">Scanned product</div>
+        <div class="product-name" id="product"><div class="skeleton"></div></div>
+        <div class="product-code" id="productCode"></div>
+        <div class="mep-status" id="mepStatus" style="display:none">
+          <div class="mep-row">
+            <span class="mep-dot green" id="mepDotDone"></span>
+            <span class="mep-row-label" id="mepLabelDone"></span>
+          </div>
+          <div class="mep-row">
+            <span class="mep-dot amber" id="mepDotList"></span>
+            <span class="mep-row-label" id="mepLabelList"></span>
+          </div>
         </div>
       </div>
-    </div>
-    <img id="productImage" class="product-img" alt="" style="display:none;">
-    <div id="imgPlaceholder" class="product-img-ph">🍽</div>
-  </div>
-
-  <!-- Camera toggle button (shown in scan home footer) -->
-  <div id="scanControls" style="display:none;gap:8px;padding:0 0 8px">
-    <button id="btnToggleCamera" onclick="toggleCamera()"
-      style="flex:1;padding:10px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
-      ⇄ Front cam
-    </button>
-  </div>
-
-  <!-- Worker -->
-  <div class="field-wrap" id="workerWrap" style="display:none">
-    <label class="field-label" for="worker">Staff member</label>
-    <select class="worker-select" id="worker">
-      <option value="">Loading…</option>
-    </select>
-  </div>
-
-  <!-- Action Buttons — flex:1 fills remaining height -->
-  <div class="actions" id="actionsWrap" style="display:none">
-    <div class="btn-row">
-      <button class="btn btn-done" onclick="send('done')">
-        <span class="btn-icon">✓</span>
-        <span class="btn-label">Finish MEP</span>
-      </button>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-used" onclick="send('used')">
-        <span class="btn-icon">→</span>
-        <span class="btn-label">Used</span>
-      </button>
-      <button class="btn btn-waste" onclick="send('waste')">
-        <span class="btn-icon">✕</span>
-        <span class="btn-label">Waste</span>
-      </button>
+      <img id="productImage" class="product-img" alt="" style="display:none;">
+      <div id="imgPlaceholder" class="product-img-ph">🍽</div>
     </div>
 
-    <button class="btn btn-undo" id="btnUndo" onclick="undoAction()" style="display:none">
-      <span class="btn-icon">↩</span>
-      <span class="btn-label" id="undoLabel">Undo (5)</span>
-    </button>
-    <div class="mep-full-msg" id="mepFullMsg">Daily target covered ✓</div>
-  </div>
+    <!-- Worker select -->
+    <div class="field-wrap" id="workerWrap">
+      <label class="field-label" for="worker">Staff member</label>
+      <select class="worker-select" id="worker">
+        <option value="">Loading…</option>
+      </select>
+    </div>
 
-  <!-- Feedback -->
-  <div class="feedback">
-    <div class="feedback-inner" id="msg"></div>
+    <!-- Action buttons — fixed heights, never shift layout -->
+    <div class="actions" id="actionsWrap">
+
+      <!-- Finish — always full width -->
+      <div class="btn-row">
+        <button class="btn btn-done" onclick="send('done')">
+          <span class="btn-icon">✓</span>
+          <span class="btn-label">Finish MEP</span>
+        </button>
+      </div>
+
+      <!-- Used + Waste — side by side -->
+      <div class="btn-row">
+        <button class="btn btn-used" id="btnUsed" onclick="send('used')">
+          <span class="btn-icon">→</span>
+          <span class="btn-label">Used</span>
+        </button>
+        <button class="btn btn-waste" id="btnWaste" onclick="send('waste')">
+          <span class="btn-icon">✕</span>
+          <span class="btn-label">Waste</span>
+        </button>
+      </div>
+
+      <!-- Status row: undo OR feedback message — same height slot -->
+      <div class="status-row" id="statusRow">
+        <div class="feedback-inner" id="msg"></div>
+        <button class="btn btn-undo" id="btnUndo" onclick="undoAction()" style="display:none">
+          <span class="btn-icon">↩</span>
+          <span class="btn-label" id="undoLabel">Undo (3)</span>
+        </button>
+      </div>
+
+      <!-- Daily target covered banner -->
+      <div class="mep-full-msg" id="mepFullMsg">Daily target covered ✓</div>
+
+    </div>
   </div>
 
 </div>
@@ -639,10 +644,21 @@
 
   function setUsedWasteState(avail) {
     const noAvail = !avail || Number(avail) < 1;
-    const btnUsed  = document.querySelector(".btn-used");
-    const btnWaste = document.querySelector(".btn-waste");
-    if (btnUsed)  btnUsed.classList.toggle("inactive",  noAvail);
-    if (btnWaste) btnWaste.classList.toggle("inactive", noAvail);
+    // Use id selectors — more reliable than class selectors when display:none parents exist
+    const btnUsed  = document.getElementById("btnUsed");
+    const btnWaste = document.getElementById("btnWaste");
+    [btnUsed, btnWaste].forEach(btn => {
+      if (!btn) return;
+      if (noAvail) {
+        btn.classList.add("inactive");
+        btn.style.opacity = "0.28";
+        btn.style.pointerEvents = "none";
+      } else {
+        btn.classList.remove("inactive");
+        btn.style.opacity = "";
+        btn.style.pointerEvents = "";
+      }
+    });
   }
 
   function updateMepUI(data) {
@@ -1030,10 +1046,9 @@
 
     // ── Has code — show product screen ──
     sessionStorage.setItem("lastScanUrl", window.location.href);
-    document.getElementById("scanHome").style.display     = "none";
-    document.getElementById("productCard").style.display  = "block";
-    document.getElementById("workerWrap").style.display   = "block";
-    document.getElementById("actionsWrap").style.display  = "grid";
+    document.getElementById("scanHome").style.display      = "none";
+    document.getElementById("productScreen").style.display = "flex";
+    document.getElementById("productScreen").style.flexDirection = "column";
 
     // Show cached product data instantly
     const cached = sessionStorage.getItem("productMap");
