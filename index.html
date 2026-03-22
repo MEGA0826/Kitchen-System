@@ -401,15 +401,16 @@
     }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 
-    /* ── Full-screen QR scanner (QRbot style) ── */
+    /* ── QRbot-style full-screen scanner ── */
     .scan-home {
       position: fixed;
       inset: 0;
-      z-index: 10;
+      z-index: 20;
       background: #000;
       display: flex;
       flex-direction: column;
     }
+    /* Video fills everything */
     .scan-home-video-wrap {
       flex: 1;
       position: relative;
@@ -423,63 +424,133 @@
       height: 100%;
       object-fit: cover;
     }
-    /* Dark overlay with transparent centre box */
-    .scan-overlay-top    { position:absolute; top:0; left:0; right:0; background:rgba(0,0,0,0.55); z-index:2; }
-    .scan-overlay-middle { position:absolute; left:0; right:0; display:flex; z-index:2; }
-    .scan-overlay-side   { flex:1; background:rgba(0,0,0,0.55); }
-    .scan-overlay-bottom { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.55); z-index:2; }
-    /* The clear scanning box */
-    .scan-box {
-      width: 240px;
-      height: 240px;
-      flex-shrink: 0;
-      position: relative;
+    /* Dark vignette overlay — 4 panels around transparent box */
+    .scan-vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
     }
-    /* Corner markers on scan box */
-    .scan-box::before,
-    .scan-box::after,
-    .scan-box .sc-tl,
-    .scan-box .sc-tr,
-    .scan-box .sc-bl,
-    .scan-box .sc-br { display:none; }
+    /* The centred transparent scan frame */
+    .scan-frame-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 220px;
+      height: 220px;
+      z-index: 3;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,0.52);
+      border-radius: 12px;
+    }
+    /* Corner brackets */
     .scan-c {
       position: absolute;
-      width: 24px; height: 24px;
+      width: 28px;
+      height: 28px;
       border-color: #e8a020;
       border-style: solid;
     }
-    .scan-c.tl { top:0; left:0;   border-width:4px 0 0 4px; border-radius:6px 0 0 0; }
-    .scan-c.tr { top:0; right:0;  border-width:4px 4px 0 0; border-radius:0 6px 0 0; }
-    .scan-c.bl { bottom:0; left:0;  border-width:0 0 4px 4px; border-radius:0 0 0 6px; }
-    .scan-c.br { bottom:0; right:0; border-width:0 4px 4px 0; border-radius:0 0 6px 0; }
-    /* Scan line inside box */
+    .scan-c.tl { top:-2px;  left:-2px;  border-width:4px 0 0 4px; border-radius:8px 0 0 0; }
+    .scan-c.tr { top:-2px;  right:-2px; border-width:4px 4px 0 0; border-radius:0 8px 0 0; }
+    .scan-c.bl { bottom:-2px; left:-2px;  border-width:0 0 4px 4px; border-radius:0 0 0 8px; }
+    .scan-c.br { bottom:-2px; right:-2px; border-width:0 4px 4px 0; border-radius:0 0 8px 0; }
+    /* Animated scan line inside frame */
     .scan-line {
       position: absolute;
-      left: 0; right: 0;
+      left: 4px; right: 4px;
       height: 2px;
-      background: #e8a020;
-      box-shadow: 0 0 8px #e8a020;
-      opacity: 0.9;
-      z-index: 3;
-      animation: scanmove 1.8s ease-in-out infinite;
+      background: linear-gradient(90deg, transparent, #e8a020, transparent);
+      box-shadow: 0 0 6px 2px rgba(232,160,32,0.6);
+      border-radius: 2px;
+      animation: scanmove 2s ease-in-out infinite;
     }
     @keyframes scanmove {
-      0%   { top: 2px; }
-      50%  { top: calc(100% - 2px); }
-      100% { top: 2px; }
+      0%   { top: 4px;  opacity:0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { top: calc(100% - 6px); opacity:0; }
     }
-    /* Scanner bottom toolbar */
-    .scan-toolbar {
-      height: 88px;
-      background: rgba(0,0,0,0.88);
+    /* Hint below frame */
+    .scan-hint-text {
+      position: absolute;
+      top: calc(50% + 120px);
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      z-index: 4;
+      pointer-events: none;
+    }
+    /* Top bar */
+    .scan-topbar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 32px;
-      gap: 16px;
-      flex-shrink: 0;
+      justify-content: center;
+      z-index: 5;
+      padding: 0 16px;
     }
-    .scan-toolbar-btn {
+    .scan-app-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 16px;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 0.5px;
+    }
+    /* Zoom slider */
+    .scan-zoom-wrap {
+      position: absolute;
+      bottom: 108px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,0,0,0.45);
+      border-radius: 20px;
+      padding: 6px 14px;
+    }
+    .scan-zoom-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      min-width: 30px;
+      text-align: center;
+    }
+    #zoomSlider {
+      -webkit-appearance: none;
+      width: 140px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.3);
+      outline: none;
+    }
+    #zoomSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #e8a020;
+      cursor: pointer;
+      border: 2px solid #fff;
+    }
+    /* Bottom toolbar */
+    .scan-toolbar {
+      height: 96px;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 16px;
+      flex-shrink: 0;
+      z-index: 5;
+    }
+    .scan-tb-btn {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -487,25 +558,63 @@
       background: none;
       border: none;
       cursor: pointer;
-      padding: 8px 16px;
-      border-radius: 10px;
+      padding: 10px 16px;
+      border-radius: 12px;
       transition: background .15s;
+      min-width: 60px;
     }
-    .scan-toolbar-btn:active { background: rgba(255,255,255,0.1); }
-    .scan-toolbar-icon { font-size: 26px; color: #fff; line-height:1; }
-    .scan-toolbar-label { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing:1px; text-transform:uppercase; }
-    .scan-toolbar-center { font-family: var(--font-serif, serif); font-size: 15px; color: rgba(255,255,255,0.5); text-align:center; letter-spacing:0.5px; }
-    .scan-hint-text {
-      position: absolute;
-      bottom: -28px; left: 0; right: 0;
-      text-align: center;
-      font-size: 12px;
+    .scan-tb-btn:active { background: rgba(255,255,255,0.12); }
+    .scan-tb-icon {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.15);
+      transition: background .15s, border-color .15s;
+    }
+    .scan-tb-icon.active { background: #e8a020; border-color: #e8a020; }
+    .scan-tb-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
       color: rgba(255,255,255,0.55);
       letter-spacing: 1px;
       text-transform: uppercase;
-      z-index: 4;
-      white-space: nowrap;
     }
+    /* Retry button */
+    .btn-scan-camera {
+      position: absolute;
+      bottom: 110px;
+      left: 50%; transform: translateX(-50%);
+      z-index: 6;
+      padding: 12px 28px;
+      background: rgba(232,160,32,0.9);
+      color: #000;
+      border: none;
+      border-radius: 24px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .scan-msg {
+      position: absolute;
+      top: 64px; left: 0; right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,100,80,0.9);
+      z-index: 6;
+      padding: 0 24px;
+    }
+    /* Hidden file input for gallery */
+    #galleryInput { display: none; }
     .btn-scan-camera {
       padding: 14px;
       background: var(--amber-dim);
@@ -1020,21 +1129,6 @@
 
   function openScanner() { startInlineScanner(); }
 
-  function positionScanOverlay() {
-    // Position the dark overlay so the scan box is centred in the video
-    const wrap = document.getElementById("scanVideoWrap");
-    const box  = document.getElementById("scanBox");
-    if (!wrap || !box) return;
-    const wh    = wrap.clientHeight;
-    const bh    = box.clientHeight; // 240px
-    const topH  = Math.max(0, (wh - bh) / 2);
-    const botH  = Math.max(0, wh - topH - bh);
-    document.getElementById("scanOverlayTop").style.height = topH + "px";
-    document.getElementById("scanOverlayBot").style.height = botH + "px";
-    document.getElementById("scanOverlayMid").style.top    = topH + "px";
-    document.getElementById("scanOverlayMid").style.height = bh + "px";
-  }
-
   function startInlineScanner() {
     const video  = document.getElementById("scanner-video-inline");
     const retry  = document.getElementById("btnRetry");
@@ -1076,8 +1170,95 @@
 
   function stopInlineScanner() {
     clearInterval(_scanInterval);
+    _flashOn = false;
     if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
-    window.removeEventListener("resize", positionScanOverlay);
+  }
+
+  // ── Flashlight ───────────────────────────────────────────────
+  let _flashOn = false;
+  async function toggleFlash() {
+    if (!_scanStream) return;
+    const track = _scanStream.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const caps = track.getCapabilities();
+      if (!caps.torch) { 
+        document.getElementById("scanMsg").textContent = "Flashlight not supported on this device";
+        setTimeout(() => { document.getElementById("scanMsg").textContent = ""; }, 2000);
+        return;
+      }
+      _flashOn = !_flashOn;
+      await track.applyConstraints({ advanced: [{ torch: _flashOn }] });
+      const icon = document.getElementById("flashIcon");
+      if (icon) icon.classList.toggle("active", _flashOn);
+    } catch(e) {
+      console.error("Flash error:", e);
+    }
+  }
+
+  // ── Zoom ─────────────────────────────────────────────────────
+  let _zoomTrack = null;
+  let _zoomMin = 1, _zoomMax = 5;
+
+  function applyZoom(val) {
+    if (!_zoomTrack) return;
+    const label = document.getElementById("zoomLabel");
+    if (label) label.textContent = parseFloat(val).toFixed(1) + "×";
+    try {
+      _zoomTrack.applyConstraints({ advanced: [{ zoom: parseFloat(val) }] });
+    } catch(e) {}
+  }
+
+  // ── Gallery scan ─────────────────────────────────────────────
+  function openGallery() {
+    document.getElementById("galleryInput").click();
+  }
+
+  function scanFromGallery(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      // Try BarcodeDetector first
+      if ("BarcodeDetector" in window) {
+        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+        detector.detect(img).then(codes => {
+          if (codes.length > 0) {
+            handleScannedUrl(codes[0].rawValue);
+          } else {
+            tryJsQROnImageData(imageData);
+          }
+        }).catch(() => tryJsQROnImageData(imageData));
+      } else {
+        tryJsQROnImageData(imageData);
+      }
+    };
+    img.src = url;
+    event.target.value = "";
+  }
+
+  function tryJsQROnImageData(imageData) {
+    if (typeof jsQR !== "undefined") {
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code) { handleScannedUrl(code.data); return; }
+    }
+    // Load jsQR and retry
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
+    script.onload = () => {
+      // Re-draw since we need the image data fresh
+      const msg = document.getElementById("scanMsg");
+      if (msg) { msg.textContent = "No QR code found in image"; setTimeout(() => msg.textContent = "", 2500); }
+    };
+    document.head.appendChild(script);
   }
 
   function loadJsQR(video) {
