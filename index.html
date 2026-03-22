@@ -478,6 +478,8 @@
       const res  = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
       const data = await res.json();
       PRODUCT_MAP = (!data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
+      // Cache for instant next load
+      try { sessionStorage.setItem("productMap", JSON.stringify(PRODUCT_MAP)); } catch(e) {}
     } catch (err) {
       document.getElementById("product").textContent = "Error loading";
     }
@@ -603,6 +605,10 @@
       }
     }
 
+    // Remember last known values for optimistic UI
+    window._lastAvail  = avail;
+    window._lastInProg = inProg;
+
     // "Daily target covered" only when available has reached the target
     const tagesziel = data.tagesziel || 0;
     const mepMax    = data.mepMax    || 0;
@@ -654,6 +660,28 @@
   function send(action) {
     const worker = document.getElementById("worker").value;
     if (!worker) { showMsg("Select a staff member first", "error"); return; }
+
+    // ── Optimistic UI: update display instantly, confirm from server ──
+    const p = PRODUCT_MAP[CURRENT_CODE] || {};
+    if (p.mepMax) {
+      const optimistic = Object.assign({}, p, {
+        mepMax      : p.mepMax,
+        gnSize      : p.gnSize    || "",
+        gnWeight    : p.gnWeight  || 0,
+        tagesziel   : p.tagesziel || 0,
+        // Estimate new values immediately
+        available   : action === "done"  ? ((_lastAvail||0) + 1)
+                    : action === "used"  ? Math.max(0, (_lastAvail||0) - 1)
+                    : action === "waste" ? Math.max(0, (_lastAvail||0) - 1)
+                    : (_lastAvail||0),
+        inProgress  : action === "done"  ? Math.max(0, (_lastInProg||0) - 1)
+                    : (_lastInProg||0),
+        listFull    : false,
+        overProduce : false,
+        goalMet     : false,
+      });
+      updateMepUI(optimistic);
+    }
 
     showMsg("Saving…", "info");
     const labels = { done: "MEP Finished ✓", waste: "Waste recorded ✓", used: "Sent to service ✓" };
@@ -751,11 +779,27 @@
     if (window.location.search.includes("code=")) {
       sessionStorage.setItem("lastScanUrl", window.location.href);
     }
-    await preloadProducts();
-    showProduct();
-    preloadWorkers();
-    // Load MEP status after products so we can show the bar immediately
-    await loadMepStatus(new URLSearchParams(window.location.search).get("code") || "");
+    const code = new URLSearchParams(window.location.search).get("code") || "";
+
+    // Show cached product data instantly if available
+    const cached = sessionStorage.getItem("productMap");
+    if (cached) {
+      try {
+        PRODUCT_MAP = JSON.parse(cached);
+        showProduct();
+      } catch(e) {}
+    }
+
+    // Load all data in parallel — don't wait for one before starting the next
+    const [, , mepData] = await Promise.allSettled([
+      preloadProducts().then(() => { showProduct(); }),
+      preloadWorkers(),
+      code ? fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()) : Promise.resolve(null),
+    ]);
+
+    if (mepData?.status === "fulfilled" && mepData.value) {
+      updateMepUI(mepData.value);
+    }
   });
 </script>
 </body>
