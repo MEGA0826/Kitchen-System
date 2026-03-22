@@ -1068,17 +1068,27 @@ function closeModal() { document.getElementById("modal").classList.remove("open"
   if (cp) { try { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); } catch(e) {} }
   if (ci) { try { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); } catch(e) {} }
   // Only render KDS from cache if products are already cached — otherwise alerts will be empty
-  if (cs && sessionStorage.getItem("dash_products")) {
-    try { allScans = JSON.parse(cs); _renderKDS(); } catch(e) {}
+  if (cs) {
+    try {
+      allScans = JSON.parse(cs);
+      // Only render full KDS if products also cached — else just render feed
+      if (sessionStorage.getItem("dash_products")) {
+        _renderKDS();
+      } else {
+        // At minimum render the recent scans feed
+        if (typeof renderFeed === "function") renderFeed();
+      }
+    } catch(e) {}
   }
 })();
 
 // Load products FIRST so allProducts is ready before KDS renders MEP alerts
-loadProducts().then(() => {
-  loadKDS();  // Now has allProducts populated — MEP alerts will work
-});
-setTimeout(loadInventory, 600);
-setTimeout(loadRecipes,  1200);
+// Load products first, then KDS — ensures allProducts ready for MEP alerts
+loadProducts()
+  .then(() => loadKDS())
+  .catch(() => loadKDS()); // run KDS even if products fail
+setTimeout(loadInventory, 400);
+setTimeout(loadRecipes,   800);
 setInterval(async () => {
   const prevLen = allScans.length;
   await loadKDS();
