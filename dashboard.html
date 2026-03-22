@@ -560,9 +560,21 @@ function switchTab(btn) {
 }
 
 // Fetch
-async function get(params) {
+async async function get(params) {
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
+}
+
+// Load from sessionStorage cache instantly, then refresh in background
+function loadCached(key, setter, loader) {
+  const raw = sessionStorage.getItem(key);
+  if (raw) {
+    try { setter(JSON.parse(raw)); } catch(e) {}
+  }
+  return loader().then(data => {
+    try { sessionStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+    setter(data);
+  });
 }
 
 // Format time
@@ -887,6 +899,7 @@ async function loadInventory() {
   try {
     const data = await get({ action: "inventory" });
     allInventory = Array.isArray(data.inventory) ? data.inventory : [];
+    try { sessionStorage.setItem("dash_inventory", JSON.stringify(allInventory)); } catch(e) {}
     renderInventory(allInventory);
     renderOrders();
   } catch(e) {
@@ -1034,6 +1047,18 @@ function openModal(code) {
 function closeModal() { document.getElementById("modal").classList.remove("open"); }
 
 // ── INIT ──────────────────────────────────────────────────────
+// Show cached data instantly while fresh loads in background
+(function() {
+  const cachedProds = sessionStorage.getItem("dash_products");
+  const cachedInv   = sessionStorage.getItem("dash_inventory");
+  if (cachedProds) {
+    try { allProducts = JSON.parse(cachedProds); renderProductGrid(Object.entries(allProducts)); } catch(e) {}
+  }
+  if (cachedInv) {
+    try { allInventory = JSON.parse(cachedInv); renderInventory(allInventory); } catch(e) {}
+  }
+})();
+
 Promise.allSettled([loadKDS(), loadProducts(), loadInventory(), loadRecipes()]);
 setInterval(loadKDS, 60_000);
 // ── Swipeable alerts ─────────────────────────────────────────
@@ -1717,6 +1742,12 @@ function alertClick(code) {
     setTimeout(() => card.style.outline = "", 2000);
   }
 }
+
+
+// ── Keep Apps Script warm — ping every 4 minutes to avoid cold starts ──
+setInterval(() => {
+  fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
+}, 4 * 60 * 1000);
 
 </script>
 </body>
