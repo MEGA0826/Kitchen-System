@@ -401,52 +401,110 @@
     }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 
-    /* ── Scanner home ── */
-    .scan-home { flex:1; display:flex; flex-direction:column; gap:10px; padding:4px 0; }
+    /* ── Full-screen QR scanner (QRbot style) ── */
+    .scan-home {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+    }
     .scan-home-video-wrap {
       flex: 1;
       position: relative;
-      border-radius: var(--radius);
       overflow: hidden;
       background: #000;
-      min-height: 320px;
     }
-    /* Corner frame markers — large, near edges */
-    .scan-corner {
+    #scanner-video-inline {
       position: absolute;
-      width: 36px; height: 36px;
-      border-color: var(--amber);
-      border-style: solid;
-      z-index: 2;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
-    .scan-corner.tl { top:10px;  left:10px;  border-width:4px 0 0 4px; border-radius:6px 0 0 0; }
-    .scan-corner.tr { top:10px;  right:10px; border-width:4px 4px 0 0; border-radius:0 6px 0 0; }
-    .scan-corner.bl { bottom:10px; left:10px;  border-width:0 0 4px 4px; border-radius:0 0 0 6px; }
-    .scan-corner.br { bottom:10px; right:10px; border-width:0 4px 4px 0; border-radius:0 0 6px 0; }
-    /* Animated scan line — full width */
+    /* Dark overlay with transparent centre box */
+    .scan-overlay-top    { position:absolute; top:0; left:0; right:0; background:rgba(0,0,0,0.55); z-index:2; }
+    .scan-overlay-middle { position:absolute; left:0; right:0; display:flex; z-index:2; }
+    .scan-overlay-side   { flex:1; background:rgba(0,0,0,0.55); }
+    .scan-overlay-bottom { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.55); z-index:2; }
+    /* The clear scanning box */
+    .scan-box {
+      width: 240px;
+      height: 240px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    /* Corner markers on scan box */
+    .scan-box::before,
+    .scan-box::after,
+    .scan-box .sc-tl,
+    .scan-box .sc-tr,
+    .scan-box .sc-bl,
+    .scan-box .sc-br { display:none; }
+    .scan-c {
+      position: absolute;
+      width: 24px; height: 24px;
+      border-color: #e8a020;
+      border-style: solid;
+    }
+    .scan-c.tl { top:0; left:0;   border-width:4px 0 0 4px; border-radius:6px 0 0 0; }
+    .scan-c.tr { top:0; right:0;  border-width:4px 4px 0 0; border-radius:0 6px 0 0; }
+    .scan-c.bl { bottom:0; left:0;  border-width:0 0 4px 4px; border-radius:0 0 0 6px; }
+    .scan-c.br { bottom:0; right:0; border-width:0 4px 4px 0; border-radius:0 0 6px 0; }
+    /* Scan line inside box */
     .scan-line {
       position: absolute;
-      left: 10px; right: 10px;
-      height: 3px;
-      background: var(--amber);
-      opacity: 0.85;
-      z-index: 2;
+      left: 0; right: 0;
+      height: 2px;
+      background: #e8a020;
+      box-shadow: 0 0 8px #e8a020;
+      opacity: 0.9;
+      z-index: 3;
       animation: scanmove 1.8s ease-in-out infinite;
     }
     @keyframes scanmove {
-      0%   { top: 10px; }
-      50%  { top: calc(100% - 10px); }
-      100% { top: 10px; }
+      0%   { top: 2px; }
+      50%  { top: calc(100% - 2px); }
+      100% { top: 2px; }
     }
+    /* Scanner bottom toolbar */
+    .scan-toolbar {
+      height: 88px;
+      background: rgba(0,0,0,0.88);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .scan-toolbar-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 16px;
+      border-radius: 10px;
+      transition: background .15s;
+    }
+    .scan-toolbar-btn:active { background: rgba(255,255,255,0.1); }
+    .scan-toolbar-icon { font-size: 26px; color: #fff; line-height:1; }
+    .scan-toolbar-label { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing:1px; text-transform:uppercase; }
+    .scan-toolbar-center { font-family: var(--font-serif, serif); font-size: 15px; color: rgba(255,255,255,0.5); text-align:center; letter-spacing:0.5px; }
     .scan-hint-text {
       position: absolute;
-      bottom: 10px; left: 0; right: 0;
+      bottom: -28px; left: 0; right: 0;
       text-align: center;
-      font-size: 11px;
-      color: rgba(255,255,255,0.65);
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
       letter-spacing: 1px;
       text-transform: uppercase;
-      z-index: 2;
+      z-index: 4;
+      white-space: nowrap;
     }
     .btn-scan-camera {
       padding: 14px;
@@ -594,9 +652,16 @@
   let CURRENT_CODE = "";
 
   function showMsg(text, type = "info") {
-    const el = document.getElementById("msg");
+    const el   = document.getElementById("msg");
+    const undo = document.getElementById("btnUndo");
     el.textContent = text;
-    el.className = `feedback-inner visible ${type}`;
+    el.className   = `feedback-inner visible ${type}`;
+    if (undo) undo.style.display = "none";  // hide undo when message shows
+  }
+
+  function hideMsg() {
+    const el = document.getElementById("msg");
+    if (el) el.className = "feedback-inner";
   }
 
   async function preloadProducts() {
@@ -843,18 +908,22 @@
 
     const btn   = document.getElementById("btnUndo");
     const label = document.getElementById("undoLabel");
-    btn.style.display = "grid";
+    const msg   = document.getElementById("msg");
+
+    // Hide feedback message, show undo in the same slot
+    if (msg)   msg.className = "feedback-inner";
+    if (btn)   btn.style.display = "flex";   // flex not grid — matches status-row
     let secs = 3;
-    label.textContent = `Undo (${secs})`;
+    if (label) label.textContent = `Undo (${secs})`;
 
     _undoTimer = setInterval(() => {
       secs--;
-      label.textContent = `Undo (${secs})`;
+      if (label) label.textContent = `Undo (${secs})`;
       if (secs <= 0) {
         clearInterval(_undoTimer);
         btn.style.display = "none";
         _lastAction = null;
-        window.location.href = "scan://restart";
+        window.location.href = window.location.pathname;
       }
     }, 1000);
   }
@@ -873,14 +942,12 @@
       .then(data => {
         if (data.error) { showMsg("Undo failed: " + data.error, "error"); return; }
         _lastAction = null;
-        // Reload MEP status to reflect undo
+        showMsg("Undone ✓", "success");
+        // Reload MEP status then return to scanner after short delay
         loadMepStatus(CURRENT_CODE);
-        showMsg("Action undone ✓", "success");
-        // Stay on page so user can act again
         setTimeout(() => {
-          const el = document.getElementById("msg");
-          if (el) el.className = "feedback-inner";
-        }, 2000);
+          window.location.href = window.location.pathname;
+        }, 1200);
       })
       .catch(() => showMsg("Network error — undo failed", "error"));
   }
@@ -901,7 +968,7 @@
     clearTimeout(_redirectTimer);
     const u = document.getElementById("btnUndo");
     if (u) u.style.display = "none";
-    window.location.href = "scan://restart";
+    window.location.href = window.location.pathname;
   }
 
   // ── QR Scanner — inline video in page ───────────────────────
@@ -953,13 +1020,27 @@
 
   function openScanner() { startInlineScanner(); }
 
+  function positionScanOverlay() {
+    // Position the dark overlay so the scan box is centred in the video
+    const wrap = document.getElementById("scanVideoWrap");
+    const box  = document.getElementById("scanBox");
+    if (!wrap || !box) return;
+    const wh    = wrap.clientHeight;
+    const bh    = box.clientHeight; // 240px
+    const topH  = Math.max(0, (wh - bh) / 2);
+    const botH  = Math.max(0, wh - topH - bh);
+    document.getElementById("scanOverlayTop").style.height = topH + "px";
+    document.getElementById("scanOverlayBot").style.height = botH + "px";
+    document.getElementById("scanOverlayMid").style.top    = topH + "px";
+    document.getElementById("scanOverlayMid").style.height = bh + "px";
+  }
+
   function startInlineScanner() {
     const video  = document.getElementById("scanner-video-inline");
     const retry  = document.getElementById("btnRetry");
     const msg    = document.getElementById("scanMsg");
-    const ctrl   = document.getElementById("scanControls");
     if (!video) return;
-    if (msg) msg.textContent = "";
+    if (msg) msg.textContent = "Kitchen MEP";
 
     // Request camera with zoom — first try with advanced zoom constraint,
     // fall back to basic if device doesn't support it
@@ -996,6 +1077,7 @@
   function stopInlineScanner() {
     clearInterval(_scanInterval);
     if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
+    window.removeEventListener("resize", positionScanOverlay);
   }
 
   function loadJsQR(video) {
@@ -1036,10 +1118,7 @@
 
     if (!code) {
       // ── No code — show scanner and open camera immediately ──
-      document.getElementById("scanHome").style.display     = "flex";
-      document.getElementById("productCard").style.display  = "none";
-      document.getElementById("workerWrap").style.display   = "none";
-      document.getElementById("actionsWrap").style.display  = "none";
+      document.getElementById("scanHome").style.display      = "flex";
       preloadProducts();
       preloadWorkers();
       // Start inline camera — show retry button if permission not yet granted
