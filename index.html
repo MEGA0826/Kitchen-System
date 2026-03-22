@@ -516,9 +516,27 @@
     }
   }
 
+  function setUsedWasteState(avail) {
+    const btnUsed  = document.querySelector(".btn-used");
+    const btnWaste = document.querySelector(".btn-waste");
+    const noAvail  = !avail || avail < 1;
+    if (btnUsed) {
+      btnUsed.classList.toggle("inactive", noAvail);
+      btnUsed.title = noAvail ? "Nothing available to use" : "";
+    }
+    if (btnWaste) {
+      btnWaste.classList.toggle("inactive", noAvail);
+      btnWaste.title = noAvail ? "Nothing available to waste" : "";
+    }
+  }
+
   function updateMepUI(data) {
     const status  = document.getElementById("mepStatus");
     const fullMsg = document.getElementById("mepFullMsg");
+
+    // Always update Used/Waste state — even when mepMax is 0
+    const _avail = data.available !== undefined ? data.available : (data.doneCount || 0);
+    setUsedWasteState(_avail);
 
     if (!data.mepMax || data.mepMax === 0) {
       status.style.display = "none";
@@ -583,27 +601,7 @@
       }
     }
 
-    // Deactivate "Used" and "Waste" when available = 0
-    const btnUsed  = document.querySelector(".btn-used");
-    const btnWaste = document.querySelector(".btn-waste");
-    if (btnUsed) {
-      if (avail < 1) {
-        btnUsed.classList.add("inactive");
-        btnUsed.title = "Nothing available to use";
-      } else {
-        btnUsed.classList.remove("inactive");
-        btnUsed.title = "";
-      }
-    }
-    if (btnWaste) {
-      if (avail === 0) {
-        btnWaste.classList.add("inactive");
-        btnWaste.title = "Nothing available to waste";
-      } else {
-        btnWaste.classList.remove("inactive");
-        btnWaste.title = "";
-      }
-    }
+    // Used/Waste state already set above via setUsedWasteState()
 
     // Remember last known values for optimistic UI
     window._lastAvail  = avail;
@@ -780,6 +778,8 @@
       sessionStorage.setItem("lastScanUrl", window.location.href);
     }
     const code = new URLSearchParams(window.location.search).get("code") || "";
+    // Start with Used/Waste deactivated until server confirms available > 0
+    setUsedWasteState(0);
 
     // Show cached product data instantly if available
     const cached = sessionStorage.getItem("productMap");
