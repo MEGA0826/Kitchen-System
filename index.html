@@ -404,6 +404,129 @@
       animation: shimmer 1.4s infinite;
     }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
+
+    /* ── Scanner home state ── */
+    .scan-home {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 24px;
+      text-align: center;
+    }
+    .scan-home-icon {
+      width: 100px;
+      height: 100px;
+      border: 2px solid var(--amber-brd);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      background: var(--amber-dim);
+      position: relative;
+      overflow: hidden;
+    }
+    .scan-home-icon::before,
+    .scan-home-icon::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: var(--amber);
+      opacity: 0;
+      animation: scanline 2s ease-in-out infinite;
+    }
+    .scan-home-icon::after { animation-delay: 1s; }
+    @keyframes scanline {
+      0%   { top: 10%;  opacity: 0; }
+      10%  { opacity: 0.8; }
+      90%  { opacity: 0.8; }
+      100% { top: 90%; opacity: 0; }
+    }
+    .scan-home-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 24px;
+      color: var(--text);
+    }
+    .scan-home-sub {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      line-height: 1.6;
+    }
+    .btn-scan-camera {
+      width: 100%;
+      padding: 16px;
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid var(--amber-brd);
+      border-radius: var(--radius);
+      font-family: 'DM Mono', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity .15s;
+    }
+    .btn-scan-camera:active { opacity: 0.7; }
+    /* QR scanner overlay */
+    .scanner-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 100;
+      flex-direction: column;
+    }
+    .scanner-overlay.visible { display: flex; }
+    #scanner-video {
+      flex: 1;
+      width: 100%;
+      object-fit: cover;
+    }
+    .scanner-frame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -60%);
+      width: 220px;
+      height: 220px;
+      border: 2px solid var(--amber);
+      border-radius: 16px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,0.5);
+    }
+    .scanner-cancel {
+      padding: 20px;
+      text-align: center;
+      background: #000;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      width: 100%;
+    }
+    .scanner-hint {
+      position: absolute;
+      top: calc(50% + 60px);
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -421,8 +544,21 @@
     </div>
   </header>
 
-  <!-- Product Card -->
-  <div class="product-card" id="productCard">
+  <!-- Scanner home state (shown when no ?code= param) -->
+  <div class="scan-home" id="scanHome" style="display:none">
+    <div class="scan-home-icon">📷</div>
+    <div>
+      <div class="scan-home-title">Scan a product</div>
+      <div class="scan-home-sub">Point the camera at a QR code<br>or tap the button below</div>
+    </div>
+    <button class="btn-scan-camera" onclick="openScanner()">
+      <span style="font-size:20px">⬡</span>
+      <span>Open camera to scan</span>
+    </button>
+  </div>
+
+  <!-- Product Card (shown after scan) -->
+  <div class="product-card" id="productCard" style="display:none">
     <div class="product-info">
       <div class="product-label">Scanned product</div>
       <div class="product-name" id="product"><div class="skeleton"></div></div>
@@ -438,13 +574,23 @@
         </div>
       </div>
     </div>
-    <!-- Image always on the right, fixed 64×64 -->
     <img id="productImage" class="product-img" alt="" style="display:none;">
     <div id="imgPlaceholder" class="product-img-ph">🍽</div>
   </div>
 
+  <!-- QR scanner overlay -->
+  <div class="scanner-overlay" id="scannerOverlay">
+    <video id="scanner-video" autoplay playsinline muted></video>
+    <div class="scanner-frame"></div>
+    <div class="scanner-hint">Align QR code within the frame</div>
+    <div style="display:flex;background:#000;gap:0">
+      <button class="scanner-cancel" onclick="closeScanner()" style="flex:1">✕ Cancel</button>
+      <button id="btnToggleCamera" class="scanner-cancel" onclick="toggleCamera()" style="flex:1;border-left:1px solid #333">⇄ Front cam</button>
+    </div>
+  </div>
+
   <!-- Worker -->
-  <div class="field-wrap">
+  <div class="field-wrap" id="workerWrap" style="display:none">
     <label class="field-label" for="worker">Staff member</label>
     <select class="worker-select" id="worker">
       <option value="">Loading…</option>
@@ -452,7 +598,7 @@
   </div>
 
   <!-- Action Buttons — flex:1 fills remaining height -->
-  <div class="actions">
+  <div class="actions" id="actionsWrap" style="display:none">
     <button class="btn btn-done" onclick="send('done')">
       <span class="btn-icon">✓</span>
       <span class="btn-label">Finish</span>
@@ -801,28 +947,140 @@
     window.location.href = "scan://restart";
   }
 
-  window.addEventListener("DOMContentLoaded", async () => {
-    if (window.location.search.includes("code=")) {
-      sessionStorage.setItem("lastScanUrl", window.location.href);
+  // ── QR Scanner via camera ────────────────────────────────────
+  let _scanStream = null;
+  let _scanInterval = null;
+
+  // Camera preference — stored in localStorage so it persists
+  let _cameraFacing = localStorage.getItem("cameraFacing") || "environment";
+
+  function toggleCamera() {
+    _cameraFacing = _cameraFacing === "environment" ? "user" : "environment";
+    localStorage.setItem("cameraFacing", _cameraFacing);
+    // Restart scanner with new camera
+    if (_scanStream) {
+      _scanStream.getTracks().forEach(t => t.stop());
+      _scanStream = null;
     }
+    clearInterval(_scanInterval);
+    startCameraStream();
+    const btn = document.getElementById("btnToggleCamera");
+    if (btn) btn.textContent = _cameraFacing === "user" ? "⇄ Rear cam" : "⇄ Front cam";
+  }
+
+  async function startCameraStream() {
+    const video = document.getElementById("scanner-video");
+    try {
+      _scanStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: _cameraFacing, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      video.srcObject = _scanStream;
+      if ("BarcodeDetector" in window) {
+        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+        _scanInterval = setInterval(async () => {
+          try {
+            const codes = await detector.detect(video);
+            if (codes.length > 0) {
+              const raw = codes[0].rawValue;
+              closeScanner();
+              handleScannedUrl(raw);
+            }
+          } catch(e) {}
+        }, 300);
+      } else {
+        closeScanner();
+        const code = prompt("Enter product code manually:");
+        if (code) handleScannedUrl(code.trim());
+      }
+    } catch(err) {
+      closeScanner();
+      showMsg("Camera access denied — check browser permissions", "error");
+    }
+  }
+
+  async function openScanner() {
+    const overlay = document.getElementById("scannerOverlay");
+    const btn = document.getElementById("btnToggleCamera");
+    if (btn) btn.textContent = _cameraFacing === "user" ? "⇄ Rear cam" : "⇄ Front cam";
+    overlay.classList.add("visible");
+    try {
+      video.srcObject = _scanStream;
+      // Use BarcodeDetector if available (Android Chrome, newer iOS)
+      if ("BarcodeDetector" in window) {
+        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+        _scanInterval = setInterval(async () => {
+          try {
+            const codes = await detector.detect(video);
+            if (codes.length > 0) {
+              const raw = codes[0].rawValue;
+              closeScanner();
+              handleScannedUrl(raw);
+            }
+          } catch(e) {}
+        }, 300);
+      } else {
+        // Fallback: show manual input prompt
+        closeScanner();
+        const code = prompt("BarcodeDetector not supported on this device.
+Enter product code manually:");
+        if (code) handleScannedUrl(code.trim());
+      }
+    } catch(err) {
+      closeScanner();
+      showMsg("Camera access denied — scan QR code with your camera app", "error");
+    }
+  }
+
+  function closeScanner() {
+    clearInterval(_scanInterval);
+    if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
+    document.getElementById("scannerOverlay").classList.remove("visible");
+  }
+
+  function handleScannedUrl(raw) {
+    // If it's a full URL containing ?code=, extract and navigate
+    if (raw.includes("?code=") || raw.includes("&code=")) {
+      window.location.href = raw;
+    } else {
+      // Treat raw value as the code directly
+      window.location.href = window.location.pathname + "?code=" + encodeURIComponent(raw);
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", async () => {
     const code = new URLSearchParams(window.location.search).get("code") || "";
-    // Start with Used/Waste deactivated until server confirms available > 0
     setUsedWasteState(0);
 
-    // Show cached product data instantly if available
-    const cached = sessionStorage.getItem("productMap");
-    if (cached) {
-      try {
-        PRODUCT_MAP = JSON.parse(cached);
-        showProduct();
-      } catch(e) {}
+    if (!code) {
+      // ── No code — show scanner home screen ──
+      document.getElementById("scanHome").style.display     = "flex";
+      document.getElementById("productCard").style.display  = "none";
+      document.getElementById("workerWrap").style.display   = "none";
+      document.getElementById("actionsWrap").style.display  = "none";
+      // Still preload products and workers in background
+      preloadProducts();
+      preloadWorkers();
+      return;
     }
 
-    // Load all data in parallel — don't wait for one before starting the next
+    // ── Has code — show product screen ──
+    sessionStorage.setItem("lastScanUrl", window.location.href);
+    document.getElementById("scanHome").style.display     = "none";
+    document.getElementById("productCard").style.display  = "block";
+    document.getElementById("workerWrap").style.display   = "block";
+    document.getElementById("actionsWrap").style.display  = "grid";
+
+    // Show cached product data instantly
+    const cached = sessionStorage.getItem("productMap");
+    if (cached) {
+      try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
+    }
+
+    // Load all in parallel
     const [, , mepData] = await Promise.allSettled([
-      preloadProducts().then(() => { showProduct(); }),
+      preloadProducts().then(() => showProduct()),
       preloadWorkers(),
-      code ? fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()) : Promise.resolve(null),
+      fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
     ]);
 
     if (mepData?.status === "fulfilled" && mepData.value) {
