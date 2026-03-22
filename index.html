@@ -957,15 +957,12 @@
   function toggleCamera() {
     _cameraFacing = _cameraFacing === "environment" ? "user" : "environment";
     localStorage.setItem("cameraFacing", _cameraFacing);
-    // Restart scanner with new camera
-    if (_scanStream) {
-      _scanStream.getTracks().forEach(t => t.stop());
-      _scanStream = null;
-    }
+    if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
     clearInterval(_scanInterval);
-    startCameraStream();
     const btn = document.getElementById("btnToggleCamera");
     if (btn) btn.textContent = _cameraFacing === "user" ? "⇄ Rear cam" : "⇄ Front cam";
+    // Re-open with new camera
+    openScanner();
   }
 
   async function startCameraStream() {
@@ -998,36 +995,60 @@
     }
   }
 
-  async function openScanner() {
+  function openScanner() {
     const overlay = document.getElementById("scannerOverlay");
     const btn = document.getElementById("btnToggleCamera");
     if (btn) btn.textContent = _cameraFacing === "user" ? "⇄ Rear cam" : "⇄ Front cam";
     overlay.classList.add("visible");
-    try {
-      video.srcObject = _scanStream;
-      // Use BarcodeDetector if available (Android Chrome, newer iOS)
+
+    // getUserMedia must be called synchronously within the user gesture
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: _cameraFacing } })
+    .then(stream => {
+      _scanStream = stream;
+      const video = document.getElementById("scanner-video");
+      video.srcObject = stream;
+      video.play();
       if ("BarcodeDetector" in window) {
         const detector = new BarcodeDetector({ formats: ["qr_code"] });
-        _scanInterval = setInterval(async () => {
-          try {
-            const codes = await detector.detect(video);
-            if (codes.length > 0) {
-              const raw = codes[0].rawValue;
-              closeScanner();
-              handleScannedUrl(raw);
-            }
-          } catch(e) {}
+        _scanInterval = setInterval(() => {
+          detector.detect(video).then(codes => {
+            if (codes.length > 0) { closeScanner(); handleScannedUrl(codes[0].rawValue); }
+          }).catch(() => {});
         }, 300);
       } else {
-        // Fallback: show manual input prompt
-        closeScanner();
-        const code = prompt("Enter product code manually:");
-        if (code) handleScannedUrl(code.trim());
+        loadJsQR(video);
       }
-    } catch(err) {
+    })
+    .catch(err => {
       closeScanner();
-      showMsg("Camera access denied — scan QR code with your camera app", "error");
-    }
+      if (err.name === "NotAllowedError") {
+        showMsg("Tap Allow when browser asks for camera permission", "error");
+      } else if (err.name === "NotFoundError") {
+        showMsg("No camera found on this device", "error");
+      } else {
+        showMsg("Camera error: " + err.message, "error");
+      }
+    });
+  }
+
+  function loadJsQR(video) {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
+    script.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      _scanInterval = setInterval(() => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) { closeScanner(); handleScannedUrl(code.data); }
+        }
+      }, 300);
+    };
+    document.head.appendChild(script);
   }
 
   function closeScanner() {
