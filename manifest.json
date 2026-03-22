@@ -1,20 +1,93 @@
 {
-  "name": "Kitchen MEP System",
-  "short_name": "MEP",
+  "name": "Kitchen MEP — 212 Nooch Richti",
+  "short_name": "Kitchen MEP",
+  "description": "Kitchen MEP tracking system — scan, produce, manage.",
   "start_url": "/Kitchen-System/index.html",
+  "scope": "/Kitchen-System/",
   "display": "standalone",
-  "background_color": "#f4f6f8",
-  "theme_color": "#4CAF50",
+  "orientation": "portrait",
+  "background_color": "#0f0f0d",
+  "theme_color": "#0f0f0d",
+  "lang": "en",
+  "categories": ["food", "productivity", "utilities"],
+
   "icons": [
+    {
+      "src": "icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+
+  "screenshots": [
+    {
+      "src": "screenshots/scan.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Scan a product to record MEP"
+    },
+    {
+      "src": "screenshots/dashboard.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Manager dashboard"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open manager dashboard",
+      "url": "/Kitchen-System/dashboard.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+
+  "prefer_related_applications": false
 }
