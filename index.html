@@ -1021,8 +1021,7 @@
       } else {
         // Fallback: show manual input prompt
         closeScanner();
-        const code = prompt("BarcodeDetector not supported on this device.
-Enter product code manually:");
+        const code = prompt("Enter product code manually:");
         if (code) handleScannedUrl(code.trim());
       }
     } catch(err) {
