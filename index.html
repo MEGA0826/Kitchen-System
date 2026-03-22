@@ -1072,14 +1072,15 @@
     setUsedWasteState(0);
 
     if (!code) {
-      // ── No code — show scanner home screen ──
+      // ── No code — show scanner and open camera immediately ──
       document.getElementById("scanHome").style.display     = "flex";
       document.getElementById("productCard").style.display  = "none";
       document.getElementById("workerWrap").style.display   = "none";
       document.getElementById("actionsWrap").style.display  = "none";
-      // Still preload products and workers in background
       preloadProducts();
       preloadWorkers();
+      // Open camera automatically — browser will prompt for permission if needed
+      openScanner();
       return;
     }
 
