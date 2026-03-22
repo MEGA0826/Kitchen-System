@@ -961,8 +961,11 @@
     if (!video) return;
     if (msg) msg.textContent = "";
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: _cameraFacing } })
-    .then(stream => {
+    // Request camera with zoom — first try with advanced zoom constraint,
+    // fall back to basic if device doesn't support it
+    const videoConstraints = { facingMode: _cameraFacing };
+    navigator.mediaDevices.getUserMedia({ video: videoConstraints })
+    .then(async stream => {
       _scanStream = stream;
       video.srcObject = stream;
       video.play();
