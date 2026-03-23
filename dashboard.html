@@ -597,9 +597,9 @@ function fmt(raw) {
 
 // -- KDS --
 function buildScanStats() {
+  // Build both all-time scanStats AND today-only todayScanStats in one pass
   scanStats = {};
-  // todayScanStats: only today's scans - used for MEP available/inProgress calcs
-  // scanStats: all-time - used for bar charts, feed counts
+  window.todayScanStats = {};
   const todayStr = new Date().toISOString().slice(0, 10);
   allScans.forEach(s => {
     const c = s.code || "";
@@ -643,13 +643,8 @@ function _renderKDS() {
 }
 
 function buildStats() {
-  scanStats = {};
-  allScans.forEach(s => {
-    const c = s.code || "";
-    if (!scanStats[c]) scanStats[c] = { produce:0, done:0, waste:0, total:0 };
-    if (s.action in scanStats[c]) scanStats[c][s.action]++;
-    scanStats[c].total++;
-  });
+  // buildStats only updates stat display counts - does NOT reset scanStats
+  // scanStats is built by buildScanStats() which also builds todayScanStats
 }
 
 function renderStats() {
