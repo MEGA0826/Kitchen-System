@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Manager Dashboard — 212 Nooch Richti</title>
+  <title>Manager Dashboard - 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -96,7 +96,7 @@
     .action-badge.waste   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
     .action-badge.used    { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-brd); }
 
-    /* ── MEP Overview panel ── */
+    /* -- MEP Overview panel -- */
     .mep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; margin-bottom: 28px; }
     .mep-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
     .mep-card.over  { border-color: var(--red-brd); }
@@ -117,7 +117,7 @@
     .mep-tag.prog  { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
     .mep-tag.idle  { background: var(--gray-dim);  color: var(--muted); border: 1px solid var(--border); }
 
-    /* ── MEP Alerts — swipeable ── */
+    /* -- MEP Alerts - swipeable -- */
     .mep-alerts { margin-bottom: 24px; display: flex; flex-direction: column; gap: 8px; }
     .alert-wrap { position: relative; overflow: hidden; border-radius: var(--radius); touch-action: pan-y; }
     .alert-delete-bg { position: absolute; inset: 0; background: #c0392b; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: #fff; border-radius: var(--radius); opacity: 0; transition: opacity .1s; }
@@ -193,7 +193,7 @@
     .empty-icon { font-size: 34px; margin-bottom: 10px; opacity: .35; }
     .error-msg { background: var(--red-dim); border: 1px solid var(--red-brd); color: var(--red); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; margin-bottom: 20px; }
 
-    /* ── Admin panel ── */
+    /* -- Admin panel -- */
     .admin-section { margin-bottom: 28px; }
     .admin-section-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
     .admin-section-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
@@ -239,7 +239,7 @@
 
 <header class="header">
   <div>
-    <div class="logo">Kitchen <em>MEP</em> — Dashboard</div>
+    <div class="logo">Kitchen <em>MEP</em> - Dashboard</div>
     <div class="logo-sub">212 · Nooch Richti · Manager</div>
   </div>
   <div class="header-right">
@@ -270,7 +270,7 @@
 
     <div class="mep-alerts" id="mep-alerts"></div>
 
-    <div class="section-sub" style="margin-bottom:14px">MEP overview — today</div>
+    <div class="section-sub" style="margin-bottom:14px">MEP overview - today</div>
     <div class="mep-grid" id="mep-grid"></div>
 
     <div class="stats-grid">
@@ -384,7 +384,7 @@
   <!-- ── ORDER PANEL ── -->
   <div class="panel" id="panel-orders">
     <div class="section-title">Orders</div>
-    <div class="section-sub" style="margin-bottom:20px">Items below minimum — what to reorder</div>
+    <div class="section-sub" style="margin-bottom:20px">Items below minimum - what to reorder</div>
 
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()">
@@ -535,7 +535,7 @@
 </div>
 
 <script>
-// ── Back navigation ─────────────────────────────────────────
+// -- Back navigation --
 // Returns to the exact scan URL the user came from (preserves ?code=)
 // Falls back to the plain index page if nothing was saved
 function goBack(e) {
@@ -595,11 +595,11 @@ function fmt(raw) {
   return `${dd}.${mm}.${yy} ${hh}:${min}`;
 }
 
-// ── KDS ──────────────────────────────────────────────────────
+// -- KDS --
 function buildScanStats() {
   scanStats = {};
-  // todayScanStats: only today's scans — used for MEP available/inProgress calcs
-  // scanStats: all-time — used for bar charts, feed counts
+  // todayScanStats: only today's scans - used for MEP available/inProgress calcs
+  // scanStats: all-time - used for bar charts, feed counts
   const todayStr = new Date().toISOString().slice(0, 10);
   allScans.forEach(s => {
     const c = s.code || "";
@@ -723,7 +723,7 @@ function buildMepAlerts() {
     const goalMet        = tagesziel > 0 && available >= tagesziel;
     const listFull       = mepMax > 0 && inProgress >= mepMax;
 
-    // ── Alert banners ──────────────────────────────────────
+    // -- Alert banners --
     const targetQty = tagesziel > 0 ? tagesziel : mepMax;
 
     // Shelf life
@@ -735,31 +735,31 @@ function buildMepAlerts() {
     }).length;
     if (expiredBatch > 0) {
       alerts.push({ type:"yellow", icon:"⚠", code,
-        title: `Check shelf life — ${name}`,
-        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} over ${shelfLife}d — verify usability` });
+        title: `Check shelf life - ${name}`,
+        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} over ${shelfLife}d - verify usability` });
     }
 
-    // Too much MEP — yellow (attention, not critical)
+    // Too much MEP - yellow (attention, not critical)
     if (overDone) {
       const excess   = available - tagesziel;
       const excessKg = gnWeight ? ` (${(excess * gnWeight).toFixed(1)} kg over)` : "";
       alerts.push({ type:"yellow", icon:"⚠", code,
-        title: `Too much MEP — ${name}`,
+        title: `Too much MEP - ${name}`,
         sub:   `${available} available, target is ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
     }
 
-    // MEP target reached — green (good news)
+    // MEP target reached - green (good news)
     if (goalMet && !overDone) {
       alerts.push({ type:"green", icon:"✓", code,
-        title: `Target reached — ${name}`,
+        title: `Target reached - ${name}`,
         sub:   `${available}${gnSize?" "+gnSize:""} available · daily target met` });
     }
 
-    // MEP list full but available = 0 — red urgent (needs prep asap)
+    // MEP list full but available = 0 - red urgent (needs prep asap)
     if (listFull && available === 0 && !goalMet) {
       const listKg = gnWeight ? ` · ${(listWeight).toFixed(1)} kg in prep` : "";
       alerts.push({ type:"red", icon:"🚨", code,
-        title: `⚠ Prepare now — ${name}`,
+        title: `⚠ Prepare now - ${name}`,
         sub:   `MEP list full but nothing available${listKg}` });
     }
 
@@ -772,13 +772,13 @@ function buildMepAlerts() {
         if (inStock < neededKg) {
           const shortKg = (neededKg - inStock).toFixed(1);
           alerts.push({ type:"blue", icon:"📦", code,
-            title: `Low stock — ${name}`,
+            title: `Low stock - ${name}`,
             sub:   `Need ${neededKg} kg for daily target, only ${inStock.toFixed(1)} kg in stock · ${shortKg} kg short` });
         }
       }
     }
 
-    // ── Per-product card ───────────────────────────────────
+    // -- Per-product card --
     let cardClass = "";
     let tagHtml   = "";
     if (overDone) {
@@ -905,7 +905,7 @@ function renderFeed() {
 }
 
 
-// ── INVENTORY ────────────────────────────────────────────────
+// -- INVENTORY --
 async function loadInventory() {
   try {
     const data = await get({ action: "inventory" });
@@ -981,7 +981,7 @@ function filterInventory() {
     (r.lieferant||"").toLowerCase().includes(q)));
 }
 
-// ── PRODUCTS ─────────────────────────────────────────────────
+// -- PRODUCTS --
 async function loadProducts() {
   try {
     const data = await get({ action: "allProducts" });
@@ -1042,7 +1042,7 @@ function filterProducts() {
     (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)));
 }
 
-// ── MODAL ─────────────────────────────────────────────────────
+// -- MODAL --
 function openModal(code) {
   const p = allProducts[code]||{}, st = scanStats[code]||{produce:0,done:0,waste:0};
   document.getElementById("m-code").textContent    = "CODE · " + code;
@@ -1059,19 +1059,19 @@ function openModal(code) {
 }
 function closeModal() { document.getElementById("modal").classList.remove("open"); }
 
-// ── INIT ──────────────────────────────────────────────────────
-// Show cached data instantly — user sees data in <100ms
+// -- INIT --
+// Show cached data instantly - user sees data in <100ms
 (function() {
   const cp = sessionStorage.getItem("dash_products");
   const ci = sessionStorage.getItem("dash_inventory");
   const cs = sessionStorage.getItem("dash_scans");
   if (cp) { try { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); } catch(e) {} }
   if (ci) { try { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); } catch(e) {} }
-  // Only render KDS from cache if products are already cached — otherwise alerts will be empty
+  // Only render KDS from cache if products are already cached - otherwise alerts will be empty
   if (cs) {
     try {
       allScans = JSON.parse(cs);
-      // Only render full KDS if products also cached — else just render feed
+      // Only render full KDS if products also cached - else just render feed
       if (sessionStorage.getItem("dash_products")) {
         _renderKDS();
       } else {
@@ -1083,7 +1083,7 @@ function closeModal() { document.getElementById("modal").classList.remove("open"
 })();
 
 // Load products FIRST so allProducts is ready before KDS renders MEP alerts
-// Load products first, then KDS — ensures allProducts ready for MEP alerts
+// Load products first, then KDS - ensures allProducts ready for MEP alerts
 loadProducts()
   .then(() => loadKDS())
   .catch(() => loadKDS()); // run KDS even if products fail
@@ -1095,7 +1095,7 @@ setInterval(async () => {
   // Only re-render product grid if scan data changed (new scans came in)
   if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
 }, 60_000);
-// ── Swipeable alerts ─────────────────────────────────────────
+// -- Swipeable alerts --
 const _sw = {};
 
 function initSwipe() {
@@ -1138,7 +1138,7 @@ function swipeEnd(e, idx) {
   const threshold = (wrap?.offsetWidth || 250) * 0.40;
 
   if (dx < -threshold) {
-    // Dismiss — slide fully off then hide
+    // Dismiss - slide fully off then hide
     if (el) { el.style.transition = 'transform .22s ease'; el.style.transform = 'translateX(-110%)'; }
     setTimeout(() => {
       if (wrap) { wrap.style.height = wrap.offsetHeight + 'px'; }
@@ -1157,7 +1157,7 @@ function swipeEnd(e, idx) {
 }
 
 
-// ── Admin helpers ─────────────────────────────────────────────
+// -- Admin helpers --
 function adminMsg(id, text, type) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -1172,7 +1172,7 @@ async function adminCall(params) {
   return res.json();
 }
 
-// ── Products admin ────────────────────────────────────────────
+// -- Products admin --
 function renderAdminProducts() {
   const list    = document.getElementById("admin-product-list");
   const catSel  = document.getElementById("admin-prod-cat");
@@ -1229,7 +1229,7 @@ function editProduct(code) {
   document.getElementById("pf-tagesziel").value = p.tagesziel ?? "";
   document.getElementById("pf-shelf").value     = p.shelfLife ?? "";
   document.getElementById("pf-drive").value     = "";
-  document.getElementById("product-form-title").textContent = "Edit product — " + code;
+  document.getElementById("product-form-title").textContent = "Edit product - " + code;
   document.getElementById("pf-cancel").style.display = "inline-flex";
   document.getElementById("product-form").scrollIntoView({ behavior: "smooth" });
 }
@@ -1290,13 +1290,13 @@ document.getElementById("pf-code")?.addEventListener("blur", () => {
   }
 });
 
-// ── Workers admin ─────────────────────────────────────────────
+// -- Workers admin --
 let allWorkersAdmin = [];
 
 async function loadWorkersAdmin() {
   try {
     const data = await adminCall({ action: "allWorkers" });
-    // allWorkers not yet in API — fall back to workers list + build from Settings
+    // allWorkers not yet in API - fall back to workers list + build from Settings
     allWorkersAdmin = data.workers || [];
     renderAdminWorkers();
   } catch(e) { console.error(e); }
@@ -1323,7 +1323,7 @@ function renderAdminWorkers() {
 function editWorker(name) {
   document.getElementById("wf-name").value    = name;
   document.getElementById("wf-name").readOnly = true;
-  document.getElementById("wf-form-title").textContent = "Edit worker — " + name;
+  document.getElementById("wf-form-title").textContent = "Edit worker - " + name;
   document.getElementById("wf-cancel").style.display = "inline-flex";
 }
 
@@ -1368,7 +1368,7 @@ async function delWorker(name) {
   renderAdminWorkers();
 }
 
-// ── Inventory admin ───────────────────────────────────────────
+// -- Inventory admin --
 function renderAdminInventory() {
   const list = document.getElementById("admin-inv-list");
   if (!list) return;
@@ -1403,7 +1403,7 @@ function editInvItem(code) {
   document.getElementById("if-lieferant").value  = r.lieferant  || "";
   document.getElementById("if-lastorder").value  = r.lastOrder  || "";
   document.getElementById("if-notizen").value    = r.notizen    || "";
-  document.getElementById("if-form-title").textContent = "Edit — " + (r.name || code);
+  document.getElementById("if-form-title").textContent = "Edit - " + (r.name || code);
   document.getElementById("if-cancel").style.display   = "inline-flex";
 }
 
@@ -1463,7 +1463,7 @@ async function saveInvItem() {
   }
 }
 
-// ── Load admin data when tab is opened ────────────────────────
+// -- Load admin data when tab is opened --
 // Hook into the existing switchTab by patching the admin tab button onclick
 function loadAdminTab() {
   renderAdminProducts();
@@ -1505,7 +1505,7 @@ function populateInvDataLists() {
 }
 
 
-// ── Orders ───────────────────────────────────────────────────
+// -- Orders --
 function renderOrders() {
   const container = document.getElementById("order-content");
   const summary   = document.getElementById("order-summary");
@@ -1607,7 +1607,7 @@ function renderOrders() {
 }
 
 
-// ── Recipes ───────────────────────────────────────────────────
+// -- Recipes --
 let allRecipes = [];
 
 async function loadRecipes() {
@@ -1759,7 +1759,7 @@ async function deleteRecipeRow(mepCode, rmCode) {
 }
 
 
-// ── Alert helpers ─────────────────────────────────────────────
+// -- Alert helpers --
 function clearAllAlerts() {
   const box = document.getElementById("mep-alerts");
   if (box) box.innerHTML = "";
@@ -1778,9 +1778,9 @@ function alertClick(code) {
 }
 
 
-// ── Initialise dashboard ─────────────────────────────────────
+// -- Initialise dashboard --
 (function init() {
-  // Show cached data instantly — user sees data in <100ms
+  // Show cached data instantly - user sees data in <100ms
   const cp = sessionStorage.getItem("dash_products");
   const ci = sessionStorage.getItem("dash_inventory");
   const cs = sessionStorage.getItem("dash_scans");
@@ -1802,7 +1802,7 @@ function alertClick(code) {
   setTimeout(loadRecipes,   800);
 })();
 
-// ── Keep Apps Script warm — ping every 4 minutes to avoid cold starts ──
+// -- Keep Apps Script warm - ping every 4 minutes to avoid cold starts --
 setInterval(() => {
   fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
 }, 4 * 60 * 1000);
