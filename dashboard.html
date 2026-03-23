@@ -566,8 +566,11 @@ function switchTab(btn) {
 }
 
 // Fetch
-async async function get(params) {
-  const res = await fetch(API + "?" + new URLSearchParams(params));
+async function get(params) {
+  const url = API + "?" + new URLSearchParams(params);
+  console.log("[MEP] fetch:", url.split("?")[1]);
+  const res = await fetch(url);
+  console.log("[MEP] response status:", res.status, res.url);
   return res.json();
 }
 
@@ -1775,20 +1778,21 @@ function alertClick(code) {
 
 // -- Initialise dashboard v9 --
 document.addEventListener("DOMContentLoaded", function() {
-  // Restore from cache instantly
+  console.log("[MEP v9] init start");
   try {
     const cp = sessionStorage.getItem("dash_products");
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
+    console.log("[MEP v9] cache cp=" + !!cp + " ci=" + !!ci + " cs=" + !!cs);
     if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
     if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); }
     if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
-  } catch(e) { console.warn("Cache restore failed:", e); }
+  } catch(e) { console.error("[MEP v9] cache error:", e); }
 
-  // Fetch fresh data — products first so MEP alerts have product names
+  console.log("[MEP v9] calling loadProducts");
   loadProducts()
-    .then(function() { return loadKDS(); })
-    .catch(function(e) { console.error("Load failed:", e); loadKDS(); });
+    .then(function() { console.log("[MEP v9] products OK, loading KDS"); return loadKDS(); })
+    .catch(function(e) { console.error("[MEP v9] failed:", e); loadKDS(); });
 
   setTimeout(loadInventory, 500);
   setTimeout(loadRecipes,   1000);
