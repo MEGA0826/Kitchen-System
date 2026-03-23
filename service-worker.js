@@ -3,7 +3,7 @@
 //   Shell files (HTML, fonts) → Cache-first (offline works)
 //   API calls (Apps Script)   → Network-first, no cache (always fresh data)
 
-const CACHE     = "mep-shell-v3";
+const CACHE     = "mep-shell-v4";
 const API_HOST  = "script.google.com";
 
 // Files to pre-cache on install — the app shell
