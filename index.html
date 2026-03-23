@@ -1198,9 +1198,12 @@
             slider.min   = caps.zoom.min;
             slider.max   = caps.zoom.max;
             slider.step  = (caps.zoom.max - caps.zoom.min) / 50;
-            slider.value = caps.zoom.min;
+            // Default to 2.8x (or max if device doesn't support that high)
+            const defaultZoom = Math.min(2.8, caps.zoom.max);
+            slider.value = defaultZoom;
+            track.applyConstraints({ advanced: [{ zoom: defaultZoom }] }).catch(() => {});
           }
-          if (label) label.textContent = parseFloat(caps.zoom.min).toFixed(1) + "×";
+          if (label) label.textContent = Math.min(2.8, caps.zoom.max).toFixed(1) + "×";
           if (wrap)  wrap.style.display = "flex";
         }
       } catch(e) { /* zoom not available */ }
