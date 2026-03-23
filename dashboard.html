@@ -1773,29 +1773,26 @@ function alertClick(code) {
 }
 
 
-// -- Initialise dashboard --
-(function init() {
-  // Show cached data instantly - user sees data in <100ms
-  const cp = sessionStorage.getItem("dash_products");
-  const ci = sessionStorage.getItem("dash_inventory");
-  const cs = sessionStorage.getItem("dash_scans");
-  if (cp) {
-    try { allProducts = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); } catch(e) {}
-  }
-  if (ci) {
-    try { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); } catch(e) {}
-  }
-  if (cs && cp) {
-    try { allScans = JSON.parse(cs); _renderKDS(); } catch(e) {}
-  }
+// -- Initialise dashboard v9 --
+document.addEventListener("DOMContentLoaded", function() {
+  // Restore from cache instantly
+  try {
+    const cp = sessionStorage.getItem("dash_products");
+    const ci = sessionStorage.getItem("dash_inventory");
+    const cs = sessionStorage.getItem("dash_scans");
+    if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
+    if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); }
+    if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
+  } catch(e) { console.warn("Cache restore failed:", e); }
 
-  // Load products first so allProducts is ready before KDS renders MEP alerts
+  // Fetch fresh data — products first so MEP alerts have product names
   loadProducts()
-    .then(() => loadKDS())
-    .catch(() => loadKDS());
-  setTimeout(loadInventory, 400);
-  setTimeout(loadRecipes,   800);
-})();
+    .then(function() { return loadKDS(); })
+    .catch(function(e) { console.error("Load failed:", e); loadKDS(); });
+
+  setTimeout(loadInventory, 500);
+  setTimeout(loadRecipes,   1000);
+});
 
 // -- Keep Apps Script warm - ping every 4 minutes to avoid cold starts --
 setInterval(() => {
