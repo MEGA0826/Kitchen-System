@@ -655,22 +655,61 @@
 
   <!-- Scanner home state — inline camera, no overlay needed -->
   <div class="scan-home" id="scanHome" style="display:none">
-    <div class="scan-home-video-wrap" id="scanVideoWrap">
-      <video id="scanner-video-inline" autoplay playsinline muted
-             style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius);display:block"></video>
-      <!-- scan frame corners -->
-      <div class="scan-corner tl"></div>
-      <div class="scan-corner tr"></div>
-      <div class="scan-corner bl"></div>
-      <div class="scan-corner br"></div>
-      <div class="scan-line" id="scanLine"></div>
-      <div class="scan-hint-text">Point at a QR code</div>
+
+    <div class="scan-home-video-wrap">
+      <video id="scanner-video-inline" autoplay playsinline muted></video>
+
+      <!-- centred transparent scan frame -->
+      <div class="scan-frame-box">
+        <div class="scan-c tl"></div>
+        <div class="scan-c tr"></div>
+        <div class="scan-c bl"></div>
+        <div class="scan-c br"></div>
+        <div class="scan-line"></div>
+      </div>
+
+      <!-- top bar -->
+      <div class="scan-topbar">
+        <div class="scan-app-name">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
+      </div>
+
+      <!-- hint -->
+      <div class="scan-hint-text">Point camera at QR code</div>
+
+      <!-- messages -->
+      <div class="scan-msg" id="scanMsg"></div>
+
+      <!-- retry -->
+      <button class="btn-scan-camera" id="btnRetry" onclick="startInlineScanner()" style="display:none">
+        <span>⟳</span><span>Tap to start camera</span>
+      </button>
+
+      <!-- zoom slider — shown only if device supports zoom -->
+      <div class="scan-zoom-wrap" id="zoomWrap" style="display:none">
+        <span class="scan-zoom-label" style="font-size:16px">−</span>
+        <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" oninput="applyZoom(this.value)">
+        <span class="scan-zoom-label" style="font-size:16px">+</span>
+        <span class="scan-zoom-label" id="zoomLabel">1×</span>
+      </div>
     </div>
-    <button class="btn-scan-camera" id="btnRetry" onclick="startInlineScanner()" style="display:none">
-      <span style="font-size:18px">⟳</span>
-      <span>Tap to start camera</span>
-    </button>
-    <div class="scan-msg" id="scanMsg"></div>
+
+    <!-- bottom toolbar -->
+    <div class="scan-toolbar">
+      <button class="scan-tb-btn" onclick="openGallery()">
+        <div class="scan-tb-icon">🖼</div>
+        <span class="scan-tb-label">Gallery</span>
+      </button>
+      <button class="scan-tb-btn" id="btnFlash" onclick="toggleFlash()">
+        <div class="scan-tb-icon" id="flashIcon">⚡</div>
+        <span class="scan-tb-label">Flash</span>
+      </button>
+      <button class="scan-tb-btn" id="btnToggleCamera" onclick="toggleCamera()">
+        <div class="scan-tb-icon">⇄</div>
+        <span class="scan-tb-label" id="btnToggleCameraLabel">Front</span>
+      </button>
+    </div>
+
+    <input type="file" id="galleryInput" accept="image/*" onchange="scanFromGallery(event)">
   </div>
 
   <!-- Product + Actions screen (shown after scan) -->
@@ -1130,30 +1169,52 @@
   function openScanner() { startInlineScanner(); }
 
   function startInlineScanner() {
-    const video  = document.getElementById("scanner-video-inline");
-    const retry  = document.getElementById("btnRetry");
-    const msg    = document.getElementById("scanMsg");
+    const video = document.getElementById("scanner-video-inline");
+    const retry = document.getElementById("btnRetry");
+    const msg   = document.getElementById("scanMsg");
     if (!video) return;
-    if (msg) msg.textContent = "Kitchen MEP";
+    if (msg) msg.textContent = "";
 
-    // Request camera with zoom — first try with advanced zoom constraint,
-    // fall back to basic if device doesn't support it
-    const videoConstraints = { facingMode: _cameraFacing };
-    navigator.mediaDevices.getUserMedia({ video: videoConstraints })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: _cameraFacing } })
     .then(async stream => {
       _scanStream = stream;
       video.srcObject = stream;
       video.play();
+
+      // Hide retry, update camera label
       if (retry) retry.style.display = "none";
-      if (ctrl) ctrl.style.display = "flex";
       updateToggleLabel();
-      // Start decoding
+
+      // Wire zoom slider
+      try {
+        const track = stream.getVideoTracks()[0];
+        _zoomTrack  = track;
+        const caps  = track.getCapabilities ? track.getCapabilities() : {};
+        if (caps.zoom) {
+          const slider = document.getElementById("zoomSlider");
+          const wrap   = document.getElementById("zoomWrap");
+          const label  = document.getElementById("zoomLabel");
+          if (slider) {
+            slider.min   = caps.zoom.min;
+            slider.max   = caps.zoom.max;
+            slider.step  = (caps.zoom.max - caps.zoom.min) / 50;
+            slider.value = caps.zoom.min;
+          }
+          if (label) label.textContent = parseFloat(caps.zoom.min).toFixed(1) + "×";
+          if (wrap)  wrap.style.display = "flex";
+        }
+      } catch(e) { /* zoom not available */ }
+
+      // Start QR decoding
       if ("BarcodeDetector" in window) {
         const detector = new BarcodeDetector({ formats: ["qr_code"] });
         _scanInterval = setInterval(() => {
           if (video.readyState < 2) return;
           detector.detect(video).then(codes => {
-            if (codes.length > 0) { stopInlineScanner(); handleScannedUrl(codes[0].rawValue); }
+            if (codes.length > 0) {
+              stopInlineScanner();
+              handleScannedUrl(codes[0].rawValue);
+            }
           }).catch(() => {});
         }, 300);
       } else {
@@ -1162,8 +1223,8 @@
     })
     .catch(err => {
       if (retry) retry.style.display = "flex";
-      if (msg)   msg.textContent = err.name === "NotAllowedError"
-        ? "Camera permission needed — tap Tap to start camera"
+      if (msg) msg.textContent = err.name === "NotAllowedError"
+        ? "Camera permission denied — tap Retry"
         : "Camera error: " + err.message;
     });
   }
