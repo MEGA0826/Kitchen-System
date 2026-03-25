@@ -28,7 +28,7 @@
           const newSW = reg.installing;
           newSW.addEventListener("statechange", () => {
             if (newSW.state === "installed" && navigator.serviceWorker.controller) {
-              // New version available — reload silently
+              // New version available - reload silently
               window.location.reload();
             }
           });
@@ -76,7 +76,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Page: fills screen, no scroll ── */
+    /* -- Page: fills screen, no scroll -- */
     .page {
       height: 100vh; height: 100dvh;
       max-width: 480px;
@@ -87,7 +87,7 @@
       gap: 10px;
     }
 
-    /* ── Header ── */
+    /* -- Header -- */
     .header {
       padding: 12px 0 10px;
       display: flex;
@@ -142,7 +142,7 @@
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    /* ── Product Card ── */
+    /* -- Product Card -- */
     .product-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -158,7 +158,7 @@
       to   { opacity:1; transform: translateY(0); }
     }
 
-    /* Text side — leaves right padding for the image */
+    /* Text side - leaves right padding for the image */
     .product-info { padding-right: 152px; }
     .product-label {
       font-size: 11px;
@@ -182,7 +182,7 @@
       letter-spacing: 1px;
     }
 
-    /* Image — absolute top-right, double wide */
+    /* Image - absolute top-right, double wide */
     .product-img {
       position: absolute;
       top: 8px;
@@ -208,7 +208,7 @@
       opacity: .25;
     }
 
-    /* ── MEP Status rows ── */
+    /* -- MEP Status rows -- */
     .mep-status {
       margin-top: 6px;
       display: flex;
@@ -259,7 +259,7 @@
     }
     .mep-full-msg.visible { display: block; }
 
-    /* ── Worker Select ── */
+    /* -- Worker Select -- */
     .field-wrap { flex-shrink: 0; animation: slideUp .3s .07s ease both; }
     .field-label {
       font-size: 11px;
@@ -288,7 +288,7 @@
     }
     .worker-select:focus { outline: none; border-color: var(--amber); }
 
-    /* ── Action Buttons — compact row ── */
+    /* -- Action Buttons - compact row -- */
     .actions {
       display: flex;
       flex-direction: column;
@@ -341,7 +341,7 @@
       pointer-events: none;
     }
 
-    /* ── Offline queue badge ── */
+    /* -- Offline queue badge -- */
     .offline-badge {
       display: none;
       position: fixed;
@@ -360,7 +360,7 @@
     }
     .offline-badge.visible { display: block; }
 
-    /* ── Status row (feedback + undo share same slot) ── */
+    /* -- Status row (feedback + undo share same slot) -- */
     .status-row {
       height: 42px;
       display: flex;
@@ -382,7 +382,7 @@
     .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
     .feedback-inner.info    { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
 
-    /* ── Over-produce popup ── */
+    /* -- Over-produce popup -- */
     .popup-overlay {
       display: none;
       position: fixed;
@@ -410,7 +410,7 @@
     .popup-btn { width: 100%; padding: 12px; background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); border-radius: var(--radius-sm); font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: opacity .15s; }
     .popup-btn:active { opacity: 0.7; }
 
-    /* ── Skeleton ── */
+    /* -- Skeleton -- */
     .skeleton {
       height: 26px; width: 55%;
       border-radius: 6px;
@@ -420,7 +420,7 @@
     }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 
-    /* ── QRbot-style full-screen scanner ── */
+    /* -- QRbot-style full-screen scanner -- */
     .scan-home {
       position: fixed;
       inset: 0;
@@ -443,7 +443,7 @@
       height: 100%;
       object-fit: cover;
     }
-    /* Dark vignette overlay — 4 panels around transparent box */
+    /* Dark vignette overlay - 4 panels around transparent box */
     .scan-vignette {
       position: absolute;
       inset: 0;
@@ -662,7 +662,7 @@
 
   <!-- Offline queue badge -->
   <div class="offline-badge" id="offlineBadge" onclick="retryQueue()" title="Tap to retry pending scans">
-    ⏳ <span id="offlineCount">0</span> pending
+     <span id="offlineCount">0</span> pending
   </div>
 
   <!-- Header -->
@@ -677,7 +677,7 @@
     </div>
   </header>
 
-  <!-- Scanner home state — inline camera, no overlay needed -->
+  <!-- Scanner home state - inline camera, no overlay needed -->
   <div class="scan-home" id="scanHome" style="display:none">
 
     <div class="scan-home-video-wrap">
@@ -708,12 +708,12 @@
         <span>⟳</span><span>Tap to start camera</span>
       </button>
 
-      <!-- zoom slider — shown only if device supports zoom -->
+      <!-- zoom slider - shown only if device supports zoom -->
       <div class="scan-zoom-wrap" id="zoomWrap" style="display:none">
         <span class="scan-zoom-label" style="font-size:16px">−</span>
         <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" oninput="applyZoom(this.value)">
         <span class="scan-zoom-label" style="font-size:16px">+</span>
-        <span class="scan-zoom-label" id="zoomLabel">1×</span>
+        <span class="scan-zoom-label" id="zoomLabel">1x</span>
       </div>
     </div>
 
@@ -739,7 +739,7 @@
   <!-- Product + Actions screen (shown after scan) -->
   <div id="productScreen" style="display:none;flex:1;display:none;flex-direction:column;gap:8px;overflow:hidden">
 
-    <!-- Product card — compact fixed height -->
+    <!-- Product card - compact fixed height -->
     <div class="product-card" id="productCard">
       <div class="product-info">
         <div class="product-label">Scanned product</div>
@@ -764,22 +764,22 @@
     <div class="field-wrap" id="workerWrap">
       <label class="field-label" for="worker">Staff member</label>
       <select class="worker-select" id="worker">
-        <option value="">Loading…</option>
+        <option value="">Loading...</option>
       </select>
     </div>
 
-    <!-- Action buttons — fixed heights, never shift layout -->
+    <!-- Action buttons - fixed heights, never shift layout -->
     <div class="actions" id="actionsWrap">
 
-      <!-- Finish — always full width -->
+      <!-- Finish - always full width -->
       <div class="btn-row">
         <button class="btn btn-done" onclick="send('done')">
-          <span class="btn-icon">✓</span>
+          <span class="btn-icon">OK</span>
           <span class="btn-label">Finish MEP</span>
         </button>
       </div>
 
-      <!-- Used + Waste — side by side -->
+      <!-- Used + Waste - side by side -->
       <div class="btn-row">
         <button class="btn btn-used" id="btnUsed" onclick="send('used')">
           <span class="btn-icon">→</span>
@@ -791,17 +791,17 @@
         </button>
       </div>
 
-      <!-- Status row: undo OR feedback message — same height slot -->
+      <!-- Status row: undo OR feedback message - same height slot -->
       <div class="status-row" id="statusRow">
         <div class="feedback-inner" id="msg"></div>
         <button class="btn btn-undo" id="btnUndo" onclick="undoAction()" style="display:none">
-          <span class="btn-icon">↩</span>
+          <span class="btn-icon"><-</span>
           <span class="btn-label" id="undoLabel">Undo (3)</span>
         </button>
       </div>
 
       <!-- Daily target covered banner -->
-      <div class="mep-full-msg" id="mepFullMsg">Daily target covered ✓</div>
+      <div class="mep-full-msg" id="mepFullMsg">Daily target covered OK</div>
 
     </div>
   </div>
@@ -814,7 +814,7 @@
     <div class="popup-icon">⚠</div>
     <div class="popup-title">Over Produce!</div>
     <div class="popup-sub" id="overPopupSub">You have finished more than the daily target.</div>
-    <button class="popup-btn" onclick="closeOverPopup()">OK — Understood</button>
+    <button class="popup-btn" onclick="closeOverPopup()">OK - Understood</button>
   </div>
 </div>
 <script>
@@ -867,7 +867,7 @@
     }
   }
 
-  // ── MEP status ──────────────────────────────────────────────
+  // -- MEP status --
   async function loadMepStatus(code) {
     if (!code) return;
     try {
@@ -881,7 +881,7 @@
 
   function setUsedWasteState(avail) {
     const noAvail = !avail || Number(avail) < 1;
-    // Use id selectors — more reliable than class selectors when display:none parents exist
+    // Use id selectors - more reliable than class selectors when display:none parents exist
     const btnUsed  = document.getElementById("btnUsed");
     const btnWaste = document.getElementById("btnWaste");
     [btnUsed, btnWaste].forEach(btn => {
@@ -902,7 +902,7 @@
     const status  = document.getElementById("mepStatus");
     const fullMsg = document.getElementById("mepFullMsg");
 
-    // Always update Used/Waste state — even when mepMax is 0
+    // Always update Used/Waste state - even when mepMax is 0
     const _avail = data.available !== undefined ? data.available : (data.doneCount || 0);
     setUsedWasteState(_avail);
 
@@ -931,7 +931,7 @@
     const listWt  = gnWeight * inProg;
     const availWt = gnWeight * avail;
 
-    // Row 1 — Available (one compact line)
+    // Row 1 - Available (one compact line)
     const labelDone = document.getElementById("mepLabelDone");
     const dotDone   = document.getElementById("mepDotDone");
     let doneText = `<strong>Available: ${avail}`;
@@ -941,7 +941,7 @@
     labelDone.innerHTML = doneText;
     dotDone.className   = "mep-dot green";
 
-    // Row 2 — To produce: target - available (or inProg if no target)
+    // Row 2 - To produce: target - available (or inProg if no target)
     const tagesziel2 = data.tagesziel || 0;
     const toProduce  = tagesziel2 > 0
       ? Math.max(0, tagesziel2 - avail)
@@ -956,7 +956,7 @@
     labelList.innerHTML = listText;
 
     // Finish is active when there is work in the MEP list (inProg > 0)
-    // Also keep active when toProduce > 0 — items are being made
+    // Also keep active when toProduce > 0 - items are being made
     const btnDone = document.querySelector(".btn-done");
     if (btnDone) {
       const canFinish = inProg > 0 || toProduce > 0;
@@ -984,7 +984,7 @@
     if (covered) {
       dotList.className = "mep-dot green";
       labelList.classList.add("full");
-      fullMsg.textContent = "Daily target covered ✓";
+      fullMsg.textContent = "Daily target covered OK";
       fullMsg.classList.add("visible");
     } else {
       dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
@@ -1027,7 +1027,7 @@
     const worker = document.getElementById("worker").value;
     if (!worker) { showMsg("Select a staff member first", "error"); return; }
 
-    // ── Optimistic UI: update display instantly, confirm from server ──
+    // -- Optimistic UI: update display instantly, confirm from server --
     const p = PRODUCT_MAP[CURRENT_CODE] || {};
     if (p.mepMax) {
       const optimistic = Object.assign({}, p, {
@@ -1049,8 +1049,8 @@
       updateMepUI(optimistic);
     }
 
-    showMsg("Saving…", "info");
-    const labels = { done: "MEP Finished ✓", waste: "Waste recorded ✓", used: "Sent to service ✓" };
+    showMsg("Saving...", "info");
+    const labels = { done: "MEP Finished OK", waste: "Waste recorded OK", used: "Sent to service OK" };
     const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
 
     fetch(url)
@@ -1064,17 +1064,17 @@
         if (data.status === "over_produce") {
           const p = PRODUCT_MAP[CURRENT_CODE] || {};
           showOverPopup(p.name || CURRENT_CODE, data);
-          showMsg("MEP Finished ✓  —  tap Undo to reverse", "success");
+          showMsg("MEP Finished OK  -  tap Undo to reverse", "success");
           startUndo(action);
           return;
         }
-        showMsg((labels[action] || "Saved") + "  —  tap Undo to reverse", "success");
+        showMsg((labels[action] || "Saved") + "  -  tap Undo to reverse", "success");
         startUndo(action);
       })
       .catch(async () => {
-        // Network failed — save to offline queue
+        // Network failed - save to offline queue
         await queueScan({ code: CURRENT_CODE, worker, action, ts: Date.now() });
-        showMsg("Saved offline ⏳ — will sync when back online", "info");
+        showMsg("Saved offline  - will sync when back online", "info");
         startUndo(action);
         updateBadge();
       });
@@ -1091,7 +1091,7 @@
 
     // Hide feedback message, show undo in the same slot
     if (msg)   msg.className = "feedback-inner";
-    if (btn)   btn.style.display = "flex";   // flex not grid — matches status-row
+    if (btn)   btn.style.display = "flex";   // flex not grid - matches status-row
     let secs = 3;
     if (label) label.textContent = `Undo (${secs})`;
 
@@ -1114,26 +1114,26 @@
     document.getElementById("btnUndo").style.display = "none";
 
     const worker = document.getElementById("worker").value;
-    showMsg("Undoing…", "info");
+    showMsg("Undoing...", "info");
 
     fetch(`${API_URL}?action=undoScan&code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&lastAction=${encodeURIComponent(_lastAction)}`)
       .then(r => r.json())
       .then(data => {
         if (data.error) { showMsg("Undo failed: " + data.error, "error"); return; }
         _lastAction = null;
-        showMsg("Undone ✓", "success");
+        showMsg("Undone OK", "success");
         // Reload MEP status then return to scanner after short delay
         loadMepStatus(CURRENT_CODE);
         setTimeout(() => {
           window.location.href = window.location.pathname;
         }, 1200);
       })
-      .catch(() => showMsg("Network error — undo failed", "error"));
+      .catch(() => showMsg("Network error - undo failed", "error"));
   }
 
   function showOverPopup(name, data) {
     const gnLabel = data.gnSize ? " " + data.gnSize : "";
-    const sub = `${name}: ${data.available}${gnLabel} finished — daily target is ${data.tagesziel}${gnLabel}.`;
+    const sub = `${name}: ${data.available}${gnLabel} finished - daily target is ${data.tagesziel}${gnLabel}.`;
     document.getElementById("overPopupSub").textContent = sub;
     document.getElementById("overPopup").classList.add("visible");
   }
@@ -1150,7 +1150,7 @@
     window.location.href = window.location.pathname;
   }
 
-  // ── QR Scanner — inline video in page ───────────────────────
+  // -- QR Scanner - inline video in page --
   let _scanStream   = null;
   let _scanInterval = null;
   let _cameraFacing = localStorage.getItem("cameraFacing") || "environment";
@@ -1193,7 +1193,7 @@
       }
     } catch(err) {
       closeScanner();
-      showMsg("Camera access denied — check browser permissions", "error");
+      showMsg("Camera access denied - check browser permissions", "error");
     }
   }
 
@@ -1234,7 +1234,7 @@
             slider.value = defaultZoom;
             track.applyConstraints({ advanced: [{ zoom: defaultZoom }] }).catch(() => {});
           }
-          if (label) label.textContent = Math.min(2.8, caps.zoom.max).toFixed(1) + "×";
+          if (label) label.textContent = Math.min(2.8, caps.zoom.max).toFixed(1) + "x";
           if (wrap)  wrap.style.display = "flex";
         }
       } catch(e) { /* zoom not available */ }
@@ -1258,7 +1258,7 @@
     .catch(err => {
       if (retry) retry.style.display = "flex";
       if (msg) msg.textContent = err.name === "NotAllowedError"
-        ? "Camera permission denied — tap Retry"
+        ? "Camera permission denied - tap Retry"
         : "Camera error: " + err.message;
     });
   }
@@ -1269,7 +1269,7 @@
     if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
   }
 
-  // ── Flashlight ───────────────────────────────────────────────
+  // -- Flashlight --
   let _flashOn = false;
   async function toggleFlash() {
     if (!_scanStream) return;
@@ -1291,20 +1291,20 @@
     }
   }
 
-  // ── Zoom ─────────────────────────────────────────────────────
+  // -- Zoom --
   let _zoomTrack = null;
   let _zoomMin = 1, _zoomMax = 5;
 
   function applyZoom(val) {
     if (!_zoomTrack) return;
     const label = document.getElementById("zoomLabel");
-    if (label) label.textContent = parseFloat(val).toFixed(1) + "×";
+    if (label) label.textContent = parseFloat(val).toFixed(1) + "x";
     try {
       _zoomTrack.applyConstraints({ advanced: [{ zoom: parseFloat(val) }] });
     } catch(e) {}
   }
 
-  // ── Gallery scan ─────────────────────────────────────────────
+  // -- Gallery scan --
   function openGallery() {
     document.getElementById("galleryInput").click();
   }
@@ -1393,16 +1393,16 @@
     setUsedWasteState(0);
 
     if (!code) {
-      // ── No code — show scanner and open camera immediately ──
+      // -- No code - show scanner and open camera immediately --
       document.getElementById("scanHome").style.display      = "flex";
       preloadProducts();
       preloadWorkers();
-      // Start inline camera — show retry button if permission not yet granted
+      // Start inline camera - show retry button if permission not yet granted
       startInlineScanner();
       return;
     }
 
-    // ── Has code — show product screen ──
+    // -- Has code - show product screen --
     sessionStorage.setItem("lastScanUrl", window.location.href);
     document.getElementById("scanHome").style.display      = "none";
     document.getElementById("productScreen").style.display = "flex";
@@ -1426,11 +1426,8 @@
     }
   });
 
-  // ══════════════════════════════════════════════════════════════
-  // OFFLINE SCAN QUEUE — IndexedDB + auto-retry
-  // ══════════════════════════════════════════════════════════════
-
-  const DB_NAME    = "mep-offline";
+  // -- // OFFLINE SCAN QUEUE - IndexedDB + auto --retry
+  // -- const DB_NAME    = "mep --offline";
   const DB_VERSION = 1;
   const STORE      = "scans";
   let   _db        = null;
@@ -1506,12 +1503,12 @@
     }
   }
 
-  // Retry all queued scans — called when back online or badge tapped
+  // Retry all queued scans - called when back online or badge tapped
   async function retryQueue() {
     const queue = await getQueue();
     if (queue.length === 0) return;
 
-    showMsg("Syncing " + queue.length + " offline scan(s)…", "info");
+    showMsg("Syncing " + queue.length + " offline scan(s)...", "info");
     let synced = 0;
     let failed = 0;
 
@@ -1532,7 +1529,7 @@
 
     await updateBadge();
     if (failed === 0) {
-      showMsg("All " + synced + " scan(s) synced ✓", "success");
+      showMsg("All " + synced + " scan(s) synced OK", "success");
     } else {
       showMsg(synced + " synced, " + failed + " still pending", "info");
     }
