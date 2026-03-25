@@ -1,8 +1,7 @@
-// Kitchen MEP — Service Worker v5
-// Strategy: cache ONLY icons and fonts. Never intercept HTML or API calls.
+// Kitchen MEP — Service Worker v6
+// Handles: background sync for offline scan queue, icon caching only
 
-const CACHE = "mep-v5";
-
+const CACHE = "mep-v6";
 const PRECACHE = [
   "/Kitchen-System/icons/icon-192.png",
   "/Kitchen-System/icons/icon-512.png"
@@ -19,7 +18,9 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -27,21 +28,32 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
 
-  // NEVER intercept: API calls, HTML pages, anything from script.google.com
-  // Let the browser handle these directly — no service worker interference
+  // Never intercept: Google APIs, HTML pages
   if (
     url.hostname.includes("google") ||
     url.hostname.includes("googleapis") ||
     e.request.headers.get("accept")?.includes("text/html") ||
     url.pathname.endsWith(".html")
-  ) {
-    return; // browser handles it natively
-  }
+  ) return;
 
-  // Cache only icons
+  // Cache icons only
   if (url.pathname.includes("/icons/")) {
     e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request))
+      caches.match(e.request)
+        .then(cached => cached || fetch(e.request))
+    );
+  }
+});
+
+// Background sync — retry offline scans when connection returns
+self.addEventListener("sync", e => {
+  if (e.tag === "retry-scans") {
+    e.waitUntil(
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client =>
+          client.postMessage({ type: "SYNC_COMPLETE" })
+        );
+      })
     );
   }
 });
