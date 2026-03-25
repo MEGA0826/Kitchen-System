@@ -341,6 +341,25 @@
       pointer-events: none;
     }
 
+    /* ── Offline queue badge ── */
+    .offline-badge {
+      display: none;
+      position: fixed;
+      top: 12px; right: 12px;
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid var(--amber-brd);
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      z-index: 50;
+      cursor: pointer;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .offline-badge.visible { display: block; }
+
     /* ── Status row (feedback + undo share same slot) ── */
     .status-row {
       height: 42px;
@@ -640,6 +659,11 @@
 </head>
 <body>
 <div class="page">
+
+  <!-- Offline queue badge -->
+  <div class="offline-badge" id="offlineBadge" onclick="retryQueue()" title="Tap to retry pending scans">
+    ⏳ <span id="offlineCount">0</span> pending
+  </div>
 
   <!-- Header -->
   <header class="header">
@@ -1027,8 +1051,9 @@
 
     showMsg("Saving…", "info");
     const labels = { done: "MEP Finished ✓", waste: "Waste recorded ✓", used: "Sent to service ✓" };
+    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
 
-    fetch(`${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`)
+    fetch(url)
       .then(r => r.json())
       .then(data => {
         if (data.mepMax !== undefined) updateMepUI(data);
@@ -1046,7 +1071,13 @@
         showMsg((labels[action] || "Saved") + "  —  tap Undo to reverse", "success");
         startUndo(action);
       })
-      .catch(() => showMsg("Network error — try again", "error"));
+      .catch(async () => {
+        // Network failed — save to offline queue
+        await queueScan({ code: CURRENT_CODE, worker, action, ts: Date.now() });
+        showMsg("Saved offline ⏳ — will sync when back online", "info");
+        startUndo(action);
+        updateBadge();
+      });
   }
 
   function startUndo(action) {
@@ -1394,6 +1425,150 @@
       updateMepUI(mepData.value);
     }
   });
+
+  // ══════════════════════════════════════════════════════════════
+  // OFFLINE SCAN QUEUE — IndexedDB + auto-retry
+  // ══════════════════════════════════════════════════════════════
+
+  const DB_NAME    = "mep-offline";
+  const DB_VERSION = 1;
+  const STORE      = "scans";
+  let   _db        = null;
+
+  // Open / create the IndexedDB
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (_db) { resolve(_db); return; }
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          db.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+        }
+      };
+      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  // Save a scan to the queue
+  async function queueScan(scan) {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx  = db.transaction(STORE, "readwrite");
+        const req = tx.objectStore(STORE).add(scan);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror   = () => reject(req.error);
+      });
+    } catch(e) {
+      console.error("IndexedDB queue failed:", e);
+    }
+  }
+
+  // Get all queued scans
+  async function getQueue() {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx  = db.transaction(STORE, "readonly");
+        const req = tx.objectStore(STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror   = () => reject(req.error);
+      });
+    } catch(e) { return []; }
+  }
+
+  // Delete a queued scan by id after successful sync
+  async function deleteQueued(id) {
+    try {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx  = db.transaction(STORE, "readwrite");
+        const req = tx.objectStore(STORE).delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror   = () => reject(req.error);
+      });
+    } catch(e) {}
+  }
+
+  // Update the pending badge count
+  async function updateBadge() {
+    const queue = await getQueue();
+    const badge = document.getElementById("offlineBadge");
+    const count = document.getElementById("offlineCount");
+    if (!badge || !count) return;
+    if (queue.length > 0) {
+      count.textContent = queue.length;
+      badge.classList.add("visible");
+    } else {
+      badge.classList.remove("visible");
+    }
+  }
+
+  // Retry all queued scans — called when back online or badge tapped
+  async function retryQueue() {
+    const queue = await getQueue();
+    if (queue.length === 0) return;
+
+    showMsg("Syncing " + queue.length + " offline scan(s)…", "info");
+    let synced = 0;
+    let failed = 0;
+
+    for (const scan of queue) {
+      try {
+        const url = `${API_URL}?code=${encodeURIComponent(scan.code)}&worker=${encodeURIComponent(scan.worker)}&action=${encodeURIComponent(scan.action)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          await deleteQueued(scan.id);
+          synced++;
+        } else {
+          failed++;
+        }
+      } catch(e) {
+        failed++;
+      }
+    }
+
+    await updateBadge();
+    if (failed === 0) {
+      showMsg("All " + synced + " scan(s) synced ✓", "success");
+    } else {
+      showMsg(synced + " synced, " + failed + " still pending", "info");
+    }
+  }
+
+  // Auto-retry when browser comes back online
+  window.addEventListener("online", () => {
+    retryQueue();
+  });
+
+  // Check queue on page load and show badge if pending
+  window.addEventListener("DOMContentLoaded", () => {
+    updateBadge();
+    // Also retry immediately if online
+    if (navigator.onLine) retryQueue();
+  });
+
+  // Register background sync with service worker (retry even when page closed)
+  async function registerBackgroundSync() {
+    if ("serviceWorker" in navigator && "SyncManager" in window) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.sync.register("retry-scans");
+      } catch(e) {}
+    }
+  }
+
+  // Listen for sync-complete message from service worker
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", e => {
+      if (e.data?.type === "SYNC_COMPLETE") {
+        retryQueue();
+      }
+    });
+  }
+
 </script>
 </body>
 </html>
