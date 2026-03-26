@@ -36,7 +36,7 @@
       });
       // Listen for sync complete messages from SW
       navigator.serviceWorker.addEventListener("message", e => {
-        if (e.data?.type === "SYNC_COMPLETE") console.log("Background sync complete");
+        if (e.data?.type === "SYNC_COMPLETE")
       });
     }
   </script>
@@ -259,8 +259,23 @@
     }
     .mep-full-msg.visible { display: block; }
 
-    /* -- Worker Select -- */
+    /* -- Worker Select + PIN -- */
     .field-wrap { flex-shrink: 0; animation: slideUp .3s .07s ease both; }
+    .pin-key {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 500;
+      padding: 16px;
+      cursor: pointer;
+      transition: background .1s;
+    }
+    .pin-key:active { background: var(--amber-dim); color: var(--amber); }
+    .pin-clear  { color: var(--red); }
+    .pin-cancel { color: var(--muted); font-size:16px; }
     .field-label {
       font-size: 11px;
       letter-spacing: 1.5px;
@@ -334,6 +349,7 @@
     }
     .btn-undo .btn-icon { font-size: 15px; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
 
     /* Inactive state for all action buttons */
     .btn.inactive {
@@ -655,6 +671,19 @@
     }
     .btn-scan-camera:active { opacity: 0.7; }
     .scan-msg { font-size:12px; color:var(--red); text-align:center; min-height:18px; }
+
+    /* -- PIN Pad -- */
+    .pin-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .pin-name { font-size:13px; color:var(--amber); font-family:'DM Mono',monospace; letter-spacing:0.5px; }
+    .pin-dots { display:flex; gap:10px; justify-content:center; margin-bottom:10px; }
+    .pin-dot { width:12px; height:12px; border-radius:50%; border:2px solid var(--border2); background:transparent; transition:background .1s, border-color .1s; }
+    .pin-dot.filled { background:var(--amber); border-color:var(--amber); }
+    .pin-dot.error  { background:var(--red);   border-color:var(--red); }
+    .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+    .pin-btn { padding:13px 0; background:var(--surface); color:var(--text); border:1px solid var(--border2); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:18px; font-weight:500; cursor:pointer; transition:background .1s, transform .08s; -webkit-tap-highlight-color:transparent; }
+    .pin-btn:active { background:var(--surface2); transform:scale(0.94); }
+    .pin-clear { color:var(--muted); font-size:13px; }
+    .pin-del   { color:var(--amber); font-size:15px; }
   </style>
 </head>
 <body>
@@ -760,12 +789,44 @@
       <div id="imgPlaceholder" class="product-img-ph">🍽</div>
     </div>
 
-    <!-- Worker select -->
+    <!-- Worker PIN login -->
     <div class="field-wrap" id="workerWrap">
-      <label class="field-label" for="worker">Staff member</label>
-      <select class="worker-select" id="worker">
-        <option value="">Loading...</option>
-      </select>
+      <div id="pinDisplay" style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="field-label">Staff member</div>
+          <div id="workerName" style="font-size:16px;font-weight:500;color:var(--text)">— tap to login —</div>
+        </div>
+        <button onclick="showPinPad()" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--muted);font-family:var(--mono);font-size:11px;padding:6px 12px;cursor:pointer;letter-spacing:1px;text-transform:uppercase">
+          PIN
+        </button>
+      </div>
+      <!-- hidden fallback select for send() compatibility -->
+      <select id="worker" style="display:none"></select>
+    </div>
+
+    <!-- PIN pad overlay -->
+    <div id="pinPad" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:30;align-items:flex-end;justify-content:center">
+      <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:20px 16px 32px;width:100%;max-width:480px">
+        <div style="text-align:center;margin-bottom:16px">
+          <div class="field-label" style="margin-bottom:6px">Enter your PIN</div>
+          <div id="pinDots" style="font-size:28px;letter-spacing:12px;color:var(--amber)">____</div>
+          <div id="pinError" style="font-size:11px;color:var(--red);margin-top:4px;min-height:16px"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto">
+          <button class="pin-key" onclick="pinKey(1)">1</button>
+          <button class="pin-key" onclick="pinKey(2)">2</button>
+          <button class="pin-key" onclick="pinKey(3)">3</button>
+          <button class="pin-key" onclick="pinKey(4)">4</button>
+          <button class="pin-key" onclick="pinKey(5)">5</button>
+          <button class="pin-key" onclick="pinKey(6)">6</button>
+          <button class="pin-key" onclick="pinKey(7)">7</button>
+          <button class="pin-key" onclick="pinKey(8)">8</button>
+          <button class="pin-key" onclick="pinKey(9)">9</button>
+          <button class="pin-key pin-clear" onclick="pinClear()" style="font-size:18px">⌫</button>
+          <button class="pin-key" onclick="pinKey(0)">0</button>
+          <button class="pin-key pin-cancel" onclick="hidePinPad()">✕</button>
+        </div>
+      </div>
     </div>
 
     <!-- Action buttons - fixed heights, never shift layout -->
@@ -1015,17 +1076,18 @@
     }
   }
 
-  document.getElementById("worker").addEventListener("change", () => {
-    localStorage.setItem("worker", document.getElementById("worker").value);
-  });
+  // -- PIN: getCurrentWorker helper --
+  function getCurrentWorker() {
+    return document.getElementById("worker")?.value || "";
+  }
 
   let _lastAction  = null;   // last successfully saved action
   let _undoTimer   = null;   // countdown interval
   let _redirectTimer = null; // auto-redirect timeout
 
   function send(action) {
-    const worker = document.getElementById("worker").value;
-    if (!worker) { showMsg("Select a staff member first", "error"); return; }
+    const worker = getCurrentWorker();
+    if (!worker) { showMsg("Enter your PIN or select staff first", "error"); return; }
 
     // -- Optimistic UI: update display instantly, confirm from server --
     const p = PRODUCT_MAP[CURRENT_CODE] || {};
@@ -1061,14 +1123,19 @@
           showMsg(data.message || "Target already covered", "info");
           return;
         }
+        // Build deduction summary if this was a done scan
+        const dedMsg = (action === "done" && data.deducted && data.deducted.length > 0)
+          ? " | Deducted: " + data.deducted.map(d => d.name + " -" + d.deducted + d.unit + (d.low ? "(LOW)" : "")).join(", ")
+          : "";
+        const hasLow = data.deducted && data.deducted.some(d => d.low);
         if (data.status === "over_produce") {
           const p = PRODUCT_MAP[CURRENT_CODE] || {};
           showOverPopup(p.name || CURRENT_CODE, data);
-          showMsg("MEP Finished OK  -  tap Undo to reverse", "success");
+          showMsg("MEP Finished OK" + dedMsg, hasLow ? "error" : "success");
           startUndo(action);
           return;
         }
-        showMsg((labels[action] || "Saved") + "  -  tap Undo to reverse", "success");
+        showMsg((labels[action] || "Saved") + dedMsg + (dedMsg ? "" : " -- tap Undo to reverse"), hasLow ? "error" : "success");
         startUndo(action);
       })
       .catch(async () => {
@@ -1407,6 +1474,7 @@
     document.getElementById("scanHome").style.display      = "none";
     document.getElementById("productScreen").style.display = "flex";
     document.getElementById("productScreen").style.flexDirection = "column";
+    initPinOnProductScreen(); // restore worker or show PIN pad
 
     // Show cached product data instantly
     const cached = sessionStorage.getItem("productMap");
@@ -1426,8 +1494,8 @@
     }
   });
 
-  // -- // OFFLINE SCAN QUEUE - IndexedDB + auto --retry
-  // -- const DB_NAME    = "mep --offline";
+  // -- OFFLINE SCAN QUEUE - IndexedDB + auto-retry --
+  const DB_NAME    = "mep-offline";
   const DB_VERSION = 1;
   const STORE      = "scans";
   let   _db        = null;
@@ -1564,6 +1632,89 @@
         retryQueue();
       }
     });
+  }
+
+
+
+  // ── PIN pad ──────────────────────────────────────────────────
+  let _pinBuffer = "";
+
+  function showPinPad() {
+    _pinBuffer = "";
+    updatePinDots();
+    document.getElementById("pinError").textContent = "";
+    document.getElementById("pinPad").style.display = "flex";
+  }
+
+  function hidePinPad() {
+    document.getElementById("pinPad").style.display = "none";
+    _pinBuffer = "";
+    updatePinDots();
+  }
+
+  function pinKey(digit) {
+    if (_pinBuffer.length >= 4) return;
+    _pinBuffer += String(digit);
+    updatePinDots();
+    if (_pinBuffer.length === 4) submitPin();
+  }
+
+  function pinClear() {
+    _pinBuffer = _pinBuffer.slice(0, -1);
+    updatePinDots();
+    document.getElementById("pinError").textContent = "";
+  }
+
+  function updatePinDots() {
+    const filled = "●".repeat(_pinBuffer.length);
+    const empty  = "_".repeat(4 - _pinBuffer.length);
+    document.getElementById("pinDots").textContent = filled + empty;
+  }
+
+  async function submitPin() {
+    const pin = _pinBuffer;
+    _pinBuffer = "";
+    updatePinDots();
+    try {
+      const res  = await fetch(API_URL + "?action=verifyPin&pin=" + encodeURIComponent(pin));
+      const data = await res.json();
+      if (data.status === "ok" && data.worker) {
+        setWorker(data.worker);
+        hidePinPad();
+      } else {
+        document.getElementById("pinError").textContent = "Wrong PIN - try again";
+      }
+    } catch(e) {
+      document.getElementById("pinError").textContent = "Network error - try again";
+    }
+  }
+
+  function setWorker(name) {
+    const nameEl = document.getElementById("workerName");
+    if (nameEl) { nameEl.textContent = name; nameEl.style.color = "var(--green)"; }
+    // Keep hidden select in sync for send() compatibility
+    const sel = document.getElementById("worker");
+    if (sel) {
+      let opt = sel.querySelector('option[value="' + name + '"]');
+      if (!opt) { opt = document.createElement("option"); opt.value = name; sel.appendChild(opt); }
+      sel.value = name;
+    }
+    localStorage.setItem("mep_worker", name);
+  }
+
+  function restoreWorker() {
+    const saved = localStorage.getItem("mep_worker");
+    if (saved) setWorker(saved);
+  }
+
+  // -- init PIN on product screen load --
+  function initPinOnProductScreen() {
+    restoreWorker(); // restore last worker from localStorage
+    // Show PIN pad automatically if no worker set
+    const worker = getCurrentWorker();
+    if (!worker) {
+      setTimeout(showPinPad, 400); // slight delay for smooth animation
+    }
   }
 
 </script>
