@@ -264,7 +264,13 @@
 
   <!-- KDS -->
   <div class="panel active" id="panel-kds">
-    <div class="section-title">Kitchen Display</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title" style="margin-bottom:0">Kitchen Display</div>
+      <button onclick="openManualScan()"
+        style="padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+        + Manual action
+      </button>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="section-sub" style="margin-bottom:0">Today's activity</div>
       <button onclick="clearAllAlerts()" style="font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red-brd)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">Clear all</button>
@@ -2148,6 +2154,169 @@ setInterval(() => {
       : `<tr><td colspan="3" style="color:var(--green);text-align:center;padding:12px">All stock OK</td></tr>`;
   }
 
+
+  // -- Manual scan modal --
+  let _msAction = "";
+
+  function openManualScan() {
+    const pSel = document.getElementById("ms-product");
+    pSel.innerHTML = '<option value="">-- Select product --</option>';
+    Object.entries(allProducts).forEach(([code, p]) => {
+      const o = document.createElement("option");
+      o.value = code;
+      o.textContent = (p.name || code) + " (" + code + ")";
+      pSel.appendChild(o);
+    });
+    const wSel = document.getElementById("ms-worker");
+    wSel.innerHTML = '<option value="">-- Select worker --</option>';
+    const workers = new Set();
+    allScans.forEach(s => { if (s.worker) workers.add(s.worker); });
+    if (window.allWorkersAdmin) {
+      allWorkersAdmin.forEach(w => {
+        const name = typeof w === "string" ? w : w.name;
+        if (name) workers.add(name);
+      });
+    }
+    workers.forEach(w => {
+      const o = document.createElement("option");
+      o.value = o.textContent = w;
+      wSel.appendChild(o);
+    });
+    _msAction = "";
+    document.getElementById("ms-msg").textContent = "";
+    document.querySelectorAll(".ms-action-btn").forEach(b => {
+      b.style.background = "var(--surface)";
+      b.style.color = "var(--muted)";
+      b.style.borderColor = "var(--border2)";
+    });
+    document.getElementById("manualScanModal").style.display = "flex";
+  }
+
+  function closeManualScan() {
+    document.getElementById("manualScanModal").style.display = "none";
+    _msAction = "";
+  }
+
+  function setManualAction(action) {
+    _msAction = action;
+    const colors = {
+      produce: { bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
+      done:    { bg:"var(--green-dim)", color:"var(--green)", border:"var(--green-brd)" },
+      waste:   { bg:"var(--red-dim)",   color:"var(--red)",   border:"var(--red-brd)" },
+      used:    { bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
+    };
+    document.querySelectorAll(".ms-action-btn").forEach(b => {
+      b.style.background = "var(--surface)";
+      b.style.color = "var(--muted)";
+      b.style.borderColor = "var(--border2)";
+    });
+    const btn = document.getElementById("ms-btn-" + action);
+    if (btn && colors[action]) {
+      btn.style.background  = colors[action].bg;
+      btn.style.color       = colors[action].color;
+      btn.style.borderColor = colors[action].border;
+    }
+    document.getElementById("ms-msg").textContent = "";
+  }
+
+  async function submitManualScan() {
+    const code   = document.getElementById("ms-product").value;
+    const worker = document.getElementById("ms-worker").value;
+    const msg    = document.getElementById("ms-msg");
+    const btn    = document.getElementById("ms-submit");
+    if (!code)    { msg.style.color = "var(--red)"; msg.textContent = "Select a product"; return; }
+    if (!worker)  { msg.style.color = "var(--red)"; msg.textContent = "Select a staff member"; return; }
+    if (!_msAction) { msg.style.color = "var(--red)"; msg.textContent = "Select an action"; return; }
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    msg.style.color = "var(--muted)";
+    msg.textContent = "";
+    try {
+      const data = await get({ code, worker, action: _msAction });
+      if (data.error) {
+        msg.style.color = "var(--red)";
+        msg.textContent = "Error: " + data.error;
+      } else {
+        msg.style.color = "var(--green)";
+        const labels = { produce:"Produce recorded", done:"Finished OK", waste:"Waste recorded", used:"Used recorded" };
+        msg.textContent = (labels[_msAction] || "Saved") + " for " + (allProducts[code]?.name || code);
+        setTimeout(() => { loadKDS(); closeManualScan(); }, 1200);
+      }
+    } catch(e) {
+      msg.style.color = "var(--red)";
+      msg.textContent = "Network error";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save action";
+    }
+  }
+
+  document.addEventListener("click", e => {
+    if (e.target && e.target.id === "manualScanModal") closeManualScan();
+  });
+
 </script>
+<!-- Manual scan modal -->
+<div id="manualScanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-end;justify-content:center">
+  <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:24px 20px 36px;width:100%;max-width:480px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:500">Manual MEP action</div>
+      <button onclick="closeManualScan()"
+        style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+
+    <!-- Product select -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Product</div>
+      <select id="ms-product"
+        style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
+        <option value="">-- Select product --</option>
+      </select>
+    </div>
+
+    <!-- Worker select -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Staff member</div>
+      <select id="ms-worker"
+        style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
+        <option value="">-- Select worker --</option>
+      </select>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Action</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="setManualAction('produce')" id="ms-btn-produce" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Produce
+        </button>
+        <button onclick="setManualAction('done')" id="ms-btn-done" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Finish
+        </button>
+        <button onclick="setManualAction('waste')" id="ms-btn-waste" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Waste
+        </button>
+        <button onclick="setManualAction('used')" id="ms-btn-used" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Used
+        </button>
+      </div>
+    </div>
+
+    <!-- Status message -->
+    <div id="ms-msg" style="font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-bottom:12px"></div>
+
+    <!-- Submit -->
+    <button onclick="submitManualScan()" id="ms-submit"
+      style="width:100%;padding:14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+      Save action
+    </button>
+  </div>
+</div>
+
 </body>
 </html>
