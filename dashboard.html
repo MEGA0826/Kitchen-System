@@ -1916,11 +1916,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
   setTimeout(loadInventory, 500);
   setTimeout(loadRecipes,   1000);
-  // Load workers early so manual scan modal has them available
-  adminCall({ action: "workers" }).then(d => {
-    allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
-  }).catch(() => {});
 });
+
+// -- Improvement #6: Mark as ordered --
+async 
 
 // -- Keep Apps Script warm - ping every 4 minutes to avoid cold starts --
 setInterval(() => {
@@ -1928,7 +1927,7 @@ setInterval(() => {
 }, 4 * 60 * 1000);
 
 
-  // -- Mark as ordered --
+  // -- Mark as ordered (Improvement #6) --
   async function markOrdered(code, btn) {
     btn.disabled = true;
     btn.textContent = "...";
@@ -2171,32 +2170,18 @@ setInterval(() => {
     const wSel = document.getElementById("ms-worker");
     wSel.innerHTML = '<option value="">-- Select worker --</option>';
     const workers = new Set();
-    // Primary: use loaded workers list
-    if (allWorkersAdmin && allWorkersAdmin.length) {
+    allScans.forEach(s => { if (s.worker) workers.add(s.worker); });
+    if (window.allWorkersAdmin) {
       allWorkersAdmin.forEach(w => {
         const name = typeof w === "string" ? w : w.name;
         if (name) workers.add(name);
       });
     }
-    // Fallback: extract from scan history
-    allScans.forEach(s => { if (s.worker) workers.add(s.worker); });
-    // If still empty, try fetching workers now
-    if (!workers.size) {
-      adminCall({ action: "workers" }).then(d => {
-        const ws = Array.isArray(d.workers) ? d.workers : [];
-        ws.forEach(w => {
-          const o = document.createElement("option");
-          o.value = o.textContent = typeof w === "string" ? w : w.name;
-          wSel.appendChild(o);
-        });
-      });
-    } else {
-      workers.forEach(w => {
-        const o = document.createElement("option");
-        o.value = o.textContent = w;
-        wSel.appendChild(o);
-      });
-    }
+    workers.forEach(w => {
+      const o = document.createElement("option");
+      o.value = o.textContent = w;
+      wSel.appendChild(o);
+    });
     _msAction = "";
     document.getElementById("ms-msg").textContent = "";
     document.querySelectorAll(".ms-action-btn").forEach(b => {
