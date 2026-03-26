@@ -255,6 +255,8 @@
   <button class="tab" data-tab="products" onclick="switchTab(this)">Products</button>
   <button class="tab" data-tab="recipes" onclick="switchTab(this)">Recipes</button>
   <button class="tab" data-tab="orders" onclick="switchTab(this)">Orders</button>
+  <button class="tab" data-tab="deductions" onclick="switchTab(this)">Deductions</button>
+  <button class="tab" data-tab="reports" onclick="switchTab(this)">Reports</button>
   <button class="tab" data-tab="admin" onclick="switchTab(this)">⚙ Admin</button>
 </nav>
 
@@ -401,7 +403,116 @@
   </div>
 
   <!-- ── ADMIN PANEL ── -->
-  <div class="panel" id="panel-admin">
+  <div class="panel" id="panel-deductions">
+    <div class="section-title">Lager deductions -- auto-logged when MEP is finished</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" id="ded-search" placeholder="Search product or ingredient..."
+        oninput="filterDeductions()"
+        style="flex:1;min-width:160px;padding:8px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:13px">
+      <button onclick="loadDeductions()"
+        style="padding:8px 16px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;letter-spacing:1px">
+        Refresh
+      </button>
+    </div>
+    <div class="inv-table-wrap">
+      <table class="inv-table" id="ded-table">
+        <thead>
+          <tr>
+            <th>Time</th><th>Worker</th><th>MEP Product</th>
+            <th>Ingredient</th><th>Deducted</th><th>Before</th><th>After</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ded-body">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Click Refresh to load deductions</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<div class="panel" id="panel-reports">
+    <div class="section-title">Weekly kitchen performance report</div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+      <button onclick="previewReport()"
+        style="flex:1;padding:10px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+        Preview this week
+      </button>
+      <button onclick="sendReportNow()"
+        style="flex:1;padding:10px 16px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+        Send email now
+      </button>
+    </div>
+
+    <div id="report-status" style="font-size:12px;color:var(--muted);margin-bottom:16px;text-align:center"></div>
+
+    <!-- Live preview area -->
+    <div id="report-preview" style="display:none">
+
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px" id="report-summary"></div>
+
+      <!-- Waste table -->
+      <div class="section-title" style="margin-bottom:8px">Waste cost</div>
+      <div class="inv-table-wrap" style="margin-bottom:20px">
+        <table class="inv-table"><thead><tr>
+          <th>Product</th><th>Waste GN</th><th>CHF/unit</th><th>Total CHF</th>
+        </tr></thead><tbody id="rpt-waste"></tbody></table>
+      </div>
+
+      <!-- Efficiency table -->
+      <div class="section-title" style="margin-bottom:8px">Production efficiency</div>
+      <div class="inv-table-wrap" style="margin-bottom:20px">
+        <table class="inv-table"><thead><tr>
+          <th>Product</th><th>Finished</th><th>Wasted</th><th>Efficiency</th>
+        </tr></thead><tbody id="rpt-eff"></tbody></table>
+      </div>
+
+      <!-- Workers -->
+      <div class="section-title" style="margin-bottom:8px">Staff activity</div>
+      <div class="inv-table-wrap" style="margin-bottom:20px">
+        <table class="inv-table"><thead><tr>
+          <th>Staff</th><th>Total</th><th>Finished</th><th>Waste rate</th>
+        </tr></thead><tbody id="rpt-workers"></tbody></table>
+      </div>
+
+      <!-- Low stock -->
+      <div class="section-title" style="margin-bottom:8px">Low stock</div>
+      <div class="inv-table-wrap">
+        <table class="inv-table"><thead><tr>
+          <th>Item</th><th>Current</th><th>Minimum</th>
+        </tr></thead><tbody id="rpt-stock"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+<div class="panel" id="panel-admin">
+
+    <!-- Archive stats card -->
+    <div class="card" id="archive-card" style="margin-bottom:16px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:500">Scan sheet archive</div>
+        <button onclick="runArchiveNow()" id="btnArchiveNow"
+          style="padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+          Archive now
+        </button>
+      </div>
+      <div id="archive-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-scan-rows">--</div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Active scans</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-archive-rows">--</div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Archived scans</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-last-run">--</div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Last archive</div>
+        </div>
+      </div>
+      <div id="archive-msg" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center"></div>
+    </div>
     <div class="section-title">Admin</div>
     <div class="section-sub" style="margin-bottom:24px">Manage without opening Google Sheets</div>
 
@@ -560,17 +671,17 @@ function switchTab(btn) {
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
   document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
-  if (btn.dataset.tab === "admin") loadAdminTab();
-  if (btn.dataset.tab === "orders")  renderOrders();
-  if (btn.dataset.tab === "recipes") { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+  if (btn.dataset.tab === "admin")      { loadAdminTab(); loadArchiveStats(); }
+  if (btn.dataset.tab === "orders")     renderOrders();
+  if (btn.dataset.tab === "recipes")    { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+  if (btn.dataset.tab === "deductions") loadDeductions();
+  if (btn.dataset.tab === "reports")    loadReportsTab();
 }
 
 // Fetch
 async function get(params) {
-  const url = API + "?" + new URLSearchParams(params);
-  console.log("[MEP] fetch:", url.split("?")[1]);
+  const url = API + "?" + new URLSearchParams(params);[1]);
   const res = await fetch(url);
-  console.log("[MEP] response status:", res.status, res.url);
   return res.json();
 }
 
@@ -1504,6 +1615,8 @@ function populateInvDataLists() {
 
 
 // -- Orders --
+
+
 function renderOrders() {
   const container = document.getElementById("order-content");
   const summary   = document.getElementById("order-summary");
@@ -1594,6 +1707,10 @@ function renderOrders() {
             <td style="color:var(--muted)">${totKg}</td>
             <td style="color:var(--amber)">${totChf}</td>
             <td style="font-size:11px;color:var(--muted)">${r.notizen||"—"}</td>
+            <td><button onclick="markOrdered('${r.code}', this)"
+              style="padding:4px 10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer">
+              Ordered
+            </button></td>
           </tr>`;
         }).join("")}</tbody>
       </table></div>
@@ -1778,30 +1895,258 @@ function alertClick(code) {
 
 // -- Initialise dashboard v9 --
 document.addEventListener("DOMContentLoaded", function() {
-  console.log("[MEP v9] init start");
   try {
     const cp = sessionStorage.getItem("dash_products");
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
-    console.log("[MEP v9] cache cp=" + !!cp + " ci=" + !!ci + " cs=" + !!cs);
     if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
     if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); }
     if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
-  } catch(e) { console.error("[MEP v9] cache error:", e); }
+  } catch(e) { console.error("cache error:", e); }
 
-  console.log("[MEP v9] calling loadProducts");
   loadProducts()
-    .then(function() { console.log("[MEP v9] products OK, loading KDS"); return loadKDS(); })
+    .then(function() { return loadKDS(); })
     .catch(function(e) { console.error("[MEP v9] failed:", e); loadKDS(); });
 
   setTimeout(loadInventory, 500);
   setTimeout(loadRecipes,   1000);
 });
 
+// -- Improvement #6: Mark as ordered --
+async 
+
 // -- Keep Apps Script warm - ping every 4 minutes to avoid cold starts --
 setInterval(() => {
   fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
 }, 4 * 60 * 1000);
+
+
+  // -- Mark as ordered (Improvement #6) --
+  async function markOrdered(code, btn) {
+    btn.disabled = true;
+    btn.textContent = "...";
+    try {
+      const data = await get({ action: "markOrdered", code });
+      if (data.status === "ok") {
+        btn.textContent = "Ordered " + data.date;
+        btn.style.background = "var(--green-dim)";
+        setTimeout(loadInventory, 1000);
+      } else {
+        btn.textContent = "Error";
+        btn.disabled = false;
+      }
+    } catch(e) {
+      btn.textContent = "Error";
+      btn.disabled = false;
+    }
+  }
+
+
+  // -- Deductions tab --
+  let allDeductions = [];
+
+  async function loadDeductions() {
+    const body = document.getElementById("ded-body");
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
+    try {
+      const data = await get({ action: "getDeductions" });
+      allDeductions = Array.isArray(data.deductions) ? data.deductions : [];
+      renderDeductions(allDeductions);
+    } catch(e) {
+      body.innerHTML = '<tr><td colspan="8" style="color:var(--red);padding:16px">Error: ' + e.message + '</td></tr>';
+    }
+  }
+
+  function renderDeductions(rows) {
+    const body = document.getElementById("ded-body");
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">No deductions recorded yet</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(d => {
+      const low  = Number(d.after) <= 0;
+      const warn = Number(d.after) > 0 && Number(d.after) < 3;
+      const badge = low  ? '<span style="color:var(--red);font-size:11px">LOW</span>'
+                 : warn ? '<span style="color:var(--amber);font-size:11px">LOW</span>'
+                 : '<span style="color:var(--green);font-size:11px">OK</span>';
+      const ts = d.timestamp ? new Date(d.timestamp).toLocaleString("de-CH", {
+        day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
+      }) : "";
+      return '<tr>' +
+        '<td>' + ts + '</td>' +
+        '<td>' + (d.worker || "") + '</td>' +
+        '<td><span style="font-size:11px;color:var(--muted)">' + (d.mepCode || "") + '</span></td>' +
+        '<td>' + (d.rmName || d.rmCode || "") + '</td>' +
+        '<td style="color:var(--red)">-' + (d.deducted || 0) + ' ' + (d.unit || "") + '</td>' +
+        '<td style="color:var(--muted)">' + (d.before || 0) + '</td>' +
+        '<td style="font-weight:500">' + (d.after || 0) + '</td>' +
+        '<td>' + badge + '</td>' +
+        '</tr>';
+    }).join("");
+  }
+
+  function filterDeductions() {
+    const q = document.getElementById("ded-search").value.toLowerCase();
+    if (!q) { renderDeductions(allDeductions); return; }
+    renderDeductions(allDeductions.filter(d =>
+      (d.rmName || "").toLowerCase().includes(q) ||
+      (d.mepCode || "").toLowerCase().includes(q) ||
+      (d.worker || "").toLowerCase().includes(q)
+    ));
+  }
+
+
+  // -- Archive stats & manual trigger --
+  async function loadArchiveStats() {
+    try {
+      const data = await get({ action: "archiveStats" });
+      const el = id => document.getElementById(id);
+      if (el("stat-scan-rows"))    el("stat-scan-rows").textContent    = data.scanRows ?? "--";
+      if (el("stat-archive-rows")) el("stat-archive-rows").textContent = data.archiveRows ?? "--";
+      if (el("stat-last-run")) {
+        if (data.lastRun) {
+          const d = new Date(data.lastRun);
+          el("stat-last-run").textContent = d.toLocaleDateString("de-CH", { day:"2-digit", month:"2-digit" });
+        } else {
+          el("stat-last-run").textContent = "Never";
+        }
+      }
+      // Warn if scan sheet is getting large
+      const msg = document.getElementById("archive-msg");
+      if (msg) {
+        if (data.scanRows > 500) {
+          msg.style.color = "var(--red)";
+          msg.textContent = data.scanRows + " rows - recommend archiving now";
+        } else if (data.scanRows > 200) {
+          msg.style.color = "var(--amber)";
+          msg.textContent = data.scanRows + " rows - auto-archive runs 1st of each month";
+        } else {
+          msg.style.color = "var(--green)";
+          msg.textContent = data.scanRows + " rows - healthy";
+        }
+      }
+    } catch(e) {
+      console.warn("Archive stats failed:", e);
+    }
+  }
+
+  async function runArchiveNow() {
+    const btn = document.getElementById("btnArchiveNow");
+    const msg = document.getElementById("archive-msg");
+    if (btn) { btn.disabled = true; btn.textContent = "Archiving..."; }
+    try {
+      const data = await get({ action: "archiveNow" });
+      if (data.error) {
+        if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Error: " + data.error; }
+      } else {
+        if (msg) {
+          msg.style.color = "var(--green)";
+          msg.textContent = "Done: " + data.archived + " archived, " + data.kept + " kept";
+        }
+        await loadArchiveStats();
+      }
+    } catch(e) {
+      if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Network error"; }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Archive now"; }
+    }
+  }
+
+
+  // -- Reports tab --
+  function loadReportsTab() {
+    document.getElementById("report-status").textContent = "Click 'Preview this week' to load report data.";
+  }
+
+  async function previewReport() {
+    const status  = document.getElementById("report-status");
+    const preview = document.getElementById("report-preview");
+    status.textContent = "Loading report data...";
+    status.style.color = "var(--muted)";
+    preview.style.display = "none";
+    try {
+      const data = await get({ action: "reportPreview" });
+      if (data.error) { status.textContent = "Error: " + data.error; return; }
+      renderReportPreview(data.stats);
+      preview.style.display = "block";
+      status.textContent = "Week ending " + data.stats.week + " -- " + data.stats.totalScans + " scans";
+      status.style.color = "var(--green)";
+    } catch(e) {
+      status.textContent = "Error: " + e.message;
+      status.style.color = "var(--red)";
+    }
+  }
+
+  async function sendReportNow() {
+    const status = document.getElementById("report-status");
+    status.textContent = "Sending email...";
+    status.style.color = "var(--amber)";
+    try {
+      const data = await get({ action: "reportSendNow" });
+      if (data.error) {
+        status.textContent = "Error: " + data.error;
+        status.style.color = "var(--red)";
+      } else {
+        status.textContent = data.message || "Report sent!";
+        status.style.color = "var(--green)";
+      }
+    } catch(e) {
+      status.textContent = "Error: " + e.message;
+      status.style.color = "var(--red)";
+    }
+  }
+
+  function renderReportPreview(s) {
+    // Summary cards
+    const sumEl = document.getElementById("report-summary");
+    const cards = [
+      { val: s.totalScans,                   label: "Total scans",  color: "var(--text)" },
+      { val: s.overallEfficiency + "%",       label: "Efficiency",   color: s.overallEfficiency >= 90 ? "var(--green)" : s.overallEfficiency >= 75 ? "var(--amber)" : "var(--red)" },
+      { val: s.totalWaste,                    label: "Waste (GN)",   color: s.totalWaste > 0 ? "var(--red)" : "var(--green)" },
+      { val: "CHF " + s.totalWasteCHF.toFixed(0), label: "Waste cost", color: s.totalWasteCHF > 100 ? "var(--red)" : s.totalWasteCHF > 50 ? "var(--amber)" : "var(--green)" },
+    ];
+    sumEl.innerHTML = cards.map(c =>
+      `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;text-align:center">
+        <div style="font-size:22px;font-weight:500;color:${c.color}">${c.val}</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px">${c.label}</div>
+      </div>`
+    ).join("");
+
+    // Waste table
+    document.getElementById("rpt-waste").innerHTML = s.wasteLines.length
+      ? s.wasteLines.map(w =>
+          `<tr><td>${w.name}</td><td>${w.waste}</td><td>CHF ${w.costPerUnit.toFixed(2)}</td>
+           <td style="color:${w.totalCost > 50 ? "var(--red)" : "var(--text)"}">CHF ${w.totalCost.toFixed(2)}</td></tr>`
+        ).join("") + `<tr style="font-weight:500"><td colspan="3">Total waste cost</td><td style="color:var(--red)">CHF ${s.totalWasteCHF.toFixed(2)}</td></tr>`
+      : `<tr><td colspan="4" style="color:var(--green);text-align:center;padding:12px">No waste this week</td></tr>`;
+
+    // Efficiency table
+    document.getElementById("rpt-eff").innerHTML = s.efficiencyLines.length
+      ? s.efficiencyLines.map(e =>
+          `<tr><td>${e.name}</td><td style="color:var(--green)">${e.done}</td>
+           <td style="color:${e.waste > 0 ? "var(--red)" : "var(--muted)"}">${e.waste}</td>
+           <td style="color:${e.efficiency < 75 ? "var(--red)" : e.efficiency < 90 ? "var(--amber)" : "var(--green)"}">
+             <strong>${e.efficiency}%</strong></td></tr>`
+        ).join("")
+      : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
+
+    // Workers table
+    document.getElementById("rpt-workers").innerHTML = s.topWorkers.length
+      ? s.topWorkers.map(w =>
+          `<tr><td>${w.name}</td><td>${w.total}</td><td>${w.done}</td>
+           <td style="color:${w.wasteRate > 20 ? "var(--red)" : "var(--muted)"}">${w.wasteRate}%</td></tr>`
+        ).join("")
+      : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
+
+    // Low stock table
+    document.getElementById("rpt-stock").innerHTML = s.lowStock.length
+      ? s.lowStock.map(i =>
+          `<tr><td>${i.name}</td>
+           <td style="color:var(--red);font-weight:500">${i.qty} ${i.unit}</td>
+           <td style="color:var(--muted)">min: ${i.minimum} ${i.unit}</td></tr>`
+        ).join("")
+      : `<tr><td colspan="3" style="color:var(--green);text-align:center;padding:12px">All stock OK</td></tr>`;
+  }
 
 </script>
 </body>
