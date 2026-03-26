@@ -3,1585 +3,2320 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kitchen MEP — 212 Nooch Richti</title>
+  <title>Manager Dashboard - 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
-
-  <!-- iOS PWA support -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kitchen MEP">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta name="mobile-web-app-capable" content="yes">
-
-  <!-- Theme color for browser chrome -->
   <meta name="theme-color" content="#0f0f0d">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js").then(reg => {
-        // Check for updates every time the page loads
-        reg.update();
-        // When a new SW is waiting, reload to activate it
-        reg.addEventListener("updatefound", () => {
-          const newSW = reg.installing;
-          newSW.addEventListener("statechange", () => {
-            if (newSW.state === "installed" && navigator.serviceWorker.controller) {
-              // New version available - reload silently
-              window.location.reload();
-            }
-          });
-        });
-      });
-      // Listen for sync complete messages from SW
-      navigator.serviceWorker.addEventListener("message", e => {
-        if (e.data?.type === "SYNC_COMPLETE")
-      });
-    }
-  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:        #0f0f0d;
-      --surface:   #1a1a16;
-      --surface2:  #242420;
-      --border:    rgba(255,255,255,0.08);
-      --border2:   rgba(255,255,255,0.14);
-      --text:      #f0ede6;
-      --muted:     #888880;
-      --amber:     #e8a020;
-      --amber-dim: rgba(232,160,32,0.12);
-      --amber-brd: rgba(232,160,32,0.25);
-      --green:     #5dca8a;
-      --green-dim: rgba(93,202,138,0.12);
-      --green-brd: rgba(93,202,138,0.20);
-      --red:       #e86050;
-      --red-dim:   rgba(232,96,80,0.12);
-      --red-brd:   rgba(232,96,80,0.20);
-      --blue:      #60a8e8;
-      --blue-dim:  rgba(96,168,232,0.12);
-      --blue-brd:  rgba(96,168,232,0.22);
-      --gray-dim:  rgba(255,255,255,0.06);
-      --radius:    14px;
-      --radius-sm: 8px;
+      --bg: #0f0f0d; --surface: #1a1a16; --surface2: #242420; --surface3: #2e2e28;
+      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+      --text: #f0ede6; --muted: #888880; --faint: #555550;
+      --amber: #e8a020; --amber-dim: rgba(232,160,32,0.13); --amber-brd: rgba(232,160,32,0.28);
+      --green: #5dca8a; --green-dim: rgba(93,202,138,0.12); --green-brd: rgba(93,202,138,0.25);
+      --red: #e86050; --red-dim: rgba(232,96,80,0.12); --red-brd: rgba(232,96,80,0.22);
+      --blue: #60a8e8; --blue-dim: rgba(96,168,232,0.12); --blue-brd: rgba(96,168,232,0.22);
+      --radius: 14px; --radius-sm: 8px;
+      --mono: 'DM Mono', monospace; --serif: 'Instrument Serif', serif;
     }
+    html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* -- Page: fills screen, no scroll -- */
-    .page {
-      height: 100vh; height: 100dvh;
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 0 16px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    /* -- Header -- */
-    .header {
-      padding: 12px 0 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .brand-name {
-      font-family: 'Instrument Serif', serif;
-      font-size: 24px;
-      line-height: 1;
-    }
-    .brand-name em { font-style: italic; color: var(--amber); }
-    .brand-sub {
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      margin-top: 3px;
-    }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .dashboard-link {
-      font-size: 11px;
-      color: var(--muted);
-      text-decoration: none;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 4px 9px;
-      border: 1px solid var(--border2);
-      border-radius: var(--radius-sm);
-      transition: color .15s, border-color .15s;
-    }
-    .dashboard-link:hover { color: var(--amber); border-color: var(--amber); }
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 10px;
-      color: var(--green);
-      letter-spacing: 0.5px;
-    }
-    .status-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: blink 2.4s ease-in-out infinite;
-    }
+    /* HEADER */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 100; }
+    .logo { font-family: var(--serif); font-size: 22px; letter-spacing: -0.3px; }
+    .logo em { font-style: italic; color: var(--amber); }
+    .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); letter-spacing: 1px; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2.4s ease-in-out infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .clock { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+    .back-btn { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); transition: color .15s, border-color .15s; }
+    .back-btn:hover { color: var(--text); border-color: var(--amber); }
 
-    /* -- Product Card -- */
-    .product-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      flex-shrink: 0;
-      animation: slideUp .3s ease both;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    @keyframes slideUp {
-      from { opacity:0; transform: translateY(10px); }
-      to   { opacity:1; transform: translateY(0); }
-    }
-    /* Top row: text left, image right — image never overlaps text */
-    .product-top {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-    }
-    .product-info {
-      flex: 1;
-      min-width: 0; /* allows text-overflow to work */
-    }
-    .product-label {
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-    .product-name {
-      font-family: 'Instrument Serif', serif;
-      font-size: 24px;
-      line-height: 1.2;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .product-code {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-      letter-spacing: 1px;
-    }
-    /* Image — fixed size beside text, never absolute */
-    .product-img {
-      width: 88px;
-      height: 66px;
-      border-radius: 8px;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-    .product-img-ph {
-      width: 88px;
-      height: 66px;
-      border-radius: 8px;
-      background: var(--surface2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      opacity: .25;
-      flex-shrink: 0;
-    }
+    /* NAV */
+    .nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); overflow-x: auto; overflow-y: visible; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; }
+    .nav::-webkit-scrollbar { display: none; }
+    .tab { padding: 11px 20px; white-space: nowrap; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--amber); border-bottom-color: var(--amber); }
 
-    /* -- MEP Status rows -- */
-    .mep-status {
-      margin-top: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .mep-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    .mep-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .mep-dot.green { background: var(--green); }
-    .mep-dot.amber { background: var(--amber); }
-    .mep-dot.red   { background: var(--red); }
-    .mep-row-label {
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 0.3px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .mep-row-label strong {
-      color: var(--text);
-      font-weight: 500;
-    }
-    .mep-row-label.full strong { color: var(--green); }
+    /* BODY */
+    .body { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
-    /* Full MEP list message inside actions grid */
-    .mep-full-msg {
-      display: none;
-      grid-column: 1 / -1;
-      background: var(--green-dim);
-      border: 1px solid var(--green-brd);
-      color: var(--green);
-      border-radius: var(--radius);
-      padding: 10px;
-      text-align: center;
-      font-size: 13px;
-      letter-spacing: 0.5px;
-    }
-    .mep-full-msg.visible { display: block; }
+    /* PANELS */
+    .panel { display: none; animation: fadeIn .25s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-    /* -- Worker Select + PIN -- */
-    .field-wrap { flex-shrink: 0; animation: slideUp .3s .07s ease both; }
+    /* SECTION */
+    .section-title { font-family: var(--serif); font-size: 26px; margin-bottom: 6px; }
+    .section-sub { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 24px; }
 
+    /* STAT CARDS */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 32px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+    .stat-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .stat-value { font-family: var(--serif); font-size: 38px; line-height: 1; }
+    .stat-value.amber { color: var(--amber); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.red   { color: var(--red); }
+    .stat-value.blue  { color: var(--blue); }
+    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
 
-    /* -- Action Buttons - compact row -- */
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      flex-shrink: 0;
-      animation: slideUp .3s .14s ease both;
-    }
-    .btn-row { display: flex; gap: 7px; }
-    .btn {
-      border: none;
-      border-radius: var(--radius-sm);
-      font-family: 'DM Mono', monospace;
-      font-weight: 500;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 13px 16px;
-      transition: transform .1s, opacity .12s;
-      flex: 1;
-    }
-    .btn:active { transform: scale(0.97); }
-    .btn-icon  { font-size: 16px; line-height: 1; flex-shrink:0; }
-    .btn-label { font-size: 13px; letter-spacing: 0.8px; }
+    /* CHARTS */
+    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 20px 14px; margin-bottom: 24px; }
+    .chart-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+    .bars { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: 130px 1fr 40px; align-items: center; gap: 10px; }
+    .bar-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+    .bar-count { font-size: 11px; color: var(--muted); text-align: right; }
 
-    .btn-done  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
-    .btn-used  { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-brd); }
-    .btn-waste { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    /* FEED */
+    .feed-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-top: 24px; }
+    .feed-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .feed-title-txt { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .refresh-btn { font-family: var(--mono); font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 5px 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all .15s; }
+    .refresh-btn:hover { color: var(--amber); border-color: var(--amber-brd); }
+    .feed-row { display: grid; grid-template-columns: 100px 100px 80px 1fr; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .feed-row:last-child { border-bottom: none; }
+    .feed-row.hdr { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); background: var(--surface2); padding: 8px 18px; }
+    .feed-time { color: var(--muted); }
+    .action-badge { display: inline-flex; align-self: center; align-items: center; justify-content: center; padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; }
+    .action-badge.produce { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
+    .action-badge.done    { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .action-badge.waste   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .action-badge.used    { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-brd); }
 
-    .btn-undo {
-      background: var(--amber-dim);
-      color: var(--amber);
-      border: 1px solid var(--amber-brd);
-      border-radius: var(--radius-sm);
-      padding: 0 16px;
-      height: 42px;
-      animation: pulse 1s ease-in-out infinite;
-      width: 100%;
-    }
-    .btn-undo .btn-icon { font-size: 15px; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
-    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+    /* -- MEP Overview panel -- */
+    .mep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; margin-bottom: 28px; }
+    .mep-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .mep-card.over  { border-color: var(--red-brd); }
+    .mep-card.goal  { border-color: var(--green-brd); }
+    .mep-card-name  { font-family: var(--serif); font-size: 16px; color: var(--text); }
+    .mep-card-rows  { display: flex; flex-direction: column; gap: 6px; }
+    .mep-stat-row   { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+    .mep-stat-label { color: var(--muted); letter-spacing: 0.3px; }
+    .mep-stat-val   { font-weight: 500; color: var(--text); }
+    .mep-stat-val.green  { color: var(--green); }
+    .mep-stat-val.amber  { color: var(--amber); }
+    .mep-stat-val.red    { color: var(--red); }
+    .mep-stat-val.muted  { color: var(--muted); }
+    .mep-divider { height: 1px; background: var(--border); }
+    .mep-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; }
+    .mep-tag.over  { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .mep-tag.goal  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .mep-tag.prog  { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
+    .mep-tag.idle  { background: var(--gray-dim);  color: var(--muted); border: 1px solid var(--border); }
 
-    /* Inactive state for all action buttons */
-    .btn.inactive {
-      opacity: 0.28;
-      pointer-events: none;
-    }
+    /* -- MEP Alerts - swipeable -- */
+    .mep-alerts { margin-bottom: 24px; display: flex; flex-direction: column; gap: 8px; }
+    .alert-wrap { position: relative; overflow: hidden; border-radius: var(--radius); touch-action: pan-y; }
+    .alert-delete-bg { position: absolute; inset: 0; background: #c0392b; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: #fff; border-radius: var(--radius); opacity: 0; transition: opacity .1s; }
+    .alert-wrap.revealing .alert-delete-bg { opacity: 1; }
+    .mep-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; position: relative; transition: transform .15s ease; will-change: transform; cursor: grab; user-select: none; }
+    .mep-alert.red    { background: #7a1a1a; border: 1px solid #c44; color: #fdd; }
+    .mep-alert.over   { background: #7a1a1a; border: 1px solid #a33; color: #fdd; }
+    .mep-alert.yellow { background: #5a4000; border: 1px solid #c09020; color: #ffe08a; }
+    .mep-alert.full   { background: #5a4000; border: 1px solid #a07010; color: #fde89a; }
+    .mep-alert.green  { background: #1a3d1a; border: 1px solid #2d7a2d; color: #aaffaa; }
+    .mep-alert.blue   { background: #1a2d4a; border: 1px solid #2060a0; color: #aad4ff; }
+    .mep-alert { cursor: pointer; }
+    .mep-alert:hover  { filter: brightness(1.12); }
+    .mep-alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .mep-alert-body { display: flex; flex-direction: column; gap: 2px; }
+    .mep-alert-title { font-weight: 500; letter-spacing: 0.3px; }
+    .mep-alert-sub { font-size: 11px; opacity: 0.8; letter-spacing: 0.3px; }
 
-    /* -- Offline queue badge -- */
-    .offline-badge {
-      display: none;
-      position: fixed;
-      top: 12px; right: 12px;
-      background: var(--amber-dim);
-      color: var(--amber);
-      border: 1px solid var(--amber-brd);
-      border-radius: 20px;
-      font-size: 11px;
-      font-family: 'DM Mono', monospace;
-      letter-spacing: 0.5px;
-      padding: 4px 10px;
-      z-index: 50;
-      cursor: pointer;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    .offline-badge.visible { display: block; }
+    /* INVENTORY */
+    .inv-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 200px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 13px; padding: 10px 14px; }
+    .search-input::placeholder { color: var(--faint); }
+    .search-input:focus { outline: none; border-color: var(--amber); }
+    .inv-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .inv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .inv-table th { background: var(--surface2); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; }
+    .inv-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .inv-table tr:last-child td { border-bottom: none; }
+    .inv-table tr:hover td { background: var(--surface2); }
+    .stock-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+    .stock-ok  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .stock-low { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
+    .stock-out { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
 
-    /* -- Status row (feedback + undo share same slot) -- */
-    .status-row {
-      height: 42px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .feedback-inner {
-      font-size: 12px;
-      letter-spacing: 0.5px;
-      padding: 6px 16px;
-      border-radius: 40px;
-      display: none;
-      width: 100%;
-      justify-content: center;
-    }
-    .feedback-inner.visible { display: inline-flex; align-items: center; gap: 6px; }
-    .feedback-inner.success { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
-    .feedback-inner.error   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
-    .feedback-inner.info    { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
+    /* PRODUCT GRID */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+    .product-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s, transform .12s; }
+    .product-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .product-card:active { transform: scale(0.98); }
+    .prod-stats { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .prod-stat { font-size: 11px; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.3px; }
+    .prod-stat.green { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .prod-stat.amber { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
+    .prod-stat.red   { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .product-thumb { width: 100%; height: 130px; object-fit: cover; display: block; }
+    .product-thumb-ph { width: 100%; height: 130px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 32px; opacity: .3; }
+    .product-body { padding: 12px 14px; }
+    .product-name-card { font-family: var(--serif); font-size: 16px; line-height: 1.2; margin-bottom: 4px; }
+    .product-code-card { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); }
 
-    /* -- Over-produce popup -- */
-    .popup-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 50;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .popup-overlay.visible { display: flex; }
-    .popup-box {
-      background: var(--surface);
-      border: 1px solid var(--red-brd);
-      border-radius: var(--radius);
-      padding: 24px 22px 20px;
-      width: 100%;
-      max-width: 340px;
-      text-align: center;
-      animation: slideUp .25s ease both;
-    }
-    .popup-icon { font-size: 32px; margin-bottom: 10px; }
-    .popup-title { font-family: 'Instrument Serif', serif; font-size: 22px; color: var(--red); margin-bottom: 6px; }
-    .popup-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
-    .popup-btn { width: 100%; padding: 12px; background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); border-radius: var(--radius-sm); font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: opacity .15s; }
-    .popup-btn:active { opacity: 0.7; }
+    /* MODAL */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+    .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); width: 100%; max-width: 460px; overflow: hidden; transform: translateY(14px); transition: transform .2s; }
+    .modal-backdrop.open .modal { transform: translateY(0); }
+    .modal-img-ph { width: 100%; height: 180px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 48px; opacity: .25; }
+    .modal-img { width: 100%; height: 220px; object-fit: cover; display: none; }
+    .modal-img.shown { display: block; }
+    .modal-body { padding: 22px 22px 26px; }
+    .modal-code { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .modal-name { font-family: var(--serif); font-size: 28px; line-height: 1.1; margin-bottom: 18px; }
+    .modal-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .modal-stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; text-align: center; }
+    .modal-stat-val { font-family: var(--serif); font-size: 22px; }
+    .modal-stat-lbl { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+    .modal-close { width: 100%; padding: 12px; background: var(--surface2); border: none; border-top: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: color .15s; }
+    .modal-close:hover { color: var(--text); }
 
-    /* -- Skeleton -- */
-    .skeleton {
-      height: 26px; width: 55%;
-      border-radius: 6px;
-      background: linear-gradient(90deg, var(--surface2) 25%, #2e2e28 50%, var(--surface2) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
-    }
+    /* UTILS */
+    .skeleton { height: 20px; border-radius: 6px; background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; margin-bottom: 8px; }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
+    .empty-state { padding: 40px 24px; text-align: center; color: var(--muted); font-size: 13px; }
+    .empty-icon { font-size: 34px; margin-bottom: 10px; opacity: .35; }
+    .error-msg { background: var(--red-dim); border: 1px solid var(--red-brd); color: var(--red); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; margin-bottom: 20px; }
 
-    /* -- QRbot-style full-screen scanner -- */
-    .scan-home {
-      position: fixed;
-      inset: 0;
-      z-index: 20;
-      background: #000;
-      display: flex;
-      flex-direction: column;
-    }
-    /* Video fills everything */
-    .scan-home-video-wrap {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      background: #000;
-    }
-    #scanner-video-inline {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    /* Dark vignette overlay - 4 panels around transparent box */
-    .scan-vignette {
-      position: absolute;
-      inset: 0;
-      z-index: 2;
-      pointer-events: none;
-    }
-    /* The centred transparent scan frame */
-    .scan-frame-box {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 220px;
-      height: 220px;
-      z-index: 3;
-      box-shadow: 0 0 0 2000px rgba(0,0,0,0.52);
-      border-radius: 12px;
-    }
-    /* Corner brackets */
-    .scan-c {
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border-color: #e8a020;
-      border-style: solid;
-    }
-    .scan-c.tl { top:-2px;  left:-2px;  border-width:4px 0 0 4px; border-radius:8px 0 0 0; }
-    .scan-c.tr { top:-2px;  right:-2px; border-width:4px 4px 0 0; border-radius:0 8px 0 0; }
-    .scan-c.bl { bottom:-2px; left:-2px;  border-width:0 0 4px 4px; border-radius:0 0 0 8px; }
-    .scan-c.br { bottom:-2px; right:-2px; border-width:0 4px 4px 0; border-radius:0 0 8px 0; }
-    /* Animated scan line inside frame */
-    .scan-line {
-      position: absolute;
-      left: 4px; right: 4px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #e8a020, transparent);
-      box-shadow: 0 0 6px 2px rgba(232,160,32,0.6);
-      border-radius: 2px;
-      animation: scanmove 2s ease-in-out infinite;
-    }
-    @keyframes scanmove {
-      0%   { top: 4px;  opacity:0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { top: calc(100% - 6px); opacity:0; }
-    }
-    /* Hint below frame */
-    .scan-hint-text {
-      position: absolute;
-      top: calc(50% + 120px);
-      left: 0; right: 0;
-      text-align: center;
-      font-size: 12px;
-      color: rgba(255,255,255,0.55);
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      z-index: 4;
-      pointer-events: none;
-    }
-    /* Top bar */
-    .scan-topbar {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 56px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 5;
-      padding: 0 16px;
-    }
-    .scan-app-name {
-      font-family: 'Instrument Serif', serif;
-      font-size: 16px;
-      color: rgba(255,255,255,0.7);
-      letter-spacing: 0.5px;
-    }
-    /* Zoom slider */
-    .scan-zoom-wrap {
-      position: absolute;
-      bottom: 108px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 5;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: rgba(0,0,0,0.45);
-      border-radius: 20px;
-      padding: 6px 14px;
-    }
-    .scan-zoom-label {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: rgba(255,255,255,0.7);
-      min-width: 30px;
-      text-align: center;
-    }
-    #zoomSlider {
-      -webkit-appearance: none;
-      width: 140px;
-      height: 3px;
-      border-radius: 2px;
-      background: rgba(255,255,255,0.3);
-      outline: none;
-    }
-    #zoomSlider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      background: #e8a020;
-      cursor: pointer;
-      border: 2px solid #fff;
-    }
-    /* Bottom toolbar */
-    .scan-toolbar {
-      height: 96px;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 0 16px;
-      flex-shrink: 0;
-      z-index: 5;
-    }
-    .scan-tb-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 10px 16px;
-      border-radius: 12px;
-      transition: background .15s;
-      min-width: 60px;
-    }
-    .scan-tb-btn:active { background: rgba(255,255,255,0.12); }
-    .scan-tb-icon {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.15);
-      transition: background .15s, border-color .15s;
-    }
-    .scan-tb-icon.active { background: #e8a020; border-color: #e8a020; }
-    .scan-tb-label {
-      font-family: 'DM Mono', monospace;
-      font-size: 9px;
-      color: rgba(255,255,255,0.55);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-    /* Retry button */
-    .btn-scan-camera {
-      position: absolute;
-      bottom: 110px;
-      left: 50%; transform: translateX(-50%);
-      z-index: 6;
-      padding: 12px 28px;
-      background: rgba(232,160,32,0.9);
-      color: #000;
-      border: none;
-      border-radius: 24px;
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .scan-msg {
-      position: absolute;
-      top: 64px; left: 0; right: 0;
-      text-align: center;
-      font-size: 12px;
-      color: rgba(255,100,80,0.9);
-      z-index: 6;
-      padding: 0 24px;
-    }
-    /* Hidden file input for gallery */
-    #galleryInput { display: none; }
-    .btn-scan-camera {
-      padding: 14px;
-      background: var(--amber-dim);
-      color: var(--amber);
-      border: 1px solid var(--amber-brd);
-      border-radius: var(--radius);
-      font-family: 'DM Mono', monospace;
-      font-size: 14px;
-      font-weight: 500;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
-      transition: opacity .15s;
-    }
-    .btn-scan-camera:active { opacity: 0.7; }
-    .scan-msg { font-size:12px; color:var(--red); text-align:center; min-height:18px; }
+    /* -- Admin panel -- */
+    .admin-section { margin-bottom: 28px; }
+    .admin-section-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    .admin-section-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
+    .admin-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+    .admin-form-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 12px; letter-spacing: 0.3px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-grid.wide { grid-template-columns: 1fr; }
+    .form-field { display: flex; flex-direction: column; gap: 4px; }
+    .form-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .form-input { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 13px; padding: 8px 10px; width: 100%; transition: border-color .15s; }
+    .form-input:focus { outline: none; border-color: var(--amber); }
+    .form-input[type=number] { -moz-appearance: textfield; }
+    .form-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-save { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); border-radius: var(--radius-sm); padding: 8px 16px; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: opacity .15s; }
+    .btn-save:hover { opacity: .8; }
+    .btn-save:disabled { opacity: .35; cursor: default; }
+    .admin-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .admin-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .admin-item-name { flex: 1; font-size: 13px; color: var(--text); }
+    .admin-item-sub { font-size: 11px; color: var(--muted); }
+    .admin-item-actions { display: flex; gap: 6px; }
+    .btn-edit { background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm); padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer; transition: color .15s, border-color .15s; }
+    .btn-edit:hover { color: var(--amber); border-color: var(--amber-brd); }
+    .btn-del { background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm); padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer; transition: color .15s, border-color .15s; }
+    .btn-del:hover { color: var(--red); border-color: var(--red-brd); }
+    .admin-msg { font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); display: none; margin-top: 8px; }
+    .admin-msg.ok  { display: block; background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .admin-msg.err { display: block; background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
+    .toggle-active { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .toggle-active input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--amber); }
 
-    /* -- PIN Pad -- */
-    .pin-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-    .pin-name { font-size:13px; color:var(--amber); font-family:'DM Mono',monospace; letter-spacing:0.5px; }
-    .pin-dots { display:flex; gap:10px; justify-content:center; margin-bottom:10px; }
-    .pin-dot { width:12px; height:12px; border-radius:50%; border:2px solid var(--border2); background:transparent; transition:background .1s, border-color .1s; }
-    .pin-dot.filled { background:var(--amber); border-color:var(--amber); }
-    .pin-dot.error  { background:var(--red);   border-color:var(--red); }
-    .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
-    .pin-btn { padding:13px 0; background:var(--surface); color:var(--text); border:1px solid var(--border2); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:18px; font-weight:500; cursor:pointer; transition:background .1s, transform .08s; -webkit-tap-highlight-color:transparent; }
-    .pin-btn:active { background:var(--surface2); transform:scale(0.94); }
-    .pin-clear { color:var(--muted); font-size:13px; }
-    .pin-del   { color:var(--amber); font-size:15px; }
+    @media (max-width: 600px) {
+      .body, .nav, .header { padding-left: 16px; padding-right: 16px; }
+      .tab { padding: 10px 12px; font-size: 10px; }
+      .feed-row { grid-template-columns: 90px 1fr 70px; }
+      .feed-row span:nth-child(3) { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .bar-row { grid-template-columns: 90px 1fr 36px; }
+    }
   </style>
 </head>
 <body>
-<div class="page">
 
-  <!-- Offline queue badge -->
-  <div class="offline-badge" id="offlineBadge" onclick="retryQueue()" title="Tap to retry pending scans">
-     <span id="offlineCount">0</span> pending
+<header class="header">
+  <div>
+    <div class="logo">Kitchen <em>MEP</em> - Dashboard</div>
+    <div class="logo-sub">212 · Nooch Richti · Manager</div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+    <div class="clock" id="clock">--:--:--</div>
+    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn" id="back-btn" onclick="goBack(event)">← Scan</a>
+  </div>
+</header>
+
+<nav class="nav">
+  <button class="tab active" data-tab="kds" onclick="switchTab(this)">KDS · Stats</button>
+  <button class="tab" data-tab="inventory" onclick="switchTab(this)">Inventory</button>
+  <button class="tab" data-tab="products" onclick="switchTab(this)">Products</button>
+  <button class="tab" data-tab="recipes" onclick="switchTab(this)">Recipes</button>
+  <button class="tab" data-tab="orders" onclick="switchTab(this)">Orders</button>
+  <button class="tab" data-tab="deductions" onclick="switchTab(this)">Deductions</button>
+  <button class="tab" data-tab="reports" onclick="switchTab(this)">Reports</button>
+  <button class="tab" data-tab="admin" onclick="switchTab(this)">⚙ Admin</button>
+</nav>
+
+<div class="body">
+
+  <!-- KDS -->
+  <div class="panel active" id="panel-kds">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title" style="margin-bottom:0">Kitchen Display</div>
+      <button onclick="openManualScan()"
+        style="padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+        + Manual action
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-sub" style="margin-bottom:0">Today's activity</div>
+      <button onclick="clearAllAlerts()" style="font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red-brd)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">Clear all</button>
+    </div>
+
+    <div class="mep-alerts" id="mep-alerts"></div>
+
+    <div class="section-sub" style="margin-bottom:14px">MEP overview - today</div>
+    <div class="mep-grid" id="mep-grid"></div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total scans</div><div class="stat-value blue" id="s-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">In MEP list</div><div class="stat-value amber" id="s-produce">—</div></div>
+      <div class="stat-card"><div class="stat-label">Finished</div><div class="stat-value green" id="s-done">—</div></div>
+      <div class="stat-card"><div class="stat-label">Waste</div><div class="stat-value red" id="s-waste">—</div></div>
+      <div class="stat-card" style="grid-column:1/-1">
+        <div class="stat-label">Total MEP today</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
+          <div class="stat-value green" id="s-mep-pct">—</div>
+          <div style="font-size:12px;color:var(--muted)" id="s-mep-sub"></div>
+        </div>
+        <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:10px;overflow:hidden">
+          <div id="s-mep-bar" style="height:100%;border-radius:3px;background:var(--green);transition:width .5s ease;width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Top products by scan count · Meistgescannte Produkte</div>
+      <div class="bars" id="product-bars"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Activity by worker · Aktivität nach Mitarbeiter</div>
+      <div class="bars" id="worker-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
+    </div>
+
+    <div class="feed-wrap">
+      <div class="feed-header">
+        <span class="feed-title-txt">Recent scans</span>
+        <button class="refresh-btn" onclick="loadKDS()">↺ Refresh</button>
+      </div>
+      <div id="scan-feed">
+        <div class="feed-row hdr"><span>Time</span><span>Worker</span><span>Code</span><span>Action</span></div>
+        <div class="empty-state"><div class="skeleton" style="width:55%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div>
+      </div>
+    </div>
   </div>
 
-  <!-- Header -->
-  <header class="header">
-    <div>
-      <div class="brand-name">Kitchen <em>MEP</em></div>
-      <div class="brand-sub">212 · Nooch Richti</div>
+  <!-- INVENTORY -->
+  <div class="panel" id="panel-inventory">
+    <div class="section-title">Inventory</div>
+    <div class="section-sub">Stock overview</div>
+    <div class="inv-controls">
+      <input class="search-input" id="inv-search" type="text" placeholder="Search…" oninput="filterInventory()">
     </div>
-    <div class="header-right">
-      <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
-        style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none">
-        Dashboard
-      </a>
-      <div class="live-badge"><span class="status-dot"></span>LIVE</div>
+    <div id="inv-content">
+      <div class="inv-table-wrap"><div class="empty-state"><div class="skeleton" style="width:50%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div></div>
     </div>
-  </header>
-
-  <!-- Scanner home state - inline camera, no overlay needed -->
-  <div class="scan-home" id="scanHome" style="display:none">
-
-    <div class="scan-home-video-wrap">
-      <video id="scanner-video-inline" autoplay playsinline muted></video>
-
-      <!-- centred transparent scan frame -->
-      <div class="scan-frame-box">
-        <div class="scan-c tl"></div>
-        <div class="scan-c tr"></div>
-        <div class="scan-c bl"></div>
-        <div class="scan-c br"></div>
-        <div class="scan-line"></div>
-      </div>
-
-      <!-- top bar -->
-      <div class="scan-topbar">
-        <div class="scan-app-name">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
-      </div>
-
-      <!-- hint -->
-      <div class="scan-hint-text">Point camera at QR code</div>
-
-      <!-- messages -->
-      <div class="scan-msg" id="scanMsg"></div>
-
-      <!-- retry -->
-      <button class="btn-scan-camera" id="btnRetry" onclick="startInlineScanner()" style="display:none">
-        <span>⟳</span><span>Tap to start camera</span>
-      </button>
-
-      <!-- zoom slider - shown only if device supports zoom -->
-      <div class="scan-zoom-wrap" id="zoomWrap" style="display:none">
-        <span class="scan-zoom-label" style="font-size:16px">−</span>
-        <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" oninput="applyZoom(this.value)">
-        <span class="scan-zoom-label" style="font-size:16px">+</span>
-        <span class="scan-zoom-label" id="zoomLabel">1x</span>
-      </div>
-    </div>
-
-    <!-- bottom toolbar -->
-    <div class="scan-toolbar">
-      <button class="scan-tb-btn" onclick="openGallery()">
-        <div class="scan-tb-icon">🖼</div>
-        <span class="scan-tb-label">Gallery</span>
-      </button>
-      <button class="scan-tb-btn" id="btnFlash" onclick="toggleFlash()">
-        <div class="scan-tb-icon" id="flashIcon">⚡</div>
-        <span class="scan-tb-label">Flash</span>
-      </button>
-      <button class="scan-tb-btn" id="btnToggleCamera" onclick="toggleCamera()">
-        <div class="scan-tb-icon">⇄</div>
-        <span class="scan-tb-label" id="btnToggleCameraLabel">Front</span>
-      </button>
-    </div>
-
-    <input type="file" id="galleryInput" accept="image/*" onchange="scanFromGallery(event)">
   </div>
 
-  <!-- Product + Actions screen (shown after scan) -->
-  <div id="productScreen" style="display:none;flex:1;display:none;flex-direction:column;gap:8px;overflow:hidden">
+  <!-- PRODUCTS -->
+  <div class="panel" id="panel-products">
+    <div class="section-title">Products</div>
+    <div class="section-sub">Click any product for scan stats</div>
+    <div class="inv-controls">
+      <input class="search-input" id="prod-search" type="text" placeholder="Search product…" oninput="filterProducts()">
+    </div>
+    <div class="product-grid" id="product-grid">
+      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
+      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
+      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
+    </div>
+  </div>
 
-    <!-- Product card - compact fixed height -->
-    <div class="product-card" id="productCard">
-      <div class="product-top">
-        <div class="product-info">
-          <div class="product-label">Scanned product</div>
-          <div class="product-name" id="product"><div class="skeleton"></div></div>
-          <div class="product-code" id="productCode"></div>
-        </div>
-        <img id="productImage" class="product-img" alt="" style="display:none;">
-        <div id="imgPlaceholder" class="product-img-ph">🍽</div>
-      </div>
-      <div class="mep-status" id="mepStatus" style="display:none">
-        <div class="mep-row">
-          <span class="mep-dot green" id="mepDotDone"></span>
-          <span class="mep-row-label" id="mepLabelDone"></span>
-        </div>
-        <div class="mep-row">
-          <span class="mep-dot amber" id="mepDotList"></span>
-          <span class="mep-row-label" id="mepLabelList"></span>
-        </div>
-      </div>
-    </div>div>
+  <!-- ── RECIPES PANEL ── -->
+  <div class="panel" id="panel-recipes">
+    <div class="section-title">Recipes</div>
+    <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products</div>
 
-    <!-- Worker PIN login -->
-    <div class="field-wrap" id="workerWrap">
-      <label class="field-label" for="worker">Staff member</label>
-      <select class="worker-select" id="worker">
-        <option value="">-- Select --</option>
+    <!-- Requirements summary -->
+    <div style="margin-bottom:24px">
+      <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
+      <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
+    </div>
+
+    <!-- Recipe editor -->
+    <div class="admin-section-title" style="margin-bottom:10px">Edit recipes</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <select class="form-input" id="recipe-mep-filter" onchange="renderRecipeList()" style="flex:1">
+        <option value="">All MEP products</option>
+      </select>
+    </div>
+    <div id="recipe-list" style="margin-bottom:16px"></div>
+
+    <div class="admin-form">
+      <div class="admin-form-title">Add ingredient to recipe</div>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">MEP Product *</label>
+          <select class="form-input" id="rf-mep"><option value="">Select MEP product…</option></select>
+        </div>
+        <div class="form-field"><label class="form-label">Raw Material *</label>
+          <select class="form-input" id="rf-rm"><option value="">Select raw material…</option></select>
+        </div>
+        <div class="form-field"><label class="form-label">Quantity per GN</label>
+          <input class="form-input" type="number" id="rf-menge" placeholder="3" min="0" step="0.01">
+        </div>
+        <div class="form-field"><label class="form-label">Unit</label>
+          <input class="form-input" id="rf-einheit" placeholder="kg / l / pcs">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" onclick="saveRecipe()">Add ingredient</button>
+      </div>
+      <div class="admin-msg" id="rf-msg"></div>
+    </div>
+  </div>
+
+  <!-- ── ORDER PANEL ── -->
+  <div class="panel" id="panel-orders">
+    <div class="section-title">Orders</div>
+    <div class="section-sub" style="margin-bottom:20px">Items below minimum - what to reorder</div>
+
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()">
+      <select class="search-input" id="order-cat" onchange="renderOrders()" style="flex:0 1 160px">
+        <option value="">All categories</option>
       </select>
     </div>
 
-    <!-- Action buttons - fixed heights, never shift layout -->
-    <div class="actions" id="actionsWrap">
+    <div id="order-content">
+      <div class="empty-state"><div class="empty-icon">📦</div>No items to order</div>
+    </div>
 
-      <!-- Finish - always full width -->
-      <div class="btn-row">
-        <button class="btn btn-done" onclick="send('done')">
-          <span class="btn-icon">OK</span>
-          <span class="btn-label">Finish MEP</span>
-        </button>
+    <div id="order-summary" style="margin-top:16px;font-size:12px;color:var(--muted)"></div>
+  </div>
+
+  <!-- ── ADMIN PANEL ── -->
+  <div class="panel" id="panel-deductions">
+    <div class="section-title">Lager deductions -- auto-logged when MEP is finished</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" id="ded-search" placeholder="Search product or ingredient..."
+        oninput="filterDeductions()"
+        style="flex:1;min-width:160px;padding:8px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:13px">
+      <button onclick="loadDeductions()"
+        style="padding:8px 16px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;letter-spacing:1px">
+        Refresh
+      </button>
+    </div>
+    <div class="inv-table-wrap">
+      <table class="inv-table" id="ded-table">
+        <thead>
+          <tr>
+            <th>Time</th><th>Worker</th><th>MEP Product</th>
+            <th>Ingredient</th><th>Deducted</th><th>Before</th><th>After</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ded-body">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Click Refresh to load deductions</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<div class="panel" id="panel-reports">
+    <div class="section-title">Weekly kitchen performance report</div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+      <button onclick="previewReport()"
+        style="flex:1;padding:10px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+        Preview this week
+      </button>
+      <button onclick="sendReportNow()"
+        style="flex:1;padding:10px 16px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+        Send email now
+      </button>
+    </div>
+
+    <div id="report-status" style="font-size:12px;color:var(--muted);margin-bottom:16px;text-align:center"></div>
+
+    <!-- Live preview area -->
+    <div id="report-preview" style="display:none">
+
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px" id="report-summary"></div>
+
+      <!-- Waste table -->
+      <div class="section-title" style="margin-bottom:8px">Waste cost</div>
+      <div class="inv-table-wrap" style="margin-bottom:20px">
+        <table class="inv-table"><thead><tr>
+          <th>Product</th><th>Waste GN</th><th>CHF/unit</th><th>Total CHF</th>
+        </tr></thead><tbody id="rpt-waste"></tbody></table>
       </div>
 
-      <!-- Used + Waste - side by side -->
-      <div class="btn-row">
-        <button class="btn btn-used" id="btnUsed" onclick="send('used')">
-          <span class="btn-icon">→</span>
-          <span class="btn-label">Used</span>
-        </button>
-        <button class="btn btn-waste" id="btnWaste" onclick="send('waste')">
-          <span class="btn-icon">✕</span>
-          <span class="btn-label">Waste</span>
-        </button>
+      <!-- Efficiency table -->
+      <div class="section-title" style="margin-bottom:8px">Production efficiency</div>
+      <div class="inv-table-wrap" style="margin-bottom:20px">
+        <table class="inv-table"><thead><tr>
+          <th>Product</th><th>Finished</th><th>Wasted</th><th>Efficiency</th>
+        </tr></thead><tbody id="rpt-eff"></tbody></table>
       </div>
 
-      <!-- Status row: undo OR feedback message - same height slot -->
-      <div class="status-row" id="statusRow">
-        <div class="feedback-inner" id="msg"></div>
-        <button class="btn btn-undo" id="btnUndo" onclick="undoAction()" style="display:none">
-          <span class="btn-icon"><-</span>
-          <span class="btn-label" id="undoLabel">Undo (3)</span>
-        </button>
+      <!-- Workers -->
+      <div class="section-title" style="margin-bottom:8px">Staff activity</div>
+      <div class="inv-table-wrap" style="margin-bottom:20px">
+        <table class="inv-table"><thead><tr>
+          <th>Staff</th><th>Total</th><th>Finished</th><th>Waste rate</th>
+        </tr></thead><tbody id="rpt-workers"></tbody></table>
       </div>
 
-      <!-- Daily target covered banner -->
-      <div class="mep-full-msg" id="mepFullMsg">Daily target covered OK</div>
+      <!-- Low stock -->
+      <div class="section-title" style="margin-bottom:8px">Low stock</div>
+      <div class="inv-table-wrap">
+        <table class="inv-table"><thead><tr>
+          <th>Item</th><th>Current</th><th>Minimum</th>
+        </tr></thead><tbody id="rpt-stock"></tbody></table>
+      </div>
+    </div>
+  </div>
 
+<div class="panel" id="panel-admin">
+
+    <!-- Archive stats card -->
+    <div class="card" id="archive-card" style="margin-bottom:16px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:500">Scan sheet archive</div>
+        <button onclick="runArchiveNow()" id="btnArchiveNow"
+          style="padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+          Archive now
+        </button>
+      </div>
+      <div id="archive-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-scan-rows">--</div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Active scans</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-archive-rows">--</div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Archived scans</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-last-run">--</div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Last archive</div>
+        </div>
+      </div>
+      <div id="archive-msg" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center"></div>
+    </div>
+    <div class="section-title">Admin</div>
+    <div class="section-sub" style="margin-bottom:24px">Manage without opening Google Sheets</div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">Products</div>
+      <div class="admin-section-sub">Produkt sheet</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <input class="form-input" id="admin-prod-search" placeholder="Search product…" oninput="renderAdminProducts()" style="flex:1;min-width:160px">
+        <select class="form-input" id="admin-prod-cat" onchange="renderAdminProducts()" style="flex:1;min-width:140px">
+          <option value="">All categories</option>
+        </select>
+      </div>
+      <div class="admin-list" id="admin-product-list"></div>
+      <div class="admin-form" id="product-form">
+        <div class="admin-form-title" id="product-form-title">Add new product</div>
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pf-code" placeholder="e.g. P-001"></div>
+          <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pf-name" placeholder="e.g. Karotten gewürfelt"></div>
+          <datalist id="dl-prod-cat">
+            <option value="Gemüse"><option value="Trockenwaren"><option value="TK Produkte">
+            <option value="Fleisch"><option value="Fisch"><option value="Milchprodukte">
+            <option value="Früchte"><option value="Gewürze"><option value="Saucen &amp; Öle">
+          </datalist>
+          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="pf-kategorie" placeholder="e.g. Gemüse" list="dl-prod-cat"></div>
+          <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="pf-mepmax" placeholder="2" min="0"></div>
+          <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="pf-gnsize" placeholder="GN1/1"></div>
+          <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="pf-gnweight" placeholder="4" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="pf-tagesziel" placeholder="3" min="0"></div>
+          <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="pf-shelf" placeholder="2" min="1"></div>
+          <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="pf-drive" placeholder="paste Google Drive link"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveProduct()">Save product</button>
+          <button class="btn-edit" onclick="clearProductForm()" style="display:none" id="pf-cancel">Cancel edit</button>
+        </div>
+        <div class="admin-msg" id="pf-msg"></div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">Workers</div>
+      <div class="admin-section-sub">Settings sheet</div>
+      <div class="admin-list" id="admin-worker-list"></div>
+      <div class="admin-form" id="worker-form">
+        <div class="admin-form-title" id="wf-form-title">Add new worker</div>
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="wf-name" placeholder="e.g. Marco"></div>
+          <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="wf-role" placeholder="e.g. Chef de Partie"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveWorkerAdmin()">Save worker</button>
+          <button class="btn-edit" onclick="clearWorkerForm()" style="display:none" id="wf-cancel">Cancel edit</button>
+        </div>
+        <div class="admin-msg" id="wf-msg"></div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">Inventory</div>
+      <div class="admin-section-sub">Lager sheet</div>
+      <div class="admin-list" id="admin-inv-list"></div>
+      <div class="admin-form" id="inv-form">
+        <div class="admin-form-title" id="if-form-title">Add / update stock item</div>
+        <!-- Datalists for autocomplete -->
+        <datalist id="dl-inv-cat">
+          <option value="Gemüse">
+          <option value="Trockenwaren">
+          <option value="TK Produkte">
+          <option value="Fleisch">
+          <option value="Fisch">
+          <option value="Milchprodukte">
+          <option value="Früchte">
+          <option value="Gewürze">
+          <option value="Getränke">
+          <option value="Saucen &amp; Öle">
+        </datalist>
+        <datalist id="dl-inv-unit">
+          <option value="kg">
+          <option value="g">
+          <option value="l">
+          <option value="ml">
+          <option value="Stück">
+          <option value="Bund">
+          <option value="Pkg">
+          <option value="Dose">
+        </datalist>
+        <datalist id="dl-inv-lieferant"></datalist>
+        <datalist id="dl-inv-code"></datalist>
+
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
+          <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from Lager"></div>
+          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse" list="dl-inv-cat"></div>
+          <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l" list="dl-inv-unit"></div>
+          <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="if-weight" placeholder="1" min="0" step="0.01"></div>
+          <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="if-max" placeholder="50" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Kosten/Unit (CHF)</label><input class="form-input" type="number" id="if-kosten" placeholder="2.50" min="0" step="0.01"></div>
+          <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Transgourmet" list="dl-inv-lieferant"></div>
+          <div class="form-field"><label class="form-label">Last ordered</label><input class="form-input" type="date" id="if-lastorder"></div>
+          <div class="form-field"><label class="form-label">Notes</label><input class="form-input" id="if-notizen" placeholder="e.g. Kühl lagern"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveInvItem()">Save item</button>
+          <button class="btn-edit" onclick="clearInvForm()" style="display:none" id="if-cancel">Cancel edit</button>
+        </div>
+        <div class="admin-msg" id="if-msg"></div>
+      </div>
     </div>
   </div>
 
 </div>
 
-<!-- Over-produce popup -->
-<div class="popup-overlay" id="overPopup">
-  <div class="popup-box">
-    <div class="popup-icon">⚠</div>
-    <div class="popup-title">Over Produce!</div>
-    <div class="popup-sub" id="overPopupSub">You have finished more than the daily target.</div>
-    <button class="popup-btn" onclick="closeOverPopup()">OK - Understood</button>
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div id="m-img-ph" class="modal-img-ph">🍽</div>
+    <img id="m-img" class="modal-img" alt="" onload="this.classList.add('shown');document.getElementById('m-img-ph').style.display='none'">
+    <div class="modal-body">
+      <div class="modal-code" id="m-code"></div>
+      <div class="modal-name" id="m-name"></div>
+      <div class="modal-stats">
+        <div class="modal-stat"><div class="modal-stat-val amber" id="m-produce">—</div><div class="modal-stat-lbl">MEP List</div></div>
+        <div class="modal-stat"><div class="modal-stat-val green" id="m-done">—</div><div class="modal-stat-lbl">Finished</div></div>
+        <div class="modal-stat"><div class="modal-stat-val red"   id="m-waste">—</div><div class="modal-stat-lbl">Waste</div></div>
+      </div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">Close</button>
   </div>
 </div>
+
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+// -- Back navigation --
+// Returns to the exact scan URL the user came from (preserves ?code=)
+// Falls back to the plain index page if nothing was saved
+function goBack(e) {
+  e.preventDefault();
+  const saved = sessionStorage.getItem("lastScanUrl");
+  window.location.href = saved || "https://mega0826.github.io/Kitchen-System/index.html";
+}
 
-  let PRODUCT_MAP = {};
-  let CURRENT_CODE = "";
+const API = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
 
-  function showMsg(text, type = "info") {
-    const el   = document.getElementById("msg");
-    const undo = document.getElementById("btnUndo");
-    el.textContent = text;
-    el.className   = `feedback-inner visible ${type}`;
-    if (undo) undo.style.display = "none";  // hide undo when message shows
+let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
+
+// Clock
+setInterval(() => {
+  document.getElementById("clock").textContent =
+    new Date().toLocaleTimeString("de-CH", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}, 1000);
+
+// Tab switch
+function switchTab(btn) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+  if (btn.dataset.tab === "admin")      { loadAdminTab(); loadArchiveStats(); }
+  if (btn.dataset.tab === "orders")     renderOrders();
+  if (btn.dataset.tab === "recipes")    { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+  if (btn.dataset.tab === "deductions") loadDeductions();
+  if (btn.dataset.tab === "reports")    loadReportsTab();
+}
+
+// Fetch
+async function get(params) {
+  const url = API + "?" + new URLSearchParams(params);
+  const res = await fetch(url);
+  return res.json();
+}
+
+// Load from sessionStorage cache instantly, then refresh in background
+function loadCached(key, setter, loader) {
+  const raw = sessionStorage.getItem(key);
+  if (raw) {
+    try { setter(JSON.parse(raw)); } catch(e) {}
   }
+  return loader().then(data => {
+    try { sessionStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+    setter(data);
+  });
+}
 
-  function hideMsg() {
-    const el = document.getElementById("msg");
-    if (el) el.className = "feedback-inner";
+// Format time
+function fmt(raw) {
+  const d = new Date(raw);
+  if (isNaN(d)) return raw;
+  const dd  = String(d.getDate()).padStart(2, "0");
+  const mm  = String(d.getMonth() + 1).padStart(2, "0");
+  const yy  = String(d.getFullYear()).slice(2);
+  const hh  = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}.${mm}.${yy} ${hh}:${min}`;
+}
+
+// -- KDS --
+function buildScanStats() {
+  // Build both all-time scanStats AND today-only todayScanStats in one pass
+  scanStats = {};
+  window.todayScanStats = {};
+  const todayStr = new Date().toISOString().slice(0, 10);
+  allScans.forEach(s => {
+    const c = s.code || "";
+    if (!scanStats[c]) scanStats[c] = { produce:0, done:0, waste:0, used:0, total:0 };
+    const a = s.action || "";
+    if (a in scanStats[c]) scanStats[c][a]++;
+    scanStats[c].total++;
+  });
+  // Build todayScanStats separately
+  window.todayScanStats = {};
+  allScans.forEach(s => {
+    if (!s.timestamp) return;
+    const d = new Date(s.timestamp).toISOString().slice(0, 10);
+    if (d !== todayStr) return;
+    const c = s.code || "";
+    if (!window.todayScanStats[c]) window.todayScanStats[c] = { produce:0, done:0, waste:0, used:0 };
+    const a = s.action || "";
+    if (a in window.todayScanStats[c]) window.todayScanStats[c][a]++;
+  });
+}
+
+async function loadKDS() {
+  try {
+    const data = await get({ action: "scans" });
+    allScans = Array.isArray(data.scans) ? data.scans : [];
+    try { sessionStorage.setItem("dash_scans", JSON.stringify(allScans)); } catch(e) {}
+    _renderKDS();
+  } catch(e) {
+    document.getElementById("scan-feed").innerHTML = `<div class="error-msg">Error loading scans: ${e.message}</div>`;
   }
+}
 
-  async function preloadProducts() {
-    try {
-      const res  = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
-      const data = await res.json();
-      PRODUCT_MAP = (!data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
-      // Cache for instant next load
-      try { sessionStorage.setItem("productMap", JSON.stringify(PRODUCT_MAP)); } catch(e) {}
-    } catch (err) {
-      document.getElementById("product").textContent = "Error loading";
-    }
+function _renderKDS() {
+  buildScanStats();
+  buildStats();
+  buildMepAlerts();
+  renderStats();
+  renderProductBars();
+  renderWorkerBars();
+  renderFeed();
+}
+
+function buildStats() {
+  // buildStats only updates stat display counts - does NOT reset scanStats
+  // scanStats is built by buildScanStats() which also builds todayScanStats
+}
+
+function renderStats() {
+  document.getElementById("s-total").textContent   = allScans.length;
+  document.getElementById("s-produce").textContent = allScans.filter(s=>s.action==="produce").length;
+  document.getElementById("s-done").textContent    = allScans.filter(s=>s.action==="done").length;
+  document.getElementById("s-waste").textContent   = allScans.filter(s=>s.action==="waste").length;
+
+  // Total MEP % = sum(available) / sum(tagesziel) × 100
+  // Only count products that have a tagesziel > 0
+  let totalAvailable = 0;
+  let totalTarget    = 0;
+  Object.entries(allProducts).forEach(([code, p]) => {
+    if (!p.tagesziel || p.tagesziel === 0) return;
+    const st         = scanStats[code] || {};
+    const done       = st.done   || 0;
+    const waste      = st.waste  || 0;
+    const available  = Math.max(0, done - waste);
+    totalAvailable  += available;
+    totalTarget     += p.tagesziel;
+  });
+
+  const pct     = totalTarget > 0 ? Math.round((totalAvailable / totalTarget) * 100) : 0;
+  const pctEl   = document.getElementById("s-mep-pct");
+  const subEl   = document.getElementById("s-mep-sub");
+  const barEl   = document.getElementById("s-mep-bar");
+
+  if (totalTarget > 0) {
+    pctEl.textContent = pct + "%";
+    subEl.textContent = `${totalAvailable} of ${totalTarget} GN available`;
+    barEl.style.width = Math.min(100, pct) + "%";
+    barEl.style.background = pct >= 100 ? "var(--red)" : pct >= 80 ? "var(--amber)" : "var(--green)";
+  } else {
+    pctEl.textContent = "—";
+    subEl.textContent = "No daily targets set";
   }
+}
 
-  async function preloadWorkers() {
-    try {
-      const res     = await fetch(`${API_URL}?action=workers`, { cache: "force-cache" });
-      const data    = await res.json();
-      const select  = document.getElementById("worker");
-      const workers = data.workers || [];
-      select.innerHTML = "";
-      workers.forEach(w => {
-        const o = document.createElement("option");
-        o.value = o.textContent = w;
-        select.appendChild(o);
-      });
-      const saved = localStorage.getItem("worker") || localStorage.getItem("mep_worker");
-      if (saved) select.value = saved;
-    } catch (err) {
-      console.error("Worker load error:", err);
-    }
-  }
+function buildMepAlerts() {
+  const alertBox = document.getElementById("mep-alerts");
+  const grid     = document.getElementById("mep-grid");
+  if (!alertBox) return;
 
-  // -- MEP status --
-  async function loadMepStatus(code) {
-    if (!code) return;
-    try {
-      const res  = await fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`);
-      const data = await res.json();
-      updateMepUI(data);
-    } catch (err) {
-      console.error("MEP status error:", err);
-    }
-  }
+  const alerts = [];
+  const cards  = [];
 
-  function setUsedWasteState(avail) {
-    const noAvail = !avail || Number(avail) < 1;
-    // Use id selectors - more reliable than class selectors when display:none parents exist
-    const btnUsed  = document.getElementById("btnUsed");
-    const btnWaste = document.getElementById("btnWaste");
-    [btnUsed, btnWaste].forEach(btn => {
-      if (!btn) return;
-      if (noAvail) {
-        btn.classList.add("inactive");
-        btn.style.opacity = "0.28";
-        btn.style.pointerEvents = "none";
-      } else {
-        btn.classList.remove("inactive");
-        btn.style.opacity = "";
-        btn.style.pointerEvents = "";
-      }
-    });
-  }
+  Object.entries(allProducts).forEach(([code, p]) => {
+    if (!p.mepMax && !p.tagesziel) return;
 
-  function updateMepUI(data) {
-    const status  = document.getElementById("mepStatus");
-    const fullMsg = document.getElementById("mepFullMsg");
+    const st           = (window.todayScanStats || {})[code] || {};
+    const produceCount = st.produce || 0;
+    const doneCount    = st.done    || 0;
+    const name         = p.name      || code;
+    const gnSize       = p.gnSize    || "";
+    const gnWeight     = p.gnWeight  || 0;
+    const tagesziel    = p.tagesziel || 0;
+    const mepMax       = p.mepMax    || 0;
+    // Match server logic: inProgress = mepMax - done when no produce scans
+    const inProgress   = (produceCount === 0 && mepMax > 0)
+      ? Math.max(0, mepMax - doneCount)
+      : Math.max(0, produceCount - doneCount);
 
-    // Always update Used/Waste state - even when mepMax is 0
-    const _avail = data.available !== undefined ? data.available : (data.doneCount || 0);
-    setUsedWasteState(_avail);
+    const wasteCount     = st.waste    || 0;
+    const available      = Math.max(0, doneCount - wasteCount);
+    const doneWeight     = doneCount   * gnWeight;
+    const availableWt    = available   * gnWeight;
+    const listWeight     = inProgress  * gnWeight;
+    const stillNeeded    = tagesziel > 0 ? Math.max(0, tagesziel - available) : null;
+    const rohwareNeeded  = stillNeeded !== null ? stillNeeded * gnWeight : null;
+    const overDone       = tagesziel > 0 && available > tagesziel;
+    const goalMet        = tagesziel > 0 && available >= tagesziel;
+    const listFull       = mepMax > 0 && inProgress >= mepMax;
 
-    if (!data.mepMax || data.mepMax === 0) {
-      status.style.display = "none";
-      fullMsg.classList.remove("visible");
-      return;
-    }
-
-    status.style.display = "flex";
-
-    const gnSize   = data.gnSize   || "";
-    const gnWeight = data.gnWeight || 0;
-
-    // inProgress: items in MEP list right now (produce - done)
-    const inProg  = data.inProgress !== undefined
-      ? data.inProgress
-      : Math.max(0, (data.produceCount||0) - (data.doneCount||0));
-
-    // available: finished MEPs still usable (done - waste)
-    // Use server field if present, otherwise fall back to doneCount
-    const avail   = data.available !== undefined
-      ? data.available
-      : (data.doneCount || 0);
-
-    const listWt  = gnWeight * inProg;
-    const availWt = gnWeight * avail;
-
-    // Row 1 - Available (one compact line)
-    const labelDone = document.getElementById("mepLabelDone");
-    const dotDone   = document.getElementById("mepDotDone");
-    let doneText = `<strong>Available: ${avail}`;
-    if (gnSize)   doneText += ` ${gnSize}`;
-    if (gnWeight) doneText += ` = ${availWt} kg`;
-    doneText += `</strong>`;
-    labelDone.innerHTML = doneText;
-    dotDone.className   = "mep-dot green";
-
-    // Row 2 - To produce: target - available (or inProg if no target)
-    const tagesziel2 = data.tagesziel || 0;
-    const toProduce  = tagesziel2 > 0
-      ? Math.max(0, tagesziel2 - avail)
-      : inProg;
-    const toProdWt   = gnWeight * toProduce;
-    const labelList  = document.getElementById("mepLabelList");
-    const dotList    = document.getElementById("mepDotList");
-    let listText = `<strong>To produce: ${toProduce}`;
-    if (gnSize)   listText += ` ${gnSize}`;
-    if (gnWeight && toProduce > 0) listText += ` = ${toProdWt} kg`;
-    listText += `</strong>`;
-    labelList.innerHTML = listText;
-
-    // Finish is active when there is work in the MEP list (inProg > 0)
-    // Also keep active when toProduce > 0 - items are being made
-    const btnDone = document.querySelector(".btn-done");
-    if (btnDone) {
-      const canFinish = inProg > 0 || toProduce > 0;
-      if (canFinish) {
-        btnDone.classList.remove("inactive");
-        btnDone.title = "";
-      } else {
-        btnDone.classList.add("inactive");
-        btnDone.title = "Nothing in MEP list to finish";
-      }
-    }
-
-    // Used/Waste state already set above via setUsedWasteState()
-
-    // Remember last known values for optimistic UI
-    window._lastAvail  = avail;
-    window._lastInProg = inProg;
-
-    // "Daily target covered" only when available has reached the target
-    const tagesziel = data.tagesziel || 0;
-    const mepMax    = data.mepMax    || 0;
+    // -- Alert banners --
     const targetQty = tagesziel > 0 ? tagesziel : mepMax;
-    const covered   = targetQty > 0 && avail >= targetQty;
 
-    if (covered) {
-      dotList.className = "mep-dot green";
-      labelList.classList.add("full");
-      fullMsg.textContent = "Daily target covered OK";
-      fullMsg.classList.add("visible");
+    // Shelf life
+    const shelfLife = p.shelfLife || 2;
+    const expiredBatch = (allScans || []).filter(s => {
+      if (s.code !== code || s.action !== "done") return false;
+      const age = (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24);
+      return age > shelfLife;
+    }).length;
+    if (expiredBatch > 0) {
+      alerts.push({ type:"yellow", icon:"⚠", code,
+        title: `Check shelf life - ${name}`,
+        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} over ${shelfLife}d - verify usability` });
+    }
+
+    // Too much MEP - yellow (attention, not critical)
+    if (overDone) {
+      const excess   = available - tagesziel;
+      const excessKg = gnWeight ? ` (${(excess * gnWeight).toFixed(1)} kg over)` : "";
+      alerts.push({ type:"yellow", icon:"⚠", code,
+        title: `Too much MEP - ${name}`,
+        sub:   `${available} available, target is ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
+    }
+
+    // MEP target reached - green (good news)
+    if (goalMet && !overDone) {
+      alerts.push({ type:"green", icon:"✓", code,
+        title: `Target reached - ${name}`,
+        sub:   `${available}${gnSize?" "+gnSize:""} available · daily target met` });
+    }
+
+    // MEP list full but available = 0 - red urgent (needs prep asap)
+    if (listFull && available === 0 && !goalMet) {
+      const listKg = gnWeight ? ` · ${(listWeight).toFixed(1)} kg in prep` : "";
+      alerts.push({ type:"red", icon:"🚨", code,
+        title: `⚠ Prepare now - ${name}`,
+        sub:   `MEP list full but nothing available${listKg}` });
+    }
+
+    // Raw material shortage alert
+    if (gnWeight > 0 && targetQty > 0) {
+      const neededKg = targetQty * gnWeight;
+      const invItem  = allInventory.find(r => r.code === code);
+      if (invItem && invItem.quantity !== null) {
+        const inStock = Number(invItem.quantity) * (invItem.weightUnit || 1);
+        if (inStock < neededKg) {
+          const shortKg = (neededKg - inStock).toFixed(1);
+          alerts.push({ type:"blue", icon:"📦", code,
+            title: `Low stock - ${name}`,
+            sub:   `Need ${neededKg} kg for daily target, only ${inStock.toFixed(1)} kg in stock · ${shortKg} kg short` });
+        }
+      }
+    }
+
+    // -- Per-product card --
+    let cardClass = "";
+    let tagHtml   = "";
+    if (overDone) {
+      cardClass = "over";
+      tagHtml   = `<span class="mep-tag over">⚠ Over target</span>`;
+    } else if (goalMet) {
+      cardClass = "goal";
+      tagHtml   = `<span class="mep-tag goal">✓ Goal reached</span>`;
+    } else if (listFull) {
+      tagHtml   = `<span class="mep-tag prog">In preparation</span>`;
+    } else if (doneCount === 0 && inProgress === 0) {
+      tagHtml   = `<span class="mep-tag idle">Not started yet</span>`;
     } else {
-      dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
-      labelList.classList.remove("full");
-      fullMsg.classList.remove("visible");
-    }
-  }
-
-  function showProduct() {
-    CURRENT_CODE = new URLSearchParams(window.location.search).get("code") || "";
-    const pd    = PRODUCT_MAP[CURRENT_CODE] || {};
-    const name  = pd.name || CURRENT_CODE || "Unknown product";
-    const image = pd.image || "";
-
-    document.getElementById("product").textContent = name;
-    if (CURRENT_CODE) document.getElementById("productCode").textContent = "CODE · " + CURRENT_CODE;
-
-    const img = document.getElementById("productImage");
-    const ph  = document.getElementById("imgPlaceholder");
-
-    if (image) {
-      img.onload  = () => { img.style.display = "block"; ph.style.display = "none"; };
-      img.onerror = () => { img.style.display = "none";  ph.style.display = "flex"; };
-      img.src = image;
-    } else {
-      img.style.display = "none";
-      ph.style.display  = "flex";
-    }
-  }
-
-  function getCurrentWorker() {
-    return document.getElementById("worker")?.value || "";
-  }
-
-  let _lastAction  = null;   // last successfully saved action
-  let _undoTimer   = null;   // countdown interval
-  let _redirectTimer = null; // auto-redirect timeout
-
-  function send(action) {
-    const worker = getCurrentWorker();
-    if (!worker) { showMsg("Enter your PIN or select staff first", "error"); return; }
-
-    // -- Optimistic UI: update display instantly, confirm from server --
-    const p = PRODUCT_MAP[CURRENT_CODE] || {};
-    if (p.mepMax) {
-      const optimistic = Object.assign({}, p, {
-        mepMax      : p.mepMax,
-        gnSize      : p.gnSize    || "",
-        gnWeight    : p.gnWeight  || 0,
-        tagesziel   : p.tagesziel || 0,
-        // Estimate new values immediately
-        available   : action === "done"  ? ((_lastAvail||0) + 1)
-                    : action === "used"  ? Math.max(0, (_lastAvail||0) - 1)
-                    : action === "waste" ? Math.max(0, (_lastAvail||0) - 1)
-                    : (_lastAvail||0),
-        inProgress  : action === "done"  ? Math.max(0, (_lastInProg||0) - 1)
-                    : (_lastInProg||0),
-        listFull    : false,
-        overProduce : false,
-        goalMet     : false,
-      });
-      updateMepUI(optimistic);
+      tagHtml   = `<span class="mep-tag prog">In progress</span>`;
     }
 
-    showMsg("Saving...", "info");
-    const labels = { done: "MEP Finished OK", waste: "Waste recorded OK", used: "Sent to service OK" };
-    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
+    const gnLabel = gnSize ? ` ${gnSize}` : "";
 
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (data.mepMax !== undefined) updateMepUI(data);
-        if (data.status === "list_full") {
-          showMsg(data.message || "Target already covered", "info");
-          return;
-        }
-        // Build deduction summary if this was a done scan
-        const dedMsg = (action === "done" && data.deducted && data.deducted.length > 0)
-          ? " | Deducted: " + data.deducted.map(d => d.name + " -" + d.deducted + d.unit + (d.low ? "(LOW)" : "")).join(", ")
-          : "";
-        const hasLow = data.deducted && data.deducted.some(d => d.low);
-        if (data.status === "over_produce") {
-          const p = PRODUCT_MAP[CURRENT_CODE] || {};
-          showOverPopup(p.name || CURRENT_CODE, data);
-          showMsg("MEP Finished OK" + dedMsg, hasLow ? "error" : "success");
-          startUndo(action);
-          return;
-        }
-        showMsg((labels[action] || "Saved") + dedMsg + (dedMsg ? "" : " -- tap Undo to reverse"), hasLow ? "error" : "success");
-        startUndo(action);
-      })
-      .catch(async () => {
-        // Network failed - save to offline queue
-        await queueScan({ code: CURRENT_CODE, worker, action, ts: Date.now() });
-        showMsg("Saved offline  - will sync when back online", "info");
-        startUndo(action);
-        updateBadge();
-      });
-  }
+    const shelfLifeCard = p.shelfLife || 2;
+    const expiredCard = (allScans || []).filter(s => {
+      if (s.code !== code || s.action !== "done") return false;
+      const age = (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24);
+      return age > shelfLifeCard;
+    }).length;
 
-  function startUndo(action) {
-    _lastAction = action;
-    clearInterval(_undoTimer);
-    clearTimeout(_redirectTimer);
+    let rows = `
+      <div class="mep-stat-row">
+        <span class="mep-stat-label">Available</span>
+        <span class="mep-stat-val ${goalMet&&!overDone?"green":overDone?"red":""}">${available}${gnLabel}${gnWeight?" = "+availableWt+" kg":""}</span>
+      </div>
+      ${expiredCard > 0 ? `<div class="mep-stat-row"><span class="mep-stat-label" style="color:var(--red)">⚠ Shelf life</span><span class="mep-stat-val red">${expiredCard} batch${expiredCard>1?"es":""} over ${shelfLifeCard}d old</span></div>` : ""}
+      <div class="mep-stat-row">
+        <span class="mep-stat-label">To produce</span>
+        <span class="mep-stat-val ${listFull?"green":"amber"}">${tagesziel>0 ? Math.max(0,tagesziel-available) : inProgress}${gnLabel}${gnWeight&&(tagesziel>0?(Math.max(0,tagesziel-available)):inProgress)>0?" = "+((tagesziel>0?Math.max(0,tagesziel-available):inProgress)*gnWeight)+" kg":""}</span>
+      </div>`;
 
-    const btn   = document.getElementById("btnUndo");
-    const label = document.getElementById("undoLabel");
-    const msg   = document.getElementById("msg");
-
-    // Hide feedback message, show undo in the same slot
-    if (msg)   msg.className = "feedback-inner";
-    if (btn)   btn.style.display = "flex";   // flex not grid - matches status-row
-    let secs = 3;
-    if (label) label.textContent = `Undo (${secs})`;
-
-    _undoTimer = setInterval(() => {
-      secs--;
-      if (label) label.textContent = `Undo (${secs})`;
-      if (secs <= 0) {
-        clearInterval(_undoTimer);
-        btn.style.display = "none";
-        _lastAction = null;
-        window.location.href = window.location.pathname;
-      }
-    }, 1000);
-  }
-
-  function undoAction() {
-    if (!_lastAction) return;
-    clearInterval(_undoTimer);
-    clearTimeout(_redirectTimer);
-    document.getElementById("btnUndo").style.display = "none";
-
-    const worker = document.getElementById("worker").value;
-    showMsg("Undoing...", "info");
-
-    fetch(`${API_URL}?action=undoScan&code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&lastAction=${encodeURIComponent(_lastAction)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { showMsg("Undo failed: " + data.error, "error"); return; }
-        _lastAction = null;
-        showMsg("Undone OK", "success");
-        // Reload MEP status then return to scanner after short delay
-        loadMepStatus(CURRENT_CODE);
-        setTimeout(() => {
-          window.location.href = window.location.pathname;
-        }, 1200);
-      })
-      .catch(() => showMsg("Network error - undo failed", "error"));
-  }
-
-  function showOverPopup(name, data) {
-    const gnLabel = data.gnSize ? " " + data.gnSize : "";
-    const sub = `${name}: ${data.available}${gnLabel} finished - daily target is ${data.tagesziel}${gnLabel}.`;
-    document.getElementById("overPopupSub").textContent = sub;
-    document.getElementById("overPopup").classList.add("visible");
-  }
-
-  function closeOverPopup() {
-    document.getElementById("overPopup").classList.remove("visible");
-  }
-
-  function cancelScan() {
-    clearInterval(_undoTimer);
-    clearTimeout(_redirectTimer);
-    const u = document.getElementById("btnUndo");
-    if (u) u.style.display = "none";
-    window.location.href = window.location.pathname;
-  }
-
-  // -- QR Scanner - inline video in page --
-  let _scanStream   = null;
-  let _scanInterval = null;
-  let _cameraFacing = localStorage.getItem("cameraFacing") || "environment";
-
-  function toggleCamera() {
-    _cameraFacing = _cameraFacing === "environment" ? "user" : "environment";
-    localStorage.setItem("cameraFacing", _cameraFacing);
-    stopInlineScanner();
-    startInlineScanner();
-  }
-
-  function updateToggleLabel() {
-    const lbl = document.getElementById("btnToggleCameraLabel");
-    if (lbl) lbl.textContent = _cameraFacing === "user" ? "Rear cam" : "Front cam";
-  }
-
-  async function startCameraStream() {
-    const video = document.getElementById("scanner-video");
-    try {
-      _scanStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: _cameraFacing, width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      video.srcObject = _scanStream;
-      if ("BarcodeDetector" in window) {
-        const detector = new BarcodeDetector({ formats: ["qr_code"] });
-        _scanInterval = setInterval(async () => {
-          try {
-            const codes = await detector.detect(video);
-            if (codes.length > 0) {
-              const raw = codes[0].rawValue;
-              closeScanner();
-              handleScannedUrl(raw);
-            }
-          } catch(e) {}
-        }, 300);
-      } else {
-        closeScanner();
-        const code = prompt("Enter product code manually:");
-        if (code) handleScannedUrl(code.trim());
-      }
-    } catch(err) {
-      closeScanner();
-      showMsg("Camera access denied - check browser permissions", "error");
+    if (tagesziel > 0) {
+      rows += `
+      <div class="mep-divider"></div>
+      <div class="mep-stat-row">
+        <span class="mep-stat-label">Daily target</span>
+        <span class="mep-stat-val muted">${tagesziel}${gnLabel}</span>
+      </div>`;
     }
-  }
 
-  function openScanner() { startInlineScanner(); }
-
-  function startInlineScanner() {
-    const video = document.getElementById("scanner-video-inline");
-    const retry = document.getElementById("btnRetry");
-    const msg   = document.getElementById("scanMsg");
-    if (!video) return;
-    if (msg) msg.textContent = "";
-
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: _cameraFacing } })
-    .then(async stream => {
-      _scanStream = stream;
-      video.srcObject = stream;
-      video.play();
-
-      // Hide retry, update camera label
-      if (retry) retry.style.display = "none";
-      updateToggleLabel();
-
-      // Wire zoom slider
-      try {
-        const track = stream.getVideoTracks()[0];
-        _zoomTrack  = track;
-        const caps  = track.getCapabilities ? track.getCapabilities() : {};
-        if (caps.zoom) {
-          const slider = document.getElementById("zoomSlider");
-          const wrap   = document.getElementById("zoomWrap");
-          const label  = document.getElementById("zoomLabel");
-          if (slider) {
-            slider.min   = caps.zoom.min;
-            slider.max   = caps.zoom.max;
-            slider.step  = (caps.zoom.max - caps.zoom.min) / 50;
-            // Default to 2.8x (or max if device doesn't support that high)
-            const defaultZoom = Math.min(2.8, caps.zoom.max);
-            slider.value = defaultZoom;
-            track.applyConstraints({ advanced: [{ zoom: defaultZoom }] }).catch(() => {});
-          }
-          if (label) label.textContent = Math.min(2.8, caps.zoom.max).toFixed(1) + "x";
-          if (wrap)  wrap.style.display = "flex";
-        }
-      } catch(e) { /* zoom not available */ }
-
-      // Start QR decoding
-      if ("BarcodeDetector" in window) {
-        const detector = new BarcodeDetector({ formats: ["qr_code"] });
-        _scanInterval = setInterval(() => {
-          if (video.readyState < 2) return;
-          detector.detect(video).then(codes => {
-            if (codes.length > 0) {
-              stopInlineScanner();
-              handleScannedUrl(codes[0].rawValue);
-            }
-          }).catch(() => {});
-        }, 300);
-      } else {
-        loadJsQR(video);
-      }
-    })
-    .catch(err => {
-      if (retry) retry.style.display = "flex";
-      if (msg) msg.textContent = err.name === "NotAllowedError"
-        ? "Camera permission denied - tap Retry"
-        : "Camera error: " + err.message;
-    });
-  }
-
-  function stopInlineScanner() {
-    clearInterval(_scanInterval);
-    _flashOn = false;
-    if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
-  }
-
-  // -- Flashlight --
-  let _flashOn = false;
-  async function toggleFlash() {
-    if (!_scanStream) return;
-    const track = _scanStream.getVideoTracks()[0];
-    if (!track) return;
-    try {
-      const caps = track.getCapabilities();
-      if (!caps.torch) { 
-        document.getElementById("scanMsg").textContent = "Flashlight not supported on this device";
-        setTimeout(() => { document.getElementById("scanMsg").textContent = ""; }, 2000);
-        return;
-      }
-      _flashOn = !_flashOn;
-      await track.applyConstraints({ advanced: [{ torch: _flashOn }] });
-      const icon = document.getElementById("flashIcon");
-      if (icon) icon.classList.toggle("active", _flashOn);
-    } catch(e) {
-      console.error("Flash error:", e);
-    }
-  }
-
-  // -- Zoom --
-  let _zoomTrack = null;
-  let _zoomMin = 1, _zoomMax = 5;
-
-  function applyZoom(val) {
-    if (!_zoomTrack) return;
-    const label = document.getElementById("zoomLabel");
-    if (label) label.textContent = parseFloat(val).toFixed(1) + "x";
-    try {
-      _zoomTrack.applyConstraints({ advanced: [{ zoom: parseFloat(val) }] });
-    } catch(e) {}
-  }
-
-  // -- Gallery scan --
-  function openGallery() {
-    document.getElementById("galleryInput").click();
-  }
-
-  function scanFromGallery(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width  = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      // Try BarcodeDetector first
-      if ("BarcodeDetector" in window) {
-        const detector = new BarcodeDetector({ formats: ["qr_code"] });
-        detector.detect(img).then(codes => {
-          if (codes.length > 0) {
-            handleScannedUrl(codes[0].rawValue);
-          } else {
-            tryJsQROnImageData(imageData);
-          }
-        }).catch(() => tryJsQROnImageData(imageData));
-      } else {
-        tryJsQROnImageData(imageData);
-      }
-    };
-    img.src = url;
-    event.target.value = "";
-  }
-
-  function tryJsQROnImageData(imageData) {
-    if (typeof jsQR !== "undefined") {
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      if (code) { handleScannedUrl(code.data); return; }
-    }
-    // Load jsQR and retry
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
-    script.onload = () => {
-      // Re-draw since we need the image data fresh
-      const msg = document.getElementById("scanMsg");
-      if (msg) { msg.textContent = "No QR code found in image"; setTimeout(() => msg.textContent = "", 2500); }
-    };
-    document.head.appendChild(script);
-  }
-
-  function loadJsQR(video) {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
-    script.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      _scanInterval = setInterval(() => {
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-          if (code) { closeScanner(); handleScannedUrl(code.data); }
-        }
-      }, 300);
-    };
-    document.head.appendChild(script);
-  }
-
-  function closeScanner() { stopInlineScanner(); }
-
-  function handleScannedUrl(raw) {
-    // If it's a full URL containing ?code=, extract and navigate
-    if (raw.includes("?code=") || raw.includes("&code=")) {
-      window.location.href = raw;
-    } else {
-      // Treat raw value as the code directly
-      window.location.href = window.location.pathname + "?code=" + encodeURIComponent(raw);
-    }
-  }
-
-  document.addEventListener("change", e => {
-    if (e.target.id === "worker") localStorage.setItem("worker", e.target.value);
+    cards.push(`
+      <div class="mep-card ${cardClass}" id="mep-card-${code}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <span class="mep-card-name">${name}</span>
+          ${tagHtml}
+        </div>
+        <div class="mep-card-rows">${rows}</div>
+      </div>`);
   });
 
-  window.addEventListener("DOMContentLoaded", async () => {
-    const code = new URLSearchParams(window.location.search).get("code") || "";
-    setUsedWasteState(0);
+  // Render alerts
+  alertBox.innerHTML = alerts.map((a,idx) => `
+    <div class="alert-wrap" id="aw-${idx}">
+      <div class="alert-delete-bg">Delete</div>
+      <div class="mep-alert ${a.type}" id="al-${idx}" data-idx="${idx}"
+           onclick="alertClick('${a.code||''}')">
+        <span class="mep-alert-icon">${a.icon}</span>
+        <div class="mep-alert-body">
+          <span class="mep-alert-title">${a.title}</span>
+          <span class="mep-alert-sub">${a.sub}</span>
+        </div>
+        <span style="margin-left:auto;font-size:10px;opacity:.5;flex-shrink:0">tap ›</span>
+      </div>
+    </div>`).join("");
+  initSwipe();
 
-    if (!code) {
-      // -- No code - show scanner and open camera immediately --
-      document.getElementById("scanHome").style.display      = "flex";
-      preloadProducts();
-      preloadWorkers();
-      // Start inline camera - show retry button if permission not yet granted
-      startInlineScanner();
+  // Render cards
+  if (grid) {
+    grid.innerHTML = cards.length
+      ? cards.join("")
+      : `<div style="color:var(--muted);font-size:13px;grid-column:1/-1">No products with MEP configuration found</div>`;
+  }
+}
+
+function bar(label, val, max, color) {
+  const pct = max > 0 ? Math.round(val/max*100) : 0;
+  return `<div class="bar-row">
+    <div class="bar-name" title="${label}">${label}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--${color})"></div></div>
+    <div class="bar-count">${val}</div>
+  </div>`;
+}
+
+function renderProductBars() {
+  const sorted = Object.entries(scanStats)
+    .map(([code,s]) => ({ label:(allProducts[code]||{}).name||code, val:s.total }))
+    .sort((a,b)=>b.val-a.val).slice(0,8);
+  const max = sorted[0]?.val || 1;
+  const colors = ["amber","green","red","blue","amber","green","red","blue"];
+  document.getElementById("product-bars").innerHTML = sorted.length
+    ? sorted.map((p,i) => bar(p.label, p.val, max, colors[i])).join("")
+    : `<div class="empty-state"><div class="empty-icon">📊</div>No scan data yet</div>`;
+}
+
+function renderWorkerBars() {
+  const wm = {};
+  allScans.forEach(s => { const w = s.worker||"?"; wm[w]=(wm[w]||0)+1; });
+  const sorted = Object.entries(wm).sort((a,b)=>b[1]-a[1]);
+  const max = sorted[0]?.[1] || 1;
+  document.getElementById("worker-bars").innerHTML = sorted.length
+    ? sorted.map(([w,n]) => bar(w, n, max, "blue")).join("")
+    : `<div class="empty-state"><div class="empty-icon">👤</div>No worker data yet</div>`;
+}
+
+function renderFeed() {
+  const rows = [...allScans].reverse().slice(0,30).map(s => {
+    const p    = allProducts[s.code] || {};
+    const name = p.name || s.code || "—";
+    return `<div class="feed-row">
+      <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
+      <span style="font-size:12px">${s.worker||"—"}</span>
+      <span class="action-badge ${s.action||""}" style="justify-self:start">${s.action||"—"}</span>
+      <span style="font-size:12px">${name}</span>
+    </div>`;
+  }).join("");
+  document.getElementById("scan-feed").innerHTML =
+    `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Action</span><span>Product</span></div>`
+    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
+}
+
+
+// -- INVENTORY --
+async function loadInventory() {
+  try {
+    const data = await get({ action: "inventory" });
+    allInventory = Array.isArray(data.inventory) ? data.inventory : [];
+    try { sessionStorage.setItem("dash_inventory", JSON.stringify(allInventory)); } catch(e) {}
+    renderInventory(allInventory);
+    renderOrders();
+  } catch(e) {
+    document.getElementById("inv-content").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function stockClass(qty, min) {
+  qty = parseFloat(qty)||0; min = parseFloat(min)||0;
+  if (qty <= 0)   return ["out","Out of stock"];
+  if (qty <= min) return ["low","Low stock"];
+  return             ["ok","OK"];
+}
+
+function renderInventory(rows) {
+  if (!rows.length) {
+    document.getElementById("inv-content").innerHTML =
+      `<div class="empty-state"><div class="empty-icon">📦</div>No inventory data.<br>Check your "Lager" sheet.</div>`;
+    return;
+  }
+  const trs = rows.map(r => {
+    // quantity may be null (empty cell), 0, or a real number
+    const qty    = r.quantity !== null && r.quantity !== undefined ? Number(r.quantity) : null;
+    const min    = r.minimum  !== null && r.minimum  !== undefined ? Number(r.minimum)  : null;
+    const qtyNum = isNaN(qty) ? 0 : (qty || 0);
+    const minNum = isNaN(min) ? 0 : (min || 0);
+    const [cls,lbl] = stockClass(qtyNum, minNum);
+
+    const qtyDisplay = qty === null || isNaN(qty) ? "—" : qty;
+    const minDisplay = min === null || isNaN(min) || min === 0 ? "—" : min;
+    const wuNum  = r.weightUnit !== null ? Number(r.weightUnit) : null;
+    const totKg  = (qty !== null && wuNum !== null) ? (qty * wuNum).toFixed(1) + " kg" : "—";
+
+    const st       = (window.todayScanStats || {})[r.code] || {};
+    const mepAvail = Math.max(0, (st.done||0) - (st.waste||0) - (st.used||0));
+    const p        = allProducts[r.code] || {};
+    const gnSize   = p.gnSize || "";
+    const mepStr   = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "—";
+    return `<tr>
+      <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
+      <td>${r.name||"—"}</td>
+      <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
+      <td style="font-weight:500">${qtyDisplay}${qtyDisplay !== "—" && r.unit ? " "+r.unit : ""}</td>
+      <td style="color:var(--muted)">${r.unit||"—"}</td>
+      <td style="color:var(--muted)">${totKg}</td>
+      <td style="color:var(--muted)">${minDisplay}</td>
+      <td style="color:var(--muted)">${r.maximum !== null ? r.maximum : "—"}</td>
+      <td style="color:var(--muted)">${r.kostenUnit !== null ? "CHF " + Number(r.kostenUnit).toFixed(2) : "—"}</td>
+      <td style="color:var(--muted)">${(r.quantity !== null && r.kostenUnit !== null) ? "CHF " + (r.quantity * r.kostenUnit).toFixed(2) : "—"}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.lieferant||"—"}</td>
+      <td style="color:var(--green)">${mepStr}</td>
+      <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("inv-content").innerHTML = `
+    <div class="inv-table-wrap"><table class="inv-table">
+      <thead><tr><th>Code</th><th>Product</th><th>Cat.</th><th>Qty</th><th>Unit</th><th>Total kg</th><th>Min</th><th>Max</th><th>CHF/Unit</th><th>Total CHF</th><th>Supplier</th><th>MEP avail.</th><th>Status</th></tr></thead>
+      <tbody>${trs}</tbody>
+    </table></div>`;
+}
+
+function filterInventory() {
+  const q = document.getElementById("inv-search").value.toLowerCase();
+  renderInventory(allInventory.filter(r =>
+    (r.name||"").toLowerCase().includes(q) ||
+    (r.code||"").toLowerCase().includes(q) ||
+    (r.kategorie||"").toLowerCase().includes(q) ||
+    (r.lieferant||"").toLowerCase().includes(q)));
+}
+
+// -- PRODUCTS --
+async function loadProducts() {
+  try {
+    const data = await get({ action: "allProducts" });
+    allProducts = (data && !data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
+    try { sessionStorage.setItem("dash_products", JSON.stringify(allProducts)); } catch(e) {}
+    renderProductGrid(Object.entries(allProducts));
+    return allProducts;
+  } catch(e) {
+    document.getElementById("product-grid").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function renderProductGrid(entries) {
+  if (!entries.length) {
+    document.getElementById("product-grid").innerHTML =
+      `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
+    return;
+  }
+  document.getElementById("product-grid").innerHTML = entries.map(([code,p]) => {
+    // Use today-only scan counts for MEP status (matches server logic)
+    const st       = (window.todayScanStats || {})[code] || {};
+    const done     = st.done    || 0;
+    const waste    = st.waste   || 0;
+    const used     = st.used    || 0;
+    const produce  = st.produce || 0;
+    const avail    = Math.max(0, done - waste - used);
+    // When no produce scans exist (button removed), inProg = mepMax - done (same as server)
+    const inProg   = (produce === 0 && p.mepMax > 0)
+      ? Math.max(0, p.mepMax - done)
+      : Math.max(0, produce - done);
+    const gnLabel  = p.gnSize ? " " + p.gnSize : "";
+
+    const img = p.image
+      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" style="height:80px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
+      : `<div class="product-thumb-ph" style="height:80px">🍽</div>`;
+
+    const statsHtml = p.mepMax ? `
+      <div class="prod-stats">
+        <span class="prod-stat green">✓ ${avail}${gnLabel}</span>
+        <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
+        <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
+      </div>` : "";
+
+    return `<div class="product-card" onclick="openModal('${code}')">
+      ${img}
+      <div class="product-body">
+        <div class="product-name-card">${p.name||code}</div>
+        <div class="product-code-card">CODE · ${code}</div>
+        ${statsHtml}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function filterProducts() {
+  const q = document.getElementById("prod-search").value.toLowerCase();
+  renderProductGrid(Object.entries(allProducts).filter(([code,p]) =>
+    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)));
+}
+
+// -- MODAL --
+function openModal(code) {
+  const p = allProducts[code]||{}, st = scanStats[code]||{produce:0,done:0,waste:0};
+  document.getElementById("m-code").textContent    = "CODE · " + code;
+  document.getElementById("m-name").textContent    = p.name||code;
+  document.getElementById("m-produce").textContent = st.produce;
+  document.getElementById("m-done").textContent    = st.done;
+  document.getElementById("m-waste").textContent   = st.waste;
+  const img = document.getElementById("m-img");
+  const ph  = document.getElementById("m-img-ph");
+  img.classList.remove("shown");
+  ph.style.display = "flex";
+  if (p.image) { img.src = p.image; } else { img.src = ""; }
+  document.getElementById("modal").classList.add("open");
+}
+function closeModal() { document.getElementById("modal").classList.remove("open"); }
+
+// -- INIT --
+// Show cached data instantly - user sees data in <100ms
+(function() {
+  const cp = sessionStorage.getItem("dash_products");
+  const ci = sessionStorage.getItem("dash_inventory");
+  const cs = sessionStorage.getItem("dash_scans");
+  if (cp) { try { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); } catch(e) {} }
+  if (ci) { try { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); } catch(e) {} }
+  // Only render KDS from cache if products are already cached - otherwise alerts will be empty
+  if (cs) {
+    try {
+      allScans = JSON.parse(cs);
+      // Only render full KDS if products also cached - else just render feed
+      if (sessionStorage.getItem("dash_products")) {
+        _renderKDS();
+      } else {
+        // At minimum render the recent scans feed
+        if (typeof renderFeed === "function") renderFeed();
+      }
+    } catch(e) {}
+  }
+})();
+
+// Load products FIRST so allProducts is ready before KDS renders MEP alerts
+// Load products first, then KDS - ensures allProducts ready for MEP alerts
+loadProducts()
+  .then(() => loadKDS())
+  .catch(() => loadKDS()); // run KDS even if products fail
+setTimeout(loadInventory, 400);
+setTimeout(loadRecipes,   800);
+setInterval(async () => {
+  const prevLen = allScans.length;
+  await loadKDS();
+  // Only re-render product grid if scan data changed (new scans came in)
+  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
+}, 60_000);
+// -- Swipeable alerts --
+const _sw = {};
+
+function initSwipe() {
+  document.querySelectorAll('.mep-alert[data-idx]').forEach(el => {
+    const idx = el.dataset.idx;
+    el.addEventListener('touchstart',  e => swipeStart(e, idx), { passive: true });
+    el.addEventListener('touchmove',   e => swipeMove(e, idx),  { passive: false });
+    el.addEventListener('touchend',    e => swipeEnd(e, idx));
+    el.addEventListener('mousedown',   e => swipeStart(e, idx));
+    window.addEventListener('mousemove', e => swipeMove(e, idx));
+    window.addEventListener('mouseup',   e => swipeEnd(e, idx));
+  });
+}
+
+function _cx(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+
+function swipeStart(e, idx) {
+  _sw[idx] = { x0: _cx(e), dragging: true, dx: 0 };
+}
+
+function swipeMove(e, idx) {
+  if (!_sw[idx]?.dragging) return;
+  const dx   = _cx(e) - _sw[idx].x0;
+  if (dx >= 0) return;                     // left swipe only
+  if (e.cancelable) e.preventDefault();
+  _sw[idx].dx = dx;
+  const el   = document.getElementById('al-' + idx);
+  const wrap = document.getElementById('aw-' + idx);
+  if (el) el.style.transform = `translateX(${dx}px)`;
+  // Reveal "Delete" background only when dragging meaningfully
+  if (wrap) wrap.classList.toggle('revealing', dx < -20);
+}
+
+function swipeEnd(e, idx) {
+  if (!_sw[idx]?.dragging) return;
+  _sw[idx].dragging = false;
+  const dx   = _sw[idx].dx || 0;
+  const el   = document.getElementById('al-' + idx);
+  const wrap = document.getElementById('aw-' + idx);
+  const threshold = (wrap?.offsetWidth || 250) * 0.40;
+
+  if (dx < -threshold) {
+    // Dismiss - slide fully off then hide
+    if (el) { el.style.transition = 'transform .22s ease'; el.style.transform = 'translateX(-110%)'; }
+    setTimeout(() => {
+      if (wrap) { wrap.style.height = wrap.offsetHeight + 'px'; }
+      setTimeout(() => {
+        if (wrap) { wrap.style.transition = 'height .18s ease, margin .18s ease, opacity .18s ease'; wrap.style.height = '0'; wrap.style.marginBottom = '0'; wrap.style.opacity = '0'; }
+        setTimeout(() => { if (wrap) wrap.style.display = 'none'; }, 200);
+      }, 10);
+    }, 220);
+  } else {
+    // Snap back
+    if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = 'translateX(0)'; }
+    if (wrap) wrap.classList.remove('revealing');
+    setTimeout(() => { if (el) el.style.transition = ''; }, 220);
+  }
+  _sw[idx].dx = 0;
+}
+
+
+// -- Admin helpers --
+function adminMsg(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = "admin-msg " + type;
+  setTimeout(() => el.className = "admin-msg", 3000);
+}
+
+async function adminCall(params) {
+  const url = API + "?" + new URLSearchParams(params);
+  const res  = await fetch(url);
+  return res.json();
+}
+
+// -- Products admin --
+function renderAdminProducts() {
+  const list    = document.getElementById("admin-product-list");
+  const catSel  = document.getElementById("admin-prod-cat");
+  if (!list) return;
+
+  let entries = Object.entries(allProducts).filter(([,p]) => p.name && p.name !== "(deleted)");
+
+  // Build category dropdown options
+  const cats = [...new Set(entries.map(([,p]) => p.kategorie || "").filter(Boolean))].sort();
+  const curCat = catSel ? catSel.value : "";
+  if (catSel) {
+    catSel.innerHTML = `<option value="">All categories (${entries.length})</option>`
+      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  }
+
+  // Filter by category
+  if (curCat) entries = entries.filter(([,p]) => (p.kategorie||"") === curCat);
+
+  // Filter by search
+  const q = (document.getElementById("admin-prod-search")?.value || "").toLowerCase();
+  if (q) entries = entries.filter(([code,p]) =>
+    (p.name||"").toLowerCase().includes(q) ||
+    code.toLowerCase().includes(q) ||
+    (p.kategorie||"").toLowerCase().includes(q)
+  );
+
+  if (!entries.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products found</div>`;
+    return;
+  }
+
+  list.innerHTML = entries.map(([code, p]) => `
+    <div class="admin-item">
+      <div style="flex:1;min-width:0">
+        <div class="admin-item-name">${p.name} ${p.kategorie ? `<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${p.kategorie}</span>` : ""}</div>
+        <div class="admin-item-sub">${code} · Max ${p.mepMax||"—"} ${p.gnSize||""} · Target ${p.tagesziel||"—"} · ${p.gnWeight||"—"} kg/GN · Shelf ${p.shelfLife||2}d</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn-edit" onclick="editProduct('${code}')">Edit</button>
+        <button class="btn-del"  onclick="delProduct('${code}')">Remove</button>
+      </div>
+    </div>`).join("");
+}
+
+function editProduct(code) {
+  const p = allProducts[code] || {};
+  document.getElementById("pf-code").value      = code;
+  document.getElementById("pf-code").readOnly   = true;
+  document.getElementById("pf-name").value      = p.name      || "";
+  document.getElementById("pf-kategorie").value = p.kategorie || "";
+  document.getElementById("pf-mepmax").value    = p.mepMax    ?? "";
+  document.getElementById("pf-gnsize").value    = p.gnSize    || "";
+  document.getElementById("pf-gnweight").value  = p.gnWeight  ?? "";
+  document.getElementById("pf-tagesziel").value = p.tagesziel ?? "";
+  document.getElementById("pf-shelf").value     = p.shelfLife ?? "";
+  document.getElementById("pf-drive").value     = "";
+  document.getElementById("product-form-title").textContent = "Edit product - " + code;
+  document.getElementById("pf-cancel").style.display = "inline-flex";
+  document.getElementById("product-form").scrollIntoView({ behavior: "smooth" });
+}
+
+function clearProductForm() {
+  ["pf-code","pf-name","pf-kategorie","pf-mepmax","pf-gnsize","pf-gnweight","pf-tagesziel","pf-shelf","pf-drive"]
+    .forEach(id => { document.getElementById(id).value = ""; });
+  document.getElementById("pf-code").readOnly = false;
+  document.getElementById("product-form-title").textContent = "Add new product";
+  document.getElementById("pf-cancel").style.display = "none";
+}
+
+async function saveProduct() {
+  const code = document.getElementById("pf-code").value.trim();
+  const name = document.getElementById("pf-name").value.trim();
+  if (!code || !name) { adminMsg("pf-msg", "Code and Name are required", "err"); return; }
+  const btn = document.querySelector("#product-form .btn-save");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    const data = await adminCall({
+      action     : "saveProduct",
+      code, name,
+      kategorie  : document.getElementById("pf-kategorie").value.trim(),
+      mepMax     : document.getElementById("pf-mepmax").value,
+      gnSize     : document.getElementById("pf-gnsize").value,
+      gnWeight   : document.getElementById("pf-gnweight").value,
+      tagesziel  : document.getElementById("pf-tagesziel").value,
+      shelfLife  : document.getElementById("pf-shelf").value,
+      driveLink  : document.getElementById("pf-drive").value,
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("pf-msg", "Saved ✓", "ok");
+    clearProductForm();
+    await loadProducts();
+    renderAdminProducts();
+  } catch(e) {
+    adminMsg("pf-msg", "Error: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save product";
+  }
+}
+
+async function delProduct(code) {
+  if (!confirm(`Remove "${allProducts[code]?.name || code}" from product list?`)) return;
+  const data = await adminCall({ action: "deleteProduct", code });
+  if (data.error) { alert("Error: " + data.error); return; }
+  await loadProducts();
+  renderAdminProducts();
+}
+
+// Auto-fill inventory name from product when code is typed
+document.getElementById("pf-code")?.addEventListener("blur", () => {
+  const code = document.getElementById("pf-code").value.trim();
+  if (code && allProducts[code]) {
+    document.getElementById("pf-name").value = allProducts[code].name;
+  }
+});
+
+// -- Workers admin --
+let allWorkersAdmin = [];
+
+async function loadWorkersAdmin() {
+  try {
+    const data = await adminCall({ action: "allWorkers" });
+    // allWorkers not yet in API - fall back to workers list + build from Settings
+    allWorkersAdmin = data.workers || [];
+    renderAdminWorkers();
+  } catch(e) { console.error(e); }
+}
+
+function renderAdminWorkers() {
+  const list = document.getElementById("admin-worker-list");
+  if (!list) return;
+  // Build from allScans worker names + workers list
+  const names = new Set([
+    ...(allWorkersAdmin.map ? allWorkersAdmin.map(w => typeof w === "string" ? w : w.name) : []),
+  ]);
+  if (!names.size) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers yet</div>`; return; }
+  list.innerHTML = [...names].map(name => `
+    <div class="admin-item">
+      <div style="flex:1"><div class="admin-item-name">${name}</div></div>
+      <div class="admin-item-actions">
+        <button class="btn-edit" onclick="editWorker('${name}')">Edit</button>
+        <button class="btn-del"  onclick="delWorker('${name}')">Deactivate</button>
+      </div>
+    </div>`).join("");
+}
+
+function editWorker(name) {
+  document.getElementById("wf-name").value    = name;
+  document.getElementById("wf-name").readOnly = true;
+  document.getElementById("wf-form-title").textContent = "Edit worker - " + name;
+  document.getElementById("wf-cancel").style.display = "inline-flex";
+}
+
+function clearWorkerForm() {
+  document.getElementById("wf-name").value    = "";
+  document.getElementById("wf-role").value    = "";
+  document.getElementById("wf-name").readOnly = false;
+  document.getElementById("wf-form-title").textContent = "Add new worker";
+  document.getElementById("wf-cancel").style.display   = "none";
+}
+
+async function saveWorkerAdmin() {
+  const name = document.getElementById("wf-name").value.trim();
+  if (!name) { adminMsg("wf-msg", "Name is required", "err"); return; }
+  const btn = document.querySelector("#admin-worker-list ~ .admin-form .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const data = await adminCall({
+      action : "saveWorker",
+      name,
+      role   : document.getElementById("wf-role").value.trim(),
+      active : "true",
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("wf-msg", "Saved ✓", "ok");
+    clearWorkerForm();
+    allWorkersAdmin = [...new Set([...allWorkersAdmin, name])];
+    renderAdminWorkers();
+  } catch(e) {
+    adminMsg("wf-msg", "Error: " + e.message, "err");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Save worker"; }
+  }
+}
+
+async function delWorker(name) {
+  if (!confirm(`Deactivate worker "${name}"? They won't appear in the scanner dropdown.`)) return;
+  const data = await adminCall({ action: "deleteWorker", name });
+  if (data.error) { alert("Error: " + data.error); return; }
+  adminMsg("wf-msg", `${name} deactivated ✓`, "ok");
+  allWorkersAdmin = allWorkersAdmin.filter(w => (typeof w === "string" ? w : w.name) !== name);
+  renderAdminWorkers();
+}
+
+// -- Inventory admin --
+function renderAdminInventory() {
+  const list = document.getElementById("admin-inv-list");
+  if (!list) return;
+  if (!allInventory.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items yet</div>`; return; }
+  list.innerHTML = allInventory.map(r => {
+    const totKg = (r.quantity !== null && r.weightUnit !== null)
+      ? ` · ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
+    return `<div class="admin-item">
+      <div style="flex:1;min-width:0">
+        <div class="admin-item-name">${r.name||r.code}${r.kategorie ? ` <span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>` : ""}</div>
+        <div class="admin-item-sub">${r.code} · ${r.quantity ?? "—"} ${r.unit||""}${totKg} · min ${r.minimum ?? "—"}${r.lieferant ? " · " + r.lieferant : ""}</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function editInvItem(code) {
+  const r = allInventory.find(x => x.code === code) || {};
+  document.getElementById("if-code").value       = code;
+  document.getElementById("if-code").readOnly    = true;
+  document.getElementById("if-name").value       = r.name       || (allProducts[code]?.name || "");
+  document.getElementById("if-kategorie").value  = r.kategorie  || (allProducts[code]?.kategorie || "");
+  document.getElementById("if-unit").value       = r.unit       || "";
+  document.getElementById("if-qty").value        = r.quantity   ?? "";
+  document.getElementById("if-weight").value     = r.weightUnit ?? "";
+  document.getElementById("if-min").value        = r.minimum    ?? "";
+  document.getElementById("if-max").value        = r.maximum    ?? "";
+  document.getElementById("if-kosten").value    = r.kostenUnit ?? "";
+  document.getElementById("if-lieferant").value  = r.lieferant  || "";
+  document.getElementById("if-lastorder").value  = r.lastOrder  || "";
+  document.getElementById("if-notizen").value    = r.notizen    || "";
+  document.getElementById("if-form-title").textContent = "Edit - " + (r.name || code);
+  document.getElementById("if-cancel").style.display   = "inline-flex";
+}
+
+function clearInvForm() {
+  ["if-code","if-name","if-kategorie","if-unit","if-qty","if-weight","if-min","if-max","if-kosten","if-lieferant","if-lastorder","if-notizen"]
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+  document.getElementById("if-code").readOnly = false;
+  document.getElementById("if-form-title").textContent = "Add / update stock item";
+  document.getElementById("if-cancel").style.display   = "none";
+}
+
+// Auto-fill from existing inventory or product when code is entered
+document.getElementById("if-code")?.addEventListener("blur", () => {
+  const code = document.getElementById("if-code").value.trim();
+  if (!code) return;
+  const existing = allInventory.find(x => x.code === code);
+  if (existing) { editInvItem(code); return; }
+  // Auto-fill name + category from Produkt sheet if code matches
+  const p = allProducts[code];
+  if (p) {
+    if (!document.getElementById("if-name").value)      document.getElementById("if-name").value      = p.name      || "";
+    if (!document.getElementById("if-kategorie").value) document.getElementById("if-kategorie").value = p.kategorie || "";
+    if (!document.getElementById("if-unit").value)      document.getElementById("if-unit").value      = p.gnSize    || "";
+  }
+});
+
+async function saveInvItem() {
+  const code = document.getElementById("if-code").value.trim();
+  if (!code) { adminMsg("if-msg", "Code is required", "err"); return; }
+  const btn = document.querySelector("#admin-inv-list ~ .admin-form .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const data = await adminCall({
+      action     : "saveInventory",
+      code,
+      name       : document.getElementById("if-name").value.trim(),
+      kategorie  : document.getElementById("if-kategorie").value.trim(),
+      unit       : document.getElementById("if-unit").value.trim(),
+      quantity   : document.getElementById("if-qty").value,
+      weightUnit : document.getElementById("if-weight").value,
+      minimum    : document.getElementById("if-min").value,
+      maximum    : document.getElementById("if-max").value,
+      kostenUnit : document.getElementById("if-kosten").value,
+      lieferant  : document.getElementById("if-lieferant").value.trim(),
+      lastOrder  : document.getElementById("if-lastorder").value,
+      notizen    : document.getElementById("if-notizen").value.trim(),
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("if-msg", "Saved ✓", "ok");
+    clearInvForm();
+    await loadInventory();
+    renderAdminInventory();
+  } catch(e) {
+    adminMsg("if-msg", "Error: " + e.message, "err");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Save item"; }
+  }
+}
+
+// -- Load admin data when tab is opened --
+// Hook into the existing switchTab by patching the admin tab button onclick
+function loadAdminTab() {
+  renderAdminProducts();
+  renderAdminInventory();
+  populateInvDataLists();
+  adminCall({ action: "workers" }).then(d => {
+    allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
+    renderAdminWorkers();
+  });
+}
+
+function populateInvDataLists() {
+  // Supplier list from existing inventory
+  const suppliers = [...new Set(allInventory.map(r => r.lieferant||"").filter(Boolean))].sort();
+  const dlSup = document.getElementById("dl-inv-lieferant");
+  if (dlSup) dlSup.innerHTML = suppliers.map(s => `<option value="${s}">`).join("");
+
+  // Extra categories from existing data
+  const cats = [...new Set([
+    ...allInventory.map(r => r.kategorie||""),
+    ...Object.values(allProducts).map(p => p.kategorie||"")
+  ].filter(Boolean))].sort();
+  ["dl-inv-cat","dl-prod-cat"].forEach(id => {
+    const dl = document.getElementById(id);
+    if (!dl) return;
+    const existing = [...dl.options].map(o => o.value);
+    cats.filter(c => !existing.includes(c)).forEach(c => {
+      const o = document.createElement("option");
+      o.value = c; dl.appendChild(o);
+    });
+  });
+
+  // Code suggestions from existing inventory
+  const dlCode = document.getElementById("dl-inv-code");
+  if (dlCode) dlCode.innerHTML = allInventory
+    .filter(r => r.code)
+    .map(r => `<option value="${r.code}" label="${r.name||""}">`)
+    .join("");
+}
+
+
+// -- Orders --
+
+
+function renderOrders() {
+  const container = document.getElementById("order-content");
+  const summary   = document.getElementById("order-summary");
+  const catSel    = document.getElementById("order-cat");
+  if (!container) return;
+
+  // Standard reorder: stock below minimum
+  let items = allInventory.filter(r => {
+    const qty = r.quantity !== null ? Number(r.quantity) : null;
+    const min = r.minimum  !== null ? Number(r.minimum)  : null;
+    return qty !== null && min !== null && qty < min;
+  }).map(r => ({ ...r, _reason: "below_min" }));
+
+  // Safety stock: raw material not enough for 1 day's MEP max target
+  // For each MEP product with gnWeight, find matching lager item
+  Object.entries(allProducts).forEach(([mepCode, p]) => {
+    if (!p.gnWeight || !p.mepMax) return;
+    const targetQty  = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
+    const neededKg   = targetQty * p.gnWeight;
+    // Find matching lager item by code
+    const invItem = allInventory.find(r => r.code === mepCode);
+    if (!invItem || invItem.quantity === null) return;
+    const inStockKg = Number(invItem.quantity) * (invItem.weightUnit || 1);
+    if (inStockKg < neededKg && !items.find(x => x.code === mepCode)) {
+      items.push({ ...invItem, _reason: "safety_stock",
+        _neededKg: neededKg, _inStockKg: inStockKg,
+        _shortKg: (neededKg - inStockKg).toFixed(1) });
+    }
+  });
+
+  // Build category dropdown
+  const cats = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
+  const curCat = catSel ? catSel.value : "";
+  if (catSel) {
+    catSel.innerHTML = `<option value="">All categories</option>`
+      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  }
+
+  const q = (document.getElementById("order-search")?.value || "").toLowerCase();
+  if (curCat) items = items.filter(r => (r.kategorie||"") === curCat);
+  if (q)      items = items.filter(r =>
+    (r.name||"").toLowerCase().includes(q) ||
+    (r.lieferant||"").toLowerCase().includes(q) ||
+    (r.kategorie||"").toLowerCase().includes(q)
+  );
+
+  if (!items.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All stock above minimum</div>`;
+    if (summary) summary.textContent = "";
+    return;
+  }
+
+  // Group by supplier
+  const bySupplier = {};
+  items.forEach(r => {
+    const sup = r.lieferant || "No supplier";
+    if (!bySupplier[sup]) bySupplier[sup] = [];
+    bySupplier[sup].push(r);
+  });
+
+  container.innerHTML = Object.entries(bySupplier).map(([sup, rows]) => `
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">${sup}</div>
+      <div class="inv-table-wrap"><table class="inv-table">
+        <thead><tr>
+          <th>Product</th><th>Category</th><th>Current</th><th>Min</th>
+          <th style="color:var(--red)">Order qty</th><th>Total kg</th><th style="color:var(--amber)">Est. CHF</th><th>Notes</th>
+        </tr></thead>
+        <tbody>${rows.map(r => {
+          const qty      = Number(r.quantity) || 0;
+          const min      = r.minimum  !== null ? Number(r.minimum)  : 0;
+          const max      = r.maximum  !== null ? Number(r.maximum)  : null;
+          const kosten   = r.kostenUnit !== null ? Number(r.kostenUnit) : null;
+          const orderQty = max !== null ? Math.max(0, max - qty) : Math.ceil(min - qty);
+          const wuNum    = r.weightUnit !== null ? Number(r.weightUnit) : null;
+          const totKg    = wuNum ? (orderQty * wuNum).toFixed(1) + " kg" : "—";
+          const totChf   = kosten ? "CHF " + (orderQty * kosten).toFixed(2) : "—";
+          const urgency  = qty <= 0 ? "color:var(--red);font-weight:500" : "color:var(--amber)";
+          const reasonBadge = r._reason === "safety_stock"
+            ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);padding:1px 6px;border-radius:10px;margin-left:4px">safety stock</span>`
+            : "";
+          return `<tr>
+            <td>${r.name||r.code}${reasonBadge}</td>
+            <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
+            <td>${qty} ${r.unit||""}</td>
+            <td style="color:var(--muted)">${min}${max!==null?" / "+max:""} ${r.unit||""}</td>
+            <td style="${urgency}">${orderQty > 0 ? orderQty+" "+r.unit : "—"}</td>
+            <td style="color:var(--muted)">${totKg}</td>
+            <td style="color:var(--amber)">${totChf}</td>
+            <td style="font-size:11px;color:var(--muted)">${r.notizen||"—"}</td>
+            <td><button onclick="markOrdered('${r.code}', this)"
+              style="padding:4px 10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer">
+              Ordered
+            </button></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>
+    </div>`).join("");
+
+  if (summary) {
+    summary.textContent = `${items.length} item${items.length>1?"s":""} to reorder across ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length>1?"s":""}`;
+  }
+}
+
+
+// -- Recipes --
+let allRecipes = [];
+
+async function loadRecipes() {
+  try {
+    const data = await adminCall({ action: "getRecipes" });
+    allRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+  } catch(e) { console.error("loadRecipes:", e); }
+}
+
+async function loadRequirements() {
+  const el = document.getElementById("req-content");
+  if (!el) return;
+  try {
+    const data = await adminCall({ action: "getRequirements" });
+    const reqs = Array.isArray(data.requirements) ? data.requirements : [];
+    if (!reqs.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`;
       return;
     }
-
-    // -- Has code - show product screen --
-    sessionStorage.setItem("lastScanUrl", window.location.href);
-    document.getElementById("scanHome").style.display      = "none";
-    document.getElementById("productScreen").style.display = "flex";
-    document.getElementById("productScreen").style.flexDirection = "column";
-
-    // Show cached product data instantly
-    const cached = sessionStorage.getItem("productMap");
-    if (cached) {
-      try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
-    }
-
-    // Load all in parallel
-    const [, , mepData] = await Promise.allSettled([
-      preloadProducts().then(() => showProduct()),
-      preloadWorkers(),
-      fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
-    ]);
-
-    if (mepData?.status === "fulfilled" && mepData.value) {
-      updateMepUI(mepData.value);
-    }
-  });
-
-  // -- OFFLINE SCAN QUEUE - IndexedDB + auto-retry --
-  const DB_NAME    = "mep-offline";
-  const DB_VERSION = 1;
-  const STORE      = "scans";
-  let   _db        = null;
-
-  // Open / create the IndexedDB
-  function openDB() {
-    return new Promise((resolve, reject) => {
-      if (_db) { resolve(_db); return; }
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = e => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE)) {
-          db.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
-        }
-      };
-      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
-      req.onerror   = e => reject(e.target.error);
+    // Group by MEP product
+    const byMep = {};
+    reqs.forEach(r => {
+      if (!byMep[r.mepCode]) byMep[r.mepCode] = { name: r.mepName, stillNeeded: r.stillNeeded, items: [] };
+      byMep[r.mepCode].items.push(r);
     });
+    el.innerHTML = Object.entries(byMep).map(([code, g]) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">
+          ${g.name} <span style="font-size:11px;color:var(--amber);margin-left:6px">need ${g.stillNeeded} more GN today</span>
+        </div>
+        <div class="inv-table-wrap"><table class="inv-table">
+          <thead><tr><th>Raw material</th><th>Need</th><th>In stock</th><th>Status</th></tr></thead>
+          <tbody>${g.items.map(r => `<tr>
+            <td>${r.rmName}</td>
+            <td style="font-weight:500">${r.required} ${r.unit}</td>
+            <td style="color:${r.sufficient?"var(--green)":"var(--red)"}">${r.inStock} ${r.unit}</td>
+            <td>${r.sufficient
+              ? `<span class="stock-pill stock-ok">OK</span>`
+              : `<span class="stock-pill stock-out">Short ${r.shortage.toFixed(1)} ${r.unit}</span>`}</td>
+          </tr>`).join("")}</tbody>
+        </table></div>
+      </div>`).join("");
+  } catch(e) {
+    el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function renderRecipeList() {
+  const el        = document.getElementById("recipe-list");
+  const filterSel = document.getElementById("recipe-mep-filter");
+  if (!el) return;
+
+  // Build MEP filter dropdown
+  const mepCodes = [...new Set(allRecipes.map(r => r.mepCode))].sort();
+  const curFilter = filterSel ? filterSel.value : "";
+  if (filterSel) {
+    filterSel.innerHTML = `<option value="">All MEP products (${mepCodes.length})</option>`
+      + mepCodes.map(c => {
+          const p = allProducts[c];
+          return `<option value="${c}" ${c===curFilter?"selected":""}>${p ? p.name : c}</option>`;
+        }).join("");
   }
 
-  // Save a scan to the queue
-  async function queueScan(scan) {
+  let recipes = curFilter ? allRecipes.filter(r => r.mepCode === curFilter) : allRecipes;
+
+  if (!recipes.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px">No recipes yet. Add ingredients below.</div>`;
+    return;
+  }
+
+  // Group by MEP code
+  const grouped = {};
+  recipes.forEach(r => {
+    if (!grouped[r.mepCode]) grouped[r.mepCode] = [];
+    grouped[r.mepCode].push(r);
+  });
+
+  el.innerHTML = Object.entries(grouped).map(([mepCode, rows]) => {
+    const p = allProducts[mepCode] || {};
+    return `<div class="admin-form" style="margin-bottom:10px">
+      <div class="admin-form-title">${p.name || mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></div>
+      ${rows.map(r => {
+        const inv = allInventory.find(x => x.code === r.rmCode) || {};
+        return `<div class="admin-item" style="margin-top:6px">
+          <div style="flex:1">
+            <span style="font-size:13px">${inv.name || r.rmCode}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN · ${r.rmCode}</span>
+          </div>
+          <button class="btn-del" onclick="deleteRecipeRow('${mepCode}','${r.rmCode}')">Remove</button>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }).join("");
+}
+
+function populateRecipeDropdowns() {
+  const mepSel = document.getElementById("rf-mep");
+  const rmSel  = document.getElementById("rf-rm");
+  if (mepSel) {
+    mepSel.innerHTML = `<option value="">Select MEP product…</option>`
+      + Object.entries(allProducts)
+          .filter(([,p]) => p.name && p.name !== "(deleted)")
+          .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
+          .map(([code,p]) => `<option value="${code}">${p.name} (${code})</option>`).join("");
+  }
+  if (rmSel) {
+    rmSel.innerHTML = `<option value="">Select raw material…</option>`
+      + allInventory
+          .filter(r => r.code)
+          .sort((a,b) => (a.name||"").localeCompare(b.name||""))
+          .map(r => `<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+  }
+  // Auto-fill unit from selected RM
+  rmSel?.addEventListener("change", () => {
+    const code = rmSel.value;
+    const inv  = allInventory.find(x => x.code === code);
+    if (inv && !document.getElementById("rf-einheit").value) {
+      document.getElementById("rf-einheit").value = inv.unit || "";
+    }
+  });
+}
+
+async function saveRecipe() {
+  const mepCode = document.getElementById("rf-mep").value;
+  const rmCode  = document.getElementById("rf-rm").value;
+  const menge   = document.getElementById("rf-menge").value;
+  if (!mepCode || !rmCode) { adminMsg("rf-msg", "Select MEP product and raw material", "err"); return; }
+  const btn = document.querySelector("#panel-recipes .admin-form .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const data = await adminCall({ action:"saveRecipe", mepCode, rmCode, menge,
+      einheit: document.getElementById("rf-einheit").value.trim() });
+    if (data.error) throw new Error(data.error);
+    adminMsg("rf-msg", "Saved ✓", "ok");
+    await loadRecipes();
+    renderRecipeList();
+    loadRequirements();
+  } catch(e) { adminMsg("rf-msg", "Error: " + e.message, "err"); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "Add ingredient"; } }
+}
+
+async function deleteRecipeRow(mepCode, rmCode) {
+  if (!confirm("Remove this ingredient from the recipe?")) return;
+  const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
+  if (data.error) { alert("Error: " + data.error); return; }
+  await loadRecipes();
+  renderRecipeList();
+  loadRequirements();
+}
+
+
+// -- Alert helpers --
+function clearAllAlerts() {
+  const box = document.getElementById("mep-alerts");
+  if (box) box.innerHTML = "";
+}
+
+function alertClick(code) {
+  if (!code) return;
+  // If it's a raw material shortage, switch to Orders tab
+  // Otherwise scroll to the MEP card for this product
+  const card = document.getElementById("mep-card-" + code);
+  if (card) {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.style.outline = "2px solid var(--amber)";
+    setTimeout(() => card.style.outline = "", 2000);
+  }
+}
+
+
+// -- Initialise dashboard v9 --
+document.addEventListener("DOMContentLoaded", function() {
+  try {
+    const cp = sessionStorage.getItem("dash_products");
+    const ci = sessionStorage.getItem("dash_inventory");
+    const cs = sessionStorage.getItem("dash_scans");
+    if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
+    if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); }
+    if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
+  } catch(e) { console.error("cache error:", e); }
+
+  loadProducts()
+    .then(function() { return loadKDS(); })
+    .catch(function(e) { console.error("[MEP v9] failed:", e); loadKDS(); });
+
+  setTimeout(loadInventory, 500);
+  setTimeout(loadRecipes,   1000);
+});
+
+// -- Improvement #6: Mark as ordered --
+async 
+
+// -- Keep Apps Script warm - ping every 4 minutes to avoid cold starts --
+setInterval(() => {
+  fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
+}, 4 * 60 * 1000);
+
+
+  // -- Mark as ordered (Improvement #6) --
+  async function markOrdered(code, btn) {
+    btn.disabled = true;
+    btn.textContent = "...";
     try {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx  = db.transaction(STORE, "readwrite");
-        const req = tx.objectStore(STORE).add(scan);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror   = () => reject(req.error);
-      });
+      const data = await get({ action: "markOrdered", code });
+      if (data.status === "ok") {
+        btn.textContent = "Ordered " + data.date;
+        btn.style.background = "var(--green-dim)";
+        setTimeout(loadInventory, 1000);
+      } else {
+        btn.textContent = "Error";
+        btn.disabled = false;
+      }
     } catch(e) {
-      console.error("IndexedDB queue failed:", e);
+      btn.textContent = "Error";
+      btn.disabled = false;
     }
   }
 
-  // Get all queued scans
-  async function getQueue() {
-    try {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx  = db.transaction(STORE, "readonly");
-        const req = tx.objectStore(STORE).getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror   = () => reject(req.error);
-      });
-    } catch(e) { return []; }
-  }
 
-  // Delete a queued scan by id after successful sync
-  async function deleteQueued(id) {
-    try {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx  = db.transaction(STORE, "readwrite");
-        const req = tx.objectStore(STORE).delete(id);
-        req.onsuccess = () => resolve();
-        req.onerror   = () => reject(req.error);
-      });
-    } catch(e) {}
-  }
+  // -- Deductions tab --
+  let allDeductions = [];
 
-  // Update the pending badge count
-  async function updateBadge() {
-    const queue = await getQueue();
-    const badge = document.getElementById("offlineBadge");
-    const count = document.getElementById("offlineCount");
-    if (!badge || !count) return;
-    if (queue.length > 0) {
-      count.textContent = queue.length;
-      badge.classList.add("visible");
-    } else {
-      badge.classList.remove("visible");
+  async function loadDeductions() {
+    const body = document.getElementById("ded-body");
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
+    try {
+      const data = await get({ action: "getDeductions" });
+      allDeductions = Array.isArray(data.deductions) ? data.deductions : [];
+      renderDeductions(allDeductions);
+    } catch(e) {
+      body.innerHTML = '<tr><td colspan="8" style="color:var(--red);padding:16px">Error: ' + e.message + '</td></tr>';
     }
   }
 
-  // Retry all queued scans - called when back online or badge tapped
-  async function retryQueue() {
-    const queue = await getQueue();
-    if (queue.length === 0) return;
+  function renderDeductions(rows) {
+    const body = document.getElementById("ded-body");
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">No deductions recorded yet</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(d => {
+      const low  = Number(d.after) <= 0;
+      const warn = Number(d.after) > 0 && Number(d.after) < 3;
+      const badge = low  ? '<span style="color:var(--red);font-size:11px">LOW</span>'
+                 : warn ? '<span style="color:var(--amber);font-size:11px">LOW</span>'
+                 : '<span style="color:var(--green);font-size:11px">OK</span>';
+      const ts = d.timestamp ? new Date(d.timestamp).toLocaleString("de-CH", {
+        day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
+      }) : "";
+      return '<tr>' +
+        '<td>' + ts + '</td>' +
+        '<td>' + (d.worker || "") + '</td>' +
+        '<td><span style="font-size:11px;color:var(--muted)">' + (d.mepCode || "") + '</span></td>' +
+        '<td>' + (d.rmName || d.rmCode || "") + '</td>' +
+        '<td style="color:var(--red)">-' + (d.deducted || 0) + ' ' + (d.unit || "") + '</td>' +
+        '<td style="color:var(--muted)">' + (d.before || 0) + '</td>' +
+        '<td style="font-weight:500">' + (d.after || 0) + '</td>' +
+        '<td>' + badge + '</td>' +
+        '</tr>';
+    }).join("");
+  }
 
-    showMsg("Syncing " + queue.length + " offline scan(s)...", "info");
-    let synced = 0;
-    let failed = 0;
+  function filterDeductions() {
+    const q = document.getElementById("ded-search").value.toLowerCase();
+    if (!q) { renderDeductions(allDeductions); return; }
+    renderDeductions(allDeductions.filter(d =>
+      (d.rmName || "").toLowerCase().includes(q) ||
+      (d.mepCode || "").toLowerCase().includes(q) ||
+      (d.worker || "").toLowerCase().includes(q)
+    ));
+  }
 
-    for (const scan of queue) {
-      try {
-        const url = `${API_URL}?code=${encodeURIComponent(scan.code)}&worker=${encodeURIComponent(scan.worker)}&action=${encodeURIComponent(scan.action)}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          await deleteQueued(scan.id);
-          synced++;
+
+  // -- Archive stats & manual trigger --
+  async function loadArchiveStats() {
+    try {
+      const data = await get({ action: "archiveStats" });
+      const el = id => document.getElementById(id);
+      if (el("stat-scan-rows"))    el("stat-scan-rows").textContent    = data.scanRows ?? "--";
+      if (el("stat-archive-rows")) el("stat-archive-rows").textContent = data.archiveRows ?? "--";
+      if (el("stat-last-run")) {
+        if (data.lastRun) {
+          const d = new Date(data.lastRun);
+          el("stat-last-run").textContent = d.toLocaleDateString("de-CH", { day:"2-digit", month:"2-digit" });
         } else {
-          failed++;
+          el("stat-last-run").textContent = "Never";
         }
-      } catch(e) {
-        failed++;
       }
-    }
-
-    await updateBadge();
-    if (failed === 0) {
-      showMsg("All " + synced + " scan(s) synced OK", "success");
-    } else {
-      showMsg(synced + " synced, " + failed + " still pending", "info");
+      // Warn if scan sheet is getting large
+      const msg = document.getElementById("archive-msg");
+      if (msg) {
+        if (data.scanRows > 500) {
+          msg.style.color = "var(--red)";
+          msg.textContent = data.scanRows + " rows - recommend archiving now";
+        } else if (data.scanRows > 200) {
+          msg.style.color = "var(--amber)";
+          msg.textContent = data.scanRows + " rows - auto-archive runs 1st of each month";
+        } else {
+          msg.style.color = "var(--green)";
+          msg.textContent = data.scanRows + " rows - healthy";
+        }
+      }
+    } catch(e) {
+      console.warn("Archive stats failed:", e);
     }
   }
 
-  // Auto-retry when browser comes back online
-  window.addEventListener("online", () => {
-    retryQueue();
-  });
-
-  // Check queue on page load and show badge if pending
-  document.addEventListener("change", e => {
-    if (e.target.id === "worker") localStorage.setItem("worker", e.target.value);
-  });
-
-  window.addEventListener("DOMContentLoaded", () => {
-    updateBadge();
-    // Also retry immediately if online
-    if (navigator.onLine) retryQueue();
-  });
-
-  // Register background sync with service worker (retry even when page closed)
-  async function registerBackgroundSync() {
-    if ("serviceWorker" in navigator && "SyncManager" in window) {
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        await reg.sync.register("retry-scans");
-      } catch(e) {}
+  async function runArchiveNow() {
+    const btn = document.getElementById("btnArchiveNow");
+    const msg = document.getElementById("archive-msg");
+    if (btn) { btn.disabled = true; btn.textContent = "Archiving..."; }
+    try {
+      const data = await get({ action: "archiveNow" });
+      if (data.error) {
+        if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Error: " + data.error; }
+      } else {
+        if (msg) {
+          msg.style.color = "var(--green)";
+          msg.textContent = "Done: " + data.archived + " archived, " + data.kept + " kept";
+        }
+        await loadArchiveStats();
+      }
+    } catch(e) {
+      if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Network error"; }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Archive now"; }
     }
   }
 
-  // Listen for sync-complete message from service worker
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.addEventListener("message", e => {
-      if (e.data?.type === "SYNC_COMPLETE") {
-        retryQueue();
+
+  // -- Reports tab --
+  function loadReportsTab() {
+    document.getElementById("report-status").textContent = "Click 'Preview this week' to load report data.";
+  }
+
+  async function previewReport() {
+    const status  = document.getElementById("report-status");
+    const preview = document.getElementById("report-preview");
+    status.textContent = "Loading report data...";
+    status.style.color = "var(--muted)";
+    preview.style.display = "none";
+    try {
+      const data = await get({ action: "reportPreview" });
+      if (data.error) { status.textContent = "Error: " + data.error; return; }
+      renderReportPreview(data.stats);
+      preview.style.display = "block";
+      status.textContent = "Week ending " + data.stats.week + " -- " + data.stats.totalScans + " scans";
+      status.style.color = "var(--green)";
+    } catch(e) {
+      status.textContent = "Error: " + e.message;
+      status.style.color = "var(--red)";
+    }
+  }
+
+  async function sendReportNow() {
+    const status = document.getElementById("report-status");
+    status.textContent = "Sending email...";
+    status.style.color = "var(--amber)";
+    try {
+      const data = await get({ action: "reportSendNow" });
+      if (data.error) {
+        status.textContent = "Error: " + data.error;
+        status.style.color = "var(--red)";
+      } else {
+        status.textContent = data.message || "Report sent!";
+        status.style.color = "var(--green)";
       }
+    } catch(e) {
+      status.textContent = "Error: " + e.message;
+      status.style.color = "var(--red)";
+    }
+  }
+
+  function renderReportPreview(s) {
+    // Summary cards
+    const sumEl = document.getElementById("report-summary");
+    const cards = [
+      { val: s.totalScans,                   label: "Total scans",  color: "var(--text)" },
+      { val: s.overallEfficiency + "%",       label: "Efficiency",   color: s.overallEfficiency >= 90 ? "var(--green)" : s.overallEfficiency >= 75 ? "var(--amber)" : "var(--red)" },
+      { val: s.totalWaste,                    label: "Waste (GN)",   color: s.totalWaste > 0 ? "var(--red)" : "var(--green)" },
+      { val: "CHF " + s.totalWasteCHF.toFixed(0), label: "Waste cost", color: s.totalWasteCHF > 100 ? "var(--red)" : s.totalWasteCHF > 50 ? "var(--amber)" : "var(--green)" },
+    ];
+    sumEl.innerHTML = cards.map(c =>
+      `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;text-align:center">
+        <div style="font-size:22px;font-weight:500;color:${c.color}">${c.val}</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px">${c.label}</div>
+      </div>`
+    ).join("");
+
+    // Waste table
+    document.getElementById("rpt-waste").innerHTML = s.wasteLines.length
+      ? s.wasteLines.map(w =>
+          `<tr><td>${w.name}</td><td>${w.waste}</td><td>CHF ${w.costPerUnit.toFixed(2)}</td>
+           <td style="color:${w.totalCost > 50 ? "var(--red)" : "var(--text)"}">CHF ${w.totalCost.toFixed(2)}</td></tr>`
+        ).join("") + `<tr style="font-weight:500"><td colspan="3">Total waste cost</td><td style="color:var(--red)">CHF ${s.totalWasteCHF.toFixed(2)}</td></tr>`
+      : `<tr><td colspan="4" style="color:var(--green);text-align:center;padding:12px">No waste this week</td></tr>`;
+
+    // Efficiency table
+    document.getElementById("rpt-eff").innerHTML = s.efficiencyLines.length
+      ? s.efficiencyLines.map(e =>
+          `<tr><td>${e.name}</td><td style="color:var(--green)">${e.done}</td>
+           <td style="color:${e.waste > 0 ? "var(--red)" : "var(--muted)"}">${e.waste}</td>
+           <td style="color:${e.efficiency < 75 ? "var(--red)" : e.efficiency < 90 ? "var(--amber)" : "var(--green)"}">
+             <strong>${e.efficiency}%</strong></td></tr>`
+        ).join("")
+      : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
+
+    // Workers table
+    document.getElementById("rpt-workers").innerHTML = s.topWorkers.length
+      ? s.topWorkers.map(w =>
+          `<tr><td>${w.name}</td><td>${w.total}</td><td>${w.done}</td>
+           <td style="color:${w.wasteRate > 20 ? "var(--red)" : "var(--muted)"}">${w.wasteRate}%</td></tr>`
+        ).join("")
+      : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
+
+    // Low stock table
+    document.getElementById("rpt-stock").innerHTML = s.lowStock.length
+      ? s.lowStock.map(i =>
+          `<tr><td>${i.name}</td>
+           <td style="color:var(--red);font-weight:500">${i.qty} ${i.unit}</td>
+           <td style="color:var(--muted)">min: ${i.minimum} ${i.unit}</td></tr>`
+        ).join("")
+      : `<tr><td colspan="3" style="color:var(--green);text-align:center;padding:12px">All stock OK</td></tr>`;
+  }
+
+
+  // -- Manual scan modal --
+  let _msAction = "";
+
+  function openManualScan() {
+    const pSel = document.getElementById("ms-product");
+    pSel.innerHTML = '<option value="">-- Select product --</option>';
+    Object.entries(allProducts).forEach(([code, p]) => {
+      const o = document.createElement("option");
+      o.value = code;
+      o.textContent = (p.name || code) + " (" + code + ")";
+      pSel.appendChild(o);
     });
+    const wSel = document.getElementById("ms-worker");
+    wSel.innerHTML = '<option value="">-- Select worker --</option>';
+    const workers = new Set();
+    allScans.forEach(s => { if (s.worker) workers.add(s.worker); });
+    if (window.allWorkersAdmin) {
+      allWorkersAdmin.forEach(w => {
+        const name = typeof w === "string" ? w : w.name;
+        if (name) workers.add(name);
+      });
+    }
+    workers.forEach(w => {
+      const o = document.createElement("option");
+      o.value = o.textContent = w;
+      wSel.appendChild(o);
+    });
+    _msAction = "";
+    document.getElementById("ms-msg").textContent = "";
+    document.querySelectorAll(".ms-action-btn").forEach(b => {
+      b.style.background = "var(--surface)";
+      b.style.color = "var(--muted)";
+      b.style.borderColor = "var(--border2)";
+    });
+    document.getElementById("manualScanModal").style.display = "flex";
   }
 
+  function closeManualScan() {
+    document.getElementById("manualScanModal").style.display = "none";
+    _msAction = "";
+  }
 
+  function setManualAction(action) {
+    _msAction = action;
+    const colors = {
+      produce: { bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
+      done:    { bg:"var(--green-dim)", color:"var(--green)", border:"var(--green-brd)" },
+      waste:   { bg:"var(--red-dim)",   color:"var(--red)",   border:"var(--red-brd)" },
+      used:    { bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
+    };
+    document.querySelectorAll(".ms-action-btn").forEach(b => {
+      b.style.background = "var(--surface)";
+      b.style.color = "var(--muted)";
+      b.style.borderColor = "var(--border2)";
+    });
+    const btn = document.getElementById("ms-btn-" + action);
+    if (btn && colors[action]) {
+      btn.style.background  = colors[action].bg;
+      btn.style.color       = colors[action].color;
+      btn.style.borderColor = colors[action].border;
+    }
+    document.getElementById("ms-msg").textContent = "";
+  }
 
-  // ── PIN pad ──────────────────────────────────────────────────
-  
+  async function submitManualScan() {
+    const code   = document.getElementById("ms-product").value;
+    const worker = document.getElementById("ms-worker").value;
+    const msg    = document.getElementById("ms-msg");
+    const btn    = document.getElementById("ms-submit");
+    if (!code)    { msg.style.color = "var(--red)"; msg.textContent = "Select a product"; return; }
+    if (!worker)  { msg.style.color = "var(--red)"; msg.textContent = "Select a staff member"; return; }
+    if (!_msAction) { msg.style.color = "var(--red)"; msg.textContent = "Select an action"; return; }
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    msg.style.color = "var(--muted)";
+    msg.textContent = "";
+    try {
+      const data = await get({ code, worker, action: _msAction });
+      if (data.error) {
+        msg.style.color = "var(--red)";
+        msg.textContent = "Error: " + data.error;
+      } else {
+        msg.style.color = "var(--green)";
+        const labels = { produce:"Produce recorded", done:"Finished OK", waste:"Waste recorded", used:"Used recorded" };
+        msg.textContent = (labels[_msAction] || "Saved") + " for " + (allProducts[code]?.name || code);
+        setTimeout(() => { loadKDS(); closeManualScan(); }, 1200);
+      }
+    } catch(e) {
+      msg.style.color = "var(--red)";
+      msg.textContent = "Network error";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save action";
+    }
+  }
 
-
+  document.addEventListener("click", e => {
+    if (e.target && e.target.id === "manualScanModal") closeManualScan();
+  });
 
 </script>
+<!-- Manual scan modal -->
+<div id="manualScanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-end;justify-content:center">
+  <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:24px 20px 36px;width:100%;max-width:480px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:500">Manual MEP action</div>
+      <button onclick="closeManualScan()"
+        style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+
+    <!-- Product select -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Product</div>
+      <select id="ms-product"
+        style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
+        <option value="">-- Select product --</option>
+      </select>
+    </div>
+
+    <!-- Worker select -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Staff member</div>
+      <select id="ms-worker"
+        style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
+        <option value="">-- Select worker --</option>
+      </select>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Action</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="setManualAction('produce')" id="ms-btn-produce" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Produce
+        </button>
+        <button onclick="setManualAction('done')" id="ms-btn-done" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Finish
+        </button>
+        <button onclick="setManualAction('waste')" id="ms-btn-waste" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Waste
+        </button>
+        <button onclick="setManualAction('used')" id="ms-btn-used" class="ms-action-btn"
+          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
+          Used
+        </button>
+      </div>
+    </div>
+
+    <!-- Status message -->
+    <div id="ms-msg" style="font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-bottom:12px"></div>
+
+    <!-- Submit -->
+    <button onclick="submitManualScan()" id="ms-submit"
+      style="width:100%;padding:14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+      Save action
+    </button>
+  </div>
+</div>
+
 </body>
 </html>
