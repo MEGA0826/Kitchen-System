@@ -147,19 +147,27 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 10px 14px 10px 14px;
-      position: relative;
+      padding: 12px 14px;
       flex-shrink: 0;
       animation: slideUp .3s ease both;
-      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     @keyframes slideUp {
       from { opacity:0; transform: translateY(10px); }
       to   { opacity:1; transform: translateY(0); }
     }
-
-    /* Text side - leaves right padding for the image */
-    .product-info { padding-right: 152px; }
+    /* Top row: text left, image right — image never overlaps text */
+    .product-top {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .product-info {
+      flex: 1;
+      min-width: 0; /* allows text-overflow to work */
+    }
     .product-label {
       font-size: 11px;
       letter-spacing: 1.5px;
@@ -169,43 +177,37 @@
     }
     .product-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 28px;
-      line-height: 1.15;
+      font-size: 24px;
+      line-height: 1.2;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .product-code {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
-      margin-top: 3px;
+      margin-top: 2px;
       letter-spacing: 1px;
     }
-
-    /* Image - absolute top-right, double wide */
+    /* Image — fixed size beside text, never absolute */
     .product-img {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 136px;
-      height: 80px;
+      width: 88px;
+      height: 66px;
       border-radius: 8px;
       object-fit: cover;
-      display: block;
+      flex-shrink: 0;
     }
     .product-img-ph {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 136px;
-      height: 80px;
+      width: 88px;
+      height: 66px;
       border-radius: 8px;
       background: var(--surface2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 20px;
       opacity: .25;
+      flex-shrink: 0;
     }
 
     /* -- MEP Status rows -- */
@@ -661,7 +663,10 @@
       <div class="brand-sub">212 · Nooch Richti</div>
     </div>
     <div class="header-right">
-      <a href="https://mega0826.github.io/Kitchen-System/dashboard.html" class="dashboard-link">⊞ Dashboard</a>
+      <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
+        style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none">
+        Dashboard
+      </a>
       <div class="live-badge"><span class="status-dot"></span>LIVE</div>
     </div>
   </header>
@@ -730,24 +735,26 @@
 
     <!-- Product card - compact fixed height -->
     <div class="product-card" id="productCard">
-      <div class="product-info">
-        <div class="product-label">Scanned product</div>
-        <div class="product-name" id="product"><div class="skeleton"></div></div>
-        <div class="product-code" id="productCode"></div>
-        <div class="mep-status" id="mepStatus" style="display:none">
-          <div class="mep-row">
-            <span class="mep-dot green" id="mepDotDone"></span>
-            <span class="mep-row-label" id="mepLabelDone"></span>
-          </div>
-          <div class="mep-row">
-            <span class="mep-dot amber" id="mepDotList"></span>
-            <span class="mep-row-label" id="mepLabelList"></span>
-          </div>
+      <div class="product-top">
+        <div class="product-info">
+          <div class="product-label">Scanned product</div>
+          <div class="product-name" id="product"><div class="skeleton"></div></div>
+          <div class="product-code" id="productCode"></div>
+        </div>
+        <img id="productImage" class="product-img" alt="" style="display:none;">
+        <div id="imgPlaceholder" class="product-img-ph">🍽</div>
+      </div>
+      <div class="mep-status" id="mepStatus" style="display:none">
+        <div class="mep-row">
+          <span class="mep-dot green" id="mepDotDone"></span>
+          <span class="mep-row-label" id="mepLabelDone"></span>
+        </div>
+        <div class="mep-row">
+          <span class="mep-dot amber" id="mepDotList"></span>
+          <span class="mep-row-label" id="mepLabelList"></span>
         </div>
       </div>
-      <img id="productImage" class="product-img" alt="" style="display:none;">
-      <div id="imgPlaceholder" class="product-img-ph">🍽</div>
-    </div>
+    </div>div>
 
     <!-- Worker PIN login -->
     <div class="field-wrap" id="workerWrap">
