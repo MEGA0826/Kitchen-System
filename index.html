@@ -158,7 +158,7 @@
       from { opacity:0; transform: translateY(10px); }
       to   { opacity:1; transform: translateY(0); }
     }
-    /* Top row: text left, image right — image never overlaps text */
+    /* Top row: text left, image right - image never overlaps text */
     .product-top {
       display: flex;
       gap: 12px;
@@ -189,7 +189,7 @@
       margin-top: 2px;
       letter-spacing: 1px;
     }
-    /* Image — fixed size beside text, never absolute */
+    /* Image - fixed size beside text, never absolute */
     .product-img {
       width: 88px;
       height: 66px;
@@ -660,7 +660,7 @@
   <header class="header">
     <div>
       <div class="brand-name">Kitchen <em>MEP</em></div>
-      <div class="brand-sub">212 · Nooch Richti</div>
+      <div class="brand-sub">212 . Nooch Richti</div>
     </div>
     <div class="header-right">
       <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
@@ -996,7 +996,7 @@
     const image = pd.image || "";
 
     document.getElementById("product").textContent = name;
-    if (CURRENT_CODE) document.getElementById("productCode").textContent = "CODE · " + CURRENT_CODE;
+    if (CURRENT_CODE) document.getElementById("productCode").textContent = "CODE . " + CURRENT_CODE;
 
     const img = document.getElementById("productImage");
     const ph  = document.getElementById("imgPlaceholder");
@@ -1019,7 +1019,7 @@
   let _undoTimer   = null;   // countdown interval
   let _redirectTimer = null; // auto-redirect timeout
 
-  function send(action) {
+  async function send(action) {
     const worker = getCurrentWorker();
     if (!worker) { showMsg("Enter your PIN or select staff first", "error"); return; }
 
@@ -1577,7 +1577,7 @@
 
 
 
-  // ── PIN pad ──────────────────────────────────────────────────
+  // -- PIN pad --------------------------------------------------
   
 
 
