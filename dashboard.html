@@ -692,8 +692,7 @@ function switchTab(btn) {
 
 // Fetch
 async function get(params) {
-  const url = API + "?" + new URLSearchParams(params);[1]);
-  const res = await fetch(url);
+  const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
 }
 
@@ -1287,7 +1286,7 @@ function adminMsg(id, text, type) {
   setTimeout(() => el.className = "admin-msg", 3000);
 }
 
-async async function adminCall(params) {
+async function adminCall(params) {
   const url = API + "?" + new URLSearchParams(params);
   const res  = await fetch(url);
   return res.json();
@@ -1480,7 +1479,7 @@ function clearWorkerForm() {
   document.getElementById("wf-cancel").style.display   = "none";
 }
 
-async async async function saveWorkerAdmin() {
+async function saveWorkerAdmin() {
   const name = document.getElementById("wf-name").value.trim();
   const pin  = (document.getElementById("wf-pin")?.value || "").trim();
   if (!name) { adminMsg("wf-msg", "Name is required", "err"); return; }
@@ -1500,7 +1499,9 @@ async async async function saveWorkerAdmin() {
     if (data.error) throw new Error(data.error);
     adminMsg("wf-msg", "Saved OK", "ok");
     clearWorkerForm();
-    allWorkersAdmin = [...new Set([...allWorkersAdmin, name])];
+    // Reload workers from server so PIN status is fresh
+    const wd = await get({ action: "allWorkers" });
+    allWorkersAdmin = wd.workers || allWorkersAdmin;
     renderAdminWorkers();
   } catch(e) {
     adminMsg("wf-msg", "Error: " + e.message, "err");
@@ -1615,7 +1616,7 @@ async function saveInvItem() {
 
 // -- Load admin data when tab is opened --
 // Hook into the existing switchTab by patching the admin tab button onclick
-async async function loadAdminTab() {
+async function loadAdminTab() {
   renderAdminProducts();
   renderAdminInventory();
   populateInvDataLists();
@@ -1949,7 +1950,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   loadProducts()
     .then(function() { return loadKDS(); })
-    .catch(function(e) { console.error("[MEP v9] failed:", e); loadKDS(); });
+    .catch(function() { loadKDS(); });
 
   setTimeout(loadInventory, 500);
   setTimeout(loadRecipes,   1000);
@@ -2260,7 +2261,7 @@ setInterval(() => {
     document.getElementById("ms-msg").textContent = "";
   }
 
-  async function submitManualScan() {
+  async async function submitManualScan() {
     const code   = document.getElementById("ms-product").value;
     const worker = document.getElementById("ms-worker").value;
     const msg    = document.getElementById("ms-msg");
