@@ -567,6 +567,12 @@
         <div class="form-grid">
           <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="wf-name" placeholder="e.g. Marco"></div>
           <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="wf-role" placeholder="e.g. Chef de Partie"></div>
+          <div class="form-field">
+            <label class="form-label">PIN (4 digits)</label>
+            <input class="form-input" id="wf-pin" type="text" inputmode="numeric"
+              maxlength="4" placeholder="e.g. 1234"
+              style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
+          </div>
         </div>
         <div class="form-actions">
           <button class="btn-save" onclick="saveWorkerAdmin()">Save worker</button>
@@ -686,7 +692,7 @@ function switchTab(btn) {
 
 // Fetch
 async function get(params) {
-  const url = API + "?" + new URLSearchParams(params);
+  const url = API + "?" + new URLSearchParams(params);[1]);
   const res = await fetch(url);
   return res.json();
 }
@@ -1172,7 +1178,7 @@ function openModal(code) {
   if (p.image) { img.src = p.image; } else { img.src = ""; }
   document.getElementById("modal").classList.add("open");
 }
-function closeModal() { document.getElementById("modal").classList.remove("open"); }
+async function closeModal() { document.getElementById("modal").classList.remove("open"); }
 
 // -- INIT --
 // Show cached data instantly - user sees data in <100ms
@@ -1281,7 +1287,7 @@ function adminMsg(id, text, type) {
   setTimeout(() => el.className = "admin-msg", 3000);
 }
 
-async function adminCall(params) {
+async async function adminCall(params) {
   const url = API + "?" + new URLSearchParams(params);
   const res  = await fetch(url);
   return res.json();
@@ -1420,19 +1426,36 @@ async function loadWorkersAdmin() {
 function renderAdminWorkers() {
   const list = document.getElementById("admin-worker-list");
   if (!list) return;
-  // Build from allScans worker names + workers list
-  const names = new Set([
-    ...(allWorkersAdmin.map ? allWorkersAdmin.map(w => typeof w === "string" ? w : w.name) : []),
-  ]);
-  if (!names.size) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers yet</div>`; return; }
-  list.innerHTML = [...names].map(name => `
-    <div class="admin-item">
-      <div style="flex:1"><div class="admin-item-name">${name}</div></div>
+  const workers = Array.isArray(allWorkersAdmin) ? allWorkersAdmin : [];
+  if (!workers.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers yet</div>`;
+    return;
+  }
+  list.innerHTML = workers.map(w => {
+    const name   = typeof w === "object" ? w.name   : w;
+    const role   = typeof w === "object" ? (w.role || "") : "";
+    const active = typeof w === "object" ? w.active !== false : true;
+    const pin    = typeof w === "object" ? (w.pin || "") : "";
+    const hasPIN = pin && pin.length === 4;
+    return `
+    <div class="admin-item" style="opacity:${active ? 1 : 0.45}">
+      <div style="flex:1">
+        <div class="admin-item-name">${name}
+          ${!active ? `<span style="font-size:10px;color:var(--red);letter-spacing:1px;margin-left:6px">INACTIVE</span>` : ""}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center">
+          ${role ? `<span>${role}</span>` : ""}
+          <span style="color:${hasPIN ? "var(--green)" : "var(--red)"}">
+            ${hasPIN ? "&#10003; PIN set" : "&#9888; No PIN"}
+          </span>
+        </div>
+      </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editWorker('${name}')">Edit</button>
-        <button class="btn-del"  onclick="delWorker('${name}')">Deactivate</button>
+        <button class="btn-del"  onclick="delWorker('${name}')">${active ? "Deactivate" : "Reactivate"}</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 function editWorker(name) {
@@ -1440,6 +1463,13 @@ function editWorker(name) {
   document.getElementById("wf-name").readOnly = true;
   document.getElementById("wf-form-title").textContent = "Edit worker - " + name;
   document.getElementById("wf-cancel").style.display = "inline-flex";
+  // Populate PIN if available
+  const pinEl = document.getElementById("wf-pin");
+  if (pinEl && window.allWorkersAdmin) {
+    const w = allWorkersAdmin.find(w => (typeof w === "object" ? w.name : w) === name);
+    pinEl.value = (w && typeof w === "object" && w.pin) ? w.pin : "";
+    pinEl.placeholder = w && typeof w === "object" && w.pin ? "****" : "e.g. 1234";
+  }
 }
 
 function clearWorkerForm() {
@@ -1450,20 +1480,25 @@ function clearWorkerForm() {
   document.getElementById("wf-cancel").style.display   = "none";
 }
 
-async function saveWorkerAdmin() {
+async async async function saveWorkerAdmin() {
   const name = document.getElementById("wf-name").value.trim();
+  const pin  = (document.getElementById("wf-pin")?.value || "").trim();
   if (!name) { adminMsg("wf-msg", "Name is required", "err"); return; }
+  if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) {
+    adminMsg("wf-msg", "PIN must be exactly 4 digits", "err"); return;
+  }
   const btn = document.querySelector("#admin-worker-list ~ .admin-form .btn-save");
-  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  if (btn) { btn.disabled = true; btn.textContent = "Saving..."; }
   try {
     const data = await adminCall({
       action : "saveWorker",
       name,
       role   : document.getElementById("wf-role").value.trim(),
+      pin,
       active : "true",
     });
     if (data.error) throw new Error(data.error);
-    adminMsg("wf-msg", "Saved ✓", "ok");
+    adminMsg("wf-msg", "Saved OK", "ok");
     clearWorkerForm();
     allWorkersAdmin = [...new Set([...allWorkersAdmin, name])];
     renderAdminWorkers();
@@ -1580,16 +1615,18 @@ async function saveInvItem() {
 
 // -- Load admin data when tab is opened --
 // Hook into the existing switchTab by patching the admin tab button onclick
-function loadAdminTab() {
+async async function loadAdminTab() {
   renderAdminProducts();
   renderAdminInventory();
   populateInvDataLists();
-  adminCall({ action: "workers" }).then(d => {
-    allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
+  try {
+    const data = await adminCall({ action: "allWorkers" });
+    allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
     renderAdminWorkers();
-  });
+  } catch(e) {
+    console.error("loadAdminTab error:", e);
+  }
 }
-
 function populateInvDataLists() {
   // Supplier list from existing inventory
   const suppliers = [...new Set(allInventory.map(r => r.lieferant||"").filter(Boolean))].sort();
@@ -2189,11 +2226,15 @@ setInterval(() => {
       b.style.color = "var(--muted)";
       b.style.borderColor = "var(--border2)";
     });
-    document.getElementById("manualScanModal").style.display = "flex";
+    const modal = document.getElementById("manualScanModal");
+    modal.style.display = "flex";
+    modal.style.alignItems = "flex-end";
+    modal.style.justifyContent = "center";
   }
 
   function closeManualScan() {
-    document.getElementById("manualScanModal").style.display = "none";
+    const m = document.getElementById("manualScanModal");
+    if (m) m.style.display = "none";
     _msAction = "";
   }
 
@@ -2257,7 +2298,7 @@ setInterval(() => {
 
 </script>
 <!-- Manual scan modal -->
-<div id="manualScanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-end;justify-content:center">
+<div id="manualScanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-end;justify-content:center;overflow-y:auto">
   <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:24px 20px 36px;width:100%;max-width:480px">
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
