@@ -779,7 +779,7 @@ function renderStats() {
   document.getElementById("s-done").textContent    = allScans.filter(s=>s.action==="done").length;
   document.getElementById("s-waste").textContent   = allScans.filter(s=>s.action==="waste").length;
 
-  // Total MEP % = sum(available) / sum(tagesziel) × 100
+  // Total MEP % = sum(available) / sum(tagesziel) x 100
   // Only count products that have a tagesziel > 0
   let totalAvailable = 0;
   let totalTarget    = 0;
@@ -804,7 +804,7 @@ function renderStats() {
     barEl.style.width = Math.min(100, pct) + "%";
     barEl.style.background = pct >= 100 ? "var(--red)" : pct >= 80 ? "var(--amber)" : "var(--green)";
   } else {
-    pctEl.textContent = "—";
+    pctEl.textContent = "-";
     subEl.textContent = "No daily targets set";
   }
 }
@@ -871,14 +871,14 @@ function buildMepAlerts() {
 
     // MEP target reached - green (good news)
     if (goalMet && !overDone) {
-      alerts.push({ type:"green", icon:"✓", code,
+      alerts.push({ type:"green", icon:"OK", code,
         title: `Target reached - ${name}`,
-        sub:   `${available}${gnSize?" "+gnSize:""} available · daily target met` });
+        sub:   `${available}${gnSize?" "+gnSize:""} available . daily target met` });
     }
 
     // MEP list full but available = 0 - red urgent (needs prep asap)
     if (listFull && available === 0 && !goalMet) {
-      const listKg = gnWeight ? ` · ${(listWeight).toFixed(1)} kg in prep` : "";
+      const listKg = gnWeight ? ` . ${(listWeight).toFixed(1)} kg in prep` : "";
       alerts.push({ type:"red", icon:"🚨", code,
         title: `⚠ Prepare now - ${name}`,
         sub:   `MEP list full but nothing available${listKg}` });
@@ -894,7 +894,7 @@ function buildMepAlerts() {
           const shortKg = (neededKg - inStock).toFixed(1);
           alerts.push({ type:"blue", icon:"📦", code,
             title: `Low stock - ${name}`,
-            sub:   `Need ${neededKg} kg for daily target, only ${inStock.toFixed(1)} kg in stock · ${shortKg} kg short` });
+            sub:   `Need ${neededKg} kg for daily target, only ${inStock.toFixed(1)} kg in stock . ${shortKg} kg short` });
         }
       }
     }
@@ -907,7 +907,7 @@ function buildMepAlerts() {
       tagHtml   = `<span class="mep-tag over">⚠ Over target</span>`;
     } else if (goalMet) {
       cardClass = "goal";
-      tagHtml   = `<span class="mep-tag goal">✓ Goal reached</span>`;
+      tagHtml   = `<span class="mep-tag goal">OK Goal reached</span>`;
     } else if (listFull) {
       tagHtml   = `<span class="mep-tag prog">In preparation</span>`;
     } else if (doneCount === 0 && inProgress === 0) {
@@ -1012,11 +1012,11 @@ function renderWorkerBars() {
 function renderFeed() {
   const rows = [...allScans].reverse().slice(0,30).map(s => {
     const p    = allProducts[s.code] || {};
-    const name = p.name || s.code || "—";
+    const name = p.name || s.code || "-";
     return `<div class="feed-row">
       <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
-      <span style="font-size:12px">${s.worker||"—"}</span>
-      <span class="action-badge ${s.action||""}" style="justify-self:start">${s.action||"—"}</span>
+      <span style="font-size:12px">${s.worker||"-"}</span>
+      <span class="action-badge ${s.action||""}" style="justify-self:start">${s.action||"-"}</span>
       <span style="font-size:12px">${name}</span>
     </div>`;
   }).join("");
@@ -1060,28 +1060,28 @@ function renderInventory(rows) {
     const minNum = isNaN(min) ? 0 : (min || 0);
     const [cls,lbl] = stockClass(qtyNum, minNum);
 
-    const qtyDisplay = qty === null || isNaN(qty) ? "—" : qty;
-    const minDisplay = min === null || isNaN(min) || min === 0 ? "—" : min;
+    const qtyDisplay = qty === null || isNaN(qty) ? "-" : qty;
+    const minDisplay = min === null || isNaN(min) || min === 0 ? "-" : min;
     const wuNum  = r.weightUnit !== null ? Number(r.weightUnit) : null;
-    const totKg  = (qty !== null && wuNum !== null) ? (qty * wuNum).toFixed(1) + " kg" : "—";
+    const totKg  = (qty !== null && wuNum !== null) ? (qty * wuNum).toFixed(1) + " kg" : "-";
 
     const st       = (window.todayScanStats || {})[r.code] || {};
     const mepAvail = Math.max(0, (st.done||0) - (st.waste||0) - (st.used||0));
     const p        = allProducts[r.code] || {};
     const gnSize   = p.gnSize || "";
-    const mepStr   = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "—";
+    const mepStr   = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "-";
     return `<tr>
-      <td style="color:var(--muted);font-size:11px">${r.code||"—"}</td>
-      <td>${r.name||"—"}</td>
-      <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
-      <td style="font-weight:500">${qtyDisplay}${qtyDisplay !== "—" && r.unit ? " "+r.unit : ""}</td>
-      <td style="color:var(--muted)">${r.unit||"—"}</td>
+      <td style="color:var(--muted);font-size:11px">${r.code||"-"}</td>
+      <td>${r.name||"-"}</td>
+      <td style="color:var(--muted);font-size:11px">${r.kategorie||"-"}</td>
+      <td style="font-weight:500">${qtyDisplay}${qtyDisplay !== "-" && r.unit ? " "+r.unit : ""}</td>
+      <td style="color:var(--muted)">${r.unit||"-"}</td>
       <td style="color:var(--muted)">${totKg}</td>
       <td style="color:var(--muted)">${minDisplay}</td>
-      <td style="color:var(--muted)">${r.maximum !== null ? r.maximum : "—"}</td>
-      <td style="color:var(--muted)">${r.kostenUnit !== null ? "CHF " + Number(r.kostenUnit).toFixed(2) : "—"}</td>
-      <td style="color:var(--muted)">${(r.quantity !== null && r.kostenUnit !== null) ? "CHF " + (r.quantity * r.kostenUnit).toFixed(2) : "—"}</td>
-      <td style="font-size:11px;color:var(--muted)">${r.lieferant||"—"}</td>
+      <td style="color:var(--muted)">${r.maximum !== null ? r.maximum : "-"}</td>
+      <td style="color:var(--muted)">${r.kostenUnit !== null ? "CHF " + Number(r.kostenUnit).toFixed(2) : "-"}</td>
+      <td style="color:var(--muted)">${(r.quantity !== null && r.kostenUnit !== null) ? "CHF " + (r.quantity * r.kostenUnit).toFixed(2) : "-"}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.lieferant||"-"}</td>
       <td style="color:var(--green)">${mepStr}</td>
       <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
     </tr>`;
@@ -1141,7 +1141,7 @@ function renderProductGrid(entries) {
 
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
-        <span class="prod-stat green">✓ ${avail}${gnLabel}</span>
+        <span class="prod-stat green">OK ${avail}${gnLabel}</span>
         <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
         <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
       </div>` : "";
@@ -1150,7 +1150,7 @@ function renderProductGrid(entries) {
       ${img}
       <div class="product-body">
         <div class="product-name-card">${p.name||code}</div>
-        <div class="product-code-card">CODE · ${code}</div>
+        <div class="product-code-card">CODE . ${code}</div>
         ${statsHtml}
       </div>
     </div>`;
@@ -1166,7 +1166,7 @@ function filterProducts() {
 // -- MODAL --
 function openModal(code) {
   const p = allProducts[code]||{}, st = scanStats[code]||{produce:0,done:0,waste:0};
-  document.getElementById("m-code").textContent    = "CODE · " + code;
+  document.getElementById("m-code").textContent    = "CODE . " + code;
   document.getElementById("m-name").textContent    = p.name||code;
   document.getElementById("m-produce").textContent = st.produce;
   document.getElementById("m-done").textContent    = st.done;
@@ -1329,7 +1329,7 @@ function renderAdminProducts() {
     <div class="admin-item">
       <div style="flex:1;min-width:0">
         <div class="admin-item-name">${p.name} ${p.kategorie ? `<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${p.kategorie}</span>` : ""}</div>
-        <div class="admin-item-sub">${code} · Max ${p.mepMax||"—"} ${p.gnSize||""} · Target ${p.tagesziel||"—"} · ${p.gnWeight||"—"} kg/GN · Shelf ${p.shelfLife||2}d</div>
+        <div class="admin-item-sub">${code} . Max ${p.mepMax||"-"} ${p.gnSize||""} . Target ${p.tagesziel||"-"} . ${p.gnWeight||"-"} kg/GN . Shelf ${p.shelfLife||2}d</div>
       </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editProduct('${code}')">Edit</button>
@@ -1383,7 +1383,7 @@ async function saveProduct() {
       driveLink  : document.getElementById("pf-drive").value,
     });
     if (data.error) throw new Error(data.error);
-    adminMsg("pf-msg", "Saved ✓", "ok");
+    adminMsg("pf-msg", "Saved OK", "ok");
     clearProductForm();
     await loadProducts();
     renderAdminProducts();
@@ -1513,7 +1513,7 @@ async function delWorker(name) {
   if (!confirm(`Deactivate worker "${name}"? They won't appear in the scanner dropdown.`)) return;
   const data = await adminCall({ action: "deleteWorker", name });
   if (data.error) { alert("Error: " + data.error); return; }
-  adminMsg("wf-msg", `${name} deactivated ✓`, "ok");
+  adminMsg("wf-msg", `${name} deactivated OK`, "ok");
   allWorkersAdmin = allWorkersAdmin.filter(w => (typeof w === "string" ? w : w.name) !== name);
   renderAdminWorkers();
 }
@@ -1525,11 +1525,11 @@ function renderAdminInventory() {
   if (!allInventory.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items yet</div>`; return; }
   list.innerHTML = allInventory.map(r => {
     const totKg = (r.quantity !== null && r.weightUnit !== null)
-      ? ` · ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
+      ? ` . ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
     return `<div class="admin-item">
       <div style="flex:1;min-width:0">
         <div class="admin-item-name">${r.name||r.code}${r.kategorie ? ` <span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>` : ""}</div>
-        <div class="admin-item-sub">${r.code} · ${r.quantity ?? "—"} ${r.unit||""}${totKg} · min ${r.minimum ?? "—"}${r.lieferant ? " · " + r.lieferant : ""}</div>
+        <div class="admin-item-sub">${r.code} . ${r.quantity ?? "-"} ${r.unit||""}${totKg} . min ${r.minimum ?? "-"}${r.lieferant ? " . " + r.lieferant : ""}</div>
       </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button>
@@ -1602,7 +1602,7 @@ async function saveInvItem() {
       notizen    : document.getElementById("if-notizen").value.trim(),
     });
     if (data.error) throw new Error(data.error);
-    adminMsg("if-msg", "Saved ✓", "ok");
+    adminMsg("if-msg", "Saved OK", "ok");
     clearInvForm();
     await loadInventory();
     renderAdminInventory();
@@ -1707,7 +1707,7 @@ function renderOrders() {
   );
 
   if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All stock above minimum</div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">OK</div>All stock above minimum</div>`;
     if (summary) summary.textContent = "";
     return;
   }
@@ -1735,21 +1735,21 @@ function renderOrders() {
           const kosten   = r.kostenUnit !== null ? Number(r.kostenUnit) : null;
           const orderQty = max !== null ? Math.max(0, max - qty) : Math.ceil(min - qty);
           const wuNum    = r.weightUnit !== null ? Number(r.weightUnit) : null;
-          const totKg    = wuNum ? (orderQty * wuNum).toFixed(1) + " kg" : "—";
-          const totChf   = kosten ? "CHF " + (orderQty * kosten).toFixed(2) : "—";
+          const totKg    = wuNum ? (orderQty * wuNum).toFixed(1) + " kg" : "-";
+          const totChf   = kosten ? "CHF " + (orderQty * kosten).toFixed(2) : "-";
           const urgency  = qty <= 0 ? "color:var(--red);font-weight:500" : "color:var(--amber)";
           const reasonBadge = r._reason === "safety_stock"
             ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);padding:1px 6px;border-radius:10px;margin-left:4px">safety stock</span>`
             : "";
           return `<tr>
             <td>${r.name||r.code}${reasonBadge}</td>
-            <td style="color:var(--muted);font-size:11px">${r.kategorie||"—"}</td>
+            <td style="color:var(--muted);font-size:11px">${r.kategorie||"-"}</td>
             <td>${qty} ${r.unit||""}</td>
             <td style="color:var(--muted)">${min}${max!==null?" / "+max:""} ${r.unit||""}</td>
-            <td style="${urgency}">${orderQty > 0 ? orderQty+" "+r.unit : "—"}</td>
+            <td style="${urgency}">${orderQty > 0 ? orderQty+" "+r.unit : "-"}</td>
             <td style="color:var(--muted)">${totKg}</td>
             <td style="color:var(--amber)">${totChf}</td>
-            <td style="font-size:11px;color:var(--muted)">${r.notizen||"—"}</td>
+            <td style="font-size:11px;color:var(--muted)">${r.notizen||"-"}</td>
             <td><button onclick="markOrdered('${r.code}', this)"
               style="padding:4px 10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer">
               Ordered
@@ -1782,7 +1782,7 @@ async function loadRequirements() {
     const data = await adminCall({ action: "getRequirements" });
     const reqs = Array.isArray(data.requirements) ? data.requirements : [];
     if (!reqs.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`;
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">OK</div>All daily targets met or no recipes configured</div>`;
       return;
     }
     // Group by MEP product
@@ -1852,7 +1852,7 @@ function renderRecipeList() {
         return `<div class="admin-item" style="margin-top:6px">
           <div style="flex:1">
             <span style="font-size:13px">${inv.name || r.rmCode}</span>
-            <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN · ${r.rmCode}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN . ${r.rmCode}</span>
           </div>
           <button class="btn-del" onclick="deleteRecipeRow('${mepCode}','${r.rmCode}')">Remove</button>
         </div>`;
@@ -1899,7 +1899,7 @@ async function saveRecipe() {
     const data = await adminCall({ action:"saveRecipe", mepCode, rmCode, menge,
       einheit: document.getElementById("rf-einheit").value.trim() });
     if (data.error) throw new Error(data.error);
-    adminMsg("rf-msg", "Saved ✓", "ok");
+    adminMsg("rf-msg", "Saved OK", "ok");
     await loadRecipes();
     renderRecipeList();
     loadRequirements();
