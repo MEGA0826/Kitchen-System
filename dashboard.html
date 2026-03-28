@@ -117,26 +117,19 @@
     .mep-tag.prog  { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
     .mep-tag.idle  { background: var(--gray-dim);  color: var(--muted); border: 1px solid var(--border); }
 
-    /* -- MEP Alerts - swipeable -- */
-    .mep-alerts { margin-bottom: 24px; display: flex; flex-direction: column; gap: 8px; }
-    .alert-wrap { position: relative; overflow: hidden; border-radius: var(--radius); touch-action: pan-y; }
-    .alert-delete-bg { position: absolute; inset: 0; background: #c0392b; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: #fff; border-radius: var(--radius); opacity: 0; transition: opacity .1s; }
-    .alert-wrap.revealing .alert-delete-bg { opacity: 1; }
-    .mep-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; position: relative; transition: transform .15s ease; will-change: transform; cursor: grab; user-select: none; }
-    .mep-alert.red    { background: #7a1a1a; border: 1px solid #c44; color: #fdd; }
-    .mep-alert.over   { background: #7a1a1a; border: 1px solid #a33; color: #fdd; }
-    .mep-alert.yellow { background: #5a4000; border: 1px solid #c09020; color: #ffe08a; }
-    .mep-alert.full   { background: #5a4000; border: 1px solid #a07010; color: #fde89a; }
-    .mep-alert.green  { background: #1a3d1a; border: 1px solid #2d7a2d; color: #aaffaa; }
-    .mep-alert.blue   { background: #1a2d4a; border: 1px solid #2060a0; color: #aad4ff; }
-    .mep-alert { cursor: pointer; }
-    .mep-alert:hover  { filter: brightness(1.12); }
-    .mep-alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-    .mep-alert-body { display: flex; flex-direction: column; gap: 2px; }
-    .mep-alert-title { font-weight: 500; letter-spacing: 0.3px; }
-    .mep-alert-sub { font-size: 11px; opacity: 0.8; letter-spacing: 0.3px; }
+    .mep-thumb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .mep-thumb { aspect-ratio: 1; background: var(--surface); border: 2px solid; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; transition: all .15s; }
+    .mep-thumb:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .mep-thumb.status-green { border-color: var(--green-brd); }
+    .mep-thumb.status-amber { border-color: var(--amber-brd); }
+    .mep-thumb.status-red { border-color: var(--red-brd); }
+    .mep-thumb-img { width: 100%; height: 100%; object-fit: cover; }
+    .mep-thumb-ph { font-size: 32px; opacity: 0.3; }
+    .mep-thumb-overlay { position: absolute; inset: 0; background: rgba(15,15,13,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; }
+    .mep-thumb-code { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
+    .mep-thumb-name { font-size: 11px; font-weight: 500; text-align: center; line-height: 1.2; }
 
-    /* INVENTORY */
+      /* INVENTORY */
     .inv-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .search-input { flex: 1; min-width: 200px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 13px; padding: 10px 14px; }
     .search-input::placeholder { color: var(--faint); }
@@ -224,7 +217,41 @@
     .admin-msg.err { display: block; background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
     .toggle-active { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
     .toggle-active input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--amber); }
+    
+    .pin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
+    .pin-modal.active { display: flex; }
+    .pin-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; max-width: 360px; width: 90%; }
+    .pin-title { font-size: 18px; font-weight: 500; margin-bottom: 8px; text-align: center; }
+    .pin-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 24px; text-align: center; }
+    .pin-input { width: 100%; padding: 16px; background: var(--surface2); color: var(--text); border: 2px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 28px; letter-spacing: 12px; text-align: center; margin-bottom: 16px; }
+    .pin-input:focus { outline: none; border-color: var(--amber-brd); }
+    .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .pin-key { padding: 18px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 20px; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .pin-key:hover { background: var(--surface3); border-color: var(--amber-brd); }
+    .pin-key:active { transform: scale(0.95); }
+    .pin-msg { font-size: 12px; text-align: center; min-height: 18px; margin-bottom: 12px; }
+    .pin-cancel { width: 100%; padding: 12px; background: var(--surface); color: var(--muted); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+    .pin-cancel:hover { color: var(--text); }
 
+    .mep-detail-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 150; backdrop-filter: blur(4px); overflow-y: auto; padding: 20px; }
+    .mep-detail-modal.active { display: flex; }
+    .mep-detail-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 500px; width: 100%; }
+    .mep-detail-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .mep-detail-img-wrap { width: 100px; height: 75px; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .mep-detail-img { width: 100%; height: 100%; object-fit: cover; }
+    .mep-detail-ph { font-size: 32px; opacity: 0.2; }
+    .mep-detail-info { flex: 1; min-width: 0; }
+    .mep-detail-name { font-family: var(--serif); font-size: 20px; margin-bottom: 4px; }
+    .mep-detail-code { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+    .mep-detail-stats { display: flex; flex-direction: column; gap: 12px; }
+    .mep-detail-stat { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .mep-detail-stat:last-child { border-bottom: none; }
+    .mep-detail-label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; }
+    .mep-detail-value { font-size: 18px; font-weight: 500; }
+    .mep-detail-close { margin-top: 16px; width: 100%; padding: 12px; background: var(--surface); color: var(--muted); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+    .mep-detail-close:hover { color: var(--text); border-color: var(--amber-brd); }
+
+    
     @media (max-width: 600px) {
       .body, .nav, .header { padding-left: 16px; padding-right: 16px; }
       .tab { padding: 10px 12px; font-size: 10px; }
@@ -244,7 +271,7 @@
   </div>
   <div class="header-right">
     <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-    <div class="clock" id="clock">--:--:--</div>
+    <div class="live-time" id="liveTime"></div>
     <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn" id="back-btn" onclick="goBack(event)">← Scan</a>
   </div>
 </header>
@@ -326,6 +353,9 @@
     <div class="section-sub">Stock overview</div>
     <div class="inv-controls">
       <input class="search-input" id="inv-search" type="text" placeholder="Search…" oninput="filterInventory()">
+      <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 180px">
+        <option value="">All categories</option>
+      </select>
     </div>
     <div id="inv-content">
       <div class="inv-table-wrap"><div class="empty-state"><div class="skeleton" style="width:50%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div></div>
@@ -338,6 +368,9 @@
     <div class="section-sub">Click any product for scan stats</div>
     <div class="inv-controls">
       <input class="search-input" id="prod-search" type="text" placeholder="Search product…" oninput="filterProducts()">
+      <select class="search-input" id="prod-cat-filter" onchange="filterProducts()" style="flex:0 1 180px">
+        <option value="">All categories</option>
+      </select>
     </div>
     <div class="product-grid" id="product-grid">
       <div class="skeleton" style="height:200px;border-radius:14px;"></div>
@@ -437,7 +470,8 @@
 
 <div class="panel" id="panel-reports">
     <div class="section-title">Weekly kitchen performance report</div>
-
+    <div class="section-sub">Send weekly summaries via email</div>
+  
     <!-- Action buttons -->
     <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
       <button onclick="previewReport()"
@@ -585,6 +619,12 @@
     <div class="admin-section">
       <div class="admin-section-title">Inventory</div>
       <div class="admin-section-sub">Lager sheet</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <input class="form-input" id="admin-inv-search" placeholder="Search inventory…" oninput="renderAdminInventory()" style="flex:1;min-width:160px">
+        <select class="form-input" id="admin-inv-cat" onchange="renderAdminInventory()" style="flex:1;min-width:140px">
+          <option value="">Select category</option>
+        </select>
+      </div>
       <div class="admin-list" id="admin-inv-list"></div>
       <div class="admin-form" id="inv-form">
         <div class="admin-form-title" id="if-form-title">Add / update stock item</div>
@@ -611,8 +651,10 @@
           <option value="Pkg">
           <option value="Dose">
         </datalist>
-        <datalist id="dl-inv-lieferant"></datalist>
-        <datalist id="dl-inv-code"></datalist>
+        <datalist id="dl-unit">
+          <option value="kg"><option value="g"><option value="l"><option value="ml">
+          <option value="pcs"><option value="btl"><option value="box"><option value="bag">
+        </datalist>
 
         <div class="form-grid">
           <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
@@ -656,6 +698,70 @@
     <button class="modal-close" onclick="closeModal()">Close</button>
   </div>
 </div>
+  
+<!-- PIN -->
+<div class="pin-modal" id="pinModal">
+  <div class="pin-content">
+    <div class="pin-title">Admin Access</div>
+    <div class="pin-subtitle">Enter your 4-digit PIN</div>
+    <input class="pin-input" id="pinInput" type="password" maxlength="4" inputmode="numeric" readonly>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="addPinDigit('1')">1</button>
+      <button class="pin-key" onclick="addPinDigit('2')">2</button>
+      <button class="pin-key" onclick="addPinDigit('3')">3</button>
+      <button class="pin-key" onclick="addPinDigit('4')">4</button>
+      <button class="pin-key" onclick="addPinDigit('5')">5</button>
+      <button class="pin-key" onclick="addPinDigit('6')">6</button>
+      <button class="pin-key" onclick="addPinDigit('7')">7</button>
+      <button class="pin-key" onclick="addPinDigit('8')">8</button>
+      <button class="pin-key" onclick="addPinDigit('9')">9</button>
+      <button class="pin-key" onclick="clearPin()">⌫</button>
+      <button class="pin-key" onclick="addPinDigit('0')">0</button>
+      <button class="pin-key" onclick="submitPin()">✓</button>
+    </div>
+    <div class="pin-msg" id="pinMsg"></div>
+    <button class="pin-cancel" onclick="cancelPin()">Cancel</button>
+  </div>
+</div>
+
+<!-- MEP Detail -->  
+<div class="mep-detail-modal" id="mepDetailModal">
+  <div class="mep-detail-content">
+    <div class="mep-detail-header">
+      <div class="mep-detail-img-wrap">
+        <img id="mepDetailImg" class="mep-detail-img" style="display:none">
+        <div id="mepDetailPh" class="mep-detail-ph">📦</div>
+      </div>
+      <div class="mep-detail-info">
+        <div class="mep-detail-name" id="mepDetailName">—</div>
+        <div class="mep-detail-code" id="mepDetailCode">—</div>
+      </div>
+    </div>
+    <div class="mep-detail-stats">
+      <div class="mep-detail-stat">
+        <div class="mep-detail-label">Available</div>
+        <div class="mep-detail-value" id="mepDetailAvail" style="color:var(--green)">—</div>
+      </div>
+      <div class="mep-detail-stat">
+        <div class="mep-detail-label">To produce</div>
+        <div class="mep-detail-value" id="mepDetailProg" style="color:var(--amber)">—</div>
+      </div>
+      <div class="mep-detail-stat">
+        <div class="mep-detail-label">Finished today</div>
+        <div class="mep-detail-value" id="mepDetailDone">—</div>
+      </div>
+      <div class="mep-detail-stat">
+        <div class="mep-detail-label">Waste today</div>
+        <div class="mep-detail-value" id="mepDetailWaste" style="color:var(--red)">—</div>
+      </div>
+      <div class="mep-detail-stat">
+        <div class="mep-detail-label">Daily target</div>
+        <div class="mep-detail-value" id="mepDetailTarget">—</div>
+      </div>
+    </div>
+    <button class="mep-detail-close" onclick="closeMepDetail()">Close</button>
+  </div>
+</div>
 
 <script>
 // -- Back navigation --
@@ -676,6 +782,16 @@ setInterval(() => {
   document.getElementById("clock").textContent =
     new Date().toLocaleTimeString("de-CH", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
 }, 1000);
+function updateLiveTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+    const combined = `${dateStr} ${timeStr}`;
+    const el = document.getElementById("liveTime");
+    if (el) el.textContent = combined;
+  }
+  setInterval(updateLiveTime, 1000);
+  updateLiveTime();
 
 // Tab switch
 function switchTab(btn) {
@@ -1023,7 +1139,132 @@ function renderFeed() {
     `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Action</span><span>Product</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
 }
+  
+  
+async function loadMepOverview() {
+    try {
+      const codes = Object.keys(allProducts);
+      const statusPromises = codes.map(code => get({ action: "mepStatus", code }).catch(() => null));
+      const results = await Promise.all(statusPromises);
+      
+      allMepStatus = {};
+      results.forEach((data, i) => {
+        if (data && !data.error) {
+          allMepStatus[codes[i]] = data;
+        }
+      });
 
+      renderMepThumbs();
+      renderMepCapacityBars();
+    } catch (e) {
+      console.error("Failed to load MEP overview:", e);
+    }
+  }
+
+  function renderMepThumbs() {
+    const catFilter = document.getElementById("mep-cat-filter")?.value || "";
+    
+    let products = Object.entries(allProducts);
+    if (catFilter) {
+      products = products.filter(([, p]) => p.kategorie === catFilter);
+    }
+
+    const html = products.map(([code, p]) => {
+      const status = allMepStatus[code] || {};
+      const avail = status.available || 0;
+      const target = status.tagesziel || 0;
+      
+      let statusClass = "status-red";
+      if (avail >= target && target > 0) statusClass = "status-green";
+      else if (avail > 0) statusClass = "status-amber";
+
+      const img = p.image ? `<img src="${p.image}" class="mep-thumb-img">` : '<div class="mep-thumb-ph">📦</div>';
+
+      return `
+        <div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
+          ${img}
+          <div class="mep-thumb-overlay">
+            <div class="mep-thumb-code">${code}</div>
+            <div class="mep-thumb-name">${p.name || code}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
+  }
+
+  function filterMepOverview() {
+    renderMepThumbs();
+  }
+
+  function renderMepCapacityBars() {
+    const products = Object.entries(allProducts)
+      .map(([code, p]) => {
+        const status = allMepStatus[code] || {};
+        return {
+          code,
+          name: p.name || code,
+          max: p.mepMax || status.mepMax || 0,
+          available: status.available || 0
+        };
+      })
+      .filter(p => p.max > 0)
+      .sort((a, b) => b.available - a.available)
+      .slice(0, 12);
+
+    const max = Math.max(...products.map(p => p.max), 1);
+
+    const html = products.map(p => {
+      const availPct = (p.available / max) * 100;
+      const maxPct = (p.max / max) * 100;
+      
+      return `
+        <div style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div class="bar-name">${p.name}</div>
+            <div style="font-size:11px;color:var(--muted)">${p.available} / ${p.max}</div>
+          </div>
+          <div class="bar-track" style="height:24px;position:relative">
+            <div style="position:absolute;inset:0;background:var(--green);opacity:0.5;width:${availPct}%"></div>
+            <div style="position:absolute;inset:0;background:var(--amber);opacity:0.3;width:${maxPct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("mep-capacity-bars").innerHTML = html || '<div class="empty-state">No capacity data</div>';
+  }
+
+  function showMepDetail(code) {
+    const product = allProducts[code];
+    const status = allMepStatus[code] || {};
+    
+    if (!product) return;
+
+    document.getElementById("mepDetailName").textContent = product.name || code;
+    document.getElementById("mepDetailCode").textContent = code;
+    
+    if (product.image) {
+      document.getElementById("mepDetailImg").src = product.image;
+      document.getElementById("mepDetailImg").style.display = "block";
+      document.getElementById("mepDetailPh").style.display = "none";
+    } else {
+      document.getElementById("mepDetailImg").style.display = "none";
+      document.getElementById("mepDetailPh").style.display = "flex";
+    }
+
+    document.getElementById("mepDetailAvail").textContent = status.available || 0;
+    document.getElementById("mepDetailProg").textContent = status.inProgress || 0;
+    document.getElementById("mepDetailDone").textContent = status.doneCount || 0;
+    document.getElementById("mepDetailWaste").textContent = status.wasteCount || 0;
+    document.getElementById("mepDetailTarget").textContent = status.tagesziel || 0;
+
+    document.getElementById("mepDetailModal").classList.add("active");
+  }
+
+  function closeMepDetail() {
+    document.getElementById("mepDetailModal").classList.remove("active");
 
 // -- INVENTORY --
 async function loadInventory() {
