@@ -712,6 +712,14 @@
   </header>
 
   <!-- Scanner home state - inline camera, no overlay needed -->
+ <style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden; /* 🚫 no scroll */
+    font-family: Arial;
+  }
+</style>
   <div class="scan-home" id="scanHome" style="display:none">
 
     <div class="scan-home-video-wrap">
@@ -729,12 +737,10 @@
       <!-- top bar -->
       <div class="scan-topbar">
         <div class="scan-app-name">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
-        <div style="display:flex;align-items:right;gap:8px">
-         <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
-        style="display:inline-flex;align-items:center;padding:8px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;white-space:nowrap">
+        <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
+        style="display:inline-flex;align-items:right;padding:6px 12px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;white-space:nowrap">
         Dashboard </a>
       </div>
-
       <!-- hint -->
       <div class="scan-hint-text">Point camera at QR code</div>
 
