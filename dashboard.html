@@ -33,11 +33,11 @@
     .logo em { font-style: italic; color: var(--amber); }
     .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
     .header-right { display: flex; align-items: center; gap: 16px; }
-    .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); letter-spacing: 1px; }
-    .live-time { font-size: 9px; color: var(--muted); letter-spacing: 0.3px; }
+    .live-badge { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+    .live-badge-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); letter-spacing: 1px; }
     .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2.4s ease-in-out infinite; }
+    .live-time { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; font-family: var(--mono); }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-    .clock { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
     .back-btn { font-family: var(--mono); font-size: 9px; color: var(--muted); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); transition: color .15s, border-color .15s; }
     .back-btn:hover { color: var(--text); border-color: var(--amber); }
 
@@ -149,7 +149,7 @@
     .mep-thumb-code { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
     .mep-thumb-name { font-size: 11px; font-weight: 500; text-align: center; line-height: 1.2; }
 
-      /* INVENTORY */
+    /* INVENTORY */
     .inv-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .search-input { flex: 1; min-width: 200px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 13px; padding: 10px 14px; }
     .search-input::placeholder { color: var(--faint); }
@@ -235,9 +235,7 @@
     .admin-msg { font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); display: none; margin-top: 8px; }
     .admin-msg.ok  { display: block; background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .admin-msg.err { display: block; background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
-    .toggle-active { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
-    .toggle-active input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--amber); }
-    
+
     .pin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
     .pin-modal.active { display: flex; }
     .pin-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; max-width: 360px; width: 90%; }
@@ -271,7 +269,6 @@
     .mep-detail-close { margin-top: 16px; width: 100%; padding: 12px; background: var(--surface); color: var(--muted); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
     .mep-detail-close:hover { color: var(--text); border-color: var(--amber-brd); }
 
-    
     @media (max-width: 600px) {
       .body, .nav, .header { padding-left: 16px; padding-right: 16px; }
       .tab { padding: 10px 12px; font-size: 10px; }
@@ -290,7 +287,8 @@
     <div class="logo-sub">212 Nooch Richti — Dashboard</div>
   </div>
   <div class="header-right">
-    <a href="index.html" class="back-btn">← Scan</a>
+    <a href="index.html" class="back-btn" onclick="goBack(event)">← Scan</a>
+    <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge">
       <div class="live-badge-row">
         <div class="live-dot"></div>
@@ -301,25 +299,27 @@
   </div>
 </div>
 
-<div class="nav">
-  <button class="tab active" onclick="switchTab('kds')">KDS</button>
-  <button class="tab" onclick="switchTab('mep-overview')">MEP Overview</button>
-  <button class="tab" onclick="switchTab('inventory')">Inventory</button>
-  <button class="tab" onclick="switchTab('products')">Products</button>
-  <button class="tab" onclick="switchTab('recipes')">Recipes</button>
-  <button class="tab" onclick="switchTab('orders')">Orders</button>
-  <button class="tab" onclick="switchTab('reports')">Reports</button>
-  <button class="tab" onclick="switchTab('deductions')">Deductions</button>
-  <button class="tab" onclick="requestAdminAccess()">Admin</button>
+<div class="nav" id="main-nav">
+  <!-- FIX: tabs now use data-tab attribute; switchTab receives the button element -->
+  <button class="tab active" data-tab="kds"          onclick="switchTab(this)">KDS</button>
+  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)">MEP Overview</button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)">Inventory</button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)">Products</button>
+  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)">Recipes</button>
+  <button class="tab"        data-tab="orders"       onclick="switchTab(this)">Orders</button>
+  <button class="tab"        data-tab="reports"      onclick="switchTab(this)">Reports</button>
+  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)">Deductions</button>
+  <button class="tab"                                onclick="requestAdminAccess()">Admin</button>
 </div>
 
 <div class="body">
 
   <!-- KDS -->
   <div class="panel active" id="panel-kds">
-     <div class="section-title">Kitchen Display</div>
+    <div class="section-title">Kitchen Display</div>
     <div class="section-sub">Real-time MEP production tracking</div>
- 
+
+    <!-- FIX: IDs now match renderStats() — stat-total, stat-produce, stat-done, stat-waste -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Total scans today</div>
@@ -339,25 +339,27 @@
       </div>
     </div>
 
-  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
       <button class="refresh-btn" onclick="loadKDS()" style="padding:8px 16px">↺ Refresh all data</button>
       <button class="refresh-btn" onclick="openManualScan()" style="padding:8px 16px;background:var(--amber-dim);color:var(--amber);border-color:var(--amber-brd)">+ Manual entry</button>
     </div>
- 
+
+    <div id="mep-alerts" class="mep-alerts"></div>
+
     <div class="chart-wrap">
       <div class="chart-title">Top products by scan count</div>
       <div class="bars" id="product-bars"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
     </div>
- 
+
     <div class="chart-wrap">
       <div class="chart-title">Activity by worker</div>
       <div class="bars" id="worker-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
     </div>
- 
+
     <div class="feed-wrap">
       <div class="feed-header">
         <span class="feed-title-txt">Recent scans</span>
-        <button class="refresh-btn" onclick="loadScans()">↺ Refresh</button>
+        <button class="refresh-btn" onclick="loadScans ? loadScans() : loadKDS()">↺ Refresh</button>
       </div>
       <div id="scan-feed">
         <div class="feed-row hdr"><span>Time</span><span>Worker</span><span>Code</span><span>Action</span></div>
@@ -365,28 +367,31 @@
       </div>
     </div>
   </div>
- <div class="panel" id="panel-mep-overview">
+
+  <!-- MEP OVERVIEW -->
+  <div class="panel" id="panel-mep-overview">
     <div class="section-title">MEP Overview Today</div>
     <div class="section-sub">Status of all products</div>
- 
+
     <div class="inv-controls">
       <select class="search-input" id="mep-cat-filter" onchange="filterMepOverview()" style="flex:0 1 200px">
         <option value="">All categories</option>
       </select>
     </div>
- 
+
     <div class="mep-thumb-grid" id="mep-thumb-grid">
       <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
       <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
       <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
       <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
     </div>
- 
+
     <div class="chart-wrap">
       <div class="chart-title">Production capacity (Available vs Max)</div>
       <div class="bars" id="mep-capacity-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
     </div>
   </div>
+
   <!-- INVENTORY -->
   <div class="panel" id="panel-inventory">
     <div class="section-title">Inventory</div>
@@ -419,18 +424,14 @@
     </div>
   </div>
 
-  <!-- ── RECIPES PANEL ── -->
+  <!-- RECIPES -->
   <div class="panel" id="panel-recipes">
     <div class="section-title">Recipes</div>
     <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products</div>
-
-    <!-- Requirements summary -->
     <div style="margin-bottom:24px">
       <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
       <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
     </div>
-
-    <!-- Recipe editor -->
     <div class="admin-section-title" style="margin-bottom:10px">Edit recipes</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <select class="form-input" id="recipe-mep-filter" onchange="renderRecipeList()" style="flex:1">
@@ -438,7 +439,6 @@
       </select>
     </div>
     <div id="recipe-list" style="margin-bottom:16px"></div>
-
     <div class="admin-form">
       <div class="admin-form-title">Add ingredient to recipe</div>
       <div class="form-grid">
@@ -462,28 +462,25 @@
     </div>
   </div>
 
-  <!-- ── ORDER PANEL ── -->
+  <!-- ORDERS -->
   <div class="panel" id="panel-orders">
     <div class="section-title">Orders</div>
     <div class="section-sub" style="margin-bottom:20px">Items below minimum - what to reorder</div>
-
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()">
       <select class="search-input" id="order-cat" onchange="renderOrders()" style="flex:0 1 160px">
         <option value="">All categories</option>
       </select>
     </div>
-
     <div id="order-content">
       <div class="empty-state"><div class="empty-icon">📦</div>No items to order</div>
     </div>
-
     <div id="order-summary" style="margin-top:16px;font-size:12px;color:var(--muted)"></div>
   </div>
 
-  <!-- ── ADMIN PANEL ── -->
+  <!-- DEDUCTIONS -->
   <div class="panel" id="panel-deductions">
-    <div class="section-title">Lager deductions -- auto-logged when MEP is finished</div>
+    <div class="section-title">Lager deductions — auto-logged when MEP is finished</div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <input type="text" id="ded-search" placeholder="Search product or ingredient..."
         oninput="filterDeductions()"
@@ -508,11 +505,10 @@
     </div>
   </div>
 
-<div class="panel" id="panel-reports">
+  <!-- REPORTS -->
+  <div class="panel" id="panel-reports">
     <div class="section-title">Weekly kitchen performance report</div>
     <div class="section-sub">Send weekly summaries via email</div>
-  
-    <!-- Action buttons -->
     <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
       <button onclick="previewReport()"
         style="flex:1;padding:10px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
@@ -523,53 +519,31 @@
         Send email now
       </button>
     </div>
-
     <div id="report-status" style="font-size:12px;color:var(--muted);margin-bottom:16px;text-align:center"></div>
-
-    <!-- Live preview area -->
     <div id="report-preview" style="display:none">
-
-      <!-- Summary cards -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px" id="report-summary"></div>
-
-      <!-- Waste table -->
       <div class="section-title" style="margin-bottom:8px">Waste cost</div>
       <div class="inv-table-wrap" style="margin-bottom:20px">
-        <table class="inv-table"><thead><tr>
-          <th>Product</th><th>Waste GN</th><th>CHF/unit</th><th>Total CHF</th>
-        </tr></thead><tbody id="rpt-waste"></tbody></table>
+        <table class="inv-table"><thead><tr><th>Product</th><th>Waste GN</th><th>CHF/unit</th><th>Total CHF</th></tr></thead><tbody id="rpt-waste"></tbody></table>
       </div>
-
-      <!-- Efficiency table -->
       <div class="section-title" style="margin-bottom:8px">Production efficiency</div>
       <div class="inv-table-wrap" style="margin-bottom:20px">
-        <table class="inv-table"><thead><tr>
-          <th>Product</th><th>Finished</th><th>Wasted</th><th>Efficiency</th>
-        </tr></thead><tbody id="rpt-eff"></tbody></table>
+        <table class="inv-table"><thead><tr><th>Product</th><th>Finished</th><th>Wasted</th><th>Efficiency</th></tr></thead><tbody id="rpt-eff"></tbody></table>
       </div>
-
-      <!-- Workers -->
       <div class="section-title" style="margin-bottom:8px">Staff activity</div>
       <div class="inv-table-wrap" style="margin-bottom:20px">
-        <table class="inv-table"><thead><tr>
-          <th>Staff</th><th>Total</th><th>Finished</th><th>Waste rate</th>
-        </tr></thead><tbody id="rpt-workers"></tbody></table>
+        <table class="inv-table"><thead><tr><th>Staff</th><th>Total</th><th>Finished</th><th>Waste rate</th></tr></thead><tbody id="rpt-workers"></tbody></table>
       </div>
-
-      <!-- Low stock -->
       <div class="section-title" style="margin-bottom:8px">Low stock</div>
       <div class="inv-table-wrap">
-        <table class="inv-table"><thead><tr>
-          <th>Item</th><th>Current</th><th>Minimum</th>
-        </tr></thead><tbody id="rpt-stock"></tbody></table>
+        <table class="inv-table"><thead><tr><th>Item</th><th>Current</th><th>Minimum</th></tr></thead><tbody id="rpt-stock"></tbody></table>
       </div>
     </div>
   </div>
 
-<div class="panel" id="panel-admin">
-
-    <!-- Archive stats card -->
-    <div class="card" id="archive-card" style="margin-bottom:16px;padding:16px">
+  <!-- ADMIN -->
+  <div class="panel" id="panel-admin">
+    <div class="admin-section" id="archive-card" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div style="font-size:13px;font-weight:500">Scan sheet archive</div>
         <button onclick="runArchiveNow()" id="btnArchiveNow"
@@ -578,21 +552,13 @@
         </button>
       </div>
       <div id="archive-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div style="text-align:center">
-          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-scan-rows">--</div>
-          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Active scans</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-archive-rows">--</div>
-          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Archived scans</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-last-run">--</div>
-          <div style="font-size:11px;color:var(--muted);letter-spacing:0.5px">Last archive</div>
-        </div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-scan-rows">--</div><div style="font-size:11px;color:var(--muted)">Active scans</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-archive-rows">--</div><div style="font-size:11px;color:var(--muted)">Archived scans</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-last-run">--</div><div style="font-size:11px;color:var(--muted)">Last archive</div></div>
       </div>
       <div id="archive-msg" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center"></div>
     </div>
+
     <div class="section-title">Admin</div>
     <div class="section-sub" style="margin-bottom:24px">Manage without opening Google Sheets</div>
 
@@ -643,8 +609,7 @@
           <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="wf-role" placeholder="e.g. Chef de Partie"></div>
           <div class="form-field">
             <label class="form-label">PIN (4 digits)</label>
-            <input class="form-input" id="wf-pin" type="text" inputmode="numeric"
-              maxlength="4" placeholder="e.g. 1234"
+            <input class="form-input" id="wf-pin" type="text" inputmode="numeric" maxlength="4" placeholder="e.g. 1234"
               style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
           </div>
         </div>
@@ -659,7 +624,7 @@
     <div class="admin-section">
       <div class="admin-section-title">Inventory</div>
       <div class="admin-section-sub">Lager sheet</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <input class="form-input" id="admin-inv-search" placeholder="Search inventory…" oninput="renderAdminInventory()" style="flex:1;min-width:160px">
         <select class="form-input" id="admin-inv-cat" onchange="renderAdminInventory()" style="flex:1;min-width:140px">
           <option value="">Select category</option>
@@ -668,34 +633,20 @@
       <div class="admin-list" id="admin-inv-list"></div>
       <div class="admin-form" id="inv-form">
         <div class="admin-form-title" id="if-form-title">Add / update stock item</div>
-        <!-- Datalists for autocomplete -->
         <datalist id="dl-inv-cat">
-          <option value="Gemüse">
-          <option value="Trockenwaren">
-          <option value="TK Produkte">
-          <option value="Fleisch">
-          <option value="Fisch">
-          <option value="Milchprodukte">
-          <option value="Früchte">
-          <option value="Gewürze">
-          <option value="Getränke">
+          <option value="Gemüse"><option value="Trockenwaren"><option value="TK Produkte">
+          <option value="Fleisch"><option value="Fisch"><option value="Milchprodukte">
+          <option value="Früchte"><option value="Gewürze"><option value="Getränke">
           <option value="Saucen &amp; Öle">
         </datalist>
         <datalist id="dl-inv-unit">
-          <option value="kg">
-          <option value="g">
-          <option value="l">
-          <option value="ml">
-          <option value="Stück">
-          <option value="Bund">
-          <option value="Pkg">
-          <option value="Dose">
+          <option value="kg"><option value="g"><option value="l"><option value="ml">
+          <option value="Stück"><option value="Bund"><option value="Pkg"><option value="Dose">
         </datalist>
         <datalist id="dl-unit">
           <option value="kg"><option value="g"><option value="l"><option value="ml">
           <option value="pcs"><option value="btl"><option value="box"><option value="bag">
         </datalist>
-
         <div class="form-grid">
           <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
           <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from Lager"></div>
@@ -717,13 +668,11 @@
         <div class="admin-msg" id="if-msg"></div>
       </div>
     </div>
-  </div>
+  </div><!-- end panel-admin -->
 
-</div>
+</div><!-- end .body -->
 
-<!-- MODAL -->
-  
-<!-- PIN -->
+<!-- PIN modal -->
 <div class="pin-modal" id="pinModal">
   <div class="pin-content">
     <div class="pin-title">Admin Access</div>
@@ -748,7 +697,7 @@
   </div>
 </div>
 
-<!-- MEP Detail -->  
+<!-- MEP Detail modal -->
 <div class="mep-detail-modal" id="mepDetailModal">
   <div class="mep-detail-content">
     <div class="mep-detail-header">
@@ -762,95 +711,190 @@
       </div>
     </div>
     <div class="mep-detail-stats">
-      <div class="mep-detail-stat">
-        <div class="mep-detail-label">Available</div>
-        <div class="mep-detail-value" id="mepDetailAvail" style="color:var(--green)">—</div>
-      </div>
-      <div class="mep-detail-stat">
-        <div class="mep-detail-label">To produce</div>
-        <div class="mep-detail-value" id="mepDetailProg" style="color:var(--amber)">—</div>
-      </div>
-      <div class="mep-detail-stat">
-        <div class="mep-detail-label">Finished today</div>
-        <div class="mep-detail-value" id="mepDetailDone">—</div>
-      </div>
-      <div class="mep-detail-stat">
-        <div class="mep-detail-label">Waste today</div>
-        <div class="mep-detail-value" id="mepDetailWaste" style="color:var(--red)">—</div>
-      </div>
-      <div class="mep-detail-stat">
-        <div class="mep-detail-label">Daily target</div>
-        <div class="mep-detail-value" id="mepDetailTarget">—</div>
-      </div>
+      <div class="mep-detail-stat"><div class="mep-detail-label">Available</div><div class="mep-detail-value" id="mepDetailAvail" style="color:var(--green)">—</div></div>
+      <div class="mep-detail-stat"><div class="mep-detail-label">To produce</div><div class="mep-detail-value" id="mepDetailProg" style="color:var(--amber)">—</div></div>
+      <div class="mep-detail-stat"><div class="mep-detail-label">Finished today</div><div class="mep-detail-value" id="mepDetailDone">—</div></div>
+      <div class="mep-detail-stat"><div class="mep-detail-label">Waste today</div><div class="mep-detail-value" id="mepDetailWaste" style="color:var(--red)">—</div></div>
+      <div class="mep-detail-stat"><div class="mep-detail-label">Daily target</div><div class="mep-detail-value" id="mepDetailTarget">—</div></div>
     </div>
     <button class="mep-detail-close" onclick="closeMepDetail()">Close</button>
   </div>
 </div>
 
+<!-- Product detail modal -->
+<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <img id="m-img" class="modal-img" alt="" onerror="this.style.display='none';document.getElementById('m-img-ph').style.display='flex'">
+    <div class="modal-img-ph" id="m-img-ph">🍽</div>
+    <div class="modal-body">
+      <div class="modal-code" id="m-code"></div>
+      <div class="modal-name" id="m-name"></div>
+      <div class="modal-stats">
+        <div class="modal-stat"><div class="modal-stat-val" id="m-produce">0</div><div class="modal-stat-lbl">Produced</div></div>
+        <div class="modal-stat"><div class="modal-stat-val" id="m-done">0</div><div class="modal-stat-lbl">Finished</div></div>
+        <div class="modal-stat"><div class="modal-stat-val" id="m-waste">0</div><div class="modal-stat-lbl">Waste</div></div>
+      </div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<!-- Manual scan modal -->
+<div id="manualScanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-end;justify-content:center;overflow-y:auto">
+  <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:24px 20px 36px;width:100%;max-width:480px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:500">Manual MEP action</div>
+      <button onclick="closeManualScan()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Product</div>
+      <select id="ms-product" style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
+        <option value="">-- Select product --</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Staff member</div>
+      <select id="ms-worker" style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
+        <option value="">-- Select worker --</option>
+      </select>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Action</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="setManualAction('produce')" id="ms-btn-produce" class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Produce</button>
+        <button onclick="setManualAction('done')"    id="ms-btn-done"    class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Finish</button>
+        <button onclick="setManualAction('waste')"   id="ms-btn-waste"   class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Waste</button>
+        <button onclick="setManualAction('used')"    id="ms-btn-used"    class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Used</button>
+      </div>
+    </div>
+    <div id="ms-msg" style="font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-bottom:12px"></div>
+    <button onclick="submitManualScan()" id="ms-submit"
+      style="width:100%;padding:14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
+      Save action
+    </button>
+  </div>
+</div>
+
 <script>
-// -- Back navigation --
-// Returns to the exact scan URL the user came from (preserves ?code=)
-// Falls back to the plain index page if nothing was saved
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const API = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
+
+let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
+let allMepStatus = {};
+let allWorkersAdmin = [];
+let allRecipes = [];
+let _msAction = "";
+
+// ─────────────────────────────────────────────
+// LIVE CLOCK  (date + time under LIVE badge)
+// ─────────────────────────────────────────────
+function updateLiveTime() {
+  const now = new Date();
+  const dd  = String(now.getDate()).padStart(2, "0");
+  const mm  = String(now.getMonth() + 1).padStart(2, "0");
+  const yy  = String(now.getFullYear()).slice(2);
+  const hh  = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  const ss  = String(now.getSeconds()).padStart(2, "0");
+  const el  = document.getElementById("liveTime");
+  if (el) el.textContent = `${dd}.${mm}.${yy}  ${hh}:${min}:${ss}`;
+}
+setInterval(updateLiveTime, 1000);
+updateLiveTime();
+
+// ─────────────────────────────────────────────
+// BACK NAVIGATION
+// ─────────────────────────────────────────────
 function goBack(e) {
   e.preventDefault();
   const saved = sessionStorage.getItem("lastScanUrl");
   window.location.href = saved || "https://mega0826.github.io/Kitchen-System/index.html";
 }
 
-const API = "https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec";
-
-let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
-
-// Clock
-setInterval(() => {
-  document.getElementById("clock").textContent =
-    new Date().toLocaleTimeString("de-CH", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-}, 1000);
-function updateLiveTime() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = now.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' });
-    const combined = `${dateStr} ${timeStr}`;
-    const el = document.getElementById("liveTime");
-    if (el) el.textContent = combined;
-  }
-  setInterval(updateLiveTime, 1000);
-  updateLiveTime();
-
-// Tab switch
+// ─────────────────────────────────────────────
+// TAB SWITCHING  — FIX: btn is the DOM element
+// ─────────────────────────────────────────────
 function switchTab(btn) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
-  document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
-  if (btn.dataset.tab === "admin")      { loadAdminTab(); loadArchiveStats(); }
-  if (btn.dataset.tab === "orders")     renderOrders();
-  if (btn.dataset.tab === "recipes")    { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
-  if (btn.dataset.tab === "deductions") loadDeductions();
-  if (btn.dataset.tab === "reports")    loadReportsTab();
+  const tabId = btn.dataset.tab;
+  if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
+
+  if (tabId === "admin")      { loadAdminTab(); loadArchiveStats(); }
+  if (tabId === "orders")     renderOrders();
+  if (tabId === "recipes")    { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+  if (tabId === "deductions") loadDeductions();
+  if (tabId === "reports")    loadReportsTab();
+  if (tabId === "mep-overview") loadMepOverview();
 }
 
-// Fetch
+function requestAdminAccess() {
+  document.getElementById("pinModal").classList.add("active");
+  document.getElementById("pinInput").value = "";
+  document.getElementById("pinMsg").textContent = "";
+}
+
+// ─────────────────────────────────────────────
+// PIN
+// ─────────────────────────────────────────────
+function addPinDigit(d) {
+  const el = document.getElementById("pinInput");
+  if (el.value.length < 4) el.value += d;
+}
+function clearPin() {
+  const el = document.getElementById("pinInput");
+  el.value = el.value.slice(0, -1);
+}
+async function submitPin() {
+  const pin  = document.getElementById("pinInput").value;
+  const msg  = document.getElementById("pinMsg");
+  if (pin.length !== 4) { msg.style.color = "var(--red)"; msg.textContent = "Enter 4 digits"; return; }
+  try {
+    const data = await get({ action: "verifyPin", pin });
+    if (data.ok) {
+      cancelPin();
+      // Activate admin tab
+      const adminTab = document.querySelector(".tab[onclick='requestAdminAccess()']");
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      if (adminTab) adminTab.classList.add("active");
+      document.getElementById("panel-admin").classList.add("active");
+      loadAdminTab();
+      loadArchiveStats();
+    } else {
+      msg.style.color = "var(--red)";
+      msg.textContent = "Wrong PIN";
+      document.getElementById("pinInput").value = "";
+    }
+  } catch(e) {
+    msg.style.color = "var(--red)";
+    msg.textContent = "Error — try again";
+  }
+}
+function cancelPin() {
+  document.getElementById("pinModal").classList.remove("active");
+  document.getElementById("pinInput").value = "";
+}
+
+// ─────────────────────────────────────────────
+// API FETCH  — FIX: was using bare string literal
+// ─────────────────────────────────────────────
 async function get(params) {
-   const url = new URL(https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec);
-    Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
 }
 
-// Load from sessionStorage cache instantly, then refresh in background
-function loadCached(key, setter, loader) {
-  const raw = sessionStorage.getItem(key);
-  if (raw) {
-    try { setter(JSON.parse(raw)); } catch(e) {}
-  }
-  return loader().then(data => {
-    try { sessionStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
-    setter(data);
-  });
+async function adminCall(params) {
+  const res = await fetch(API + "?" + new URLSearchParams(params));
+  return res.json();
 }
 
-// Format time
+// ─────────────────────────────────────────────
+// FORMAT TIMESTAMP
+// ─────────────────────────────────────────────
 function fmt(raw) {
   const d = new Date(raw);
   if (isNaN(d)) return raw;
@@ -862,9 +906,10 @@ function fmt(raw) {
   return `${dd}.${mm}.${yy} ${hh}:${min}`;
 }
 
-// -- KDS --
+// ─────────────────────────────────────────────
+// KDS
+// ─────────────────────────────────────────────
 function buildScanStats() {
-  // Build both all-time scanStats AND today-only todayScanStats in one pass
   scanStats = {};
   window.todayScanStats = {};
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -875,8 +920,6 @@ function buildScanStats() {
     if (a in scanStats[c]) scanStats[c][a]++;
     scanStats[c].total++;
   });
-  // Build todayScanStats separately
-  window.todayScanStats = {};
   allScans.forEach(s => {
     if (!s.timestamp) return;
     const d = new Date(s.timestamp).toISOString().slice(0, 10);
@@ -901,245 +944,95 @@ async function loadKDS() {
 
 function _renderKDS() {
   buildScanStats();
-  buildStats();
-  buildMepAlerts();
   renderStats();
+  buildMepAlerts();
   renderProductBars();
   renderWorkerBars();
   renderFeed();
 }
 
-function buildStats() {
-  // buildStats only updates stat display counts - does NOT reset scanStats
-  // scanStats is built by buildScanStats() which also builds todayScanStats
-}
-
+// FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
 function renderStats() {
-  document.getElementById("s-total").textContent   = allScans.length;
-  document.getElementById("s-produce").textContent = allScans.filter(s=>s.action==="produce").length;
-  document.getElementById("s-done").textContent    = allScans.filter(s=>s.action==="done").length;
-  document.getElementById("s-waste").textContent   = allScans.filter(s=>s.action==="waste").length;
-
-  // Total MEP % = sum(available) / sum(tagesziel) x 100
-  // Only count products that have a tagesziel > 0
-  let totalAvailable = 0;
-  let totalTarget    = 0;
-  Object.entries(allProducts).forEach(([code, p]) => {
-    if (!p.tagesziel || p.tagesziel === 0) return;
-    const st         = scanStats[code] || {};
-    const done       = st.done   || 0;
-    const waste      = st.waste  || 0;
-    const available  = Math.max(0, done - waste);
-    totalAvailable  += available;
-    totalTarget     += p.tagesziel;
-  });
-
-  const pct     = totalTarget > 0 ? Math.round((totalAvailable / totalTarget) * 100) : 0;
-  const pctEl   = document.getElementById("s-mep-pct");
-  const subEl   = document.getElementById("s-mep-sub");
-  const barEl   = document.getElementById("s-mep-bar");
-
-  if (totalTarget > 0) {
-    pctEl.textContent = pct + "%";
-    subEl.textContent = `${totalAvailable} of ${totalTarget} GN available`;
-    barEl.style.width = Math.min(100, pct) + "%";
-    barEl.style.background = pct >= 100 ? "var(--red)" : pct >= 80 ? "var(--amber)" : "var(--green)";
-  } else {
-    pctEl.textContent = "-";
-    subEl.textContent = "No daily targets set";
-  }
+  document.getElementById("stat-total").textContent   = allScans.length;
+  document.getElementById("stat-produce").textContent = allScans.filter(s => s.action === "produce").length;
+  document.getElementById("stat-done").textContent    = allScans.filter(s => s.action === "done").length;
+  document.getElementById("stat-waste").textContent   = allScans.filter(s => s.action === "waste").length;
 }
 
 function buildMepAlerts() {
   const alertBox = document.getElementById("mep-alerts");
-  const grid     = document.getElementById("mep-grid");
   if (!alertBox) return;
-
   const alerts = [];
-  const cards  = [];
 
   Object.entries(allProducts).forEach(([code, p]) => {
     if (!p.mepMax && !p.tagesziel) return;
-
     const st           = (window.todayScanStats || {})[code] || {};
     const produceCount = st.produce || 0;
     const doneCount    = st.done    || 0;
+    const wasteCount   = st.waste   || 0;
     const name         = p.name      || code;
     const gnSize       = p.gnSize    || "";
     const gnWeight     = p.gnWeight  || 0;
     const tagesziel    = p.tagesziel || 0;
     const mepMax       = p.mepMax    || 0;
-    // Match server logic: inProgress = mepMax - done when no produce scans
     const inProgress   = (produceCount === 0 && mepMax > 0)
       ? Math.max(0, mepMax - doneCount)
       : Math.max(0, produceCount - doneCount);
+    const available    = Math.max(0, doneCount - wasteCount);
+    const availableWt  = available   * gnWeight;
+    const listWeight   = inProgress  * gnWeight;
+    const overDone     = tagesziel > 0 && available > tagesziel;
+    const goalMet      = tagesziel > 0 && available >= tagesziel;
+    const listFull     = mepMax > 0 && inProgress >= mepMax;
+    const targetQty    = tagesziel > 0 ? tagesziel : mepMax;
+    const shelfLife    = p.shelfLife || 2;
 
-    const wasteCount     = st.waste    || 0;
-    const available      = Math.max(0, doneCount - wasteCount);
-    const doneWeight     = doneCount   * gnWeight;
-    const availableWt    = available   * gnWeight;
-    const listWeight     = inProgress  * gnWeight;
-    const stillNeeded    = tagesziel > 0 ? Math.max(0, tagesziel - available) : null;
-    const rohwareNeeded  = stillNeeded !== null ? stillNeeded * gnWeight : null;
-    const overDone       = tagesziel > 0 && available > tagesziel;
-    const goalMet        = tagesziel > 0 && available >= tagesziel;
-    const listFull       = mepMax > 0 && inProgress >= mepMax;
-
-    // -- Alert banners --
-    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
-
-    // Shelf life
-    const shelfLife = p.shelfLife || 2;
     const expiredBatch = (allScans || []).filter(s => {
       if (s.code !== code || s.action !== "done") return false;
-      const age = (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24);
-      return age > shelfLife;
+      return (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24) > shelfLife;
     }).length;
+
     if (expiredBatch > 0) {
       alerts.push({ type:"yellow", icon:"⚠", code,
         title: `Check shelf life - ${name}`,
-        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} over ${shelfLife}d - verify usability` });
+        sub:   `${expiredBatch} batch${expiredBatch>1?"es":""} over ${shelfLife}d — verify usability` });
     }
-
-    // Too much MEP - yellow (attention, not critical)
     if (overDone) {
-      const excess   = available - tagesziel;
-      const excessKg = gnWeight ? ` (${(excess * gnWeight).toFixed(1)} kg over)` : "";
+      const excess = available - tagesziel;
+      const exKg   = gnWeight ? ` (${(excess * gnWeight).toFixed(1)} kg over)` : "";
       alerts.push({ type:"yellow", icon:"⚠", code,
         title: `Too much MEP - ${name}`,
-        sub:   `${available} available, target is ${tagesziel}${gnSize?" "+gnSize:""}${excessKg}` });
+        sub:   `${available} available, target is ${tagesziel}${gnSize?" "+gnSize:""}${exKg}` });
     }
-
-    // MEP target reached - green (good news)
     if (goalMet && !overDone) {
       alerts.push({ type:"green", icon:"OK", code,
         title: `Target reached - ${name}`,
-        sub:   `${available}${gnSize?" "+gnSize:""} available . daily target met` });
+        sub:   `${available}${gnSize?" "+gnSize:""} available · daily target met` });
     }
-
-    // MEP list full but available = 0 - red urgent (needs prep asap)
     if (listFull && available === 0 && !goalMet) {
-      const listKg = gnWeight ? ` . ${(listWeight).toFixed(1)} kg in prep` : "";
+      const lKg = gnWeight ? ` · ${listWeight.toFixed(1)} kg in prep` : "";
       alerts.push({ type:"red", icon:"🚨", code,
         title: `⚠ Prepare now - ${name}`,
-        sub:   `MEP list full but nothing available${listKg}` });
+        sub:   `MEP list full but nothing available${lKg}` });
     }
-
-    // Raw material shortage alert
     if (gnWeight > 0 && targetQty > 0) {
       const neededKg = targetQty * gnWeight;
       const invItem  = allInventory.find(r => r.code === code);
       if (invItem && invItem.quantity !== null) {
-        const inStock = Number(invItem.quantity) * (invItem.weightUnit || 1);
+        const inStock  = Number(invItem.quantity) * (invItem.weightUnit || 1);
         if (inStock < neededKg) {
-          const shortKg = (neededKg - inStock).toFixed(1);
           alerts.push({ type:"blue", icon:"📦", code,
             title: `Low stock - ${name}`,
-            sub:   `Need ${neededKg} kg for daily target, only ${inStock.toFixed(1)} kg in stock . ${shortKg} kg short` });
+            sub:   `Need ${neededKg} kg, only ${inStock.toFixed(1)} kg in stock` });
         }
       }
     }
-
-    // -- Per-product card --
-    let cardClass = "";
-    let tagHtml   = "";
-    if (overDone) {
-      cardClass = "over";
-      tagHtml   = `<span class="mep-tag over">⚠ Over target</span>`;
-    } else if (goalMet) {
-      cardClass = "goal";
-      tagHtml   = `<span class="mep-tag goal">OK Goal reached</span>`;
-    } else if (listFull) {
-      tagHtml   = `<span class="mep-tag prog">In preparation</span>`;
-    } else if (doneCount === 0 && inProgress === 0) {
-      tagHtml   = `<span class="mep-tag idle">Not started yet</span>`;
-    } else {
-      tagHtml   = `<span class="mep-tag prog">In progress</span>`;
-    }
-
-    const gnLabel = gnSize ? ` ${gnSize}` : "";
-
-    const shelfLifeCard = p.shelfLife || 2;
-    const expiredCard = (allScans || []).filter(s => {
-      if (s.code !== code || s.action !== "done") return false;
-      const age = (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24);
-      return age > shelfLifeCard;
-    }).length;
-
-    let rows = `
-      <div class="mep-stat-row">
-        <span class="mep-stat-label">Available</span>
-        <span class="mep-stat-val ${goalMet&&!overDone?"green":overDone?"red":""}">${available}${gnLabel}${gnWeight?" = "+availableWt+" kg":""}</span>
-      </div>
-      ${expiredCard > 0 ? `<div class="mep-stat-row"><span class="mep-stat-label" style="color:var(--red)">⚠ Shelf life</span><span class="mep-stat-val red">${expiredCard} batch${expiredCard>1?"es":""} over ${shelfLifeCard}d old</span></div>` : ""}
-      <div class="mep-stat-row">
-        <span class="mep-stat-label">To produce</span>
-        <span class="mep-stat-val ${listFull?"green":"amber"}">${tagesziel>0 ? Math.max(0,tagesziel-available) : inProgress}${gnLabel}${gnWeight&&(tagesziel>0?(Math.max(0,tagesziel-available)):inProgress)>0?" = "+((tagesziel>0?Math.max(0,tagesziel-available):inProgress)*gnWeight)+" kg":""}</span>
-      </div>`;
-
-    if (tagesziel > 0) {
-      rows += `
-      <div class="mep-divider"></div>
-      <div class="mep-stat-row">
-        <span class="mep-stat-label">Daily target</span>
-        <span class="mep-stat-val muted">${tagesziel}${gnLabel}</span>
-      </div>`;
-    }
-  // Thumbnail card - compact, 4 per row
-    let thumbColor = "#2e2e28"; // idle grey border
-    let thumbIcon  = "";
-    if (overDone)        { thumbColor = "var(--red-brd)"; thumbIcon = "⚠"; }
-    else if (goalMet)    { thumbColor = "var(--green-brd)"; thumbIcon = "OK"; }
-    else if (listFull)   { thumbColor = "var(--amber-brd)"; thumbIcon = "↻"; }
-    else if (doneCount === 0 && inProgress === 0) { thumbColor = "rgba(255,255,255,0.08)"; thumbIcon = ""; }
-    else                 { thumbColor = "var(--amber-brd)"; thumbIcon = "↻"; }
-
-    // Build detail HTML for popup
-    const detailHtml = `
-      <div style="font-family:var(--serif);font-size:20px;margin-bottom:12px">${name}</div>
-      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:16px">${code}</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;justify-content:space-between;font-size:14px">
-          <span style="color:var(--muted)">Available</span>
-          <span style="color:${goalMet&&!overDone?"var(--green)":overDone?"var(--red)":"var(--text)"};font-weight:500">${available}${gnSize?" "+gnSize:""}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:14px">
-          <span style="color:var(--muted)">To produce</span>
-          <span style="color:var(--amber);font-weight:500">${tagesziel>0?Math.max(0,tagesziel-available):inProgress}${gnSize?" "+gnSize:""}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:14px">
-          <span style="color:var(--muted)">Daily target</span>
-          <span style="color:var(--muted)">${tagesziel||"-"}${gnSize?" "+gnSize:""}</span>
-        </div>
-        ${gnWeight?`<div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">GN weight</span><span style="color:var(--muted)">${gnWeight} kg</span></div>`:""}
-        ${overDone?`<div style="margin-top:8px;padding:8px;background:var(--red-dim);border-radius:6px;color:var(--red);font-size:12px">Over target by ${available-tagesziel} GN</div>`:""}
-        ${goalMet&&!overDone?`<div style="margin-top:8px;padding:8px;background:var(--green-dim);border-radius:6px;color:var(--green);font-size:12px">Daily target reached</div>`:""}
-      </div>
-      <button onclick="document.getElementById('mepDetailPopup').style.display='none'"
-        style="width:100%;margin-top:16px;padding:10px;background:var(--surface2);border:none;border-radius:var(--radius-sm);color:var(--muted);font-family:var(--mono);font-size:12px;letter-spacing:1px;cursor:pointer">
-        Close
-      </button>`;
-
-    const thumbImg = p.image
-      ? `<img src="${p.image}" style="width:100%;height:56px;object-fit:cover;border-radius:6px 6px 0 0;display:block" onerror="this.style.display='none'">`
-      : `<div style="width:100%;height:56px;background:var(--surface2);border-radius:6px 6px 0 0;display:flex;align-items:center;justify-content:center;font-size:20px;opacity:.3">🍽</div>`;
-
-    cards.push(`
-      <div class="mep-card ${cardClass}" id="mep-card-${code}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-          <span class="mep-card-name">${name}</span>
-          ${tagHtml}
-        </div>
-        <div class="mep-card-rows">${rows}</div>
-      </div>`);
   });
 
-  // Render alerts
-  alertBox.innerHTML = alerts.map((a,idx) => `
+  alertBox.innerHTML = alerts.map((a, idx) => `
     <div class="alert-wrap" id="aw-${idx}">
       <div class="alert-delete-bg">Delete</div>
-      <div class="mep-alert ${a.type}" id="al-${idx}" data-idx="${idx}"
-           onclick="alertClick('${a.code||''}')">
+      <div class="mep-alert ${a.type}" id="al-${idx}" data-idx="${idx}" onclick="alertClick('${a.code||''}')">
         <span class="mep-alert-icon">${a.icon}</span>
         <div class="mep-alert-body">
           <span class="mep-alert-title">${a.title}</span>
@@ -1149,17 +1042,10 @@ function buildMepAlerts() {
       </div>
     </div>`).join("");
   initSwipe();
-
-  // Render cards
-  if (grid) {
-    grid.innerHTML = cards.length
-      ? cards.join("")
-      : `<div style="color:var(--muted);font-size:13px;grid-column:1/-1">No products with MEP configuration found</div>`;
-  }
 }
 
 function bar(label, val, max, color) {
-  const pct = max > 0 ? Math.round(val/max*100) : 0;
+  const pct = max > 0 ? Math.round(val / max * 100) : 0;
   return `<div class="bar-row">
     <div class="bar-name" title="${label}">${label}</div>
     <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--${color})"></div></div>
@@ -1169,33 +1055,33 @@ function bar(label, val, max, color) {
 
 function renderProductBars() {
   const sorted = Object.entries(scanStats)
-    .map(([code,s]) => ({ label:(allProducts[code]||{}).name||code, val:s.total }))
-    .sort((a,b)=>b.val-a.val).slice(0,8);
+    .map(([code, s]) => ({ label: (allProducts[code] || {}).name || code, val: s.total }))
+    .sort((a, b) => b.val - a.val).slice(0, 8);
   const max = sorted[0]?.val || 1;
   const colors = ["amber","green","red","blue","amber","green","red","blue"];
   document.getElementById("product-bars").innerHTML = sorted.length
-    ? sorted.map((p,i) => bar(p.label, p.val, max, colors[i])).join("")
+    ? sorted.map((p, i) => bar(p.label, p.val, max, colors[i])).join("")
     : `<div class="empty-state"><div class="empty-icon">📊</div>No scan data yet</div>`;
 }
 
 function renderWorkerBars() {
   const wm = {};
-  allScans.forEach(s => { const w = s.worker||"?"; wm[w]=(wm[w]||0)+1; });
-  const sorted = Object.entries(wm).sort((a,b)=>b[1]-a[1]);
+  allScans.forEach(s => { const w = s.worker || "?"; wm[w] = (wm[w] || 0) + 1; });
+  const sorted = Object.entries(wm).sort((a, b) => b[1] - a[1]);
   const max = sorted[0]?.[1] || 1;
   document.getElementById("worker-bars").innerHTML = sorted.length
-    ? sorted.map(([w,n]) => bar(w, n, max, "blue")).join("")
+    ? sorted.map(([w, n]) => bar(w, n, max, "blue")).join("")
     : `<div class="empty-state"><div class="empty-icon">👤</div>No worker data yet</div>`;
 }
 
 function renderFeed() {
-  const rows = [...allScans].reverse().slice(0,30).map(s => {
+  const rows = [...allScans].reverse().slice(0, 30).map(s => {
     const p    = allProducts[s.code] || {};
     const name = p.name || s.code || "-";
     return `<div class="feed-row">
       <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
-      <span style="font-size:12px">${s.worker||"-"}</span>
-      <span class="action-badge ${s.action||""}" style="justify-self:start">${s.action||"-"}</span>
+      <span style="font-size:12px">${s.worker || "-"}</span>
+      <span class="action-badge ${s.action || ""}" style="justify-self:start">${s.action || "-"}</span>
       <span style="font-size:12px">${name}</span>
     </div>`;
   }).join("");
@@ -1203,134 +1089,98 @@ function renderFeed() {
     `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Action</span><span>Product</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
 }
-  
-  
+
+// ─────────────────────────────────────────────
+// MEP OVERVIEW
+// ─────────────────────────────────────────────
 async function loadMepOverview() {
-    try {
-      const codes = Object.keys(allProducts);
-      const statusPromises = codes.map(code => get({ action: "mepStatus", code }).catch(() => null));
-      const results = await Promise.all(statusPromises);
-      
-      allMepStatus = {};
-      results.forEach((data, i) => {
-        if (data && !data.error) {
-          allMepStatus[codes[i]] = data;
-        }
-      });
-
-      renderMepThumbs();
-      renderMepCapacityBars();
-    } catch (e) {
-      console.error("Failed to load MEP overview:", e);
-    }
-  }
-
-  function renderMepThumbs() {
-    const catFilter = document.getElementById("mep-cat-filter")?.value || "";
-    
-    let products = Object.entries(allProducts);
-    if (catFilter) {
-      products = products.filter(([, p]) => p.kategorie === catFilter);
-    }
-
-    const html = products.map(([code, p]) => {
-      const status = allMepStatus[code] || {};
-      const avail = status.available || 0;
-      const target = status.tagesziel || 0;
-      
-      let statusClass = "status-red";
-      if (avail >= target && target > 0) statusClass = "status-green";
-      else if (avail > 0) statusClass = "status-amber";
-
-      const img = p.image ? `<img src="${p.image}" class="mep-thumb-img">` : '<div class="mep-thumb-ph">📦</div>';
-
-      return `
-        <div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
-          ${img}
-          <div class="mep-thumb-overlay">
-            <div class="mep-thumb-code">${code}</div>
-            <div class="mep-thumb-name">${p.name || code}</div>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
-  }
-
-  function filterMepOverview() {
+  try {
+    const codes = Object.keys(allProducts);
+    const results = await Promise.all(codes.map(code => get({ action: "mepStatus", code }).catch(() => null)));
+    allMepStatus = {};
+    results.forEach((data, i) => { if (data && !data.error) allMepStatus[codes[i]] = data; });
     renderMepThumbs();
-  }
+    renderMepCapacityBars();
+  } catch(e) { console.error("Failed to load MEP overview:", e); }
+}
 
-  function renderMepCapacityBars() {
-    const products = Object.entries(allProducts)
-      .map(([code, p]) => {
-        const status = allMepStatus[code] || {};
-        return {
-          code,
-          name: p.name || code,
-          max: p.mepMax || status.mepMax || 0,
-          available: status.available || 0
-        };
-      })
-      .filter(p => p.max > 0)
-      .sort((a, b) => b.available - a.available)
-      .slice(0, 12);
-
-    const max = Math.max(...products.map(p => p.max), 1);
-
-    const html = products.map(p => {
-      const availPct = (p.available / max) * 100;
-      const maxPct = (p.max / max) * 100;
-      
-      return `
-        <div style="margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <div class="bar-name">${p.name}</div>
-            <div style="font-size:11px;color:var(--muted)">${p.available} / ${p.max}</div>
-          </div>
-          <div class="bar-track" style="height:24px;position:relative">
-            <div style="position:absolute;inset:0;background:var(--green);opacity:0.5;width:${availPct}%"></div>
-            <div style="position:absolute;inset:0;background:var(--amber);opacity:0.3;width:${maxPct}%"></div>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    document.getElementById("mep-capacity-bars").innerHTML = html || '<div class="empty-state">No capacity data</div>';
-  }
-
-  function showMepDetail(code) {
-    const product = allProducts[code];
+function renderMepThumbs() {
+  const catFilter = document.getElementById("mep-cat-filter")?.value || "";
+  let products = Object.entries(allProducts);
+  if (catFilter) products = products.filter(([, p]) => p.kategorie === catFilter);
+  const html = products.map(([code, p]) => {
     const status = allMepStatus[code] || {};
-    
-    if (!product) return;
+    const avail  = status.available || 0;
+    const target = status.tagesziel || 0;
+    let statusClass = "status-red";
+    if (avail >= target && target > 0) statusClass = "status-green";
+    else if (avail > 0) statusClass = "status-amber";
+    const img = p.image ? `<img src="${p.image}" class="mep-thumb-img">` : '<div class="mep-thumb-ph">📦</div>';
+    return `<div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
+      ${img}
+      <div class="mep-thumb-overlay">
+        <div class="mep-thumb-code">${code}</div>
+        <div class="mep-thumb-name">${p.name || code}</div>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
+}
 
-    document.getElementById("mepDetailName").textContent = product.name || code;
-    document.getElementById("mepDetailCode").textContent = code;
-    
-    if (product.image) {
-      document.getElementById("mepDetailImg").src = product.image;
-      document.getElementById("mepDetailImg").style.display = "block";
-      document.getElementById("mepDetailPh").style.display = "none";
-    } else {
-      document.getElementById("mepDetailImg").style.display = "none";
-      document.getElementById("mepDetailPh").style.display = "flex";
-    }
+function filterMepOverview() { renderMepThumbs(); }
 
-    document.getElementById("mepDetailAvail").textContent = status.available || 0;
-    document.getElementById("mepDetailProg").textContent = status.inProgress || 0;
-    document.getElementById("mepDetailDone").textContent = status.doneCount || 0;
-    document.getElementById("mepDetailWaste").textContent = status.wasteCount || 0;
-    document.getElementById("mepDetailTarget").textContent = status.tagesziel || 0;
+function renderMepCapacityBars() {
+  const products = Object.entries(allProducts)
+    .map(([code, p]) => ({ code, name: p.name || code, max: p.mepMax || (allMepStatus[code] || {}).mepMax || 0, available: (allMepStatus[code] || {}).available || 0 }))
+    .filter(p => p.max > 0).sort((a, b) => b.available - a.available).slice(0, 12);
+  const max = Math.max(...products.map(p => p.max), 1);
+  const html = products.map(p => {
+    const availPct = (p.available / max) * 100;
+    const maxPct   = (p.max / max) * 100;
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div class="bar-name">${p.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${p.available} / ${p.max}</div>
+      </div>
+      <div class="bar-track" style="height:24px;position:relative">
+        <div style="position:absolute;inset:0;background:var(--green);opacity:0.5;width:${availPct}%"></div>
+        <div style="position:absolute;inset:0;background:var(--amber);opacity:0.3;width:${maxPct}%"></div>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("mep-capacity-bars").innerHTML = html || '<div class="empty-state">No capacity data</div>';
+}
 
-    document.getElementById("mepDetailModal").classList.add("active");
+function showMepDetail(code) {
+  const product = allProducts[code];
+  const status  = allMepStatus[code] || {};
+  if (!product) return;
+  document.getElementById("mepDetailName").textContent = product.name || code;
+  document.getElementById("mepDetailCode").textContent = code;
+  if (product.image) {
+    document.getElementById("mepDetailImg").src = product.image;
+    document.getElementById("mepDetailImg").style.display = "block";
+    document.getElementById("mepDetailPh").style.display  = "none";
+  } else {
+    document.getElementById("mepDetailImg").style.display = "none";
+    document.getElementById("mepDetailPh").style.display  = "flex";
   }
+  document.getElementById("mepDetailAvail").textContent  = status.available  || 0;
+  document.getElementById("mepDetailProg").textContent   = status.inProgress || 0;
+  document.getElementById("mepDetailDone").textContent   = status.doneCount  || 0;
+  document.getElementById("mepDetailWaste").textContent  = status.wasteCount || 0;
+  document.getElementById("mepDetailTarget").textContent = status.tagesziel  || 0;
+  document.getElementById("mepDetailModal").classList.add("active");
+}
 
-  function closeMepDetail() {
-    document.getElementById("mepDetailModal").classList.remove("active");
+// FIX: was missing closing brace
+function closeMepDetail() {
+  document.getElementById("mepDetailModal").classList.remove("active");
+}
 
-// -- INVENTORY --
+// ─────────────────────────────────────────────
+// INVENTORY
+// ─────────────────────────────────────────────
 async function loadInventory() {
   try {
     const data = await get({ action: "inventory" });
@@ -1344,10 +1194,10 @@ async function loadInventory() {
 }
 
 function stockClass(qty, min) {
-  qty = parseFloat(qty)||0; min = parseFloat(min)||0;
+  qty = parseFloat(qty) || 0; min = parseFloat(min) || 0;
   if (qty <= 0)   return ["out","Out of stock"];
   if (qty <= min) return ["low","Low stock"];
-  return             ["ok","OK"];
+  return                  ["ok","OK"];
 }
 
 function renderInventory(rows) {
@@ -1357,23 +1207,20 @@ function renderInventory(rows) {
     return;
   }
   const trs = rows.map(r => {
-    // quantity may be null (empty cell), 0, or a real number
     const qty    = r.quantity !== null && r.quantity !== undefined ? Number(r.quantity) : null;
     const min    = r.minimum  !== null && r.minimum  !== undefined ? Number(r.minimum)  : null;
     const qtyNum = isNaN(qty) ? 0 : (qty || 0);
     const minNum = isNaN(min) ? 0 : (min || 0);
     const [cls,lbl] = stockClass(qtyNum, minNum);
-
     const qtyDisplay = qty === null || isNaN(qty) ? "-" : qty;
     const minDisplay = min === null || isNaN(min) || min === 0 ? "-" : min;
     const wuNum  = r.weightUnit !== null ? Number(r.weightUnit) : null;
     const totKg  = (qty !== null && wuNum !== null) ? (qty * wuNum).toFixed(1) + " kg" : "-";
-
-    const st       = (window.todayScanStats || {})[r.code] || {};
+    const st     = (window.todayScanStats || {})[r.code] || {};
     const mepAvail = Math.max(0, (st.done||0) - (st.waste||0) - (st.used||0));
-    const p        = allProducts[r.code] || {};
-    const gnSize   = p.gnSize || "";
-    const mepStr   = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "-";
+    const p      = allProducts[r.code] || {};
+    const gnSize = p.gnSize || "";
+    const mepStr = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "-";
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"-"}</td>
       <td>${r.name||"-"}</td>
@@ -1406,7 +1253,9 @@ function filterInventory() {
     (r.lieferant||"").toLowerCase().includes(q)));
 }
 
-// -- PRODUCTS --
+// ─────────────────────────────────────────────
+// PRODUCTS
+// ─────────────────────────────────────────────
 async function loadProducts() {
   try {
     const data = await get({ action: "allProducts" });
@@ -1425,31 +1274,25 @@ function renderProductGrid(entries) {
       `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
     return;
   }
-  document.getElementById("product-grid").innerHTML = entries.map(([code,p]) => {
-    // Use today-only scan counts for MEP status (matches server logic)
-    const st       = (window.todayScanStats || {})[code] || {};
-    const done     = st.done    || 0;
-    const waste    = st.waste   || 0;
-    const used     = st.used    || 0;
-    const produce  = st.produce || 0;
-    const avail    = Math.max(0, done - waste - used);
-    // When no produce scans exist (button removed), inProg = mepMax - done (same as server)
-    const inProg   = (produce === 0 && p.mepMax > 0)
+  document.getElementById("product-grid").innerHTML = entries.map(([code, p]) => {
+    const st      = (window.todayScanStats || {})[code] || {};
+    const done    = st.done    || 0;
+    const waste   = st.waste   || 0;
+    const produce = st.produce || 0;
+    const avail   = Math.max(0, done - waste);
+    const inProg  = (produce === 0 && p.mepMax > 0)
       ? Math.max(0, p.mepMax - done)
       : Math.max(0, produce - done);
-    const gnLabel  = p.gnSize ? " " + p.gnSize : "";
-
-    const img = p.image
+    const gnLabel = p.gnSize ? " " + p.gnSize : "";
+    const img     = p.image
       ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" style="height:80px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
       : `<div class="product-thumb-ph" style="height:80px">🍽</div>`;
-
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
         <span class="prod-stat green">OK ${avail}${gnLabel}</span>
         <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
         <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
       </div>` : "";
-
     return `<div class="product-card" onclick="openModal('${code}')">
       ${img}
       <div class="product-body">
@@ -1463,15 +1306,15 @@ function renderProductGrid(entries) {
 
 function filterProducts() {
   const q = document.getElementById("prod-search").value.toLowerCase();
-  renderProductGrid(Object.entries(allProducts).filter(([code,p]) =>
+  renderProductGrid(Object.entries(allProducts).filter(([code, p]) =>
     (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)));
 }
 
-// -- MODAL --
 function openModal(code) {
-  const p = allProducts[code]||{}, st = scanStats[code]||{produce:0,done:0,waste:0};
+  const p  = allProducts[code] || {};
+  const st = scanStats[code] || { produce:0, done:0, waste:0 };
   document.getElementById("m-code").textContent    = "CODE . " + code;
-  document.getElementById("m-name").textContent    = p.name||code;
+  document.getElementById("m-name").textContent    = p.name || code;
   document.getElementById("m-produce").textContent = st.produce;
   document.getElementById("m-done").textContent    = st.done;
   document.getElementById("m-waste").textContent   = st.waste;
@@ -1479,50 +1322,15 @@ function openModal(code) {
   const ph  = document.getElementById("m-img-ph");
   img.classList.remove("shown");
   ph.style.display = "flex";
-  if (p.image) { img.src = p.image; } else { img.src = ""; }
+  if (p.image) { img.src = p.image; img.onload = () => { img.classList.add("shown"); ph.style.display = "none"; }; }
   document.getElementById("modal").classList.add("open");
 }
-async function closeModal() { document.getElementById("modal").classList.remove("open"); }
+function closeModal() { document.getElementById("modal").classList.remove("open"); }
 
-// -- INIT --
-// Show cached data instantly - user sees data in <100ms
-(function() {
-  const cp = sessionStorage.getItem("dash_products");
-  const ci = sessionStorage.getItem("dash_inventory");
-  const cs = sessionStorage.getItem("dash_scans");
-  if (cp) { try { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); } catch(e) {} }
-  if (ci) { try { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); } catch(e) {} }
-  // Only render KDS from cache if products are already cached - otherwise alerts will be empty
-  if (cs) {
-    try {
-      allScans = JSON.parse(cs);
-      // Only render full KDS if products also cached - else just render feed
-      if (sessionStorage.getItem("dash_products")) {
-        _renderKDS();
-      } else {
-        // At minimum render the recent scans feed
-        if (typeof renderFeed === "function") renderFeed();
-      }
-    } catch(e) {}
-  }
-})();
-
-// Load products FIRST so allProducts is ready before KDS renders MEP alerts
-// Load products first, then KDS - ensures allProducts ready for MEP alerts
-loadProducts()
-  .then(() => loadKDS())
-  .catch(() => loadKDS()); // run KDS even if products fail
-setTimeout(loadInventory, 400);
-setTimeout(loadRecipes,   800);
-setInterval(async () => {
-  const prevLen = allScans.length;
-  await loadKDS();
-  // Only re-render product grid if scan data changed (new scans came in)
-  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
-}, 60_000);
-// -- Swipeable alerts --
+// ─────────────────────────────────────────────
+// SWIPEABLE ALERTS
+// ─────────────────────────────────────────────
 const _sw = {};
-
 function initSwipe() {
   document.querySelectorAll('.mep-alert[data-idx]').forEach(el => {
     const idx = el.dataset.idx;
@@ -1534,36 +1342,27 @@ function initSwipe() {
     window.addEventListener('mouseup',   e => swipeEnd(e, idx));
   });
 }
-
 function _cx(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
-
-function swipeStart(e, idx) {
-  _sw[idx] = { x0: _cx(e), dragging: true, dx: 0 };
-}
-
+function swipeStart(e, idx) { _sw[idx] = { x0: _cx(e), dragging: true, dx: 0 }; }
 function swipeMove(e, idx) {
   if (!_sw[idx]?.dragging) return;
-  const dx   = _cx(e) - _sw[idx].x0;
-  if (dx >= 0) return;                     // left swipe only
+  const dx = _cx(e) - _sw[idx].x0;
+  if (dx >= 0) return;
   if (e.cancelable) e.preventDefault();
   _sw[idx].dx = dx;
   const el   = document.getElementById('al-' + idx);
   const wrap = document.getElementById('aw-' + idx);
   if (el) el.style.transform = `translateX(${dx}px)`;
-  // Reveal "Delete" background only when dragging meaningfully
   if (wrap) wrap.classList.toggle('revealing', dx < -20);
 }
-
 function swipeEnd(e, idx) {
   if (!_sw[idx]?.dragging) return;
   _sw[idx].dragging = false;
-  const dx   = _sw[idx].dx || 0;
-  const el   = document.getElementById('al-' + idx);
-  const wrap = document.getElementById('aw-' + idx);
+  const dx        = _sw[idx].dx || 0;
+  const el        = document.getElementById('al-' + idx);
+  const wrap      = document.getElementById('aw-' + idx);
   const threshold = (wrap?.offsetWidth || 250) * 0.40;
-
   if (dx < -threshold) {
-    // Dismiss - slide fully off then hide
     if (el) { el.style.transition = 'transform .22s ease'; el.style.transform = 'translateX(-110%)'; }
     setTimeout(() => {
       if (wrap) { wrap.style.height = wrap.offsetHeight + 'px'; }
@@ -1573,7 +1372,6 @@ function swipeEnd(e, idx) {
       }, 10);
     }, 220);
   } else {
-    // Snap back
     if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = 'translateX(0)'; }
     if (wrap) wrap.classList.remove('revealing');
     setTimeout(() => { if (el) el.style.transition = ''; }, 220);
@@ -1581,8 +1379,19 @@ function swipeEnd(e, idx) {
   _sw[idx].dx = 0;
 }
 
+function alertClick(code) {
+  if (!code) return;
+  const card = document.getElementById("mep-card-" + code);
+  if (card) {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.style.outline = "2px solid var(--amber)";
+    setTimeout(() => card.style.outline = "", 2000);
+  }
+}
 
-// -- Admin helpers --
+// ─────────────────────────────────────────────
+// ADMIN HELPERS
+// ─────────────────────────────────────────────
 function adminMsg(id, text, type) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -1591,49 +1400,27 @@ function adminMsg(id, text, type) {
   setTimeout(() => el.className = "admin-msg", 3000);
 }
 
-async function adminCall(params) {
-  const url = API + "?" + new URLSearchParams(params);
-  const res  = await fetch(url);
-  return res.json();
-}
-
-// -- Products admin --
 function renderAdminProducts() {
-  const list    = document.getElementById("admin-product-list");
-  const catSel  = document.getElementById("admin-prod-cat");
+  const list   = document.getElementById("admin-product-list");
+  const catSel = document.getElementById("admin-prod-cat");
   if (!list) return;
-
-  let entries = Object.entries(allProducts).filter(([,p]) => p.name && p.name !== "(deleted)");
-
-  // Build category dropdown options
-  const cats = [...new Set(entries.map(([,p]) => p.kategorie || "").filter(Boolean))].sort();
+  let entries = Object.entries(allProducts).filter(([, p]) => p.name && p.name !== "(deleted)");
+  const cats  = [...new Set(entries.map(([, p]) => p.kategorie || "").filter(Boolean))].sort();
   const curCat = catSel ? catSel.value : "";
   if (catSel) {
     catSel.innerHTML = `<option value="">All categories (${entries.length})</option>`
       + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
   }
-
-  // Filter by category
-  if (curCat) entries = entries.filter(([,p]) => (p.kategorie||"") === curCat);
-
-  // Filter by search
+  if (curCat) entries = entries.filter(([, p]) => (p.kategorie||"") === curCat);
   const q = (document.getElementById("admin-prod-search")?.value || "").toLowerCase();
-  if (q) entries = entries.filter(([code,p]) =>
-    (p.name||"").toLowerCase().includes(q) ||
-    code.toLowerCase().includes(q) ||
-    (p.kategorie||"").toLowerCase().includes(q)
-  );
-
-  if (!entries.length) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products found</div>`;
-    return;
-  }
-
+  if (q) entries = entries.filter(([code, p]) =>
+    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q) || (p.kategorie||"").toLowerCase().includes(q));
+  if (!entries.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products found</div>`; return; }
   list.innerHTML = entries.map(([code, p]) => `
     <div class="admin-item">
       <div style="flex:1;min-width:0">
-        <div class="admin-item-name">${p.name} ${p.kategorie ? `<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${p.kategorie}</span>` : ""}</div>
-        <div class="admin-item-sub">${code} . Max ${p.mepMax||"-"} ${p.gnSize||""} . Target ${p.tagesziel||"-"} . ${p.gnWeight||"-"} kg/GN . Shelf ${p.shelfLife||2}d</div>
+        <div class="admin-item-name">${p.name}${p.kategorie?`<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${p.kategorie}</span>`:""}</div>
+        <div class="admin-item-sub">${code} · Max ${p.mepMax||"-"} ${p.gnSize||""} · Target ${p.tagesziel||"-"} · ${p.gnWeight||"-"} kg/GN · Shelf ${p.shelfLife||2}d</div>
       </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editProduct('${code}')">Edit</button>
@@ -1658,7 +1445,6 @@ function editProduct(code) {
   document.getElementById("pf-cancel").style.display = "inline-flex";
   document.getElementById("product-form").scrollIntoView({ behavior: "smooth" });
 }
-
 function clearProductForm() {
   ["pf-code","pf-name","pf-kategorie","pf-mepmax","pf-gnsize","pf-gnweight","pf-tagesziel","pf-shelf","pf-drive"]
     .forEach(id => { document.getElementById(id).value = ""; });
@@ -1666,116 +1452,83 @@ function clearProductForm() {
   document.getElementById("product-form-title").textContent = "Add new product";
   document.getElementById("pf-cancel").style.display = "none";
 }
-
 async function saveProduct() {
   const code = document.getElementById("pf-code").value.trim();
   const name = document.getElementById("pf-name").value.trim();
-  if (!code || !name) { adminMsg("pf-msg", "Code and Name are required", "err"); return; }
+  if (!code || !name) { adminMsg("pf-msg","Code and Name are required","err"); return; }
   const btn = document.querySelector("#product-form .btn-save");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
+  btn.disabled = true; btn.textContent = "Saving…";
   try {
-    const data = await adminCall({
-      action     : "saveProduct",
-      code, name,
-      kategorie  : document.getElementById("pf-kategorie").value.trim(),
-      mepMax     : document.getElementById("pf-mepmax").value,
-      gnSize     : document.getElementById("pf-gnsize").value,
-      gnWeight   : document.getElementById("pf-gnweight").value,
-      tagesziel  : document.getElementById("pf-tagesziel").value,
-      shelfLife  : document.getElementById("pf-shelf").value,
-      driveLink  : document.getElementById("pf-drive").value,
-    });
+    const data = await adminCall({ action:"saveProduct", code, name,
+      kategorie : document.getElementById("pf-kategorie").value.trim(),
+      mepMax    : document.getElementById("pf-mepmax").value,
+      gnSize    : document.getElementById("pf-gnsize").value,
+      gnWeight  : document.getElementById("pf-gnweight").value,
+      tagesziel : document.getElementById("pf-tagesziel").value,
+      shelfLife : document.getElementById("pf-shelf").value,
+      driveLink : document.getElementById("pf-drive").value });
     if (data.error) throw new Error(data.error);
-    adminMsg("pf-msg", "Saved OK", "ok");
+    adminMsg("pf-msg","Saved OK","ok");
     clearProductForm();
     await loadProducts();
     renderAdminProducts();
-  } catch(e) {
-    adminMsg("pf-msg", "Error: " + e.message, "err");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Save product";
-  }
+  } catch(e) { adminMsg("pf-msg","Error: "+e.message,"err"); }
+  finally { btn.disabled = false; btn.textContent = "Save product"; }
 }
-
 async function delProduct(code) {
-  if (!confirm(`Remove "${allProducts[code]?.name || code}" from product list?`)) return;
-  const data = await adminCall({ action: "deleteProduct", code });
-  if (data.error) { alert("Error: " + data.error); return; }
+  if (!confirm(`Remove "${allProducts[code]?.name||code}" from product list?`)) return;
+  const data = await adminCall({ action:"deleteProduct", code });
+  if (data.error) { alert("Error: "+data.error); return; }
   await loadProducts();
   renderAdminProducts();
 }
 
-// Auto-fill inventory name from product when code is typed
+// Auto-fill product name from code
 document.getElementById("pf-code")?.addEventListener("blur", () => {
   const code = document.getElementById("pf-code").value.trim();
-  if (code && allProducts[code]) {
-    document.getElementById("pf-name").value = allProducts[code].name;
-  }
+  if (code && allProducts[code]) document.getElementById("pf-name").value = allProducts[code].name;
 });
 
-// -- Workers admin --
-let allWorkersAdmin = [];
-
-async function loadWorkersAdmin() {
-  try {
-    const data = await adminCall({ action: "allWorkers" });
-    // allWorkers not yet in API - fall back to workers list + build from Settings
-    allWorkersAdmin = data.workers || [];
-    renderAdminWorkers();
-  } catch(e) { console.error(e); }
-}
-
+// ─────────────────────────────────────────────
+// WORKERS ADMIN
+// ─────────────────────────────────────────────
 function renderAdminWorkers() {
   const list = document.getElementById("admin-worker-list");
   if (!list) return;
   const workers = Array.isArray(allWorkersAdmin) ? allWorkersAdmin : [];
-  if (!workers.length) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers yet</div>`;
-    return;
-  }
+  if (!workers.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers yet</div>`; return; }
   list.innerHTML = workers.map(w => {
     const name   = typeof w === "object" ? w.name   : w;
-    const role   = typeof w === "object" ? (w.role || "") : "";
+    const role   = typeof w === "object" ? (w.role  || "") : "";
     const active = typeof w === "object" ? w.active !== false : true;
-    const pin    = typeof w === "object" ? (w.pin || "") : "";
+    const pin    = typeof w === "object" ? (w.pin   || "") : "";
     const hasPIN = pin && pin.length === 4;
-    return `
-    <div class="admin-item" style="opacity:${active ? 1 : 0.45}">
+    return `<div class="admin-item" style="opacity:${active?1:0.45}">
       <div style="flex:1">
-        <div class="admin-item-name">${name}
-          ${!active ? `<span style="font-size:10px;color:var(--red);letter-spacing:1px;margin-left:6px">INACTIVE</span>` : ""}
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center">
-          ${role ? `<span>${role}</span>` : ""}
-          <span style="color:${hasPIN ? "var(--green)" : "var(--red)"}">
-            ${hasPIN ? "&#10003; PIN set" : "&#9888; No PIN"}
-          </span>
+        <div class="admin-item-name">${name}${!active?`<span style="font-size:10px;color:var(--red);letter-spacing:1px;margin-left:6px">INACTIVE</span>`:""}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px">
+          ${role?`<span>${role}</span>`:""}
+          <span style="color:${hasPIN?"var(--green)":"var(--red)"}">${hasPIN?"✓ PIN set":"⚠ No PIN"}</span>
         </div>
       </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editWorker('${name}')">Edit</button>
-        <button class="btn-del"  onclick="delWorker('${name}')">${active ? "Deactivate" : "Reactivate"}</button>
+        <button class="btn-del"  onclick="delWorker('${name}')">${active?"Deactivate":"Reactivate"}</button>
       </div>
     </div>`;
   }).join("");
 }
-
 function editWorker(name) {
   document.getElementById("wf-name").value    = name;
   document.getElementById("wf-name").readOnly = true;
   document.getElementById("wf-form-title").textContent = "Edit worker - " + name;
-  document.getElementById("wf-cancel").style.display = "inline-flex";
-  // Populate PIN if available
+  document.getElementById("wf-cancel").style.display   = "inline-flex";
   const pinEl = document.getElementById("wf-pin");
-  if (pinEl && window.allWorkersAdmin) {
+  if (pinEl) {
     const w = allWorkersAdmin.find(w => (typeof w === "object" ? w.name : w) === name);
     pinEl.value = (w && typeof w === "object" && w.pin) ? w.pin : "";
-    pinEl.placeholder = w && typeof w === "object" && w.pin ? "****" : "e.g. 1234";
   }
 }
-
 function clearWorkerForm() {
   document.getElementById("wf-name").value    = "";
   document.getElementById("wf-role").value    = "";
@@ -1785,86 +1538,71 @@ function clearWorkerForm() {
   document.getElementById("wf-form-title").textContent = "Add new worker";
   document.getElementById("wf-cancel").style.display   = "none";
 }
-
 async function saveWorkerAdmin() {
   const name = document.getElementById("wf-name").value.trim();
   const pin  = (document.getElementById("wf-pin")?.value || "").trim();
-  if (!name) { adminMsg("wf-msg", "Name is required", "err"); return; }
-  if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) {
-    adminMsg("wf-msg", "PIN must be exactly 4 digits", "err"); return;
-  }
-  const btn = document.querySelector("#admin-worker-list ~ .admin-form .btn-save");
+  if (!name) { adminMsg("wf-msg","Name is required","err"); return; }
+  if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) { adminMsg("wf-msg","PIN must be 4 digits","err"); return; }
+  const btn = document.querySelector("#worker-form .btn-save");
   if (btn) { btn.disabled = true; btn.textContent = "Saving..."; }
   try {
-    const data = await adminCall({
-      action : "saveWorker",
-      name,
-      role   : document.getElementById("wf-role").value.trim(),
-      pin,
-      active : "true",
-    });
+    const data = await adminCall({ action:"saveWorker", name,
+      role: document.getElementById("wf-role").value.trim(), pin, active:"true" });
     if (data.error) throw new Error(data.error);
-    adminMsg("wf-msg", "Saved OK", "ok");
+    adminMsg("wf-msg","Saved OK","ok");
     clearWorkerForm();
-    // Reload workers from server so PIN status is fresh
-    const wd = await get({ action: "allWorkers" });
+    const wd = await get({ action:"allWorkers" });
     allWorkersAdmin = wd.workers || allWorkersAdmin;
     renderAdminWorkers();
-  } catch(e) {
-    adminMsg("wf-msg", "Error: " + e.message, "err");
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Save worker"; }
-  }
+  } catch(e) { adminMsg("wf-msg","Error: "+e.message,"err"); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "Save worker"; } }
 }
-
 async function delWorker(name) {
-  if (!confirm(`Deactivate worker "${name}"? They won't appear in the scanner dropdown.`)) return;
-  const data = await adminCall({ action: "deleteWorker", name });
-  if (data.error) { alert("Error: " + data.error); return; }
-  adminMsg("wf-msg", `${name} deactivated OK`, "ok");
-  allWorkersAdmin = allWorkersAdmin.filter(w => (typeof w === "string" ? w : w.name) !== name);
+  if (!confirm(`Deactivate worker "${name}"?`)) return;
+  const data = await adminCall({ action:"deleteWorker", name });
+  if (data.error) { alert("Error: "+data.error); return; }
+  adminMsg("wf-msg",`${name} deactivated OK`,"ok");
+  allWorkersAdmin = allWorkersAdmin.filter(w => (typeof w==="string"?w:w.name) !== name);
   renderAdminWorkers();
 }
 
-// -- Inventory admin --
+// ─────────────────────────────────────────────
+// INVENTORY ADMIN
+// ─────────────────────────────────────────────
 function renderAdminInventory() {
   const list = document.getElementById("admin-inv-list");
   if (!list) return;
   if (!allInventory.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items yet</div>`; return; }
   list.innerHTML = allInventory.map(r => {
     const totKg = (r.quantity !== null && r.weightUnit !== null)
-      ? ` . ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
+      ? ` · ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
     return `<div class="admin-item">
       <div style="flex:1;min-width:0">
-        <div class="admin-item-name">${r.name||r.code}${r.kategorie ? ` <span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>` : ""}</div>
-        <div class="admin-item-sub">${r.code} . ${r.quantity ?? "-"} ${r.unit||""}${totKg} . min ${r.minimum ?? "-"}${r.lieferant ? " . " + r.lieferant : ""}</div>
+        <div class="admin-item-name">${r.name||r.code}${r.kategorie?`<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>`:""}</div>
+        <div class="admin-item-sub">${r.code} · ${r.quantity??"-"} ${r.unit||""}${totKg} · min ${r.minimum??"-"}${r.lieferant?" · "+r.lieferant:""}</div>
       </div>
-      <div class="admin-item-actions">
-        <button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button>
-      </div>
+      <div class="admin-item-actions"><button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button></div>
     </div>`;
   }).join("");
 }
-
 function editInvItem(code) {
   const r = allInventory.find(x => x.code === code) || {};
   document.getElementById("if-code").value       = code;
   document.getElementById("if-code").readOnly    = true;
-  document.getElementById("if-name").value       = r.name       || (allProducts[code]?.name || "");
+  document.getElementById("if-name").value       = r.name       || (allProducts[code]?.name      || "");
   document.getElementById("if-kategorie").value  = r.kategorie  || (allProducts[code]?.kategorie || "");
   document.getElementById("if-unit").value       = r.unit       || "";
   document.getElementById("if-qty").value        = r.quantity   ?? "";
   document.getElementById("if-weight").value     = r.weightUnit ?? "";
   document.getElementById("if-min").value        = r.minimum    ?? "";
   document.getElementById("if-max").value        = r.maximum    ?? "";
-  document.getElementById("if-kosten").value    = r.kostenUnit ?? "";
+  document.getElementById("if-kosten").value     = r.kostenUnit ?? "";
   document.getElementById("if-lieferant").value  = r.lieferant  || "";
   document.getElementById("if-lastorder").value  = r.lastOrder  || "";
   document.getElementById("if-notizen").value    = r.notizen    || "";
   document.getElementById("if-form-title").textContent = "Edit - " + (r.name || code);
   document.getElementById("if-cancel").style.display   = "inline-flex";
 }
-
 function clearInvForm() {
   ["if-code","if-name","if-kategorie","if-unit","if-qty","if-weight","if-min","if-max","if-kosten","if-lieferant","if-lastorder","if-notizen"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
@@ -1872,14 +1610,11 @@ function clearInvForm() {
   document.getElementById("if-form-title").textContent = "Add / update stock item";
   document.getElementById("if-cancel").style.display   = "none";
 }
-
-// Auto-fill from existing inventory or product when code is entered
 document.getElementById("if-code")?.addEventListener("blur", () => {
   const code = document.getElementById("if-code").value.trim();
   if (!code) return;
   const existing = allInventory.find(x => x.code === code);
   if (existing) { editInvItem(code); return; }
-  // Auto-fill name + category from Produkt sheet if code matches
   const p = allProducts[code];
   if (p) {
     if (!document.getElementById("if-name").value)      document.getElementById("if-name").value      = p.name      || "";
@@ -1887,61 +1622,48 @@ document.getElementById("if-code")?.addEventListener("blur", () => {
     if (!document.getElementById("if-unit").value)      document.getElementById("if-unit").value      = p.gnSize    || "";
   }
 });
-
 async function saveInvItem() {
   const code = document.getElementById("if-code").value.trim();
-  if (!code) { adminMsg("if-msg", "Code is required", "err"); return; }
-  const btn = document.querySelector("#admin-inv-list ~ .admin-form .btn-save");
+  if (!code) { adminMsg("if-msg","Code is required","err"); return; }
+  const btn = document.querySelector("#inv-form .btn-save");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
-    const data = await adminCall({
-      action     : "saveInventory",
-      code,
-      name       : document.getElementById("if-name").value.trim(),
-      kategorie  : document.getElementById("if-kategorie").value.trim(),
-      unit       : document.getElementById("if-unit").value.trim(),
-      quantity   : document.getElementById("if-qty").value,
-      weightUnit : document.getElementById("if-weight").value,
-      minimum    : document.getElementById("if-min").value,
-      maximum    : document.getElementById("if-max").value,
-      kostenUnit : document.getElementById("if-kosten").value,
-      lieferant  : document.getElementById("if-lieferant").value.trim(),
-      lastOrder  : document.getElementById("if-lastorder").value,
-      notizen    : document.getElementById("if-notizen").value.trim(),
-    });
+    const data = await adminCall({ action:"saveInventory", code,
+      name      : document.getElementById("if-name").value.trim(),
+      kategorie : document.getElementById("if-kategorie").value.trim(),
+      unit      : document.getElementById("if-unit").value.trim(),
+      quantity  : document.getElementById("if-qty").value,
+      weightUnit: document.getElementById("if-weight").value,
+      minimum   : document.getElementById("if-min").value,
+      maximum   : document.getElementById("if-max").value,
+      kostenUnit: document.getElementById("if-kosten").value,
+      lieferant : document.getElementById("if-lieferant").value.trim(),
+      lastOrder : document.getElementById("if-lastorder").value,
+      notizen   : document.getElementById("if-notizen").value.trim() });
     if (data.error) throw new Error(data.error);
-    adminMsg("if-msg", "Saved OK", "ok");
+    adminMsg("if-msg","Saved OK","ok");
     clearInvForm();
     await loadInventory();
     renderAdminInventory();
-  } catch(e) {
-    adminMsg("if-msg", "Error: " + e.message, "err");
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Save item"; }
-  }
+  } catch(e) { adminMsg("if-msg","Error: "+e.message,"err"); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "Save item"; } }
 }
 
-// -- Load admin data when tab is opened --
-// Hook into the existing switchTab by patching the admin tab button onclick
 async function loadAdminTab() {
   renderAdminProducts();
   renderAdminInventory();
   populateInvDataLists();
   try {
-    const data = await adminCall({ action: "allWorkers" });
+    const data = await adminCall({ action:"allWorkers" });
     allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
     renderAdminWorkers();
-  } catch(e) {
-    console.error("loadAdminTab error:", e);
-  }
+  } catch(e) { console.error("loadAdminTab error:", e); }
 }
+
 function populateInvDataLists() {
-  // Supplier list from existing inventory
   const suppliers = [...new Set(allInventory.map(r => r.lieferant||"").filter(Boolean))].sort();
   const dlSup = document.getElementById("dl-inv-lieferant");
   if (dlSup) dlSup.innerHTML = suppliers.map(s => `<option value="${s}">`).join("");
-
-  // Extra categories from existing data
   const cats = [...new Set([
     ...allInventory.map(r => r.kategorie||""),
     ...Object.values(allProducts).map(p => p.kategorie||"")
@@ -1950,719 +1672,409 @@ function populateInvDataLists() {
     const dl = document.getElementById(id);
     if (!dl) return;
     const existing = [...dl.options].map(o => o.value);
-    cats.filter(c => !existing.includes(c)).forEach(c => {
-      const o = document.createElement("option");
-      o.value = c; dl.appendChild(o);
-    });
+    cats.filter(c => !existing.includes(c)).forEach(c => { const o = document.createElement("option"); o.value = c; dl.appendChild(o); });
   });
-
-  // Code suggestions from existing inventory
   const dlCode = document.getElementById("dl-inv-code");
-  if (dlCode) dlCode.innerHTML = allInventory
-    .filter(r => r.code)
-    .map(r => `<option value="${r.code}" label="${r.name||""}">`)
-    .join("");
+  if (dlCode) dlCode.innerHTML = allInventory.filter(r => r.code).map(r => `<option value="${r.code}" label="${r.name||""}">`).join("");
 }
 
-
-// -- Orders --
-
-
+// ─────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────
 function renderOrders() {
   const container = document.getElementById("order-content");
   const summary   = document.getElementById("order-summary");
   const catSel    = document.getElementById("order-cat");
   if (!container) return;
-
-  // Standard reorder: stock below minimum
   let items = allInventory.filter(r => {
     const qty = r.quantity !== null ? Number(r.quantity) : null;
     const min = r.minimum  !== null ? Number(r.minimum)  : null;
     return qty !== null && min !== null && qty < min;
-  }).map(r => ({ ...r, _reason: "below_min" }));
-
-  // Safety stock: raw material not enough for 1 day's MEP max target
-  // For each MEP product with gnWeight, find matching lager item
+  }).map(r => ({ ...r, _reason:"below_min" }));
   Object.entries(allProducts).forEach(([mepCode, p]) => {
     if (!p.gnWeight || !p.mepMax) return;
-    const targetQty  = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
-    const neededKg   = targetQty * p.gnWeight;
-    // Find matching lager item by code
-    const invItem = allInventory.find(r => r.code === mepCode);
+    const targetQty = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
+    const neededKg  = targetQty * p.gnWeight;
+    const invItem   = allInventory.find(r => r.code === mepCode);
     if (!invItem || invItem.quantity === null) return;
     const inStockKg = Number(invItem.quantity) * (invItem.weightUnit || 1);
-    if (inStockKg < neededKg && !items.find(x => x.code === mepCode)) {
-      items.push({ ...invItem, _reason: "safety_stock",
-        _neededKg: neededKg, _inStockKg: inStockKg,
-        _shortKg: (neededKg - inStockKg).toFixed(1) });
-    }
+    if (inStockKg < neededKg && !items.find(x => x.code === mepCode))
+      items.push({ ...invItem, _reason:"safety_stock", _neededKg:neededKg, _inStockKg:inStockKg, _shortKg:(neededKg-inStockKg).toFixed(1) });
   });
-
-  // Build category dropdown
-  const cats = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
+  const cats   = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
   const curCat = catSel ? catSel.value : "";
-  if (catSel) {
-    catSel.innerHTML = `<option value="">All categories</option>`
-      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
-  }
-
+  if (catSel) catSel.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
   const q = (document.getElementById("order-search")?.value || "").toLowerCase();
   if (curCat) items = items.filter(r => (r.kategorie||"") === curCat);
   if (q)      items = items.filter(r =>
     (r.name||"").toLowerCase().includes(q) ||
     (r.lieferant||"").toLowerCase().includes(q) ||
-    (r.kategorie||"").toLowerCase().includes(q)
-  );
-
+    (r.kategorie||"").toLowerCase().includes(q));
   if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">OK</div>All stock above minimum</div>`;
-    if (summary) summary.textContent = "";
-    return;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All stock above minimum</div>`;
+    if (summary) summary.textContent = ""; return;
   }
-
-  // Group by supplier
   const bySupplier = {};
-  items.forEach(r => {
-    const sup = r.lieferant || "No supplier";
-    if (!bySupplier[sup]) bySupplier[sup] = [];
-    bySupplier[sup].push(r);
-  });
-
+  items.forEach(r => { const s = r.lieferant || "No supplier"; if (!bySupplier[s]) bySupplier[s] = []; bySupplier[s].push(r); });
   container.innerHTML = Object.entries(bySupplier).map(([sup, rows]) => `
     <div style="margin-bottom:20px">
       <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">${sup}</div>
       <div class="inv-table-wrap"><table class="inv-table">
-        <thead><tr>
-          <th>Product</th><th>Category</th><th>Current</th><th>Min</th>
-          <th style="color:var(--red)">Order qty</th><th>Total kg</th><th style="color:var(--amber)">Est. CHF</th><th>Notes</th>
-        </tr></thead>
+        <thead><tr><th>Product</th><th>Category</th><th>Current</th><th>Min</th><th style="color:var(--red)">Order qty</th><th>Total kg</th><th style="color:var(--amber)">Est. CHF</th><th>Notes</th></tr></thead>
         <tbody>${rows.map(r => {
           const qty      = Number(r.quantity) || 0;
-          const min      = r.minimum  !== null ? Number(r.minimum)  : 0;
-          const max      = r.maximum  !== null ? Number(r.maximum)  : null;
+          const min      = r.minimum !== null ? Number(r.minimum) : 0;
+          const max      = r.maximum !== null ? Number(r.maximum) : null;
           const kosten   = r.kostenUnit !== null ? Number(r.kostenUnit) : null;
           const orderQty = max !== null ? Math.max(0, max - qty) : Math.ceil(min - qty);
           const wuNum    = r.weightUnit !== null ? Number(r.weightUnit) : null;
-          const totKg    = wuNum ? (orderQty * wuNum).toFixed(1) + " kg" : "-";
-          const totChf   = kosten ? "CHF " + (orderQty * kosten).toFixed(2) : "-";
+          const totKg    = wuNum ? (orderQty * wuNum).toFixed(1)+" kg" : "-";
+          const totChf   = kosten ? "CHF "+(orderQty*kosten).toFixed(2) : "-";
           const urgency  = qty <= 0 ? "color:var(--red);font-weight:500" : "color:var(--amber)";
-          const reasonBadge = r._reason === "safety_stock"
-            ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);padding:1px 6px;border-radius:10px;margin-left:4px">safety stock</span>`
-            : "";
+          const reasonBadge = r._reason==="safety_stock"
+            ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);padding:1px 6px;border-radius:10px;margin-left:4px">safety</span>` : "";
           return `<tr>
             <td>${r.name||r.code}${reasonBadge}</td>
             <td style="color:var(--muted);font-size:11px">${r.kategorie||"-"}</td>
             <td>${qty} ${r.unit||""}</td>
             <td style="color:var(--muted)">${min}${max!==null?" / "+max:""} ${r.unit||""}</td>
-            <td style="${urgency}">${orderQty > 0 ? orderQty+" "+r.unit : "-"}</td>
+            <td style="${urgency}">${orderQty>0?orderQty+" "+r.unit:"-"}</td>
             <td style="color:var(--muted)">${totKg}</td>
             <td style="color:var(--amber)">${totChf}</td>
             <td style="font-size:11px;color:var(--muted)">${r.notizen||"-"}</td>
-            <td><button onclick="markOrdered('${r.code}', this)"
-              style="padding:4px 10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer">
-              Ordered
-            </button></td>
+            <td><button onclick="markOrdered('${r.code}',this)" style="padding:4px 10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer">Ordered</button></td>
           </tr>`;
         }).join("")}</tbody>
       </table></div>
     </div>`).join("");
-
-  if (summary) {
-    summary.textContent = `${items.length} item${items.length>1?"s":""} to reorder across ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length>1?"s":""}`;
-  }
+  if (summary) summary.textContent = `${items.length} item${items.length>1?"s":""} to reorder across ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length>1?"s":""}`;
 }
 
+async function markOrdered(code, btn) {
+  btn.disabled = true; btn.textContent = "...";
+  try {
+    const data = await get({ action:"markOrdered", code });
+    if (data.status === "ok") { btn.textContent = "Ordered "+data.date; btn.style.background = "var(--green-dim)"; setTimeout(loadInventory, 1000); }
+    else { btn.textContent = "Error"; btn.disabled = false; }
+  } catch(e) { btn.textContent = "Error"; btn.disabled = false; }
+}
 
-// -- Recipes --
-let allRecipes = [];
-
+// ─────────────────────────────────────────────
+// RECIPES
+// ─────────────────────────────────────────────
 async function loadRecipes() {
   try {
-    const data = await adminCall({ action: "getRecipes" });
+    const data = await adminCall({ action:"getRecipes" });
     allRecipes = Array.isArray(data.recipes) ? data.recipes : [];
   } catch(e) { console.error("loadRecipes:", e); }
 }
-
 async function loadRequirements() {
   const el = document.getElementById("req-content");
   if (!el) return;
   try {
-    const data = await adminCall({ action: "getRequirements" });
+    const data = await adminCall({ action:"getRequirements" });
     const reqs = Array.isArray(data.requirements) ? data.requirements : [];
-    if (!reqs.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">OK</div>All daily targets met or no recipes configured</div>`;
-      return;
-    }
-    // Group by MEP product
+    if (!reqs.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`; return; }
     const byMep = {};
-    reqs.forEach(r => {
-      if (!byMep[r.mepCode]) byMep[r.mepCode] = { name: r.mepName, stillNeeded: r.stillNeeded, items: [] };
-      byMep[r.mepCode].items.push(r);
-    });
+    reqs.forEach(r => { if (!byMep[r.mepCode]) byMep[r.mepCode] = { name:r.mepName, stillNeeded:r.stillNeeded, items:[] }; byMep[r.mepCode].items.push(r); });
     el.innerHTML = Object.entries(byMep).map(([code, g]) => `
       <div style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">
-          ${g.name} <span style="font-size:11px;color:var(--amber);margin-left:6px">need ${g.stillNeeded} more GN today</span>
-        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">${g.name}<span style="font-size:11px;color:var(--amber);margin-left:6px">need ${g.stillNeeded} more GN today</span></div>
         <div class="inv-table-wrap"><table class="inv-table">
           <thead><tr><th>Raw material</th><th>Need</th><th>In stock</th><th>Status</th></tr></thead>
           <tbody>${g.items.map(r => `<tr>
             <td>${r.rmName}</td>
             <td style="font-weight:500">${r.required} ${r.unit}</td>
             <td style="color:${r.sufficient?"var(--green)":"var(--red)"}">${r.inStock} ${r.unit}</td>
-            <td>${r.sufficient
-              ? `<span class="stock-pill stock-ok">OK</span>`
-              : `<span class="stock-pill stock-out">Short ${r.shortage.toFixed(1)} ${r.unit}</span>`}</td>
+            <td>${r.sufficient?`<span class="stock-pill stock-ok">OK</span>`:`<span class="stock-pill stock-out">Short ${r.shortage.toFixed(1)} ${r.unit}</span>`}</td>
           </tr>`).join("")}</tbody>
         </table></div>
       </div>`).join("");
-  } catch(e) {
-    el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
-  }
+  } catch(e) { el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`; }
 }
-
 function renderRecipeList() {
-  const el        = document.getElementById("recipe-list");
+  const el = document.getElementById("recipe-list");
   const filterSel = document.getElementById("recipe-mep-filter");
   if (!el) return;
-
-  // Build MEP filter dropdown
   const mepCodes = [...new Set(allRecipes.map(r => r.mepCode))].sort();
   const curFilter = filterSel ? filterSel.value : "";
   if (filterSel) {
     filterSel.innerHTML = `<option value="">All MEP products (${mepCodes.length})</option>`
-      + mepCodes.map(c => {
-          const p = allProducts[c];
-          return `<option value="${c}" ${c===curFilter?"selected":""}>${p ? p.name : c}</option>`;
-        }).join("");
+      + mepCodes.map(c => { const p = allProducts[c]; return `<option value="${c}" ${c===curFilter?"selected":""}>${p?p.name:c}</option>`; }).join("");
   }
-
-  let recipes = curFilter ? allRecipes.filter(r => r.mepCode === curFilter) : allRecipes;
-
-  if (!recipes.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:13px">No recipes yet. Add ingredients below.</div>`;
-    return;
-  }
-
-  // Group by MEP code
+  const recipes = curFilter ? allRecipes.filter(r => r.mepCode === curFilter) : allRecipes;
+  if (!recipes.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px">No recipes yet. Add ingredients below.</div>`; return; }
   const grouped = {};
-  recipes.forEach(r => {
-    if (!grouped[r.mepCode]) grouped[r.mepCode] = [];
-    grouped[r.mepCode].push(r);
-  });
-
+  recipes.forEach(r => { if (!grouped[r.mepCode]) grouped[r.mepCode] = []; grouped[r.mepCode].push(r); });
   el.innerHTML = Object.entries(grouped).map(([mepCode, rows]) => {
     const p = allProducts[mepCode] || {};
     return `<div class="admin-form" style="margin-bottom:10px">
-      <div class="admin-form-title">${p.name || mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></div>
-      ${rows.map(r => {
-        const inv = allInventory.find(x => x.code === r.rmCode) || {};
+      <div class="admin-form-title">${p.name||mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></div>
+      ${rows.map(r => { const inv = allInventory.find(x => x.code===r.rmCode)||{};
         return `<div class="admin-item" style="margin-top:6px">
-          <div style="flex:1">
-            <span style="font-size:13px">${inv.name || r.rmCode}</span>
-            <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN . ${r.rmCode}</span>
-          </div>
+          <div style="flex:1"><span style="font-size:13px">${inv.name||r.rmCode}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN · ${r.rmCode}</span></div>
           <button class="btn-del" onclick="deleteRecipeRow('${mepCode}','${r.rmCode}')">Remove</button>
-        </div>`;
-      }).join("")}
+        </div>`; }).join("")}
     </div>`;
   }).join("");
 }
-
 function populateRecipeDropdowns() {
   const mepSel = document.getElementById("rf-mep");
   const rmSel  = document.getElementById("rf-rm");
-  if (mepSel) {
-    mepSel.innerHTML = `<option value="">Select MEP product…</option>`
-      + Object.entries(allProducts)
-          .filter(([,p]) => p.name && p.name !== "(deleted)")
-          .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
-          .map(([code,p]) => `<option value="${code}">${p.name} (${code})</option>`).join("");
-  }
+  if (mepSel) mepSel.innerHTML = `<option value="">Select MEP product…</option>`
+    + Object.entries(allProducts).filter(([,p])=>p.name&&p.name!=="(deleted)").sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||""))
+      .map(([code,p])=>`<option value="${code}">${p.name} (${code})</option>`).join("");
   if (rmSel) {
     rmSel.innerHTML = `<option value="">Select raw material…</option>`
-      + allInventory
-          .filter(r => r.code)
-          .sort((a,b) => (a.name||"").localeCompare(b.name||""))
-          .map(r => `<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+      + allInventory.filter(r=>r.code).sort((a,b)=>(a.name||"").localeCompare(b.name||""))
+        .map(r=>`<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+    rmSel.addEventListener("change", () => {
+      const inv = allInventory.find(x=>x.code===rmSel.value);
+      if (inv && !document.getElementById("rf-einheit").value) document.getElementById("rf-einheit").value = inv.unit||"";
+    });
   }
-  // Auto-fill unit from selected RM
-  rmSel?.addEventListener("change", () => {
-    const code = rmSel.value;
-    const inv  = allInventory.find(x => x.code === code);
-    if (inv && !document.getElementById("rf-einheit").value) {
-      document.getElementById("rf-einheit").value = inv.unit || "";
-    }
-  });
 }
-
 async function saveRecipe() {
   const mepCode = document.getElementById("rf-mep").value;
   const rmCode  = document.getElementById("rf-rm").value;
   const menge   = document.getElementById("rf-menge").value;
-  if (!mepCode || !rmCode) { adminMsg("rf-msg", "Select MEP product and raw material", "err"); return; }
+  if (!mepCode||!rmCode) { adminMsg("rf-msg","Select MEP product and raw material","err"); return; }
   const btn = document.querySelector("#panel-recipes .admin-form .btn-save");
-  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
   try {
-    const data = await adminCall({ action:"saveRecipe", mepCode, rmCode, menge,
-      einheit: document.getElementById("rf-einheit").value.trim() });
+    const data = await adminCall({ action:"saveRecipe", mepCode, rmCode, menge, einheit:document.getElementById("rf-einheit").value.trim() });
     if (data.error) throw new Error(data.error);
-    adminMsg("rf-msg", "Saved OK", "ok");
-    await loadRecipes();
-    renderRecipeList();
-    loadRequirements();
-  } catch(e) { adminMsg("rf-msg", "Error: " + e.message, "err"); }
-  finally { if (btn) { btn.disabled = false; btn.textContent = "Add ingredient"; } }
+    adminMsg("rf-msg","Saved OK","ok");
+    await loadRecipes(); renderRecipeList(); loadRequirements();
+  } catch(e) { adminMsg("rf-msg","Error: "+e.message,"err"); }
+  finally { if (btn) { btn.disabled=false; btn.textContent="Add ingredient"; } }
 }
-
 async function deleteRecipeRow(mepCode, rmCode) {
   if (!confirm("Remove this ingredient from the recipe?")) return;
   const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
-  if (data.error) { alert("Error: " + data.error); return; }
-  await loadRecipes();
-  renderRecipeList();
-  loadRequirements();
+  if (data.error) { alert("Error: "+data.error); return; }
+  await loadRecipes(); renderRecipeList(); loadRequirements();
 }
 
-
-// -- Alert helpers --
-function clearAllAlerts() {
-  const box = document.getElementById("mep-alerts");
-  if (box) box.innerHTML = "";
+// ─────────────────────────────────────────────
+// DEDUCTIONS
+// ─────────────────────────────────────────────
+let allDeductions = [];
+async function loadDeductions() {
+  const body = document.getElementById("ded-body");
+  body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
+  try {
+    const data = await get({ action:"getDeductions" });
+    allDeductions = Array.isArray(data.deductions) ? data.deductions : [];
+    renderDeductions(allDeductions);
+  } catch(e) { body.innerHTML = '<tr><td colspan="8" style="color:var(--red);padding:16px">Error: '+e.message+'</td></tr>'; }
+}
+function renderDeductions(rows) {
+  const body = document.getElementById("ded-body");
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">No deductions recorded yet</td></tr>'; return; }
+  body.innerHTML = rows.map(d => {
+    const low  = Number(d.after) <= 0;
+    const warn = Number(d.after) > 0 && Number(d.after) < 3;
+    const badge = low ? '<span style="color:var(--red);font-size:11px">LOW</span>' : warn ? '<span style="color:var(--amber);font-size:11px">LOW</span>' : '<span style="color:var(--green);font-size:11px">OK</span>';
+    const ts = d.timestamp ? new Date(d.timestamp).toLocaleString("de-CH",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "";
+    return `<tr><td>${ts}</td><td>${d.worker||""}</td><td><span style="font-size:11px;color:var(--muted)">${d.mepCode||""}</span></td><td>${d.rmName||d.rmCode||""}</td><td style="color:var(--red)">-${d.deducted||0} ${d.unit||""}</td><td style="color:var(--muted)">${d.before||0}</td><td style="font-weight:500">${d.after||0}</td><td>${badge}</td></tr>`;
+  }).join("");
+}
+function filterDeductions() {
+  const q = document.getElementById("ded-search").value.toLowerCase();
+  if (!q) { renderDeductions(allDeductions); return; }
+  renderDeductions(allDeductions.filter(d =>
+    (d.rmName||"").toLowerCase().includes(q) ||
+    (d.mepCode||"").toLowerCase().includes(q) ||
+    (d.worker||"").toLowerCase().includes(q)));
 }
 
-function alertClick(code) {
-  if (!code) return;
-  // If it's a raw material shortage, switch to Orders tab
-  // Otherwise scroll to the MEP card for this product
-  const card = document.getElementById("mep-card-" + code);
-  if (card) {
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
-    card.style.outline = "2px solid var(--amber)";
-    setTimeout(() => card.style.outline = "", 2000);
+// ─────────────────────────────────────────────
+// ARCHIVE
+// ─────────────────────────────────────────────
+async function loadArchiveStats() {
+  try {
+    const data = await get({ action:"archiveStats" });
+    const el = id => document.getElementById(id);
+    if (el("stat-scan-rows"))    el("stat-scan-rows").textContent    = data.scanRows    ?? "--";
+    if (el("stat-archive-rows")) el("stat-archive-rows").textContent = data.archiveRows ?? "--";
+    if (el("stat-last-run")) {
+      el("stat-last-run").textContent = data.lastRun
+        ? new Date(data.lastRun).toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"})
+        : "Never";
+    }
+    const msg = document.getElementById("archive-msg");
+    if (msg) {
+      if      (data.scanRows > 500) { msg.style.color="var(--red)";   msg.textContent=data.scanRows+" rows — recommend archiving now"; }
+      else if (data.scanRows > 200) { msg.style.color="var(--amber)"; msg.textContent=data.scanRows+" rows — auto-archive runs 1st of each month"; }
+      else                          { msg.style.color="var(--green)"; msg.textContent=data.scanRows+" rows — healthy"; }
+    }
+  } catch(e) { console.warn("Archive stats failed:", e); }
+}
+async function runArchiveNow() {
+  const btn = document.getElementById("btnArchiveNow");
+  const msg = document.getElementById("archive-msg");
+  if (btn) { btn.disabled=true; btn.textContent="Archiving..."; }
+  try {
+    const data = await get({ action:"archiveNow" });
+    if (data.error) { if (msg) { msg.style.color="var(--red)"; msg.textContent="Error: "+data.error; } }
+    else { if (msg) { msg.style.color="var(--green)"; msg.textContent="Done: "+data.archived+" archived, "+data.kept+" kept"; } await loadArchiveStats(); }
+  } catch(e) { if (msg) { msg.style.color="var(--red)"; msg.textContent="Network error"; } }
+  finally { if (btn) { btn.disabled=false; btn.textContent="Archive now"; } }
+}
+
+// ─────────────────────────────────────────────
+// REPORTS
+// ─────────────────────────────────────────────
+function loadReportsTab() {
+  document.getElementById("report-status").textContent = "Click 'Preview this week' to load report data.";
+}
+async function previewReport() {
+  const status  = document.getElementById("report-status");
+  const preview = document.getElementById("report-preview");
+  status.textContent = "Loading report data..."; status.style.color = "var(--muted)";
+  preview.style.display = "none";
+  try {
+    const data = await get({ action:"reportPreview" });
+    if (data.error) { status.textContent="Error: "+data.error; return; }
+    renderReportPreview(data.stats);
+    preview.style.display = "block";
+    status.textContent = "Week ending "+data.stats.week+" — "+data.stats.totalScans+" scans";
+    status.style.color = "var(--green)";
+  } catch(e) { status.textContent="Error: "+e.message; status.style.color="var(--red)"; }
+}
+async function sendReportNow() {
+  const status = document.getElementById("report-status");
+  status.textContent = "Sending email..."; status.style.color = "var(--amber)";
+  try {
+    const data = await get({ action:"reportSendNow" });
+    status.textContent = data.error ? "Error: "+data.error : (data.message||"Report sent!");
+    status.style.color = data.error ? "var(--red)" : "var(--green)";
+  } catch(e) { status.textContent="Error: "+e.message; status.style.color="var(--red)"; }
+}
+function renderReportPreview(s) {
+  const sumEl = document.getElementById("report-summary");
+  const cards = [
+    { val:s.totalScans,                      label:"Total scans", color:"var(--text)" },
+    { val:s.overallEfficiency+"%",            label:"Efficiency",  color:s.overallEfficiency>=90?"var(--green)":s.overallEfficiency>=75?"var(--amber)":"var(--red)" },
+    { val:s.totalWaste,                       label:"Waste (GN)",  color:s.totalWaste>0?"var(--red)":"var(--green)" },
+    { val:"CHF "+s.totalWasteCHF.toFixed(0),  label:"Waste cost",  color:s.totalWasteCHF>100?"var(--red)":s.totalWasteCHF>50?"var(--amber)":"var(--green)" },
+  ];
+  sumEl.innerHTML = cards.map(c => `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;text-align:center"><div style="font-size:22px;font-weight:500;color:${c.color}">${c.val}</div><div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px">${c.label}</div></div>`).join("");
+  document.getElementById("rpt-waste").innerHTML = s.wasteLines.length
+    ? s.wasteLines.map(w=>`<tr><td>${w.name}</td><td>${w.waste}</td><td>CHF ${w.costPerUnit.toFixed(2)}</td><td style="color:${w.totalCost>50?"var(--red)":"var(--text)"}">CHF ${w.totalCost.toFixed(2)}</td></tr>`).join("")
+      + `<tr style="font-weight:500"><td colspan="3">Total waste cost</td><td style="color:var(--red)">CHF ${s.totalWasteCHF.toFixed(2)}</td></tr>`
+    : `<tr><td colspan="4" style="color:var(--green);text-align:center;padding:12px">No waste this week</td></tr>`;
+  document.getElementById("rpt-eff").innerHTML = s.efficiencyLines.length
+    ? s.efficiencyLines.map(e=>`<tr><td>${e.name}</td><td style="color:var(--green)">${e.done}</td><td style="color:${e.waste>0?"var(--red)":"var(--muted)"}">${e.waste}</td><td style="color:${e.efficiency<75?"var(--red)":e.efficiency<90?"var(--amber)":"var(--green)"}"><strong>${e.efficiency}%</strong></td></tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
+  document.getElementById("rpt-workers").innerHTML = s.topWorkers.length
+    ? s.topWorkers.map(w=>`<tr><td>${w.name}</td><td>${w.total}</td><td>${w.done}</td><td style="color:${w.wasteRate>20?"var(--red)":"var(--muted)"}">${w.wasteRate}%</td></tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
+  document.getElementById("rpt-stock").innerHTML = s.lowStock.length
+    ? s.lowStock.map(i=>`<tr><td>${i.name}</td><td style="color:var(--red);font-weight:500">${i.qty} ${i.unit}</td><td style="color:var(--muted)">min: ${i.minimum} ${i.unit}</td></tr>`).join("")
+    : `<tr><td colspan="3" style="color:var(--green);text-align:center;padding:12px">All stock OK</td></tr>`;
+}
+
+// ─────────────────────────────────────────────
+// MANUAL SCAN
+// ─────────────────────────────────────────────
+function openManualScan() {
+  const pSel = document.getElementById("ms-product");
+  pSel.innerHTML = '<option value="">-- Select product --</option>';
+  Object.entries(allProducts).forEach(([code, p]) => {
+    const o = document.createElement("option");
+    o.value = code; o.textContent = (p.name||code)+" ("+code+")";
+    pSel.appendChild(o);
+  });
+  const wSel = document.getElementById("ms-worker");
+  wSel.innerHTML = '<option value="">-- Select worker --</option>';
+  const workers = new Set();
+  allScans.forEach(s => { if (s.worker) workers.add(s.worker); });
+  if (Array.isArray(allWorkersAdmin)) {
+    allWorkersAdmin.forEach(w => { const name = typeof w==="string"?w:w.name; if (name) workers.add(name); });
   }
+  workers.forEach(w => { const o = document.createElement("option"); o.value = o.textContent = w; wSel.appendChild(o); });
+  _msAction = "";
+  document.getElementById("ms-msg").textContent = "";
+  document.querySelectorAll(".ms-action-btn").forEach(b => { b.style.background="var(--surface)"; b.style.color="var(--muted)"; b.style.borderColor="var(--border2)"; });
+  const modal = document.getElementById("manualScanModal");
+  modal.style.display = "flex"; modal.style.alignItems = "flex-end"; modal.style.justifyContent = "center";
 }
+function closeManualScan() {
+  const m = document.getElementById("manualScanModal");
+  if (m) m.style.display = "none";
+  _msAction = "";
+}
+function setManualAction(action) {
+  _msAction = action;
+  const colors = {
+    produce:{ bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
+    done:   { bg:"var(--green-dim)", color:"var(--green)", border:"var(--green-brd)" },
+    waste:  { bg:"var(--red-dim)",   color:"var(--red)",   border:"var(--red-brd)" },
+    used:   { bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
+  };
+  document.querySelectorAll(".ms-action-btn").forEach(b => { b.style.background="var(--surface)"; b.style.color="var(--muted)"; b.style.borderColor="var(--border2)"; });
+  const btn = document.getElementById("ms-btn-"+action);
+  if (btn && colors[action]) { btn.style.background=colors[action].bg; btn.style.color=colors[action].color; btn.style.borderColor=colors[action].border; }
+  document.getElementById("ms-msg").textContent = "";
+}
+async function submitManualScan() {
+  const code   = document.getElementById("ms-product").value;
+  const worker = document.getElementById("ms-worker").value;
+  const msg    = document.getElementById("ms-msg");
+  const btn    = document.getElementById("ms-submit");
+  if (!code)    { msg.style.color="var(--red)"; msg.textContent="Select a product"; return; }
+  if (!worker)  { msg.style.color="var(--red)"; msg.textContent="Select a staff member"; return; }
+  if (!_msAction) { msg.style.color="var(--red)"; msg.textContent="Select an action"; return; }
+  btn.disabled = true; btn.textContent = "Saving...";
+  msg.style.color = "var(--muted)"; msg.textContent = "";
+  try {
+    const data = await get({ code, worker, action:_msAction });
+    if (data.error) { msg.style.color="var(--red)"; msg.textContent="Error: "+data.error; }
+    else {
+      msg.style.color = "var(--green)";
+      const labels = { produce:"Produce recorded", done:"Finished OK", waste:"Waste recorded", used:"Used recorded" };
+      msg.textContent = (labels[_msAction]||"Saved")+" for "+(allProducts[code]?.name||code);
+      setTimeout(() => { loadKDS(); closeManualScan(); }, 1200);
+    }
+  } catch(e) { msg.style.color="var(--red)"; msg.textContent="Network error"; }
+  finally { btn.disabled=false; btn.textContent="Save action"; }
+}
+document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") closeManualScan(); });
 
-
-// -- Initialise dashboard v9 --
-document.addEventListener("DOMContentLoaded", function() {
+// ─────────────────────────────────────────────
+// INIT — show cache instantly, then fetch fresh
+// ─────────────────────────────────────────────
+(function initFromCache() {
   try {
     const cp = sessionStorage.getItem("dash_products");
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
     if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
-    if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); }
+    if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); }
     if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
   } catch(e) { console.error("cache error:", e); }
+})();
 
-  loadProducts()
-    .then(function() { return loadKDS(); })
-    .catch(function() { loadKDS(); });
+loadProducts()
+  .then(() => loadKDS())
+  .catch(()  => loadKDS());
+setTimeout(loadInventory, 400);
+setTimeout(loadRecipes,   800);
 
-  setTimeout(loadInventory, 500);
-  setTimeout(loadRecipes,   1000);
-});
+// Auto-refresh every 60s
+setInterval(async () => {
+  const prevLen = allScans.length;
+  await loadKDS();
+  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
+}, 60_000);
 
-// -- Keep Apps Script warm - ping every 4 minutes to avoid cold starts --
+// Keep Apps Script warm — ping every 4 min
 setInterval(() => {
-  fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
+  fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
 }, 4 * 60 * 1000);
-
-
-  // -- Mark as ordered (Improvement #6) --
-  async function markOrdered(code, btn) {
-    btn.disabled = true;
-    btn.textContent = "...";
-    try {
-      const data = await get({ action: "markOrdered", code });
-      if (data.status === "ok") {
-        btn.textContent = "Ordered " + data.date;
-        btn.style.background = "var(--green-dim)";
-        setTimeout(loadInventory, 1000);
-      } else {
-        btn.textContent = "Error";
-        btn.disabled = false;
-      }
-    } catch(e) {
-      btn.textContent = "Error";
-      btn.disabled = false;
-    }
-  }
-
-
-  // -- Deductions tab --
-  let allDeductions = [];
-
-  async function loadDeductions() {
-    const body = document.getElementById("ded-body");
-    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
-    try {
-      const data = await get({ action: "getDeductions" });
-      allDeductions = Array.isArray(data.deductions) ? data.deductions : [];
-      renderDeductions(allDeductions);
-    } catch(e) {
-      body.innerHTML = '<tr><td colspan="8" style="color:var(--red);padding:16px">Error: ' + e.message + '</td></tr>';
-    }
-  }
-
-  function renderDeductions(rows) {
-    const body = document.getElementById("ded-body");
-    if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">No deductions recorded yet</td></tr>';
-      return;
-    }
-    body.innerHTML = rows.map(d => {
-      const low  = Number(d.after) <= 0;
-      const warn = Number(d.after) > 0 && Number(d.after) < 3;
-      const badge = low  ? '<span style="color:var(--red);font-size:11px">LOW</span>'
-                 : warn ? '<span style="color:var(--amber);font-size:11px">LOW</span>'
-                 : '<span style="color:var(--green);font-size:11px">OK</span>';
-      const ts = d.timestamp ? new Date(d.timestamp).toLocaleString("de-CH", {
-        day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
-      }) : "";
-      return '<tr>' +
-        '<td>' + ts + '</td>' +
-        '<td>' + (d.worker || "") + '</td>' +
-        '<td><span style="font-size:11px;color:var(--muted)">' + (d.mepCode || "") + '</span></td>' +
-        '<td>' + (d.rmName || d.rmCode || "") + '</td>' +
-        '<td style="color:var(--red)">-' + (d.deducted || 0) + ' ' + (d.unit || "") + '</td>' +
-        '<td style="color:var(--muted)">' + (d.before || 0) + '</td>' +
-        '<td style="font-weight:500">' + (d.after || 0) + '</td>' +
-        '<td>' + badge + '</td>' +
-        '</tr>';
-    }).join("");
-  }
-
-  function filterDeductions() {
-    const q = document.getElementById("ded-search").value.toLowerCase();
-    if (!q) { renderDeductions(allDeductions); return; }
-    renderDeductions(allDeductions.filter(d =>
-      (d.rmName || "").toLowerCase().includes(q) ||
-      (d.mepCode || "").toLowerCase().includes(q) ||
-      (d.worker || "").toLowerCase().includes(q)
-    ));
-  }
-
-
-  // -- Archive stats & manual trigger --
-  async function loadArchiveStats() {
-    try {
-      const data = await get({ action: "archiveStats" });
-      const el = id => document.getElementById(id);
-      if (el("stat-scan-rows"))    el("stat-scan-rows").textContent    = data.scanRows ?? "--";
-      if (el("stat-archive-rows")) el("stat-archive-rows").textContent = data.archiveRows ?? "--";
-      if (el("stat-last-run")) {
-        if (data.lastRun) {
-          const d = new Date(data.lastRun);
-          el("stat-last-run").textContent = d.toLocaleDateString("de-CH", { day:"2-digit", month:"2-digit" });
-        } else {
-          el("stat-last-run").textContent = "Never";
-        }
-      }
-      // Warn if scan sheet is getting large
-      const msg = document.getElementById("archive-msg");
-      if (msg) {
-        if (data.scanRows > 500) {
-          msg.style.color = "var(--red)";
-          msg.textContent = data.scanRows + " rows - recommend archiving now";
-        } else if (data.scanRows > 200) {
-          msg.style.color = "var(--amber)";
-          msg.textContent = data.scanRows + " rows - auto-archive runs 1st of each month";
-        } else {
-          msg.style.color = "var(--green)";
-          msg.textContent = data.scanRows + " rows - healthy";
-        }
-      }
-    } catch(e) {
-      console.warn("Archive stats failed:", e);
-    }
-  }
-
-  async function runArchiveNow() {
-    const btn = document.getElementById("btnArchiveNow");
-    const msg = document.getElementById("archive-msg");
-    if (btn) { btn.disabled = true; btn.textContent = "Archiving..."; }
-    try {
-      const data = await get({ action: "archiveNow" });
-      if (data.error) {
-        if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Error: " + data.error; }
-      } else {
-        if (msg) {
-          msg.style.color = "var(--green)";
-          msg.textContent = "Done: " + data.archived + " archived, " + data.kept + " kept";
-        }
-        await loadArchiveStats();
-      }
-    } catch(e) {
-      if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Network error"; }
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = "Archive now"; }
-    }
-  }
-
-
-  // -- Reports tab --
-  function loadReportsTab() {
-    document.getElementById("report-status").textContent = "Click 'Preview this week' to load report data.";
-  }
-
-  async function previewReport() {
-    const status  = document.getElementById("report-status");
-    const preview = document.getElementById("report-preview");
-    status.textContent = "Loading report data...";
-    status.style.color = "var(--muted)";
-    preview.style.display = "none";
-    try {
-      const data = await get({ action: "reportPreview" });
-      if (data.error) { status.textContent = "Error: " + data.error; return; }
-      renderReportPreview(data.stats);
-      preview.style.display = "block";
-      status.textContent = "Week ending " + data.stats.week + " -- " + data.stats.totalScans + " scans";
-      status.style.color = "var(--green)";
-    } catch(e) {
-      status.textContent = "Error: " + e.message;
-      status.style.color = "var(--red)";
-    }
-  }
-
-  async function sendReportNow() {
-    const status = document.getElementById("report-status");
-    status.textContent = "Sending email...";
-    status.style.color = "var(--amber)";
-    try {
-      const data = await get({ action: "reportSendNow" });
-      if (data.error) {
-        status.textContent = "Error: " + data.error;
-        status.style.color = "var(--red)";
-      } else {
-        status.textContent = data.message || "Report sent!";
-        status.style.color = "var(--green)";
-      }
-    } catch(e) {
-      status.textContent = "Error: " + e.message;
-      status.style.color = "var(--red)";
-    }
-  }
-
-  function renderReportPreview(s) {
-    // Summary cards
-    const sumEl = document.getElementById("report-summary");
-    const cards = [
-      { val: s.totalScans,                   label: "Total scans",  color: "var(--text)" },
-      { val: s.overallEfficiency + "%",       label: "Efficiency",   color: s.overallEfficiency >= 90 ? "var(--green)" : s.overallEfficiency >= 75 ? "var(--amber)" : "var(--red)" },
-      { val: s.totalWaste,                    label: "Waste (GN)",   color: s.totalWaste > 0 ? "var(--red)" : "var(--green)" },
-      { val: "CHF " + s.totalWasteCHF.toFixed(0), label: "Waste cost", color: s.totalWasteCHF > 100 ? "var(--red)" : s.totalWasteCHF > 50 ? "var(--amber)" : "var(--green)" },
-    ];
-    sumEl.innerHTML = cards.map(c =>
-      `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;text-align:center">
-        <div style="font-size:22px;font-weight:500;color:${c.color}">${c.val}</div>
-        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px">${c.label}</div>
-      </div>`
-    ).join("");
-
-    // Waste table
-    document.getElementById("rpt-waste").innerHTML = s.wasteLines.length
-      ? s.wasteLines.map(w =>
-          `<tr><td>${w.name}</td><td>${w.waste}</td><td>CHF ${w.costPerUnit.toFixed(2)}</td>
-           <td style="color:${w.totalCost > 50 ? "var(--red)" : "var(--text)"}">CHF ${w.totalCost.toFixed(2)}</td></tr>`
-        ).join("") + `<tr style="font-weight:500"><td colspan="3">Total waste cost</td><td style="color:var(--red)">CHF ${s.totalWasteCHF.toFixed(2)}</td></tr>`
-      : `<tr><td colspan="4" style="color:var(--green);text-align:center;padding:12px">No waste this week</td></tr>`;
-
-    // Efficiency table
-    document.getElementById("rpt-eff").innerHTML = s.efficiencyLines.length
-      ? s.efficiencyLines.map(e =>
-          `<tr><td>${e.name}</td><td style="color:var(--green)">${e.done}</td>
-           <td style="color:${e.waste > 0 ? "var(--red)" : "var(--muted)"}">${e.waste}</td>
-           <td style="color:${e.efficiency < 75 ? "var(--red)" : e.efficiency < 90 ? "var(--amber)" : "var(--green)"}">
-             <strong>${e.efficiency}%</strong></td></tr>`
-        ).join("")
-      : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
-
-    // Workers table
-    document.getElementById("rpt-workers").innerHTML = s.topWorkers.length
-      ? s.topWorkers.map(w =>
-          `<tr><td>${w.name}</td><td>${w.total}</td><td>${w.done}</td>
-           <td style="color:${w.wasteRate > 20 ? "var(--red)" : "var(--muted)"}">${w.wasteRate}%</td></tr>`
-        ).join("")
-      : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">No data</td></tr>`;
-
-    // Low stock table
-    document.getElementById("rpt-stock").innerHTML = s.lowStock.length
-      ? s.lowStock.map(i =>
-          `<tr><td>${i.name}</td>
-           <td style="color:var(--red);font-weight:500">${i.qty} ${i.unit}</td>
-           <td style="color:var(--muted)">min: ${i.minimum} ${i.unit}</td></tr>`
-        ).join("")
-      : `<tr><td colspan="3" style="color:var(--green);text-align:center;padding:12px">All stock OK</td></tr>`;
-  }
-
-
-  // -- Manual scan modal --
-  let _msAction = "";
-
-  function openManualScan() {
-    const pSel = document.getElementById("ms-product");
-    pSel.innerHTML = '<option value="">-- Select product --</option>';
-    Object.entries(allProducts).forEach(([code, p]) => {
-      const o = document.createElement("option");
-      o.value = code;
-      o.textContent = (p.name || code) + " (" + code + ")";
-      pSel.appendChild(o);
-    });
-    const wSel = document.getElementById("ms-worker");
-    wSel.innerHTML = '<option value="">-- Select worker --</option>';
-    const workers = new Set();
-    allScans.forEach(s => { if (s.worker) workers.add(s.worker); });
-    if (window.allWorkersAdmin) {
-      allWorkersAdmin.forEach(w => {
-        const name = typeof w === "string" ? w : w.name;
-        if (name) workers.add(name);
-      });
-    }
-    workers.forEach(w => {
-      const o = document.createElement("option");
-      o.value = o.textContent = w;
-      wSel.appendChild(o);
-    });
-    _msAction = "";
-    document.getElementById("ms-msg").textContent = "";
-    document.querySelectorAll(".ms-action-btn").forEach(b => {
-      b.style.background = "var(--surface)";
-      b.style.color = "var(--muted)";
-      b.style.borderColor = "var(--border2)";
-    });
-    const modal = document.getElementById("manualScanModal");
-    modal.style.display = "flex";
-    modal.style.alignItems = "flex-end";
-    modal.style.justifyContent = "center";
-  }
-
-  function closeManualScan() {
-    const m = document.getElementById("manualScanModal");
-    if (m) m.style.display = "none";
-    _msAction = "";
-  }
-
-  function setManualAction(action) {
-    _msAction = action;
-    const colors = {
-      produce: { bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
-      done:    { bg:"var(--green-dim)", color:"var(--green)", border:"var(--green-brd)" },
-      waste:   { bg:"var(--red-dim)",   color:"var(--red)",   border:"var(--red-brd)" },
-      used:    { bg:"var(--blue-dim)",  color:"var(--blue)",  border:"var(--blue-brd)" },
-    };
-    document.querySelectorAll(".ms-action-btn").forEach(b => {
-      b.style.background = "var(--surface)";
-      b.style.color = "var(--muted)";
-      b.style.borderColor = "var(--border2)";
-    });
-    const btn = document.getElementById("ms-btn-" + action);
-    if (btn && colors[action]) {
-      btn.style.background  = colors[action].bg;
-      btn.style.color       = colors[action].color;
-      btn.style.borderColor = colors[action].border;
-    }
-    document.getElementById("ms-msg").textContent = "";
-  }
-
-  async function submitManualScan() {
-    const code   = document.getElementById("ms-product").value;
-    const worker = document.getElementById("ms-worker").value;
-    const msg    = document.getElementById("ms-msg");
-    const btn    = document.getElementById("ms-submit");
-    if (!code)    { msg.style.color = "var(--red)"; msg.textContent = "Select a product"; return; }
-    if (!worker)  { msg.style.color = "var(--red)"; msg.textContent = "Select a staff member"; return; }
-    if (!_msAction) { msg.style.color = "var(--red)"; msg.textContent = "Select an action"; return; }
-    btn.disabled = true;
-    btn.textContent = "Saving...";
-    msg.style.color = "var(--muted)";
-    msg.textContent = "";
-    try {
-      const data = await get({ code, worker, action: _msAction });
-      if (data.error) {
-        msg.style.color = "var(--red)";
-        msg.textContent = "Error: " + data.error;
-      } else {
-        msg.style.color = "var(--green)";
-        const labels = { produce:"Produce recorded", done:"Finished OK", waste:"Waste recorded", used:"Used recorded" };
-        msg.textContent = (labels[_msAction] || "Saved") + " for " + (allProducts[code]?.name || code);
-        setTimeout(() => { loadKDS(); closeManualScan(); }, 1200);
-      }
-    } catch(e) {
-      msg.style.color = "var(--red)";
-      msg.textContent = "Network error";
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Save action";
-    }
-  }
-
-  document.addEventListener("click", e => {
-    if (e.target && e.target.id === "manualScanModal") closeManualScan();
-  });
-
 </script>
-<!-- Manual scan modal -->
-<div id="manualScanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:flex-end;justify-content:center;overflow-y:auto">
-  <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:24px 20px 36px;width:100%;max-width:480px">
-
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div style="font-size:16px;font-weight:500">Manual MEP action</div>
-      <button onclick="closeManualScan()"
-        style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
-    </div>
-
-    <!-- Product select -->
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Product</div>
-      <select id="ms-product"
-        style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
-        <option value="">-- Select product --</option>
-      </select>
-    </div>
-
-    <!-- Worker select -->
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Staff member</div>
-      <select id="ms-worker"
-        style="width:100%;padding:10px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;appearance:none">
-        <option value="">-- Select worker --</option>
-      </select>
-    </div>
-
-    <!-- Action buttons -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Action</div>
-      <div style="display:flex;gap:8px">
-        <button onclick="setManualAction('produce')" id="ms-btn-produce" class="ms-action-btn"
-          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
-          Produce
-        </button>
-        <button onclick="setManualAction('done')" id="ms-btn-done" class="ms-action-btn"
-          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
-          Finish
-        </button>
-        <button onclick="setManualAction('waste')" id="ms-btn-waste" class="ms-action-btn"
-          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
-          Waste
-        </button>
-        <button onclick="setManualAction('used')" id="ms-btn-used" class="ms-action-btn"
-          style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">
-          Used
-        </button>
-      </div>
-    </div>
-
-    <!-- Status message -->
-    <div id="ms-msg" style="font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-bottom:12px"></div>
-
-    <!-- Submit -->
-    <button onclick="submitManualScan()" id="ms-submit"
-      style="width:100%;padding:14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
-      Save action
-    </button>
-  </div>
-</div>
-
 </body>
 </html>
