@@ -105,22 +105,22 @@
     .brand-sub {
       font-size: 10px;
       color: var(--muted);
-      letter-spacing: 1.5px;
+      letter-spacing: 1px;
       text-transform: uppercase;
       margin-top: 3px;
     }
     .header-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     .dashboard-link {
-      font-size: 11px;
+      font-size: 8px;
       color: var(--muted);
       text-decoration: none;
       letter-spacing: 1px;
       text-transform: uppercase;
-      padding: 6px 11px;
+      padding: 4px 8px;
       border: 1px solid var(--border2);
       border-radius: var(--radius-sm);
       transition: color .15s, border-color .15s;
@@ -695,7 +695,7 @@
     <div style="display:flex;align-items:center;gap:12px">
       <div>
         <div class="brand-name">Kitchen <em>MEP</em></div>
-        <div class="brand-sub">212 . Nooch Richti</div>
+        <div class="brand-sub">212.Nooch Richti</div>
       </div>
       <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
         style="display:inline-flex;align-items:center;padding:6px 12px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;white-space:nowrap">
@@ -703,11 +703,11 @@
       </a>
     </div>
     <div class="header-right">
-       <a href="dashboard.html" class="dashboard-link">Dashboard</a>
-      <div class="live-badge">
+        <div class="live-badge">
         <div class="live-badge-row">
           <span class="status-dot"></span>LIVE</div>
-       <div class="live-time" id="liveTime2"></div>
+       <div class="live-time" 
+         id="liveTime2"></div>
     </div>
   </header>
 
@@ -730,6 +730,12 @@
       <div class="scan-topbar">
         <div class="scan-app-name">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
       </div>
+       <div style="display:flex;align-items:center;gap:12px">
+         <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
+        style="display:inline-flex;align-items:center;padding:6px 12px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;white-space:nowrap">
+        Dashboard
+        </a>
+        </div>
 
       <!-- hint -->
       <div class="scan-hint-text">Point camera at QR code</div>
@@ -800,7 +806,7 @@
     <div class="field-wrap" id="workerWrap">
       <label class="field-label" for="worker">Staff member</label>
       <select class="worker-select" id="worker">
-        <option value="">-- Select --</option>
+        <option value="">-- Select your name --</option>
       </select>
     </div>
 
@@ -862,7 +868,7 @@
   function updateLiveTime() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = now.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+    const dateStr = now.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' });
     const combined = `${dateStr} ${timeStr}`;
     const el1 = document.getElementById("liveTime");
     const el2 = document.getElementById("liveTime2");
