@@ -1474,6 +1474,8 @@ function editWorker(name) {
 function clearWorkerForm() {
   document.getElementById("wf-name").value    = "";
   document.getElementById("wf-role").value    = "";
+  const pinEl = document.getElementById("wf-pin");
+  if (pinEl) pinEl.value = "";
   document.getElementById("wf-name").readOnly = false;
   document.getElementById("wf-form-title").textContent = "Add new worker";
   document.getElementById("wf-cancel").style.display   = "none";
@@ -1956,9 +1958,6 @@ document.addEventListener("DOMContentLoaded", function() {
   setTimeout(loadRecipes,   1000);
 });
 
-// -- Improvement #6: Mark as ordered --
-async 
-
 // -- Keep Apps Script warm - ping every 4 minutes to avoid cold starts --
 setInterval(() => {
   fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
@@ -2261,7 +2260,7 @@ setInterval(() => {
     document.getElementById("ms-msg").textContent = "";
   }
 
-  async async function submitManualScan() {
+  async function submitManualScan() {
     const code   = document.getElementById("ms-product").value;
     const worker = document.getElementById("ms-worker").value;
     const msg    = document.getElementById("ms-msg");
