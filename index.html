@@ -139,17 +139,16 @@
       align-items: center;
       gap: 5px;
     }
-    .live-time {
-      font-size: 9px;
-      color: var(--muted);
-      letter-spacing: 0.3px;
-    }
-    .status-dot {
+      .status-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
       background: var(--green);
       animation: blink 2.4s ease-in-out infinite;
     }
+      .live-time { 
+      font-size: 10px; color: var(--muted); letter-spacing: 0.5px; font-family: var(--mono); 
+    }
+
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     /* -- Product Card -- */
