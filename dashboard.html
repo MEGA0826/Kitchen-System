@@ -34,6 +34,7 @@
     .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
     .header-right { display: flex; align-items: center; gap: 16px; }
     .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); letter-spacing: 1px; }
+    .live-time { font-size: 9px; color: var(--muted); letter-spacing: 0.3px; }
     .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2.4s ease-in-out infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
     .clock { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
@@ -283,81 +284,80 @@
 </head>
 <body>
 
-<header class="header">
+<div class="header">
   <div>
-    <div class="logo">Kitchen <em>MEP</em> - Dashboard</div>
-    <div class="logo-sub">212 · Nooch Richti · Manager</div>
+    <div class="logo">Kitchen <em>MEP</em></div>
+    <div class="logo-sub">212 Nooch Richti — Dashboard</div>
   </div>
   <div class="header-right">
-    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-      <div class="live-time" id="liveTime2"></div>
-    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn" id="back-btn" onclick="goBack(event)">← Scan</a>
+    <a href="index.html" class="back-btn">← Scan</a>
+    <div class="live-badge">
+      <div class="live-badge-row">
+        <div class="live-dot"></div>
+        <span>LIVE</span>
+      </div>
+      <div class="live-time" id="liveTime"></div>
+    </div>
   </div>
-</header>
+</div>
 
-<nav class="nav">
-  <button class="tab active" data-tab="kds" onclick="switchTab(this)">KDS·Stats</button>
-  <button class="tab" data-tab="inventory" onclick="switchTab(this)">Inventory</button>
-  <button class="tab" data-tab="products" onclick="switchTab(this)">Products</button>
-  <button class="tab" data-tab="recipes" onclick="switchTab(this)">Recipes</button>
-  <button class="tab" data-tab="orders" onclick="switchTab(this)">Orders</button>
-  <button class="tab" data-tab="deductions" onclick="switchTab(this)">Deductions</button>
-  <button class="tab" data-tab="reports" onclick="switchTab(this)">Reports</button>
-  <button class="tab" data-tab="admin" onclick="switchTab(this)">⚙ Admin</button>
-</nav>
+<div class="nav">
+  <button class="tab active" onclick="switchTab('kds')">KDS</button>
+  <button class="tab" onclick="switchTab('mep-overview')">MEP Overview</button>
+  <button class="tab" onclick="switchTab('inventory')">Inventory</button>
+  <button class="tab" onclick="switchTab('products')">Products</button>
+  <button class="tab" onclick="switchTab('recipes')">Recipes</button>
+  <button class="tab" onclick="switchTab('orders')">Orders</button>
+  <button class="tab" onclick="switchTab('reports')">Reports</button>
+  <button class="tab" onclick="switchTab('deductions')">Deductions</button>
+  <button class="tab" onclick="requestAdminAccess()">Admin</button>
+</div>
 
 <div class="body">
 
   <!-- KDS -->
   <div class="panel active" id="panel-kds">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="section-title" style="margin-bottom:0">Kitchen Display</div>
-      <button onclick="openManualScan()"
-        style="padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
-        Manual action
-      </button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="section-sub" style="margin-bottom:0">Today's activity</div>
-      <button onclick="clearAllAlerts()" style="font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red-brd)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">Clear all</button>
-    </div>
-
-    <div class="mep-alerts" id="mep-alerts"></div>
-
-    <div class="section-sub" style="margin-bottom:14px">MEP overview - today</div>
-    <div class="mep-grid" id="mep-grid"></div>
-
+     <div class="section-title">Kitchen Display</div>
+    <div class="section-sub">Real-time MEP production tracking</div>
+ 
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Total scans</div><div class="stat-value blue" id="s-total">—</div></div>
-      <div class="stat-card"><div class="stat-label">In MEP list</div><div class="stat-value amber" id="s-produce">—</div></div>
-      <div class="stat-card"><div class="stat-label">Finished</div><div class="stat-value green" id="s-done">—</div></div>
-      <div class="stat-card"><div class="stat-label">Waste</div><div class="stat-value red" id="s-waste">—</div></div>
-      <div class="stat-card" style="grid-column:1/-1">
-        <div class="stat-label">Total MEP today</div>
-        <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
-          <div class="stat-value green" id="s-mep-pct">—</div>
-          <div style="font-size:12px;color:var(--muted)" id="s-mep-sub"></div>
-        </div>
-        <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:10px;overflow:hidden">
-          <div id="s-mep-bar" style="height:100%;border-radius:3px;background:var(--green);transition:width .5s ease;width:0%"></div>
-        </div>
+      <div class="stat-card">
+        <div class="stat-label">Total scans today</div>
+        <div class="stat-value blue" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Produced</div>
+        <div class="stat-value amber" id="stat-produce">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Finished</div>
+        <div class="stat-value green" id="stat-done">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Waste</div>
+        <div class="stat-value red" id="stat-waste">—</div>
       </div>
     </div>
 
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+      <button class="refresh-btn" onclick="loadKDS()" style="padding:8px 16px">↺ Refresh all data</button>
+      <button class="refresh-btn" onclick="openManualScan()" style="padding:8px 16px;background:var(--amber-dim);color:var(--amber);border-color:var(--amber-brd)">+ Manual entry</button>
+    </div>
+ 
     <div class="chart-wrap">
-      <div class="chart-title">Top products by scan count · Meistgescannte Produkte</div>
+      <div class="chart-title">Top products by scan count</div>
       <div class="bars" id="product-bars"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
     </div>
-
+ 
     <div class="chart-wrap">
-      <div class="chart-title">Activity by worker · Aktivität nach Mitarbeiter</div>
+      <div class="chart-title">Activity by worker</div>
       <div class="bars" id="worker-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
     </div>
-
+ 
     <div class="feed-wrap">
       <div class="feed-header">
         <span class="feed-title-txt">Recent scans</span>
-        <button class="refresh-btn" onclick="loadKDS()">↺ Refresh</button>
+        <button class="refresh-btn" onclick="loadScans()">↺ Refresh</button>
       </div>
       <div id="scan-feed">
         <div class="feed-row hdr"><span>Time</span><span>Worker</span><span>Code</span><span>Action</span></div>
@@ -365,7 +365,28 @@
       </div>
     </div>
   </div>
-
+ <div class="panel" id="panel-mep-overview">
+    <div class="section-title">MEP Overview Today</div>
+    <div class="section-sub">Status of all products</div>
+ 
+    <div class="inv-controls">
+      <select class="search-input" id="mep-cat-filter" onchange="filterMepOverview()" style="flex:0 1 200px">
+        <option value="">All categories</option>
+      </select>
+    </div>
+ 
+    <div class="mep-thumb-grid" id="mep-thumb-grid">
+      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
+      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
+      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
+      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
+    </div>
+ 
+    <div class="chart-wrap">
+      <div class="chart-title">Production capacity (Available vs Max)</div>
+      <div class="bars" id="mep-capacity-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
+    </div>
+  </div>
   <!-- INVENTORY -->
   <div class="panel" id="panel-inventory">
     <div class="section-title">Inventory</div>
@@ -701,22 +722,6 @@
 </div>
 
 <!-- MODAL -->
-<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <div id="m-img-ph" class="modal-img-ph">🍽</div>
-    <img id="m-img" class="modal-img" alt="" onload="this.classList.add('shown');document.getElementById('m-img-ph').style.display='none'">
-    <div class="modal-body">
-      <div class="modal-code" id="m-code"></div>
-      <div class="modal-name" id="m-name"></div>
-      <div class="modal-stats">
-        <div class="modal-stat"><div class="modal-stat-val amber" id="m-produce">—</div><div class="modal-stat-lbl">MEP List</div></div>
-        <div class="modal-stat"><div class="modal-stat-val green" id="m-done">—</div><div class="modal-stat-lbl">Finished</div></div>
-        <div class="modal-stat"><div class="modal-stat-val red"   id="m-waste">—</div><div class="modal-stat-lbl">Waste</div></div>
-      </div>
-    </div>
-    <button class="modal-close" onclick="closeModal()">Close</button>
-  </div>
-</div>
   
 <!-- PIN -->
 <div class="pin-modal" id="pinModal">
@@ -804,7 +809,7 @@ setInterval(() => {
 function updateLiveTime() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = now.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+    const dateStr = now.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' });
     const combined = `${dateStr} ${timeStr}`;
     const el = document.getElementById("liveTime");
     if (el) el.textContent = combined;
@@ -827,6 +832,8 @@ function switchTab(btn) {
 
 // Fetch
 async function get(params) {
+   const url = new URL(https://script.google.com/macros/s/AKfycbynCt3ykTwU7O6e4fdO2yLlyj75WCiL5-7QkP249BTA7MJdbl9AdY3RiBVetEn-dNs0Xg/exec);
+    Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
 }
