@@ -287,7 +287,7 @@
     <div class="logo-sub">212 Nooch Richti — Dashboard</div>
   </div>
   <div class="header-right">
-    <a href="index.html" class="back-btn">← Scan</a>
+    <a href="index.html" class="back-btn" onclick="goBack(event)">← Scan</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge">
       <div class="live-badge-row">
@@ -1425,38 +1425,23 @@ function renderAdminProducts() {
   const list   = document.getElementById("admin-product-list");
   const catSel = document.getElementById("admin-prod-cat");
   if (!list) return;
-
-  // FIX: read current value BEFORE rebuilding innerHTML
-  const curCat = catSel ? catSel.value : "";
-
   let entries = Object.entries(allProducts).filter(([, p]) => p.name && p.name !== "(deleted)");
   const cats  = [...new Set(entries.map(([, p]) => p.kategorie || "").filter(Boolean))].sort();
-
+  const curCat = catSel ? catSel.value : "";
   if (catSel) {
     catSel.innerHTML = `<option value="">All categories (${entries.length})</option>`
-      + cats.map(c => `<option value="${c}" ${c === curCat ? "selected" : ""}>${c}</option>`).join("");
-    // FIX: restore value after rebuild (some browsers reset it)
-    catSel.value = curCat;
+      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
   }
-
-  if (curCat) entries = entries.filter(([, p]) => (p.kategorie || "") === curCat);
-
+  if (curCat) entries = entries.filter(([, p]) => (p.kategorie||"") === curCat);
   const q = (document.getElementById("admin-prod-search")?.value || "").toLowerCase();
   if (q) entries = entries.filter(([code, p]) =>
-    (p.name || "").toLowerCase().includes(q) ||
-    code.toLowerCase().includes(q) ||
-    (p.kategorie || "").toLowerCase().includes(q));
-
-  if (!entries.length) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products found${curCat ? " in category "" + curCat + """ : ""}</div>`;
-    return;
-  }
-
+    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q) || (p.kategorie||"").toLowerCase().includes(q));
+  if (!entries.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products found</div>`; return; }
   list.innerHTML = entries.map(([code, p]) => `
     <div class="admin-item">
       <div style="flex:1;min-width:0">
-        <div class="admin-item-name">${p.name}${p.kategorie ? `<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${p.kategorie}</span>` : ""}</div>
-        <div class="admin-item-sub">${code} · Max ${p.mepMax || "-"} ${p.gnSize || ""} · Target ${p.tagesziel || "-"} · ${p.gnWeight || "-"} kg/GN · Shelf ${p.shelfLife || 2}d</div>
+        <div class="admin-item-name">${p.name}${p.kategorie?`<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${p.kategorie}</span>`:""}</div>
+        <div class="admin-item-sub">${code} · Max ${p.mepMax||"-"} ${p.gnSize||""} · Target ${p.tagesziel||"-"} · ${p.gnWeight||"-"} kg/GN · Shelf ${p.shelfLife||2}d</div>
       </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editProduct('${code}')">Edit</button>
@@ -1464,6 +1449,7 @@ function renderAdminProducts() {
       </div>
     </div>`).join("");
 }
+
 function editProduct(code) {
   const p = allProducts[code] || {};
   document.getElementById("pf-code").value      = code;
@@ -1527,6 +1513,7 @@ async function saveProduct() {
     btn.textContent = "Save product";
   }
 }
+
 async function delProduct(code) {
   if (!confirm(`Remove "${allProducts[code]?.name||code}" from product list?`)) return;
   const data = await adminCall({ action:"deleteProduct", code });
