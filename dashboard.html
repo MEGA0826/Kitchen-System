@@ -925,7 +925,10 @@ function switchTab(btn) {
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
-  if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
+  if (tabId) {
+    document.getElementById("panel-" + tabId).classList.add("active");
+    sessionStorage.setItem("activeTab", tabId);
+  }
 
   if (tabId === "admin")      { loadAdminTab(); loadArchiveStats(); }
   if (tabId === "orders")     renderOrders();
@@ -934,7 +937,17 @@ function switchTab(btn) {
   if (tabId === "reports")    loadReportsTab();
   if (tabId === "mep-overview") loadMepOverview();
 }
-
+function restoreActiveTab() {
+  const savedTab = sessionStorage.getItem("activeTab");
+  if (savedTab) {
+    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+    if (btn) {
+      switchTab(btn);
+      const dropdown = document.getElementById("nav-dropdown");
+      if (dropdown) dropdown.value = savedTab;
+    }
+  }
+}
 function requestAdminAccess() {
   document.getElementById("pinModal").classList.add("active");
   document.getElementById("pinInput").value = "";
@@ -1465,6 +1478,10 @@ function initSwipe() {
     el.addEventListener('mousedown',   e => swipeStart(e, idx));
     window.addEventListener('mousemove', e => swipeMove(e, idx));
     window.addEventListener('mouseup',   e => swipeEnd(e, idx));
+    window.addEventListener("DOMContentLoaded", () => {
+  loadKDS();
+  restoreActiveTab();
+});
   });
 }
 function _cx(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
@@ -1625,9 +1642,33 @@ document.getElementById("pf-code")?.addEventListener("blur", () => {
 function renderAdminWorkers() {
   const list = document.getElementById("admin-worker-list");
   if (!list) return;
+  const roleSel = document.getElementById("admin-worker-role");
   const workers = Array.isArray(allWorkersAdmin) ? allWorkersAdmin : [];
-  if (!workers.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers yet</div>`; return; }
-  list.innerHTML = workers.map(w => {
+  
+  const roles = [...new Set(workers.map(w => typeof w === "object" ? (w.role || "") : "").filter(Boolean))].sort();
+  const curRole = roleSel ? roleSel.value : "";
+  
+  if (roleSel) {
+    roleSel.innerHTML = `<option value="">Select role...</option>`
+      + roles.map(r => `<option value="${r}" ${r===curRole?"selected":""}>${r}</option>`).join("");
+  }
+  
+  if (!curRole) { 
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">Select a role to view workers</div>`; 
+    return; 
+  }
+  
+  const filtered = workers.filter(w => {
+    const wRole = typeof w === "object" ? (w.role || "") : "";
+    return wRole === curRole;
+  });
+  
+  if (!filtered.length) { 
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found</div>`; 
+    return; 
+  }
+  
+  list.innerHTML = filtered.map(w => {
     const name   = typeof w === "object" ? w.name   : w;
     const role   = typeof w === "object" ? (w.role  || "") : "";
     const active = typeof w === "object" ? w.active !== false : true;
@@ -1647,6 +1688,15 @@ function renderAdminWorkers() {
       </div>
     </div>`;
   }).join("");
+  <div class="admin-section">
+  <div class="admin-section-title">Workers</div>
+  <div class="admin-section-sub">Settings sheet</div>
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+    <select class="search-input" id="admin-worker-role" onchange="renderAdminWorkers()" style="flex:1">
+      <option value="">Select role...</option>
+    </select>
+  </div>
+  <div class="admin-list" id="admin-worker-list"></div>
 }
 function editWorker(name) {
   const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
