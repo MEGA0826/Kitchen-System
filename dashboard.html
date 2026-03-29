@@ -2251,6 +2251,25 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
   } catch(e) { console.error("cache error:", e); }
 })();
 
+// Always load fresh — loadKDS runs regardless of loadProducts outcome
+Promise.allSettled([
+  loadProducts(),
+  loadInventory(),
+  loadRecipes()
+]).then(() => loadKDS());
+
+// Auto-refresh every 60s
+setInterval(async () => {
+  const prevLen = allScans.length;
+  await loadKDS();
+  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
+}, 60_000);
+
+// Keep Apps Script warm — ping every 4 min
+setInterval(() => {
+  fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
+}, 4 * 60 * 1000);
+
 async function initDashboard() {
   try {
     await Promise.all([
