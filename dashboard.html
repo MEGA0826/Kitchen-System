@@ -308,6 +308,64 @@
     display: block;
   }
 }
+.edit-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.edit-modal.active {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+}
+
+.edit-modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.edit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.edit-modal-header h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  margin: 0;
+}
+
+.edit-modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.edit-modal-close:hover {
+  color: var(--text);
+}    
   </style>
 </head>
 <body>
@@ -1498,20 +1556,7 @@ function renderAdminProducts() {
 }
 
 function editProduct(code) {
-  const p = allProducts[code] || {};
-  document.getElementById("pf-code").value      = code;
-  document.getElementById("pf-code").readOnly   = true;
-  document.getElementById("pf-name").value      = p.name      || "";
-  document.getElementById("pf-kategorie").value = p.kategorie || "";
-  document.getElementById("pf-mepmax").value    = p.mepMax    ?? "";
-  document.getElementById("pf-gnsize").value    = p.gnSize    || "";
-  document.getElementById("pf-gnweight").value  = p.gnWeight  ?? "";
-  document.getElementById("pf-tagesziel").value = p.tagesziel ?? "";
-  document.getElementById("pf-shelf").value     = p.shelfLife ?? "";
-  document.getElementById("pf-drive").value     = "";
-  document.getElementById("product-form-title").textContent = "Edit product - " + code;
-  document.getElementById("pf-cancel").style.display = "inline-flex";
-  document.getElementById("product-form").scrollIntoView({ behavior: "smooth" });
+  openEditProductModal(code);
 }
 function clearProductForm() {
   ["pf-code","pf-name","pf-kategorie","pf-mepmax","pf-gnsize","pf-gnweight","pf-tagesziel","pf-shelf","pf-drive"]
@@ -1597,8 +1642,8 @@ function renderAdminWorkers() {
         </div>
       </div>
       <div class="admin-item-actions">
-        <button class="btn-edit" onclick="editWorker('${name}')">Edit</button>
-        <button class="btn-del"  onclick="delWorker('${name}')">${active?"Deactivate":"Reactivate"}</button>
+        <button class="btn-edit" onclick="openEditWorkerModal('${name.replace(/'/g, "\\'")}')">Edit</button>
+        <button class="btn-del"  onclick="delWorker('${name.replace(/'/g, "\\'")}')">${active?"Deactivate":"Remove"}</button>
       </div>
     </div>`;
   }).join("");
@@ -1687,23 +1732,7 @@ function renderAdminInventory() {
   }).join("");
 }
 function editInvItem(code) {
-  const r = allInventory.find(x => x.code === code) || {};
-  document.getElementById("if-code").value       = code;
-  document.getElementById("if-code").readOnly    = true;
-  document.getElementById("if-name").value       = r.name       || (allProducts[code]?.name      || "");
-  document.getElementById("if-kategorie").value  = r.kategorie  || (allProducts[code]?.kategorie || "");
-  document.getElementById("if-unit").value       = r.unit       || "";
-  document.getElementById("if-qty").value        = r.quantity   ?? "";
-  document.getElementById("if-weight").value     = r.weightUnit ?? "";
-  document.getElementById("if-min").value        = r.minimum    ?? "";
-  document.getElementById("if-max").value        = r.maximum    ?? "";
-  document.getElementById("if-kosten").value     = r.kostenUnit ?? "";
-  document.getElementById("if-lieferant").value  = r.lieferant  || "";
-  document.getElementById("if-lastorder").value  = r.lastOrder  || "";
-  document.getElementById("if-notizen").value    = r.notizen    || "";
-  document.getElementById("if-form-title").textContent = "Edit - " + (r.name || code);
-  document.getElementById("if-cancel").style.display   = "inline-flex";
-  document.getElementById("inv-form").scrollIntoView({ behavior: "smooth", block: "start" });
+  openEditInventoryModal(code);
 }
 function clearInvForm() {
   ["if-code","if-name","if-kategorie","if-unit","if-qty","if-weight","if-min","if-max","if-kosten","if-lieferant","if-lastorder","if-notizen"]
@@ -2192,7 +2221,249 @@ function switchTabMobile(select) {
   if (btn) {
     switchTab(btn);
   }
+} 
+
+// Product edit modal
+function openEditProductModal(code) {
+  const p = allProducts[code] || {};
+  document.getElementById("epf-code").value = code;
+  document.getElementById("epf-name").value = p.name || "";
+  document.getElementById("epf-kategorie").value = p.kategorie || "";
+  document.getElementById("epf-mepmax").value = p.mepMax ?? "";
+  document.getElementById("epf-gnsize").value = p.gnSize || "";
+  document.getElementById("epf-gnweight").value = p.gnWeight ?? "";
+  document.getElementById("epf-tagesziel").value = p.tagesziel ?? "";
+  document.getElementById("epf-shelf").value = p.shelfLife ?? "";
+  document.getElementById("epf-drive").value = "";
+  document.getElementById("editProductTitle").textContent = "Edit Product - " + code;
+  document.getElementById("epf-msg").textContent = "";
+  document.getElementById("editProductModal").classList.add("active");
+}
+
+function closeEditProductModal() {
+  document.getElementById("editProductModal").classList.remove("active");
+}
+
+async function saveEditedProduct() {
+  const code = document.getElementById("epf-code").value.trim();
+  const name = document.getElementById("epf-name").value.trim();
+  if (!code || !name) { adminMsg("epf-msg", "Code and Name are required", "err"); return; }
+  const btn = document.querySelector("#editProductModal .btn-save");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    const mepMax = document.getElementById("epf-mepmax").value.trim();
+    const gnWeight = document.getElementById("epf-gnweight").value.trim();
+    const tagesziel = document.getElementById("epf-tagesziel").value.trim();
+    const shelf = document.getElementById("epf-shelf").value.trim();
+    const payload = {
+      action: "saveProduct",
+      code, name,
+      kategorie: document.getElementById("epf-kategorie").value.trim(),
+      mepMax: mepMax === "" ? "" : Number(mepMax),
+      gnSize: document.getElementById("epf-gnsize").value.trim(),
+      gnWeight: gnWeight === "" ? "" : Number(gnWeight),
+      tagesziel: tagesziel === "" ? "" : Number(tagesziel),
+      shelfLife: shelf === "" ? "" : Number(shelf),
+      driveLink: document.getElementById("epf-drive").value.trim(),
+    };
+    const data = await adminCall(payload);
+    if (!data) throw new Error("No response from server");
+    if (data.error) throw new Error(data.error);
+    adminMsg("epf-msg", "Saved OK", "ok");
+    await loadProducts();
+    renderAdminProducts();
+    setTimeout(() => closeEditProductModal(), 800);
+  } catch(e) {
+    adminMsg("epf-msg", "Error: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save";
+  }
+}
+
+// Worker edit modal
+function openEditWorkerModal(name) {
+  const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
+  if (!w) return;
+  const wName = typeof w === "object" ? w.name : w;
+  const wRole = typeof w === "object" ? (w.role || "") : "";
+  const wActive = typeof w === "object" ? w.active !== false : true;
+  const wPin = typeof w === "object" ? (w.pin || "") : "";
+  document.getElementById("ewf-name").value = wName;
+  document.getElementById("ewf-role").value = wRole;
+  document.getElementById("ewf-pin").value = wPin;
+  document.getElementById("ewf-active").checked = wActive;
+  document.getElementById("editWorkerTitle").textContent = "Edit Worker - " + wName;
+  document.getElementById("ewf-msg").textContent = "";
+  document.getElementById("editWorkerModal").classList.add("active");
+}
+
+function closeEditWorkerModal() {
+  document.getElementById("editWorkerModal").classList.remove("active");
+}
+
+async function saveEditedWorker() {
+  const name = document.getElementById("ewf-name").value.trim();
+  if (!name) { adminMsg("ewf-msg", "Name is required", "err"); return; }
+  const btn = document.querySelector("#editWorkerModal .btn-save");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    const data = await adminCall({
+      action: "saveWorker",
+      name,
+      role: document.getElementById("ewf-role").value.trim(),
+      pin: document.getElementById("ewf-pin").value.trim(),
+      active: document.getElementById("ewf-active").checked
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("ewf-msg", "Saved OK", "ok");
+    const workersData = await adminCall({ action: "allWorkers" });
+    allWorkersAdmin = Array.isArray(workersData.workers) ? workersData.workers : [];
+    renderAdminWorkers();
+    setTimeout(() => closeEditWorkerModal(), 800);
+  } catch(e) {
+    adminMsg("ewf-msg", "Error: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save";
+  }
+}
+
+// Inventory edit modal
+function openEditInventoryModal(code) {
+  const r = allInventory.find(x => x.code === code) || {};
+  document.getElementById("eif-code").value = code;
+  document.getElementById("eif-name").value = r.name || (allProducts[code]?.name || "");
+  document.getElementById("eif-kategorie").value = r.kategorie || (allProducts[code]?.kategorie || "");
+  document.getElementById("eif-unit").value = r.unit || "";
+  document.getElementById("eif-qty").value = r.quantity ?? "";
+  document.getElementById("eif-weight").value = r.weightUnit ?? "";
+  document.getElementById("eif-min").value = r.minimum ?? "";
+  document.getElementById("eif-max").value = r.maximum ?? "";
+  document.getElementById("eif-kosten").value = r.kostenUnit ?? "";
+  document.getElementById("eif-lieferant").value = r.lieferant || "";
+  document.getElementById("eif-lastorder").value = r.lastOrder || "";
+  document.getElementById("eif-notizen").value = r.notizen || "";
+  document.getElementById("editInventoryTitle").textContent = "Edit - " + (r.name || code);
+  document.getElementById("eif-msg").textContent = "";
+  document.getElementById("editInventoryModal").classList.add("active");
+}
+
+function closeEditInventoryModal() {
+  document.getElementById("editInventoryModal").classList.remove("active");
+}
+
+async function saveEditedInventory() {
+  const code = document.getElementById("eif-code").value.trim();
+  if (!code) { adminMsg("eif-msg", "Code is required", "err"); return; }
+  const btn = document.querySelector("#editInventoryModal .btn-save");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    const data = await adminCall({
+      action: "saveInventory",
+      code,
+      name: document.getElementById("eif-name").value.trim(),
+      kategorie: document.getElementById("eif-kategorie").value.trim(),
+      unit: document.getElementById("eif-unit").value.trim(),
+      quantity: document.getElementById("eif-qty").value,
+      weightUnit: document.getElementById("eif-weight").value,
+      minimum: document.getElementById("eif-min").value,
+      maximum: document.getElementById("eif-max").value,
+      kostenUnit: document.getElementById("eif-kosten").value,
+      lieferant: document.getElementById("eif-lieferant").value.trim(),
+      lastOrder: document.getElementById("eif-lastorder").value,
+      notizen: document.getElementById("eif-notizen").value.trim()
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("eif-msg", "Saved OK", "ok");
+    await loadInventory();
+    renderAdminInventory();
+    setTimeout(() => closeEditInventoryModal(), 800);
+  } catch(e) {
+    adminMsg("eif-msg", "Error: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save";
+  }
 }  
+  
 </script>
+  
+<!-- Edit Modals -->
+<div class="edit-modal" id="editProductModal">
+  <div class="edit-modal-content">
+    <div class="edit-modal-header">
+      <h3 id="editProductTitle">Edit Product</h3>
+      <button class="edit-modal-close" onclick="closeEditProductModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly></div>
+      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name"></div>
+      <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat"></div>
+      <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="epf-mepmax" min="0"></div>
+      <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="epf-gnsize"></div>
+      <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" min="0" step="0.1"></div>
+      <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="epf-tagesziel" min="0"></div>
+      <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" min="1"></div>
+      <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="epf-drive"></div>
+    </div>
+    <div class="admin-msg" id="epf-msg"></div>
+    <div class="form-actions">
+      <button class="btn-save" onclick="saveEditedProduct()">Save</button>
+      <button class="btn-edit" onclick="closeEditProductModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="edit-modal" id="editWorkerModal">
+  <div class="edit-modal-content">
+    <div class="edit-modal-header">
+      <h3 id="editWorkerTitle">Edit Worker</h3>
+      <button class="edit-modal-close" onclick="closeEditWorkerModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="ewf-name" readonly></div>
+      <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="ewf-role"></div>
+      <div class="form-field"><label class="form-label">PIN (4 digits)</label><input class="form-input" id="ewf-pin" type="text" inputmode="numeric" maxlength="4"></div>
+      <div class="form-field" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ewf-active"><label class="form-label" style="margin:0">Active</label></div>
+    </div>
+    <div class="admin-msg" id="ewf-msg"></div>
+    <div class="form-actions">
+      <button class="btn-save" onclick="saveEditedWorker()">Save</button>
+      <button class="btn-edit" onclick="closeEditWorkerModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="edit-modal" id="editInventoryModal">
+  <div class="edit-modal-content">
+    <div class="edit-modal-header">
+      <h3 id="editInventoryTitle">Edit Inventory</h3>
+      <button class="edit-modal-close" onclick="closeEditInventoryModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="eif-code" readonly></div>
+      <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="eif-name"></div>
+      <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="eif-kategorie"></div>
+      <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="eif-unit"></div>
+      <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="eif-qty" step="0.1"></div>
+      <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="eif-weight" step="0.01"></div>
+      <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="eif-min"></div>
+      <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="eif-max"></div>
+      <div class="form-field"><label class="form-label">Cost/Unit (CHF)</label><input class="form-input" type="number" id="eif-kosten" step="0.01"></div>
+      <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="eif-lieferant"></div>
+      <div class="form-field"><label class="form-label">Last Order</label><input class="form-input" type="date" id="eif-lastorder"></div>
+      <div class="form-field"><label class="form-label">Notes</label><textarea class="form-input" id="eif-notizen" rows="2"></textarea></div>
+    </div>
+    <div class="admin-msg" id="eif-msg"></div>
+    <div class="form-actions">
+      <button class="btn-save" onclick="saveEditedInventory()">Save</button>
+      <button class="btn-edit" onclick="closeEditInventoryModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
