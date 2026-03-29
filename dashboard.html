@@ -939,7 +939,7 @@ function switchTab(btn) {
 }
 function restoreActiveTab() {
   const savedTab = sessionStorage.getItem("activeTab");
-  if (savedTab) {
+  if (savedTab && savedTab !== "kds") {
     const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
     if (btn) {
       switchTab(btn);
@@ -1073,13 +1073,17 @@ async function loadKDS() {
   try {
     const data = await get({ action: "scans" });
     allScans = Array.isArray(data.scans) ? data.scans : [];
-    try { sessionStorage.setItem("dash_scans", JSON.stringify(allScans)); } catch(e) {}
-    _renderKDS();
+    buildScanStats();
+    renderStats();
+    renderProductBars();
+    renderWorkerBars();
+    renderScanFeed(allScans.slice(-50));
+    startAutoRefresh();
   } catch(e) {
-    document.getElementById("scan-feed").innerHTML = `<div class="error-msg">Error loading scans: ${e.message}</div>`;
+    console.error("loadKDS error:", e);
+    document.getElementById("scan-feed").innerHTML = `<div class="error-msg">Error loading data: ${e.message}</div>`;
   }
 }
-
 function _renderKDS() {
   buildScanStats();
   renderStats();
@@ -1478,9 +1482,17 @@ function initSwipe() {
     el.addEventListener('mousedown',   e => swipeStart(e, idx));
     window.addEventListener('mousemove', e => swipeMove(e, idx));
     window.addEventListener('mouseup',   e => swipeEnd(e, idx));
-    window.addEventListener("DOMContentLoaded", () => {
-  loadKDS();
-  restoreActiveTab();
+    window.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await Promise.all([
+      loadProducts(),
+      loadInventory(),
+      loadKDS()
+    ]);
+    restoreActiveTab();
+  } catch(e) {
+    console.error("Init error:", e);
+  }
 });
   });
 }
@@ -2239,11 +2251,22 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
   } catch(e) { console.error("cache error:", e); }
 })();
 
-loadProducts()
-  .then(() => loadKDS())
-  .catch(()  => loadKDS());
-setTimeout(loadInventory, 400);
-setTimeout(loadRecipes,   800);
+async function initDashboard() {
+  try {
+    await Promise.all([
+      loadProducts(),
+      loadInventory()
+    ]);
+    await loadKDS();
+    restoreActiveTab();
+  } catch(e) {
+    console.error("Init error:", e);
+    await loadKDS();
+  }
+}
+
+initDashboard();
+setTimeout(loadRecipes, 800);
 
 // Auto-refresh every 60s
 setInterval(async () => {
