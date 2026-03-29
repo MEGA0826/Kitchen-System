@@ -1,4 +1,4 @@
-// Kitchen MEP — Service Worker v6
+// Kitchen MEP — Service Worker v7
 // Handles: background sync for offline scan queue, icon caching only
 
 const CACHE = "mep-v7";
