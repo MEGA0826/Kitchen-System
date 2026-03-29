@@ -906,10 +906,7 @@ function updateLiveTime() {
   if (el) el.textContent = `${dd}.${mm}.${yy}  ${hh}:${min}:${ss}`;
 }
 // Run clock immediately and on DOM ready (survives early JS errors)
-function _startClock() {
-  updateLiveTime();
-  setInterval(updateLiveTime, 1000);
-}
+function _startClock() 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", _startClock);
 } else {
@@ -2259,7 +2256,11 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
   } catch(e) { console.error("cache error:", e); }
 })();
 
-// Always load fresh — loadKDS runs regardless of loadProducts outcome
+// Clock starts immediately, independent of data loading
+updateLiveTime();
+setInterval(updateLiveTime, 1000);
+
+// All loads run in parallel; KDS renders after all settle
 Promise.allSettled([
   loadProducts(),
   loadInventory(),
