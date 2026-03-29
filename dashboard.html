@@ -1513,7 +1513,6 @@ async function saveProduct() {
     btn.textContent = "Save product";
   }
 }
-
 async function delProduct(code) {
   if (!confirm(`Remove "${allProducts[code]?.name||code}" from product list?`)) return;
   const data = await adminCall({ action:"deleteProduct", code });
