@@ -905,8 +905,16 @@ function updateLiveTime() {
   const el  = document.getElementById("liveTime");
   if (el) el.textContent = `${dd}.${mm}.${yy}  ${hh}:${min}:${ss}`;
 }
-setInterval(updateLiveTime, 1000);
-updateLiveTime();
+// Run clock immediately and on DOM ready (survives early JS errors)
+function _startClock() {
+  updateLiveTime();
+  setInterval(updateLiveTime, 1000);
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", _startClock);
+} else {
+  _startClock();
+}
 
 // ─────────────────────────────────────────────
 // BACK NAVIGATION
