@@ -1476,26 +1476,44 @@ function clearProductForm() {
 async function saveProduct() {
   const code = document.getElementById("pf-code").value.trim();
   const name = document.getElementById("pf-name").value.trim();
-  if (!code || !name) { adminMsg("pf-msg","Code and Name are required","err"); return; }
+  if (!code || !name) { adminMsg("pf-msg", "Code and Name are required", "err"); return; }
   const btn = document.querySelector("#product-form .btn-save");
-  btn.disabled = true; btn.textContent = "Saving…";
+  btn.disabled = true;
+  btn.textContent = "Saving…";
   try {
-    const data = await adminCall({ action:"saveProduct", code, name,
-      kategorie : document.getElementById("pf-kategorie").value.trim(),
-      mepMax    : document.getElementById("pf-mepmax").value,
-      gnSize    : document.getElementById("pf-gnsize").value,
-      gnWeight  : document.getElementById("pf-gnweight").value,
-      tagesziel : document.getElementById("pf-tagesziel").value,
-      shelfLife : document.getElementById("pf-shelf").value,
-      driveLink : document.getElementById("pf-drive").value });
+    // normalize numeric fields to avoid sending "undefined" or non-numeric strings
+    const mepMax    = document.getElementById("pf-mepmax").value.trim();
+    const gnWeight  = document.getElementById("pf-gnweight").value.trim();
+    const tagesziel = document.getElementById("pf-tagesziel").value.trim();
+    const shelf     = document.getElementById("pf-shelf").value.trim();
+
+    const payload = {
+      action     : "saveProduct",
+      code, name,
+      kategorie  : document.getElementById("pf-kategorie").value.trim(),
+      mepMax     : mepMax === "" ? "" : Number(mepMax),
+      gnSize     : document.getElementById("pf-gnsize").value.trim(),
+      gnWeight   : gnWeight === "" ? "" : Number(gnWeight),
+      tagesziel  : tagesziel === "" ? "" : Number(tagesziel),
+      shelfLife  : shelf === "" ? "" : Number(shelf),
+      driveLink  : document.getElementById("pf-drive").value.trim(),
+    };
+
+    const data = await adminCall(payload);
+    if (!data) throw new Error("No response from server");
     if (data.error) throw new Error(data.error);
-    adminMsg("pf-msg","Saved OK","ok");
+    adminMsg("pf-msg", "Saved OK", "ok");
     clearProductForm();
     await loadProducts();
     renderAdminProducts();
-  } catch(e) { adminMsg("pf-msg","Error: "+e.message,"err"); }
-  finally { btn.disabled = false; btn.textContent = "Save product"; }
+  } catch(e) {
+    adminMsg("pf-msg", "Error: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save product";
+  }
 }
+
 async function delProduct(code) {
   if (!confirm(`Remove "${allProducts[code]?.name||code}" from product list?`)) return;
   const data = await adminCall({ action:"deleteProduct", code });
