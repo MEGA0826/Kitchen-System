@@ -318,7 +318,7 @@
     <div class="logo-sub">212 Nooch Richti — Dashboard</div>
   </div>
   <div class="header-right">
-    <a href="index.html" class="back-btn" onclick="goBack(event)">← Scan</a>
+   <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Scan</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge">
       <div class="live-badge-row">
@@ -1468,20 +1468,21 @@ function adminMsg(id, text, type) {
 }
 
 function renderAdminProducts() {
-  const list   = document.getElementById("admin-product-list");
-  const catSel = document.getElementById("admin-prod-cat");
+  const list = document.getElementById("admin-product-list");
   if (!list) return;
-  let entries = Object.entries(allProducts).filter(([, p]) => p.name && p.name !== "(deleted)");
-  const cats  = [...new Set(entries.map(([, p]) => p.kategorie || "").filter(Boolean))].sort();
+  const catSel = document.getElementById("admin-prod-cat");
+  let entries = Object.entries(allProducts);
+  const cats = [...new Set(entries.map(([, p]) => p.kategorie).filter(Boolean))].sort();
   const curCat = catSel ? catSel.value : "";
   if (catSel) {
-    catSel.innerHTML = `<option value="">All categories (${entries.length})</option>`
+    catSel.innerHTML = `<option value="">Select category...</option>`
       + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
   }
-  if (curCat) entries = entries.filter(([, p]) => (p.kategorie||"") === curCat);
+  if (!curCat) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">Select a category to view products</div>`; return; }
+  entries = entries.filter(([, p]) => (p.kategorie||"") === curCat);
   const q = (document.getElementById("admin-prod-search")?.value || "").toLowerCase();
   if (q) entries = entries.filter(([code, p]) =>
-    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q) || (p.kategorie||"").toLowerCase().includes(q));
+    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q));
   if (!entries.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No products found</div>`; return; }
   list.innerHTML = entries.map(([code, p]) => `
     <div class="admin-item">
@@ -1603,15 +1604,20 @@ function renderAdminWorkers() {
   }).join("");
 }
 function editWorker(name) {
-  document.getElementById("wf-name").value    = name;
-  document.getElementById("wf-name").readOnly = true;
-  document.getElementById("wf-form-title").textContent = "Edit worker - " + name;
+  const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
+  if (!w) return;
+  const wName   = typeof w === "object" ? w.name   : w;
+  const wRole   = typeof w === "object" ? (w.role  || "") : "";
+  const wActive = typeof w === "object" ? w.active !== false : true;
+  const wPin    = typeof w === "object" ? (w.pin   || "") : "";
+  document.getElementById("wf-name").value        = wName;
+  document.getElementById("wf-name").readOnly     = true;
+  document.getElementById("wf-role").value        = wRole;
+  document.getElementById("wf-pin").value         = wPin;
+  document.getElementById("wf-active").checked    = wActive;
+  document.getElementById("wf-form-title").textContent = "Edit worker - " + wName;
   document.getElementById("wf-cancel").style.display   = "inline-flex";
-  const pinEl = document.getElementById("wf-pin");
-  if (pinEl) {
-    const w = allWorkersAdmin.find(w => (typeof w === "object" ? w.name : w) === name);
-    pinEl.value = (w && typeof w === "object" && w.pin) ? w.pin : "";
-  }
+  document.getElementById("worker-form").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function clearWorkerForm() {
   document.getElementById("wf-name").value    = "";
@@ -1656,10 +1662,21 @@ async function delWorker(name) {
 function renderAdminInventory() {
   const list = document.getElementById("admin-inv-list");
   if (!list) return;
-  if (!allInventory.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items yet</div>`; return; }
-  list.innerHTML = allInventory.map(r => {
-    const totKg = (r.quantity !== null && r.weightUnit !== null)
-      ? ` · ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
+  const catSel = document.getElementById("admin-inv-cat");
+  const cats = [...new Set(allInventory.map(r => r.kategorie).filter(Boolean))].sort();
+  const curCat = catSel ? catSel.value : "";
+  if (catSel) {
+    catSel.innerHTML = `<option value="">Select category...</option>`
+      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  }
+  if (!curCat) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">Select a category to view inventory</div>`; return; }
+  let items = allInventory.filter(r => (r.kategorie||"") === curCat);
+  const q = (document.getElementById("admin-inv-search")?.value || "").toLowerCase();
+  if (q) items = items.filter(r =>
+    (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q));
+  if (!items.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No items found</div>`; return; }
+  list.innerHTML = items.map(r => {
+    const totKg = r.weightUnit ? ` · ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
     return `<div class="admin-item">
       <div style="flex:1;min-width:0">
         <div class="admin-item-name">${r.name||r.code}${r.kategorie?`<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>`:""}</div>
@@ -1686,6 +1703,7 @@ function editInvItem(code) {
   document.getElementById("if-notizen").value    = r.notizen    || "";
   document.getElementById("if-form-title").textContent = "Edit - " + (r.name || code);
   document.getElementById("if-cancel").style.display   = "inline-flex";
+  document.getElementById("inv-form").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function clearInvForm() {
   ["if-code","if-name","if-kategorie","if-unit","if-qty","if-weight","if-min","if-max","if-kosten","if-lieferant","if-lastorder","if-notizen"]
