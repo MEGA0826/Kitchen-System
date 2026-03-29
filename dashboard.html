@@ -1481,7 +1481,6 @@ async function saveProduct() {
   btn.disabled = true;
   btn.textContent = "Saving…";
   try {
-    // normalize numeric fields to avoid sending "undefined" or non-numeric strings
     const mepMax    = document.getElementById("pf-mepmax").value.trim();
     const gnWeight  = document.getElementById("pf-gnweight").value.trim();
     const tagesziel = document.getElementById("pf-tagesziel").value.trim();
