@@ -277,6 +277,37 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .bar-row { grid-template-columns: 90px 1fr 36px; }
     }
+    /* Nav dropdown for mobile */
+.nav-dropdown {
+  display: none;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.nav-dropdown:focus {
+  outline: none;
+  border-color: var(--amber-brd);
+}
+
+/* Show dropdown on mobile, hide tabs */
+@media (max-width: 900px) {
+  .nav-tabs {
+    display: none;
+  }
+  
+  .nav-dropdown {
+    display: block;
+  }
+}
   </style>
 </head>
 <body>
@@ -300,16 +331,31 @@
 </div>
 
 <div class="nav" id="main-nav">
-  <!-- FIX: tabs now use data-tab attribute; switchTab receives the button element -->
-  <button class="tab active" data-tab="kds"          onclick="switchTab(this)">KDS</button>
-  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)">MEP Overview</button>
-  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)">Inventory</button>
-  <button class="tab"        data-tab="products"     onclick="switchTab(this)">Products</button>
-  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)">Recipes</button>
-  <button class="tab"        data-tab="orders"       onclick="switchTab(this)">Orders</button>
-  <button class="tab"        data-tab="reports"      onclick="switchTab(this)">Reports</button>
-  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)">Deductions</button>
-  <button class="tab"                                onclick="requestAdminAccess()">Admin</button>
+  <!-- Desktop: Horizontal tabs -->
+  <div class="nav-tabs">
+    <button class="tab active" data-tab="kds"          onclick="switchTab(this)">KDS</button>
+    <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)">MEP Overview</button>
+    <button class="tab"        data-tab="inventory"    onclick="switchTab(this)">Inventory</button>
+    <button class="tab"        data-tab="products"     onclick="switchTab(this)">Products</button>
+    <button class="tab"        data-tab="recipes"      onclick="switchTab(this)">Recipes</button>
+    <button class="tab"        data-tab="orders"       onclick="switchTab(this)">Orders</button>
+    <button class="tab"        data-tab="reports"      onclick="switchTab(this)">Reports</button>
+    <button class="tab"        data-tab="deductions"   onclick="switchTab(this)">Deductions</button>
+    <button class="tab"                                onclick="requestAdminAccess()">Admin</button>
+  </div>
+  
+  <!-- Mobile: Dropdown -->
+  <select class="nav-dropdown" id="nav-dropdown" onchange="switchTabMobile(this)">
+    <option value="kds">KDS</option>
+    <option value="mep-overview">MEP Overview</option>
+    <option value="inventory">Inventory</option>
+    <option value="products">Products</option>
+    <option value="recipes">Recipes</option>
+    <option value="orders">Orders</option>
+    <option value="reports">Reports</option>
+    <option value="deductions">Deductions</option>
+    <option value="admin">Admin</option>
+  </select>
 </div>
 
 <div class="body">
@@ -2113,6 +2159,22 @@ setInterval(async () => {
 setInterval(() => {
   fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
 }, 4 * 60 * 1000);
+  
+// Mobile dropdown tab switching
+function switchTabMobile(select) {
+  const tabId = select.value;
+  
+  if (tabId === "admin") {
+    requestAdminAccess();
+    return;
+  }
+  
+  // Find matching desktop tab button and trigger its click
+  const btn = document.querySelector(`.tab[data-tab="${tabId}"]`);
+  if (btn) {
+    switchTab(btn);
+  }
+}  
 </script>
 </body>
 </html>
