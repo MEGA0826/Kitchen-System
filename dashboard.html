@@ -835,6 +835,12 @@ function requestAdminAccess() {
   document.getElementById("pinModal").classList.add("active");
   document.getElementById("pinInput").value = "";
   document.getElementById("pinMsg").textContent = "";
+  // Load workers in background so PIN check has data
+  if (!allWorkersAdmin.length) {
+    get({ action: "allWorkers" }).then(d => {
+      allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
+    }).catch(() => {});
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -842,43 +848,58 @@ function requestAdminAccess() {
 // ─────────────────────────────────────────────
 function addPinDigit(d) {
   const el = document.getElementById("pinInput");
-  if (el.value.length < 4) el.value += d;
+  if (el.value.length < 4) {
+    el.value += d;
+    if (el.value.length === 4) submitPin();   // auto-submit on 4th digit
+  }
 }
+
 function clearPin() {
   const el = document.getElementById("pinInput");
   el.value = el.value.slice(0, -1);
+  document.getElementById("pinMsg").textContent = "";
 }
+
 async function submitPin() {
-  const pin  = document.getElementById("pinInput").value;
-  const msg  = document.getElementById("pinMsg");
+  const pin = document.getElementById("pinInput").value;
+  const msg = document.getElementById("pinMsg");
   if (pin.length !== 4) { msg.style.color = "var(--red)"; msg.textContent = "Enter 4 digits"; return; }
-  try {
-    const data = await get({ action: "verifyPin", pin });
-    if (data.ok) {
-      cancelPin();
-      // Activate admin tab
-      const adminTab = document.querySelector(".tab[onclick='requestAdminAccess()']");
-      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-      if (adminTab) adminTab.classList.add("active");
-      document.getElementById("panel-admin").classList.add("active");
-      loadAdminTab();
-      loadArchiveStats();
-    } else {
-      msg.style.color = "var(--red)";
-      msg.textContent = "Wrong PIN";
+
+  // Check PIN locally against loaded workers
+  const matched = allWorkersAdmin.find(w =>
+    typeof w === "object" && w.pin && String(w.pin) === String(pin) && w.active !== false
+  );
+
+  if (matched) {
+    cancelPin();
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.querySelector(".tab[onclick='requestAdminAccess()']")?.classList.add("active");
+    document.getElementById("panel-admin").classList.add("active");
+    loadAdminTab();
+    loadArchiveStats();
+  } else if (allWorkersAdmin.length === 0) {
+    // Workers not loaded yet — fall back to API check
+    msg.style.color = "var(--muted)"; msg.textContent = "Checking...";
+    try {
+      const data = await get({ action: "allWorkers" });
+      allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
       document.getElementById("pinInput").value = "";
+      await submitPin();   // retry now that we have data
+    } catch(e) {
+      msg.style.color = "var(--red)"; msg.textContent = "Network error";
     }
-  } catch(e) {
-    msg.style.color = "var(--red)";
-    msg.textContent = "Error — try again";
+  } else {
+    msg.style.color = "var(--red)"; msg.textContent = "Wrong PIN";
+    document.getElementById("pinInput").value = "";
   }
 }
+
 function cancelPin() {
   document.getElementById("pinModal").classList.remove("active");
   document.getElementById("pinInput").value = "";
+  document.getElementById("pinMsg").textContent = "";
 }
-
 // ─────────────────────────────────────────────
 // API FETCH  — FIX: was using bare string literal
 // ─────────────────────────────────────────────
