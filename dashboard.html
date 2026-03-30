@@ -1078,7 +1078,7 @@ async function loadKDS() {
     renderStats();
     renderProductBars();
     renderWorkerBars();
-    renderScanFeed(allScans.slice(-50));
+    renderFeed(allScans.slice(-50));
     startAutoRefresh();
   } catch(e) {
     console.error("loadKDS error:", e);
