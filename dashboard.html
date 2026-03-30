@@ -2252,9 +2252,8 @@ Promise.allSettled([
   loadInventory(),
   loadRecipes()
 ]).then(() => loadKDS());
-  .then(() => restoreActiveTab());
 
-// Auto-refresh every 60s
+  // Auto-refresh every 60s
 setInterval(async () => {
   const prevLen = allScans.length;
   await loadKDS();
