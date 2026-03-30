@@ -1656,34 +1656,27 @@ document.getElementById("pf-code")?.addEventListener("blur", () => {
 // WORKERS ADMIN
 // ─────────────────────────────────────────────
 function renderAdminWorkers() {
-  const list = document.getElementById("admin-worker-list");
-  if (!list) return;
+  const list    = document.getElementById("admin-worker-list");
   const roleSel = document.getElementById("admin-worker-role");
+  if (!list) return;
   const workers = Array.isArray(allWorkersAdmin) ? allWorkersAdmin : [];
-  
-  const roles = [...new Set(workers.map(w => typeof w === "object" ? (w.role || "") : "").filter(Boolean))].sort();
-  const curRole = roleSel ? roleSel.value : "";
-  
+
+  // Populate role dropdown
   if (roleSel) {
-    roleSel.innerHTML = `<option value="">Select role...</option>`
+    const curRole = roleSel.value;
+    const roles = [...new Set(workers.map(w => typeof w==="object" ? (w.role||"") : "").filter(Boolean))].sort();
+    roleSel.innerHTML = `<option value="">All staff</option>`
       + roles.map(r => `<option value="${r}" ${r===curRole?"selected":""}>${r}</option>`).join("");
+    roleSel.value = curRole;
   }
-  
-  if (!curRole) { 
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">Select a role to view workers</div>`; 
-    return; 
-  }
-  
-  const filtered = workers.filter(w => {
-    const wRole = typeof w === "object" ? (w.role || "") : "";
-    return wRole === curRole;
-  });
-  
-  if (!filtered.length) { 
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found</div>`; 
-    return; 
-  }
-  
+
+  const filterRole = roleSel ? roleSel.value : "";
+  const filtered = filterRole
+    ? workers.filter(w => (typeof w==="object" ? (w.role||"") : "") === filterRole)
+    : workers;
+
+  if (!filtered.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found</div>`; return; }
+
   list.innerHTML = filtered.map(w => {
     const name   = typeof w === "object" ? w.name   : w;
     const role   = typeof w === "object" ? (w.role  || "") : "";
@@ -1699,11 +1692,11 @@ function renderAdminWorkers() {
         </div>
       </div>
       <div class="admin-item-actions">
-        <button class="btn-edit" onclick="openEditWorkerModal('${name.replace(/'/g, "\\'")}')">Edit</button>
-        <button class="btn-del"  onclick="delWorker('${name.replace(/'/g, "\\'")}')">${active?"Deactivate":"Remove"}</button>
+        <button class="btn-edit" onclick="openEditWorkerModal('${name.replace(/'/g,"\\'")}')">Edit</button>
+        <button class="btn-del"  onclick="delWorker('${name.replace(/'/g,"\\'")}'">${active?"Deactivate":"Reactivate"}</button>
       </div>
     </div>`;
-}).join("");
+  }).join("");
 }
 function editWorker(name) {
   const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
@@ -1762,29 +1755,42 @@ async function delWorker(name) {
 // INVENTORY ADMIN
 // ─────────────────────────────────────────────
 function renderAdminInventory() {
-  const list = document.getElementById("admin-inv-list");
+  const list    = document.getElementById("admin-inv-list");
+  const catSel  = document.getElementById("admin-inv-cat");
+  const search  = (document.getElementById("admin-inv-search")?.value || "").toLowerCase();
   if (!list) return;
-  const catSel = document.getElementById("admin-inv-cat");
-  const cats = [...new Set(allInventory.map(r => r.kategorie).filter(Boolean))].sort();
-  const curCat = catSel ? catSel.value : "";
+
+  // Populate category dropdown
   if (catSel) {
-    catSel.innerHTML = `<option value="">Select category...</option>`
+    const curCat = catSel.value;
+    const cats = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
+    catSel.innerHTML = `<option value="">All categories</option>`
       + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+    catSel.value = curCat;
   }
-  if (!curCat) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">Select a category to view inventory</div>`; return; }
-  let items = allInventory.filter(r => (r.kategorie||"") === curCat);
-  const q = (document.getElementById("admin-inv-search")?.value || "").toLowerCase();
-  if (q) items = items.filter(r =>
-    (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q));
-  if (!items.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No items found</div>`; return; }
-  list.innerHTML = items.map(r => {
-    const totKg = r.weightUnit ? ` · ${(r.quantity * r.weightUnit).toFixed(1)} kg total` : "";
+
+  const filterCat = catSel ? catSel.value : "";
+  let rows = allInventory;
+  if (filterCat) rows = rows.filter(r => (r.kategorie||"") === filterCat);
+  if (search)    rows = rows.filter(r => (r.name||"").toLowerCase().includes(search) || (r.code||"").toLowerCase().includes(search));
+
+  if (!rows.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items found</div>`; return; }
+
+  list.innerHTML = rows.map(r => {
+    const qty = r.quantity !== null && r.quantity !== undefined ? Number(r.quantity) : null;
+    const min = r.minimum  !== null && r.minimum  !== undefined ? Number(r.minimum)  : null;
+    const [cls] = stockClass(qty??0, min??0);
     return `<div class="admin-item">
       <div style="flex:1;min-width:0">
-        <div class="admin-item-name">${r.name||r.code}${r.kategorie?`<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>`:""}</div>
-        <div class="admin-item-sub">${r.code} · ${r.quantity??"-"} ${r.unit||""}${totKg} · min ${r.minimum??"-"}${r.lieferant?" · "+r.lieferant:""}</div>
+        <div class="admin-item-name">${r.name||r.code}
+          ${r.kategorie?`<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>`:""}
+          <span class="stock-${cls}" style="font-size:10px;margin-left:4px">${qty??"-"} ${r.unit||""}</span>
+        </div>
+        <div class="admin-item-sub">${r.code} · min ${min??"-"} · ${r.lieferant||"no supplier"}</div>
       </div>
-      <div class="admin-item-actions"><button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button></div>
+      <div class="admin-item-actions">
+        <button class="btn-edit" onclick="openEditInventoryModal('${r.code}')">Edit</button>
+      </div>
     </div>`;
   }).join("");
 }
