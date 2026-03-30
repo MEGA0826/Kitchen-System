@@ -276,6 +276,8 @@
       .feed-row span:nth-child(3) { display: none; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .bar-row { grid-template-columns: 90px 1fr 36px; }
+      .mep-alerts { display: flex !important; }
+      .mep-alert  { display: flex !important; }
     }
     /* Nav dropdown for mobile */
 .nav-dropdown {
@@ -865,10 +867,9 @@
     <div style="margin-bottom:16px">
       <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Action</div>
       <div style="display:flex;gap:8px">
-        <button onclick="setManualAction('produce')" id="ms-btn-produce" class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Produce</button>
-        <button onclick="setManualAction('done')"    id="ms-btn-done"    class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Finish</button>
-        <button onclick="setManualAction('waste')"   id="ms-btn-waste"   class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Waste</button>
-        <button onclick="setManualAction('used')"    id="ms-btn-used"    class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:0.5px;cursor:pointer;text-transform:uppercase">Used</button>
+       <button onclick="setManualAction('done')"    id="ms-btn-done"    class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;text-transform:uppercase">Finished</button>
+       <button onclick="setManualAction('used')"    id="ms-btn-used"    class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;text-transform:uppercase">Used</button>
+       <button onclick="setManualAction('waste')"   id="ms-btn-waste"   class="ms-action-btn" style="flex:1;padding:12px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;text-transform:uppercase">Waste</button>
       </div>
     </div>
     <div id="ms-msg" style="font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-bottom:12px"></div>
@@ -1095,10 +1096,14 @@ function _renderKDS() {
 
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
 function renderStats() {
-  document.getElementById("stat-total").textContent   = allScans.length;
-  document.getElementById("stat-produce").textContent = allScans.filter(s => s.action === "produce").length;
-  document.getElementById("stat-done").textContent    = allScans.filter(s => s.action === "done").length;
-  document.getElementById("stat-waste").textContent   = allScans.filter(s => s.action === "waste").length;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const today = allScans.filter(s => s.timestamp && new Date(s.timestamp).toISOString().slice(0,10) === todayStr);
+  document.getElementById("stat-total").textContent   = today.length;
+  document.getElementById("stat-produce").textContent = today.filter(s => s.action === "produce").length;
+  document.getElementById("stat-done").textContent    = today.filter(s => s.action === "done").length;
+  document.getElementById("stat-waste").textContent   = today.filter(s => s.action === "waste").length;
+  const usedEl = document.getElementById("stat-used");
+  if (usedEl) usedEl.textContent = today.filter(s => s.action === "used").length;
 }
 
 function buildMepAlerts() {
@@ -1117,10 +1122,9 @@ function buildMepAlerts() {
     const gnWeight     = p.gnWeight  || 0;
     const tagesziel    = p.tagesziel || 0;
     const mepMax       = p.mepMax    || 0;
-    const inProgress   = (produceCount === 0 && mepMax > 0)
-      ? Math.max(0, mepMax - doneCount)
-      : Math.max(0, produceCount - doneCount);
-    const available    = Math.max(0, doneCount - wasteCount);
+    const inProgress   = Math.max(0, mepMax - available);
+    const usedCount    = st.used  || 0;
+    const available    = Math.max(0, doneCount - wasteCount - usedCount);
     const availableWt  = available   * gnWeight;
     const listWeight   = inProgress  * gnWeight;
     const overDone     = tagesziel > 0 && available > tagesziel;
@@ -1177,7 +1181,7 @@ function buildMepAlerts() {
       <div class="mep-alert ${a.type}" id="al-${idx}" data-idx="${idx}" onclick="alertClick('${a.code||''}')">
         <span class="mep-alert-icon">${a.icon}</span>
         <div class="mep-alert-body">
-          <span class="mep-alert-title">${a.title}</span>
+          `<span class="alert-title" onclick="window.location.href='index.html?code=${a.code}'" style="cursor:pointer;text-decoration:underline">${a.title}</span>`
           <span class="mep-alert-sub">${a.sub}</span>
         </div>
         <span style="margin-left:auto;font-size:10px;opacity:.5;flex-shrink:0">tap ›</span>
@@ -2173,13 +2177,23 @@ function openManualScan() {
     pSel.appendChild(o);
   });
   const wSel = document.getElementById("ms-worker");
-  wSel.innerHTML = '<option value="">-- Select worker --</option>';
+wSel.innerHTML = '<option value="">-- Select worker --</option>';
+// Load fresh from API to get ALL workers
+get({ action: "allWorkers" }).then(d => {
+  const all = Array.isArray(d.workers) ? d.workers : [];
+  all.filter(w => w.active !== false).forEach(w => {
+    const name = typeof w === "string" ? w : w.name;
+    if (!name) return;
+    const o = document.createElement("option");
+    o.value = o.textContent = name;
+    wSel.appendChild(o);
+  });
+}).catch(() => {
+  // fallback to cached
   const workers = new Set();
-  allScans.forEach(s => { if (s.worker) workers.add(s.worker); });
-  if (Array.isArray(allWorkersAdmin)) {
-    allWorkersAdmin.forEach(w => { const name = typeof w==="string"?w:w.name; if (name) workers.add(name); });
-  }
+  if (Array.isArray(allWorkersAdmin)) allWorkersAdmin.forEach(w => { const n = typeof w==="string"?w:w.name; if(n) workers.add(n); });
   workers.forEach(w => { const o = document.createElement("option"); o.value = o.textContent = w; wSel.appendChild(o); });
+});
   _msAction = "";
   document.getElementById("ms-msg").textContent = "";
   document.querySelectorAll(".ms-action-btn").forEach(b => { b.style.background="var(--surface)"; b.style.color="var(--muted)"; b.style.borderColor="var(--border2)"; });
