@@ -999,61 +999,60 @@
     labelDone.innerHTML = doneText;
     dotDone.className   = "mep-dot green";
 
-    // Row 2 - To produce: target - available (when target set) OR 0 when target covered
-    const tagesziel2 = data.tagesziel || 0;
-    const mepMax2 = data.mepMax || 0;
-    const targetQty = tagesziel2 > 0 ? tagesziel2 : mepMax2;
+// Row 2 - To produce: target - available (when target set) OR 0 when target covered
+const tagesziel2 = data.tagesziel || 0;
+const mepMax2 = data.mepMax || 0;
+const targetQtyCalc = tagesziel2 > 0 ? tagesziel2 : mepMax2;
 
-    // When available meets/exceeds target, toProduce = 0
-    // When used, toProduce increases as available drops below target
-    const toProduce = targetQty > 0 ? Math.max(0, targetQty - avail) : inProg;
+// When available meets/exceeds target, toProduce = 0
+// When used, toProduce increases as available drops below target
+const toProduce = targetQtyCalc > 0 ? Math.max(0, targetQtyCalc - avail) : inProg;
 
-    const toProdWt = gnWeight * toProduce;
-    const labelList  = document.getElementById("mepLabelList");
-    const dotList    = document.getElementById("mepDotList");
-    let listText = `<strong>To produce: ${toProduce}`;
-    if (gnSize)   listText += ` ${gnSize}`;
-    if (gnWeight && toProduce > 0) listText += ` = ${toProdWt} kg`;
-    listText += `</strong>`;
-    labelList.innerHTML = listText;
+const toProdWt = gnWeight * toProduce;
+const labelList = document.getElementById("mepLabelList");
+const dotList = document.getElementById("mepDotList");
+let listText = `<strong>To produce: ${toProduce}`;
+if (gnSize) listText += ` ${gnSize}`;
+if (gnWeight && toProduce > 0) listText += ` = ${toProdWt} kg`;
+listText += `</strong>`;
+labelList.innerHTML = listText;
 
-    // Finish is active when there is work in the MEP list (inProg > 0)
-    // Also keep active when toProduce > 0 - items are being made
-    const btnDone = document.querySelector(".btn-done");
-    if (btnDone) {
-      const canFinish = inProg > 0 || toProduce > 0;
-      if (canFinish) {
-        btnDone.classList.remove("inactive");
-        btnDone.title = "";
-      } else {
-        btnDone.classList.add("inactive");
-        btnDone.title = "Nothing in MEP list to finish";
-      }
-    }
-
-    // Used/Waste state already set above via setUsedWasteState()
-
-    // Remember last known values for optimistic UI
-    window._lastAvail  = avail;
-    window._lastInProg = inProg;
-
-    // "Daily target covered" only when available has reached the target
-    const tagesziel = data.tagesziel || 0;
-    const mepMax    = data.mepMax    || 0;
-    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
-    const covered   = targetQty > 0 && avail >= targetQty;
-
-    if (covered) {
-      dotList.className = "mep-dot green";
-      labelList.classList.add("full");
-      fullMsg.textContent = "Daily target covered OK";
-      fullMsg.classList.add("visible");
-    } else {
-      dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
-      labelList.classList.remove("full");
-      fullMsg.classList.remove("visible");
-    }
+// Finish is active when there is work in the MEP list (inProg > 0)
+// Also keep active when toProduce > 0 - items are being made
+const btnDone = document.querySelector(".btn-done");
+if (btnDone) {
+  const canFinish = inProg > 0 || toProduce > 0;
+  if (canFinish) {
+    btnDone.classList.remove("inactive");
+    btnDone.title = "";
+  } else {
+    btnDone.classList.add("inactive");
+    btnDone.title = "Nothing in MEP list to finish";
   }
+}
+
+// Used/Waste state already set above via setUsedWasteState()
+
+// Remember last known values for optimistic UI
+window._lastAvail = avail;
+window._lastInProg = inProg;
+
+// "Daily target covered" only when available has reached the target
+const tagesziel = data.tagesziel || 0;
+const mepMax = data.mepMax || 0;
+const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+const covered = targetQty > 0 && avail >= targetQty;
+
+if (covered) {
+  dotList.className = "mep-dot green";
+  labelList.classList.add("full");
+  fullMsg.textContent = "Daily target covered OK";
+  fullMsg.classList.add("visible");
+} else {
+  dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
+  labelList.classList.remove("full");
+  fullMsg.classList.remove("visible");
+}
 
   function showProduct() {
     CURRENT_CODE = new URLSearchParams(window.location.search).get("code") || "";
