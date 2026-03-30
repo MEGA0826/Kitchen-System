@@ -999,12 +999,16 @@
     labelDone.innerHTML = doneText;
     dotDone.className   = "mep-dot green";
 
-    // Row 2 - To produce: target - available (or inProg if no target)
+    // Row 2 - To produce: target - available (when target set) OR 0 when target covered
     const tagesziel2 = data.tagesziel || 0;
-    const toProduce  = tagesziel2 > 0
-      ? Math.max(0, tagesziel2 - avail)
-      : inProg;
-    const toProdWt   = gnWeight * toProduce;
+    const mepMax2 = data.mepMax || 0;
+    const targetQty = tagesziel2 > 0 ? tagesziel2 : mepMax2;
+
+    // When available meets/exceeds target, toProduce = 0
+    // When used, toProduce increases as available drops below target
+    const toProduce = targetQty > 0 ? Math.max(0, targetQty - avail) : inProg;
+
+    const toProdWt = gnWeight * toProduce;
     const labelList  = document.getElementById("mepLabelList");
     const dotList    = document.getElementById("mepDotList");
     let listText = `<strong>To produce: ${toProduce}`;
@@ -1081,67 +1085,110 @@
   let _undoTimer   = null;   // countdown interval
   let _redirectTimer = null; // auto-redirect timeout
 
-  async function send(action) {
-    const worker = getCurrentWorker();
-    if (!worker) { showMsg("Enter your PIN or select staff first", "error"); return; }
+async function send(action) {
+  const worker = getCurrentWorker();
+  if (!worker) { showMsg("Enter your PIN or select staff first", "error"); return; }
 
-    // -- Optimistic UI: update display instantly, confirm from server --
-    const p = PRODUCT_MAP[CURRENT_CODE] || {};
-    if (p.mepMax) {
-      const optimistic = Object.assign({}, p, {
-        mepMax      : p.mepMax,
-        gnSize      : p.gnSize    || "",
-        gnWeight    : p.gnWeight  || 0,
-        tagesziel   : p.tagesziel || 0,
-        // Estimate new values immediately
-        available   : action === "done"  ? ((_lastAvail||0) + 1)
-                    : action === "used"  ? Math.max(0, (_lastAvail||0) - 1)
-                    : action === "waste" ? Math.max(0, (_lastAvail||0) - 1)
-                    : (_lastAvail||0),
-        inProgress  : action === "done"  ? Math.max(0, (_lastInProg||0) - 1)
-                    : (_lastInProg||0),
-        listFull    : false,
-        overProduce : false,
-        goalMet     : false,
-      });
-      updateMepUI(optimistic);
+  // -- Optimistic UI: update display instantly, confirm from server --
+  const p = PRODUCT_MAP[CURRENT_CODE] || {};
+  if (p.mepMax || p.tagesziel) {
+    const targetQty = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
+    
+    const optimistic = Object.assign({}, p, {
+      mepMax: p.mepMax,
+      gnSize: p.gnSize || "",
+      gnWeight: p.gnWeight || 0,
+      tagesziel: p.tagesziel || 0,
+      // Estimate new values immediately
+      available: action === "done" ? ((_lastAvail || 0) + 1)
+               : action === "used" ? Math.max(0, (_lastAvail || 0) - 1)
+               : action === "waste" ? Math.max(0, (_lastAvail || 0) - 1)
+               : (_lastAvail || 0),
+      toProduce: 0  // Will be recalculated below
+    });
+
+    // Recalculate toProduce based on new available
+    optimistic.toProduce = Math.max(0, targetQty - optimistic.available);
+
+    _lastAvail = optimistic.available;
+    _lastToProduce = optimistic.toProduce;
+
+    const gnLabel = optimistic.gnSize ? " " + optimistic.gnSize : "";
+    const availEl = document.getElementById("mepAvailable");
+    const prodEl = document.getElementById("mepToProduce");
+    const dotList = document.getElementById("mepDotList");
+    const labelList = document.getElementById("mepLabelList");
+    const fullMsg = document.getElementById("mepFullMsg");
+
+    if (availEl) availEl.textContent = optimistic.available + gnLabel;
+    if (prodEl) prodEl.textContent = optimistic.toProduce + gnLabel;
+
+    const covered = targetQty > 0 && optimistic.available >= targetQty;
+
+    if (covered) {
+      dotList.className = "mep-dot green";
+      labelList.classList.add("full");
+      fullMsg.textContent = "Daily target covered OK";
+      fullMsg.classList.add("visible");
+    } else {
+      dotList.className = optimistic.toProduce > 0 ? "mep-dot amber" : "mep-dot green";
+      labelList.classList.remove("full");
+      fullMsg.classList.remove("visible");
+    }
+  }
+
+  // Show feedback
+  const labels = {
+    produce: "Producing...",
+    done: "Finishing...",
+    waste: "Recording waste...",
+    used: "Recording use..."
+  };
+  showMsg(labels[action] || "Saving...", "info");
+
+  // Send to server
+  try {
+    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
+    const res = await fetch(url);
+    
+    if (!navigator.onLine) {
+      await queueScan(CURRENT_CODE, worker, action);
+      showMsg("Offline - queued for sync", "info");
+      await updateBadge();
+      startUndoTimer(action);
+      return;
     }
 
-    showMsg("Saving...", "info");
-    const labels = { done: "MEP Finished OK", waste: "Waste recorded OK", used: "Sent to service OK" };
-    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
+    const data = await res.json();
+    
+    if (data.error) {
+      showMsg("Error: " + data.error, "error");
+      await updateMepStatus();
+      return;
+    }
 
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (data.mepMax !== undefined) updateMepUI(data);
-        if (data.status === "list_full") {
-          showMsg(data.message || "Target already covered", "info");
-          return;
-        }
-        // Build deduction summary if this was a done scan
-        const dedMsg = (action === "done" && data.deducted && data.deducted.length > 0)
-          ? " | Deducted: " + data.deducted.map(d => d.name + " -" + d.deducted + d.unit + (d.low ? "(LOW)" : "")).join(", ")
-          : "";
-        const hasLow = data.deducted && data.deducted.some(d => d.low);
-        if (data.status === "over_produce") {
-          const p = PRODUCT_MAP[CURRENT_CODE] || {};
-          showOverPopup(p.name || CURRENT_CODE, data);
-          showMsg("MEP Finished OK" + dedMsg, hasLow ? "error" : "success");
-          startUndo(action);
-          return;
-        }
-        showMsg((labels[action] || "Saved") + dedMsg + (dedMsg ? "" : " -- tap Undo to reverse"), hasLow ? "error" : "success");
-        startUndo(action);
-      })
-      .catch(async () => {
-        // Network failed - save to offline queue
-        await queueScan({ code: CURRENT_CODE, worker, action, ts: Date.now() });
-        showMsg("Saved offline  - will sync when back online", "info");
-        startUndo(action);
-        updateBadge();
-      });
+    // Success feedback
+    const successLabels = {
+      produce: "Production started",
+      done: "Batch finished",
+      waste: "Waste recorded",
+      used: "Use recorded"
+    };
+    showMsg(successLabels[action] || "OK", "success");
+
+    // Refresh from server
+    await updateMepStatus();
+    
+    // Start undo timer
+    startUndoTimer(action);
+
+  } catch (err) {
+    await queueScan(CURRENT_CODE, worker, action);
+    showMsg("Offline - queued for sync", "info");
+    await updateBadge();
+    startUndoTimer(action);
   }
+}
 
   function startUndo(action) {
     _lastAction = action;
