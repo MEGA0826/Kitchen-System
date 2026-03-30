@@ -1079,8 +1079,7 @@ async function loadKDS() {
     renderProductBars();
     renderWorkerBars();
     renderFeed(allScans.slice(-50));
-    startAutoRefresh();
-  } catch(e) {
+    } catch(e) {
     console.error("loadKDS error:", e);
     document.getElementById("scan-feed").innerHTML = `<div class="error-msg">Error loading data: ${e.message}</div>`;
   }
@@ -2253,6 +2252,7 @@ Promise.allSettled([
   loadInventory(),
   loadRecipes()
 ]).then(() => loadKDS());
+  .then(() => restoreActiveTab());
 
 // Auto-refresh every 60s
 setInterval(async () => {
