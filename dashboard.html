@@ -2250,49 +2250,28 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
     const cp = sessionStorage.getItem("dash_products");
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
-    if (cp) { allProducts = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
+    if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
     if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); }
     if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
   } catch(e) { console.error("cache error:", e); }
 })();
 
-async function initDashboard() {
-  try {
-    await Promise.all([
-      loadProducts(),
-      loadInventory()
-    ]);
-    await loadKDS();
-    const savedTab = sessionStorage.getItem("activeTab");
-    if (savedTab && savedTab !== "kds") {
-      const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-      if (btn) {
-        switchTab(btn);
-        const dropdown = document.getElementById("nav-dropdown");
-        if (dropdown) dropdown.value = savedTab;
-      }
-    }
-  } catch(e) {
-    console.error("Init error:", e);
-    await loadKDS();
-  }
-}
-
-initDashboard();
-setTimeout(loadRecipes, 800);
-
-// Clock starts immediately, independent of data loading
+// Clock — independent of data
 updateLiveTime();
 setInterval(updateLiveTime, 1000);
 
-// All loads run in parallel; KDS renders after all settle
-Promise.allSettled([
-  loadProducts(),
-  loadInventory(),
-  loadRecipes()
-]).then(() => loadKDS());
+// Load all data, then render KDS and restore tab
+Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()])
+  .then(() => loadKDS())
+  .then(() => {
+    const savedTab = sessionStorage.getItem("activeTab");
+    if (savedTab && savedTab !== "kds") {
+      const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+      if (btn) switchTab(btn);
+    }
+  });
 
-  // Auto-refresh every 60s
+// Auto-refresh every 60s
 setInterval(async () => {
   const prevLen = allScans.length;
   await loadKDS();
