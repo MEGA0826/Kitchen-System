@@ -1093,47 +1093,53 @@ async function send(action) {
   if (p.mepMax || p.tagesziel) {
     const targetQty = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
     
-    const optimistic = Object.assign({}, p, {
-      mepMax: p.mepMax,
-      gnSize: p.gnSize || "",
-      gnWeight: p.gnWeight || 0,
-      tagesziel: p.tagesziel || 0,
-      // Estimate new values immediately
-      available: action === "done" ? ((_lastAvail || 0) + 1)
-               : action === "used" ? Math.max(0, (_lastAvail || 0) - 1)
-               : action === "waste" ? Math.max(0, (_lastAvail || 0) - 1)
-               : (_lastAvail || 0),
-      toProduce: 0  // Will be recalculated below
-    });
-
-    // Recalculate toProduce based on new available
-    optimistic.toProduce = Math.max(0, targetQty - optimistic.available);
-
-    _lastAvail = optimistic.available;
-    _lastToProduce = optimistic.toProduce;
-
-    const gnLabel = optimistic.gnSize ? " " + optimistic.gnSize : "";
-    const availEl = document.getElementById("mepAvailable");
-    const prodEl = document.getElementById("mepToProduce");
-    const dotList = document.getElementById("mepDotList");
+    // Calculate new available based on action
+    let newAvail = window._lastAvail || 0;
+    if (action === "done") newAvail += 1;
+    if (action === "used" || action === "waste") newAvail = Math.max(0, newAvail - 1);
+    
+    // Calculate new toProduce: target - available
+    const newToProduce = targetQty > 0 ? Math.max(0, targetQty - newAvail) : (window._lastInProg || 0);
+    
+    // Update UI
+    const gnLabel = p.gnSize ? " " + p.gnSize : "";
+    const labelDone = document.getElementById("mepLabelDone");
     const labelList = document.getElementById("mepLabelList");
+    const dotList = document.getElementById("mepDotList");
     const fullMsg = document.getElementById("mepFullMsg");
-
-    if (availEl) availEl.textContent = optimistic.available + gnLabel;
-    if (prodEl) prodEl.textContent = optimistic.toProduce + gnLabel;
-
-    const covered = targetQty > 0 && optimistic.available >= targetQty;
-
-    if (covered) {
-      dotList.className = "mep-dot green";
-      labelList.classList.add("full");
-      fullMsg.textContent = "Daily target covered OK";
-      fullMsg.classList.add("visible");
-    } else {
-      dotList.className = optimistic.toProduce > 0 ? "mep-dot amber" : "mep-dot green";
-      labelList.classList.remove("full");
-      fullMsg.classList.remove("visible");
+    
+    if (labelDone) {
+      let doneText = `<strong>Available: ${newAvail}`;
+      if (p.gnSize) doneText += ` ${p.gnSize}`;
+      if (p.gnWeight) doneText += ` = ${(newAvail * p.gnWeight).toFixed(1)} kg`;
+      doneText += `</strong>`;
+      labelDone.innerHTML = doneText;
     }
+    
+    if (labelList) {
+      let listText = `<strong>To produce: ${newToProduce}`;
+      if (p.gnSize) listText += ` ${p.gnSize}`;
+      if (p.gnWeight && newToProduce > 0) listText += ` = ${(newToProduce * p.gnWeight).toFixed(1)} kg`;
+      listText += `</strong>`;
+      labelList.innerHTML = listText;
+    }
+    
+    const covered = targetQty > 0 && newAvail >= targetQty;
+    
+    if (covered) {
+      if (dotList) dotList.className = "mep-dot green";
+      if (labelList) labelList.classList.add("full");
+      if (fullMsg) {
+        fullMsg.textContent = "Daily target covered OK";
+        fullMsg.classList.add("visible");
+      }
+    } else {
+      if (dotList) dotList.className = newToProduce > 0 ? "mep-dot amber" : "mep-dot green";
+      if (labelList) labelList.classList.remove("full");
+      if (fullMsg) fullMsg.classList.remove("visible");
+    }
+    
+    window._lastAvail = newAvail;
   }
 
   // Show feedback
@@ -1162,7 +1168,7 @@ async function send(action) {
     
     if (data.error) {
       showMsg("Error: " + data.error, "error");
-      await updateMepStatus();
+      await loadMepStatus(CURRENT_CODE);
       return;
     }
 
@@ -1176,7 +1182,7 @@ async function send(action) {
     showMsg(successLabels[action] || "OK", "success");
 
     // Refresh from server
-    await updateMepStatus();
+    await loadMepStatus(CURRENT_CODE);
     
     // Start undo timer
     startUndoTimer(action);
