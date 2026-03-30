@@ -1146,7 +1146,7 @@ async function send(action) {
       await queueScan(CURRENT_CODE, worker, action);
       showMsg("Offline - queued for sync", "info");
       await updateBadge();
-      startUndoTimer(action);
+      startUndo(action);
       return;
     }
 
@@ -1160,12 +1160,12 @@ async function send(action) {
     const successLabels = { produce: "Production started", done: "Batch finished", waste: "Waste recorded", used: "Use recorded" };
     showMsg(successLabels[action] || "OK", "success");
     await loadMepStatus(CURRENT_CODE);
-    startUndoTimer(action);
+    startUndo(action);
   } catch (err) {
     await queueScan(CURRENT_CODE, worker, action);
     showMsg("Offline - queued for sync", "info");
     await updateBadge();
-    startUndoTimer(action);
+    startUndo(action);
   }
 }
 
