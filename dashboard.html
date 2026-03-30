@@ -1700,16 +1700,7 @@ function renderAdminWorkers() {
         <button class="btn-del"  onclick="delWorker('${name.replace(/'/g, "\\'")}')">${active?"Deactivate":"Remove"}</button>
       </div>
     </div>`;
-  }).join("");
-  <div class="admin-section">
-  <div class="admin-section-title">Workers</div>
-  <div class="admin-section-sub">Settings sheet</div>
-  <div style="display:flex;gap:8px;margin-bottom:10px">
-    <select class="search-input" id="admin-worker-role" onchange="renderAdminWorkers()" style="flex:1">
-      <option value="">Select role...</option>
-    </select>
-  </div>
-  <div class="admin-list" id="admin-worker-list"></div>
+}).join("");
 }
 function editWorker(name) {
   const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
