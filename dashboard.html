@@ -2279,19 +2279,14 @@ setInterval(() => {
   fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
 }, 4 * 60 * 1000);
 
-async function initDashboard() {
-  try {
-    await Promise.all([
-      loadProducts(),
-      loadInventory()
-    ]);
-    await loadKDS();
-    restoreActiveTab();
-  } catch(e) {
-    console.error("Init error:", e);
-    await loadKDS();
-  }
-}
+// Clock runs immediately, never blocked by data loading
+updateLiveTime();
+setInterval(updateLiveTime, 1000);
+
+// All loads independent — KDS renders regardless of failures
+Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()])
+  .then(() => loadKDS())
+  .then(() => restoreActiveTab());
 
 initDashboard();
 setTimeout(loadRecipes, 800);
