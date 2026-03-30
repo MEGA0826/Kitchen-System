@@ -1049,10 +1049,12 @@ if (covered) {
   fullMsg.textContent = "Daily target covered OK";
   fullMsg.classList.add("visible");
 } else {
-  dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
-  labelList.classList.remove("full");
-  fullMsg.classList.remove("visible");
+    dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
+    labelList.classList.remove("full");
+    fullMsg.classList.remove("visible");
+  }
 }
+    
 
   function showProduct() {
     CURRENT_CODE = new URLSearchParams(window.location.search).get("code") || "";
@@ -1088,21 +1090,14 @@ async function send(action) {
   const worker = getCurrentWorker();
   if (!worker) { showMsg("Enter your PIN or select staff first", "error"); return; }
 
-  // -- Optimistic UI: update display instantly, confirm from server --
   const p = PRODUCT_MAP[CURRENT_CODE] || {};
   if (p.mepMax || p.tagesziel) {
     const targetQty = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
-    
-    // Calculate new available based on action
     let newAvail = window._lastAvail || 0;
     if (action === "done") newAvail += 1;
     if (action === "used" || action === "waste") newAvail = Math.max(0, newAvail - 1);
-    
-    // Calculate new toProduce: target - available
     const newToProduce = targetQty > 0 ? Math.max(0, targetQty - newAvail) : (window._lastInProg || 0);
     
-    // Update UI
-    const gnLabel = p.gnSize ? " " + p.gnSize : "";
     const labelDone = document.getElementById("mepLabelDone");
     const labelList = document.getElementById("mepLabelList");
     const dotList = document.getElementById("mepDotList");
@@ -1125,7 +1120,6 @@ async function send(action) {
     }
     
     const covered = targetQty > 0 && newAvail >= targetQty;
-    
     if (covered) {
       if (dotList) dotList.className = "mep-dot green";
       if (labelList) labelList.classList.add("full");
@@ -1138,20 +1132,12 @@ async function send(action) {
       if (labelList) labelList.classList.remove("full");
       if (fullMsg) fullMsg.classList.remove("visible");
     }
-    
     window._lastAvail = newAvail;
   }
 
-  // Show feedback
-  const labels = {
-    produce: "Producing...",
-    done: "Finishing...",
-    waste: "Recording waste...",
-    used: "Recording use..."
-  };
+  const labels = { produce: "Producing...", done: "Finishing...", waste: "Recording waste...", used: "Recording use..." };
   showMsg(labels[action] || "Saving...", "info");
 
-  // Send to server
   try {
     const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
     const res = await fetch(url);
@@ -1165,28 +1151,16 @@ async function send(action) {
     }
 
     const data = await res.json();
-    
     if (data.error) {
       showMsg("Error: " + data.error, "error");
       await loadMepStatus(CURRENT_CODE);
       return;
     }
 
-    // Success feedback
-    const successLabels = {
-      produce: "Production started",
-      done: "Batch finished",
-      waste: "Waste recorded",
-      used: "Use recorded"
-    };
+    const successLabels = { produce: "Production started", done: "Batch finished", waste: "Waste recorded", used: "Use recorded" };
     showMsg(successLabels[action] || "OK", "success");
-
-    // Refresh from server
     await loadMepStatus(CURRENT_CODE);
-    
-    // Start undo timer
     startUndoTimer(action);
-
   } catch (err) {
     await queueScan(CURRENT_CODE, worker, action);
     showMsg("Offline - queued for sync", "info");
