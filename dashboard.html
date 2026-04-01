@@ -1875,73 +1875,96 @@ function populateInvDataLists() {
 // ─────────────────────────────────────────────
 // ORDERS
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────
 function renderOrders() {
   const container = document.getElementById("order-content");
   const summary   = document.getElementById("order-summary");
   const catSel    = document.getElementById("order-cat");
   if (!container) return;
-  let items = allInventory.filter(r => {
+
+  // Build map: rmCode → { needed, inStock, shortfall, unit, mepSources[] }
+  const rmNeeds = {};
+
+  Object.entries(allProducts).forEach(([mepCode, p]) => {
+    const targetGN = Number(p.tagesziel > 0 ? p.tagesziel : p.mepMax) || 0;
+    if (!targetGN) return;
+    const productRecipes = allRecipes.filter(r => r.mepCode === mepCode);
+    productRecipes.forEach(r => {
+      const needed = targetGN * Number(r.menge || 0);
+      if (!needed) return;
+      if (!rmNeeds[r.rmCode]) rmNeeds[r.rmCode] = { needed: 0, unit: r.einheit || "", mepSources: [] };
+      rmNeeds[r.rmCode].needed += needed;
+      rmNeeds[r.rmCode].mepSources.push(`${p.name || mepCode} (${targetGN} GN × ${r.menge} ${r.einheit})`);
+    });
+  });
+
+  // Match against inventory, collect items below required amount
+  let items = [];
+  Object.entries(rmNeeds).forEach(([rmCode, req]) => {
+    const inv = allInventory.find(x => x.code === rmCode);
+    if (!inv) return;
+    const inStock = Number(inv.quantity || 0) * Number(inv.weightUnit || 1);
+    if (inStock < req.needed) {
+      items.push({
+        ...inv,
+        _reason:    "mep_requirement",
+        _needed:    req.needed,
+        _inStock:   inStock,
+        _shortfall: (req.needed - inStock).toFixed(2),
+        _unit:      req.unit || inv.unit || "",
+        _mepSources: req.mepSources
+      });
+    }
+  });
+
+  // Also catch plain below-minimum inventory items not already in list
+  allInventory.forEach(r => {
     const qty = r.quantity !== null ? Number(r.quantity) : null;
     const min = r.minimum  !== null ? Number(r.minimum)  : null;
-    return qty !== null && min !== null && qty < min;
-  }).map(r => ({ ...r, _reason:"below_min" }));
-  Object.entries(allProducts).forEach(([mepCode, p]) => {
-    if (!p.gnWeight || !p.mepMax) return;
-    const targetQty = p.tagesziel > 0 ? p.tagesziel : p.mepMax;
-    const neededKg  = targetQty * p.gnWeight;
-    const invItem   = allInventory.find(r => r.code === mepCode);
-    if (!invItem || invItem.quantity === null) return;
-    const inStockKg = Number(invItem.quantity) * (invItem.weightUnit || 1);
-    if (inStockKg < neededKg && !items.find(x => x.code === mepCode))
-      items.push({ ...invItem, _reason:"safety_stock", _neededKg:neededKg, _inStockKg:inStockKg, _shortKg:(neededKg-inStockKg).toFixed(1) });
+    if (qty !== null && min !== null && qty < min && !items.find(x => x.code === r.code)) {
+      items.push({ ...r, _reason: "below_min", _needed: min, _inStock: qty,
+        _shortfall: (min - qty).toFixed(2), _unit: r.unit || "", _mepSources: [] });
+    }
   });
-  const cats   = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
+
+  // Populate category filter
+  const cats   = [...new Set(allInventory.map(r => r.kategorie || "").filter(Boolean))].sort();
   const curCat = catSel ? catSel.value : "";
-  if (catSel) catSel.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  if (catSel) catSel.innerHTML = `<option value="">All categories</option>`
+    + cats.map(c => `<option value="${c}" ${c === curCat ? "selected" : ""}>${c}</option>`).join("");
+
+  // Filter by search + category
   const q = (document.getElementById("order-search")?.value || "").toLowerCase();
-  if (curCat) items = items.filter(r => (r.kategorie||"") === curCat);
-  if (q)      items = items.filter(r =>
-    (r.name||"").toLowerCase().includes(q) ||
-    (r.lieferant||"").toLowerCase().includes(q) ||
-    (r.kategorie||"").toLowerCase().includes(q));
+  if (curCat)  items = items.filter(x => (x.kategorie || "") === curCat);
+  if (q)       items = items.filter(x => (x.name || x.code || "").toLowerCase().includes(q));
+
   if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All stock above minimum</div>`;
-    if (summary) summary.textContent = ""; return;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>No items to order</div>`;
+    if (summary) summary.textContent = "";
+    return;
   }
-  const bySupplier = {};
-  items.forEach(r => { const s = r.lieferant || "No supplier"; if (!bySupplier[s]) bySupplier[s] = []; bySupplier[s].push(r); });
-  container.innerHTML = Object.entries(bySupplier).map(([sup, rows]) => `
-    <div style="margin-bottom:20px">
-      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">${sup}</div>
-      <div class="inv-table-wrap"><table class="inv-table">
-        <thead><tr><th>Product</th><th>Category</th><th>Current</th><th>Min</th><th style="color:var(--red)">Order qty</th><th>Total kg</th><th style="color:var(--amber)">Est. CHF</th><th>Notes</th></tr></thead>
-        <tbody>${rows.map(r => {
-          const qty      = Number(r.quantity) || 0;
-          const min      = r.minimum !== null ? Number(r.minimum) : 0;
-          const max      = r.maximum !== null ? Number(r.maximum) : null;
-          const kosten   = r.kostenUnit !== null ? Number(r.kostenUnit) : null;
-          const orderQty = max !== null ? Math.max(0, max - qty) : Math.ceil(min - qty);
-          const wuNum    = r.weightUnit !== null ? Number(r.weightUnit) : null;
-          const totKg    = wuNum ? (orderQty * wuNum).toFixed(1)+" kg" : "-";
-          const totChf   = kosten ? "CHF "+(orderQty*kosten).toFixed(2) : "-";
-          const urgency  = qty <= 0 ? "color:var(--red);font-weight:500" : "color:var(--amber)";
-          const reasonBadge = r._reason==="safety_stock"
-            ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);padding:1px 6px;border-radius:10px;margin-left:4px">safety</span>` : "";
-          return `<tr>
-            <td>${r.name||r.code}${reasonBadge}</td>
-            <td style="color:var(--muted);font-size:11px">${r.kategorie||"-"}</td>
-            <td>${qty} ${r.unit||""}</td>
-            <td style="color:var(--muted)">${min}${max!==null?" / "+max:""} ${r.unit||""}</td>
-            <td style="${urgency}">${orderQty>0?orderQty+" "+r.unit:"-"}</td>
-            <td style="color:var(--muted)">${totKg}</td>
-            <td style="color:var(--amber)">${totChf}</td>
-            <td style="font-size:11px;color:var(--muted)">${r.notizen||"-"}</td>
-            <td><button onclick="markOrdered('${r.code}',this)" style="padding:4px 10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer">Ordered</button></td>
-          </tr>`;
-        }).join("")}</tbody>
-      </table></div>
-    </div>`).join("");
-  if (summary) summary.textContent = `${items.length} item${items.length>1?"s":""} to reorder across ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length>1?"s":""}`;
+
+  container.innerHTML = `<div class="inv-table-wrap"><table class="inv-table">
+    <thead><tr>
+      <th>Raw material</th><th>In stock</th><th>Required</th><th>Short</th><th>Reason</th>
+    </tr></thead>
+    <tbody>${items.map(r => {
+      const reasonLabel = r._reason === "mep_requirement"
+        ? `<span title="${r._mepSources.join('\n')}" style="cursor:help;color:var(--amber)">MEP req.</span>`
+        : `<span style="color:var(--red)">Below min</span>`;
+      return `<tr>
+        <td><strong>${r.name || r.code}</strong><br><span style="font-size:10px;color:var(--muted)">${r.code}${r.lieferant ? " · " + r.lieferant : ""}</span></td>
+        <td style="color:var(--red)">${Number(r._inStock).toFixed(2)} ${r._unit}</td>
+        <td>${Number(r._needed).toFixed(2)} ${r._unit}</td>
+        <td style="color:var(--red);font-weight:600">+${r._shortfall} ${r._unit}</td>
+        <td>${reasonLabel}</td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table></div>`;
+
+  if (summary) summary.textContent = `${items.length} item${items.length > 1 ? "s" : ""} to reorder`;
 }
 
 async function markOrdered(code, btn) {
