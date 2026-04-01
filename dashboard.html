@@ -154,8 +154,8 @@
     .search-input { flex: 1; min-width: 200px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 13px; padding: 10px 14px; }
     .search-input::placeholder { color: var(--faint); }
     .search-input:focus { outline: none; border-color: var(--amber); }
-    .inv-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-    .inv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .inv-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .inv-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
     .inv-table th { background: var(--surface2); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; }
     .inv-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .inv-table tr:last-child td { border-bottom: none; }
