@@ -498,18 +498,21 @@
     </div>
   </div>
 
-  <!-- INVENTORY -->
+<!-- INVENTORY -->
   <div class="panel" id="panel-inventory">
     <div class="section-title">Inventory</div>
-    <div class="section-sub">Stock overview</div>
-    <div class="inv-controls">
-      <input class="search-input" id="inv-search" type="text" placeholder="Search…" oninput="filterInventory()">
-      <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 180px">
+    <div class="section-sub">Select a category or supplier to load items</div>
+    <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
+      <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" style="flex:1;min-width:160px">
+      <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 160px">
         <option value="">All categories</option>
+      </select>
+      <select class="search-input" id="inv-sup-filter" onchange="filterInventory()" style="flex:0 1 160px">
+        <option value="">All suppliers</option>
       </select>
     </div>
     <div id="inv-content">
-      <div class="inv-table-wrap"><div class="empty-state"><div class="skeleton" style="width:50%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div></div>
+      <div class="empty-state"><div class="empty-icon">🔍</div>Choose a category or supplier above to view inventory</div>
     </div>
   </div>
 
@@ -1327,16 +1330,36 @@ function closeMepDetail() {
 // ─────────────────────────────────────────────
 // INVENTORY
 // ─────────────────────────────────────────────
+let _invSortCol = "name";
+let _invSortAsc = true;
+
 async function loadInventory() {
   try {
     const data = await get({ action: "inventory" });
     allInventory = Array.isArray(data.inventory) ? data.inventory : [];
     try { sessionStorage.setItem("dash_inventory", JSON.stringify(allInventory)); } catch(e) {}
-    renderInventory(allInventory);
+    populateInvFilters();
     renderOrders();
+    // Do NOT auto-render all rows — wait for user filter selection
   } catch(e) {
     document.getElementById("inv-content").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
   }
+}
+
+function populateInvFilters() {
+  const cats = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
+  const sups = [...new Set(allInventory.map(r => r.lieferant||"").filter(Boolean))].sort();
+  const catSel = document.getElementById("inv-cat-filter");
+  const supSel = document.getElementById("inv-sup-filter");
+  if (catSel) {
+    const curCat = catSel.value;
+    catSel.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  }
+  if (supSel) {
+    const curSup = supSel.value;
+    supSel.innerHTML = `<option value="">All suppliers</option>` + sups.map(s => `<option value="${s}" ${s===curSup?"selected":""}>${s}</option>`).join("");
+  }
+  populateInvDataLists();
 }
 
 function stockClass(qty, min) {
@@ -1346,12 +1369,57 @@ function stockClass(qty, min) {
   return                  ["ok","OK"];
 }
 
-function renderInventory(rows) {
-  if (!rows.length) {
+function filterInventory() {
+  const q   = (document.getElementById("inv-search")?.value || "").toLowerCase();
+  const cat = document.getElementById("inv-cat-filter")?.value || "";
+  const sup = document.getElementById("inv-sup-filter")?.value || "";
+
+  // Show prompt if no filter active and no search
+  if (!q && !cat && !sup) {
     document.getElementById("inv-content").innerHTML =
-      `<div class="empty-state"><div class="empty-icon">📦</div>No inventory data.<br>Check your "Lager" sheet.</div>`;
+      `<div class="empty-state"><div class="empty-icon">🔍</div>Choose a category or supplier above to view inventory</div>`;
     return;
   }
+
+  let rows = allInventory;
+  if (cat) rows = rows.filter(r => (r.kategorie||"") === cat);
+  if (sup) rows = rows.filter(r => (r.lieferant||"") === sup);
+  if (q)   rows = rows.filter(r =>
+    (r.name||"").toLowerCase().includes(q) ||
+    (r.code||"").toLowerCase().includes(q) ||
+    (r.kategorie||"").toLowerCase().includes(q) ||
+    (r.lieferant||"").toLowerCase().includes(q));
+
+  renderInventory(rows);
+}
+
+function sortInventory(col) {
+  if (_invSortCol === col) { _invSortAsc = !_invSortAsc; }
+  else { _invSortCol = col; _invSortAsc = true; }
+  filterInventory();
+}
+
+function renderInventory(rows) {
+  const el = document.getElementById("inv-content");
+  if (!rows || !rows.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>No items found.</div>`;
+    return;
+  }
+
+  // Sort
+  const col = _invSortCol;
+  const asc = _invSortAsc;
+  const numCols = ["quantity","minimum","maximum","kostenUnit","weightUnit"];
+  rows = [...rows].sort((a, b) => {
+    let av = a[col] ?? ""; let bv = b[col] ?? "";
+    if (numCols.includes(col)) { av = parseFloat(av)||0; bv = parseFloat(bv)||0; }
+    else { av = String(av).toLowerCase(); bv = String(bv).toLowerCase(); }
+    return asc ? (av > bv ? 1 : av < bv ? -1 : 0) : (av < bv ? 1 : av > bv ? -1 : 0);
+  });
+
+  const arrow = (c) => `<span style="font-size:9px;opacity:0.6;margin-left:2px">${_invSortCol===c ? (_invSortAsc?"▲":"▼") : "⇅"}</span>`;
+  const th = (label, col) => `<th style="cursor:pointer;white-space:nowrap" onclick="sortInventory('${col}')">${label}${arrow(col)}</th>`;
+
   const trs = rows.map(r => {
     const qty    = r.quantity !== null && r.quantity !== undefined ? Number(r.quantity) : null;
     const min    = r.minimum  !== null && r.minimum  !== undefined ? Number(r.minimum)  : null;
@@ -1376,27 +1444,27 @@ function renderInventory(rows) {
       <td style="color:var(--muted)">${totKg}</td>
       <td style="color:var(--muted)">${minDisplay}</td>
       <td style="color:var(--muted)">${r.maximum !== null ? r.maximum : "-"}</td>
-      <td style="color:var(--muted)">${r.kostenUnit !== null ? "CHF " + Number(r.kostenUnit).toFixed(2) : "-"}</td>
-      <td style="color:var(--muted)">${(r.quantity !== null && r.kostenUnit !== null) ? "CHF " + (r.quantity * r.kostenUnit).toFixed(2) : "-"}</td>
+      <td style="color:var(--muted)">${r.kostenUnit !== null ? "CHF "+Number(r.kostenUnit).toFixed(2) : "-"}</td>
+      <td style="color:var(--muted)">${(r.quantity !== null && r.kostenUnit !== null) ? "CHF "+(r.quantity*r.kostenUnit).toFixed(2) : "-"}</td>
       <td style="font-size:11px;color:var(--muted)">${r.lieferant||"-"}</td>
       <td style="color:var(--green)">${mepStr}</td>
       <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
     </tr>`;
   }).join("");
-  document.getElementById("inv-content").innerHTML = `
+
+  el.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${rows.length} item${rows.length!==1?"s":""} — click column header to sort</div>
     <div class="inv-table-wrap"><table class="inv-table">
-      <thead><tr><th>Code</th><th>Product</th><th>Cat.</th><th>Qty</th><th>Unit</th><th>Total kg</th><th>Min</th><th>Max</th><th>CHF/Unit</th><th>Total CHF</th><th>Supplier</th><th>MEP avail.</th><th>Status</th></tr></thead>
+      <thead><tr>
+        ${th("Code","code")}${th("Product","name")}${th("Cat.","kategorie")}
+        ${th("Qty","quantity")}${th("Unit","unit")}
+        <th>Total kg</th>
+        ${th("Min","minimum")}${th("Max","maximum")}
+        ${th("CHF/Unit","kostenUnit")}<th>Total CHF</th>
+        ${th("Supplier","lieferant")}<th>MEP avail.</th><th>Status</th>
+      </tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
-}
-
-function filterInventory() {
-  const q = document.getElementById("inv-search").value.toLowerCase();
-  renderInventory(allInventory.filter(r =>
-    (r.name||"").toLowerCase().includes(q) ||
-    (r.code||"").toLowerCase().includes(q) ||
-    (r.kategorie||"").toLowerCase().includes(q) ||
-    (r.lieferant||"").toLowerCase().includes(q)));
 }
 
 // ─────────────────────────────────────────────
@@ -2280,7 +2348,7 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
     if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
-    if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); }
+    if (ci) { allInventory = JSON.parse(ci); populateInvFilters(); renderOrders(); }
     if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
   } catch(e) { console.error("cache error:", e); }
 })();
