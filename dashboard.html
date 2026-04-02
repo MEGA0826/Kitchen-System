@@ -713,18 +713,38 @@
       </div>
     </div>
 
-    <div class="admin-section">
+<div class="admin-section">
       <div class="admin-section-title">Workers</div>
       <div class="admin-section-sub">Settings sheet</div>
-     <div style="margin-bottom:10px">
-        <input class="form-input" id="admin-worker-search" placeholder="Search worker…" oninput="renderAdminWorkers()" style="width:100%">
+      
+      <div style="margin-bottom:10px; display:flex; gap:8px;">
+        <select class="form-input" id="admin-worker-role-filter" onchange="renderAdminWorkers()" style="flex:0 0 140px">
+          <option value="">All roles</option>
+          <option value="Kitchen">Kitchen</option>
+          <option value="Service">Service</option>
+          <option value="Admin">Admin</option>
+        </select>
+        <input class="form-input" id="admin-worker-search" placeholder="Search worker…" oninput="renderAdminWorkers()" style="flex:1">
       </div>
+      
       <div class="admin-list" id="admin-workers-list"></div>
+      
       <div class="admin-form" id="worker-form">
         <div class="admin-form-title" id="wf-form-title">Add new worker</div>
         <div class="form-grid">
-          <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="wf-name" placeholder="e.g. Marco"></div>
-          <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="wf-role" placeholder="e.g. Chef de Partie"></div>
+          <div class="form-field">
+            <label class="form-label">Name *</label>
+            <input class="form-input" id="wf-name" placeholder="e.g. Marco">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Role</label>
+            <select class="form-input" id="wf-role">
+              <option value="">-- Select role --</option>
+              <option value="Kitchen">Kitchen</option>
+              <option value="Service">Service</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
           <div class="form-field">
             <label class="form-label">PIN (4 digits)</label>
             <input class="form-input" id="wf-pin" type="text" inputmode="numeric" maxlength="4" placeholder="e.g. 1234"
@@ -1736,37 +1756,35 @@ document.getElementById("pf-code")?.addEventListener("blur", () => {
 // WORKERS ADMIN
 // ─────────────────────────────────────────────
 function renderAdminWorkers() {
-  const list = document.getElementById("admin-workers-list");
-  if (!list) return;
-
-  const q = (document.getElementById("admin-worker-search")?.value || "").toLowerCase();
-  let workers = allWorkersAdmin || [];
-
-  if (q) workers = workers.filter(w => {
-    const name = typeof w === "string" ? w : (w.name || "");
-    const role = typeof w === "object" ? (w.role || "") : "";
-    return name.toLowerCase().includes(q) || role.toLowerCase().includes(q);
-  });
-
-  if (!workers.length) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found.</div>`;
-    return;
+  const search = document.getElementById('admin-worker-search').value.toLowerCase();
+  const roleFilter = document.getElementById('admin-worker-role-filter').value;
+  const list = document.getElementById('admin-workers-list');
+  
+  let filtered = allSettings.workers || [];
+  
+  // Filter by role
+  if (roleFilter) {
+    filtered = filtered.filter(w => w.role === roleFilter);
   }
-
-  list.innerHTML = workers.map(w => {
-    const name   = typeof w === "string" ? w : (w.name || "?");
-    const role   = typeof w === "object" ? (w.role   || "") : "";
-    const active = typeof w === "object" ? w.active !== false : true;
-    return `<div class="admin-item" style="opacity:${active?1:0.5}">
-      <div style="flex:1">
-        <span style="font-size:13px;font-weight:500">${name}</span>
-        ${role ? `<span style="font-size:11px;color:var(--muted);margin-left:8px">${role}</span>` : ""}
-        ${!active ? `<span style="font-size:11px;color:var(--red);margin-left:8px">inactive</span>` : ""}
+  
+  // Filter by search
+  if (search) {
+    filtered = filtered.filter(w => 
+      (w.name || '').toLowerCase().includes(search) ||
+      (w.role || '').toLowerCase().includes(search) ||
+      (w.pin || '').toString().includes(search)
+    );
+  }
+  
+  list.innerHTML = filtered.map((w, i) => {
+    const originalIndex = allSettings.workers.indexOf(w);
+    return `
+      <div class="admin-list-item" onclick="editWorkerAdmin(${originalIndex})">
+        <div class="admin-list-item-main">${w.name || '(no name)'}</div>
+        <div class="admin-list-item-sub">${w.role || '—'} · PIN: ${w.pin || '—'}</div>
       </div>
-      <button class="btn-edit" onclick="editWorker('${name}')">Edit</button>
-      <button class="btn-del" onclick="delWorker('${name}')">${active?"Deactivate":"Reactivate"}</button>
-    </div>`;
-  }).join("");
+    `;
+  }).join('') || '<div style="padding:12px;color:#999;text-align:center">No workers found</div>';
 }
 function editWorker(name) {
   const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
