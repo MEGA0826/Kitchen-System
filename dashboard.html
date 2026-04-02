@@ -762,6 +762,35 @@
         <div class="admin-msg" id="wf-msg"></div>
       </div>
     </div>
+    <!-- Edit Worker Popup -->
+      <div id="workerEditPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:25px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:9999; min-width:320px;">
+        <h3 style="margin-top:0">Worker bearbeiten</h3>
+        <input type="hidden" id="editWorkerOriginalName">
+        <div style="margin-bottom:12px">
+          <label style="display:block; margin-bottom:4px; font-weight:600">Name:</label>
+          <input type="text" id="editWorkerName" class="form-input">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block; margin-bottom:4px; font-weight:600">Rolle:</label>
+          <select id="editWorkerRole" class="form-input">
+            <option value="">-- Rolle wählen --</option>
+            <option value="Küchenchef">Küchenchef</option>
+            <option value="Teamleader">Teamleader</option>
+            <option value="Sushikoch">Sushikoch</option>
+            <option value="Wokkoch">Wokkoch</option>
+            <option value="Küchehilfe">Küchehilfe</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block; margin-bottom:4px; font-weight:600">PIN (4 digits):</label>
+          <input type="text" id="editWorkerPin" class="form-input" maxlength="4" inputmode="numeric" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px">
+          <button onclick="saveWorkerEditPopup()" class="btn-save" style="flex:1">Speichern</button>
+          <button onclick="closeWorkerEditPopup()" class="btn-edit" style="flex:1">Abbrechen</button>
+        </div>
+      </div>
+      <div id="workerEditOverlay" onclick="closeWorkerEditPopup()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9998"></div>
 
     <div class="admin-section">
       <div class="admin-section-title">Inventory</div>
@@ -1764,50 +1793,106 @@ function renderAdminWorkers() {
   const roleFilter = document.getElementById('admin-worker-role-filter').value;
   const list = document.getElementById('admin-workers-list');
   
-  // Use allWorkersAdmin instead of allSettings.workers
   let workers = allWorkersAdmin || [];
   
   let filtered = workers;
   
   // Filter by role (empty string = show all)
   if (roleFilter) {
-    filtered = filtered.filter(w => w.role === roleFilter);
+    filtered = filtered.filter(w => {
+      const role = typeof w === 'object' ? w.role : '';
+      return role === roleFilter;
+    });
   }
   
   // Filter by search
   if (search) {
-    filtered = filtered.filter(w => 
-      (w.name || '').toLowerCase().includes(search) ||
-      (w.role || '').toLowerCase().includes(search) ||
-      (w.pin || '').toString().includes(search)
-    );
+    filtered = filtered.filter(w => {
+      const name = typeof w === 'object' ? w.name : w;
+      const role = typeof w === 'object' ? (w.role || '') : '';
+      const pin = typeof w === 'object' ? (w.pin || '') : '';
+      return (name || '').toLowerCase().includes(search) ||
+             role.toLowerCase().includes(search) ||
+             pin.toString().includes(search);
+    });
   }
   
-  list.innerHTML = filtered.map((w, i) => {
-    const originalIndex = workers.indexOf(w);
+  list.innerHTML = filtered.map(w => {
+    const name = typeof w === 'object' ? w.name : w;
+    const role = typeof w === 'object' ? (w.role || '—') : '—';
+    const pin = typeof w === 'object' ? (w.pin || '—') : '—';
     return `
-      <div class="admin-list-item" ondblclick="editWorkerAdmin(${originalIndex})">
-        <div class="admin-list-item-main">${w.name || '(no name)'}</div>
-        <div class="admin-list-item-sub">${w.role || '—'} · PIN: ${w.pin || '—'}</div>
+      <div class="admin-list-item">
+        <div style="flex:1">
+          <div class="admin-list-item-main">${name || '(no name)'}</div>
+          <div class="admin-list-item-sub">${role} · PIN: ${pin}</div>
+        </div>
+        <button class="btn-edit" onclick="openWorkerEditPopup('${name.replace(/'/g, "\\'")}')">Edit</button>
       </div>
     `;
   }).join('') || '<div style="padding:12px;color:#999;text-align:center">No workers found</div>';
 }
-function editWorker(name) {
+function openWorkerEditPopup(name) {
   const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
   if (!w) return;
-  const wName   = typeof w === "object" ? w.name   : w;
-  const wRole   = typeof w === "object" ? (w.role  || "") : "";
-  const wActive = typeof w === "object" ? w.active !== false : true;
-  const wPin    = typeof w === "object" ? (w.pin   || "") : "";
-  document.getElementById("wf-name").value        = wName;
-  document.getElementById("wf-name").readOnly     = true;
-  document.getElementById("wf-role").value        = wRole;
-  document.getElementById("wf-pin").value         = wPin;
-  document.getElementById("wf-active").checked    = wActive;
-  document.getElementById("wf-form-title").textContent = "Edit worker - " + wName;
-  document.getElementById("wf-cancel").style.display   = "inline-flex";
-  document.getElementById("worker-form").scrollIntoView({ behavior: "smooth", block: "start" });
+  
+  const wName = typeof w === "object" ? w.name : w;
+  const wRole = typeof w === "object" ? (w.role || "") : "";
+  const wPin = typeof w === "object" ? (w.pin || "") : "";
+  
+  document.getElementById('editWorkerOriginalName').value = wName;
+  document.getElementById('editWorkerName').value = wName;
+  document.getElementById('editWorkerRole').value = wRole;
+  document.getElementById('editWorkerPin').value = wPin;
+  
+  document.getElementById('workerEditPopup').style.display = 'block';
+  document.getElementById('workerEditOverlay').style.display = 'block';
+}
+
+function closeWorkerEditPopup() {
+  document.getElementById('workerEditPopup').style.display = 'none';
+  document.getElementById('workerEditOverlay').style.display = 'none';
+}
+
+async function saveWorkerEditPopup() {
+  const originalName = document.getElementById('editWorkerOriginalName').value;
+  const name = document.getElementById('editWorkerName').value.trim();
+  const role = document.getElementById('editWorkerRole').value.trim();
+  const pin = document.getElementById('editWorkerPin').value.trim();
+  
+  if (!name) {
+    alert('Name erforderlich');
+    return;
+  }
+  
+  if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) {
+    alert('PIN must be 4 digits');
+    return;
+  }
+  
+  try {
+    const data = await adminCall({
+      action: 'saveWorker',
+      originalName: originalName,
+      name: name,
+      role: role,
+      pin: pin,
+      active: 'true'
+    });
+    
+    if (data.error) throw new Error(data.error);
+    
+    // Refresh workers list
+    const wd = await adminCall({ action: "allWorkers" });
+    allWorkersAdmin = Array.isArray(wd.workers) ? wd.workers : [];
+    renderAdminWorkers();
+    
+    closeWorkerEditPopup();
+    alert('Gespeichert');
+  } catch (e) {
+    alert('Fehler: ' + e.message);
+    console.error(e);
+  }
 }
 function clearWorkerForm() {
   document.getElementById("wf-name").value    = "";
