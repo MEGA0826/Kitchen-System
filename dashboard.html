@@ -1760,15 +1760,20 @@ document.getElementById("pf-code")?.addEventListener("blur", () => {
 // WORKERS ADMIN
 // ─────────────────────────────────────────────
 function renderAdminWorkers() {
+  console.log('allSettings:', allSettings);
+  console.log('allSettings.workers:', allSettings?.workers);
+  
   const search = document.getElementById('admin-worker-search').value.toLowerCase();
   const roleFilter = document.getElementById('admin-worker-role-filter').value;
   const list = document.getElementById('admin-workers-list');
   
   let filtered = allSettings.workers || [];
+  console.log('filtered before role filter:', filtered);
   
   // Filter by role (empty string = show all)
   if (roleFilter) {
     filtered = filtered.filter(w => w.role === roleFilter);
+    console.log('filtered after role filter:', filtered);
   }
   
   // Filter by search
@@ -1779,6 +1784,8 @@ function renderAdminWorkers() {
       (w.pin || '').toString().includes(search)
     );
   }
+  
+  console.log('final filtered:', filtered);
   
   list.innerHTML = filtered.map((w, i) => {
     const originalIndex = allSettings.workers.indexOf(w);
