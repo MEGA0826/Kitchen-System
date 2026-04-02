@@ -718,11 +718,13 @@
       <div class="admin-section-sub">Settings sheet</div>
       
       <div style="margin-bottom:10px; display:flex; gap:8px;">
-        <select class="form-input" id="admin-worker-role-filter" onchange="renderAdminWorkers()" style="flex:0 0 140px">
-          <option value="">All roles</option>
-          <option value="Kitchen">Kitchen</option>
-          <option value="Service">Service</option>
-          <option value="Admin">Admin</option>
+        <select class="form-input" id="admin-worker-role-filter" onchange="renderAdminWorkers()" style="flex:0 0 160px">
+          <option value="">Alle Rollen</option>
+          <option value="Küchenchef">Küchenchef</option>
+          <option value="Teamleader">Teamleader</option>
+          <option value="Sushikoch">Sushikoch</option>
+          <option value="Wokkoch">Wokkoch</option>
+          <option value="Küchehilfe">Küchehilfe</option>
         </select>
         <input class="form-input" id="admin-worker-search" placeholder="Search worker…" oninput="renderAdminWorkers()" style="flex:1">
       </div>
@@ -739,10 +741,12 @@
           <div class="form-field">
             <label class="form-label">Role</label>
             <select class="form-input" id="wf-role">
-              <option value="">-- Select role --</option>
-              <option value="Kitchen">Kitchen</option>
-              <option value="Service">Service</option>
-              <option value="Admin">Admin</option>
+              <option value="">-- Rolle wählen --</option>
+              <option value="Küchenchef">Küchenchef</option>
+              <option value="Teamleader">Teamleader</option>
+              <option value="Sushikoch">Sushikoch</option>
+              <option value="Wokkoch">Wokkoch</option>
+              <option value="Küchehilfe">Küchehilfe</option>
             </select>
           </div>
           <div class="form-field">
@@ -1762,7 +1766,7 @@ function renderAdminWorkers() {
   
   let filtered = allSettings.workers || [];
   
-  // Filter by role
+  // Filter by role (empty string = show all)
   if (roleFilter) {
     filtered = filtered.filter(w => w.role === roleFilter);
   }
