@@ -574,15 +574,20 @@
   <!-- ORDERS -->
   <div class="panel" id="panel-orders">
     <div class="section-title">Orders</div>
-    <div class="section-sub" style="margin-bottom:20px">Items below minimum - what to reorder</div>
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()">
-      <select class="search-input" id="order-cat" onchange="renderOrders()" style="flex:0 1 160px">
-        <option value="">All categories</option>
+    <div class="section-sub" style="margin-bottom:16px">Raw material order list by supplier — based on MEP daily max</div>
+
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;color:var(--muted);white-space:nowrap">Coverage days:</span>
+      <select class="search-input" id="order-days" onchange="renderOrders()" style="flex:0 1 160px">
+        <option value="1">1 day × 150%</option>
+        <option value="2" selected>2 days × 150%</option>
+        <option value="3">3 days × 150%</option>
       </select>
+      <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()" style="flex:1;min-width:140px">
     </div>
+
     <div id="order-content">
-      <div class="empty-state"><div class="empty-icon">📦</div>No items to order</div>
+      <div class="empty-state"><div class="empty-icon">📦</div>Loading…</div>
     </div>
     <div id="order-summary" style="margin-top:16px;font-size:12px;color:var(--muted)"></div>
   </div>
@@ -1951,96 +1956,260 @@ function populateInvDataLists() {
 // ─────────────────────────────────────────────
 // ORDERS
 // ─────────────────────────────────────────────
-// ─────────────────────────────────────────────
-// ORDERS
-// ─────────────────────────────────────────────
+
+// Supplier delivery schedule config
+const SUPPLIER_SCHEDULE = {
+  "Kellerberger": {
+    deliveryDays: [2, 4, 5],        // Tue, Thu, Fri
+    orderCutoffHour: 14,
+    orderLeadDays: 1,
+    isThailand: false,
+    note: "Order by 14:00 day before. Delivery: Tue, Thu, Fri."
+  },
+  "G.Bianchi AG": {
+    deliveryDays: [1,2,3,4,5,6],    // Mon–Sat
+    orderCutoffHour: 15,
+    orderLeadDays: 1,
+    isThailand: false,
+    note: "Order by 15:00 day before. Delivery: Mon–Sat."
+  },
+  "Saviva Food Services": {
+    deliveryDays: [2, 4],           // Tue, Thu (Mon/Wed/Fri = Ersatz)
+    ersatzDays: [1, 3, 5],
+    orderCutoffHour: 12,
+    orderLeadDays: 1,
+    isThailand: false,
+    note: "Order by 12:00 day before. Delivery: Tue & Thu. Ersatz: Mon, Wed, Fri."
+  },
+  "Stutzer Service AG": {
+    deliveryDays: [2, 4],           // Tue & Thu only
+    orderCutoffHour: 23,
+    orderLeadDays: 7,               // 1 week advance
+    isThailand: true,
+    note: "Thailand products — order 1 WEEK in advance. Delivery: Tue & Thu only."
+  },
+  "The Asia Company SA": {
+    deliveryDays: [3, 5],           // Wed & Fri (Mon/Tue = Ersatz)
+    ersatzDays: [1, 2],
+    orderCutoffHour: 12,
+    orderLeadDays: 1,
+    isThailand: false,
+    note: "Order by 12:00 day before. Delivery: Wed & Fri. Ersatz: Mon & Tue."
+  }
+};
+
+const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const DAY_NAMES_FULL = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+function getOrderDeliveryDates(supplierName) {
+  const cfg = SUPPLIER_SCHEDULE[supplierName];
+  const now = new Date();
+  const todayDow = now.getDay(); // 0=Sun
+  const todayHour = now.getHours();
+
+  if (!cfg) {
+    // Unknown supplier — generic +1 day
+    const orderDate = new Date(now); orderDate.setDate(orderDate.getDate() + 1);
+    const delivDate = new Date(now); delivDate.setDate(delivDate.getDate() + 2);
+    return { orderDate, delivDate, note: "No schedule configured. Estimate +1 day." };
+  }
+
+  // Find next valid delivery day from today+leadDays
+  const leadDays = cfg.isThailand ? 7 : 1;
+  let checkFrom = new Date(now);
+
+  // If today is past cutoff, start searching from tomorrow
+  if (todayHour >= cfg.orderCutoffHour) {
+    checkFrom.setDate(checkFrom.getDate() + 1);
+  }
+
+  // Advance by lead days
+  let orderDate = new Date(checkFrom);
+  if (!cfg.isThailand) {
+    // Find earliest day such that orderDate + leadDays = deliveryDay
+    // i.e. find next delivery day, order day = delivDay - leadDays
+    let delivDate = null;
+    for (let i = 1; i <= 14; i++) {
+      const candidate = new Date(checkFrom);
+      candidate.setDate(checkFrom.getDate() + i);
+      if (cfg.deliveryDays.includes(candidate.getDay())) {
+        delivDate = candidate;
+        orderDate = new Date(candidate);
+        orderDate.setDate(candidate.getDate() - leadDays);
+        // Make sure orderDate is not in the past
+        if (orderDate < now && todayHour < cfg.orderCutoffHour) orderDate = new Date(now);
+        break;
+      }
+    }
+    return {
+      orderDate,
+      delivDate,
+      note: cfg.note
+    };
+  } else {
+    // Thailand: order day → same weekday +7 days = delivery
+    // Find next Tuesday or Thursday to order
+    let delivDate = null;
+    for (let i = 1; i <= 14; i++) {
+      const candidate = new Date(checkFrom);
+      candidate.setDate(checkFrom.getDate() + i);
+      if (cfg.deliveryDays.includes(candidate.getDay())) {
+        orderDate = new Date(candidate);
+        delivDate = new Date(candidate);
+        delivDate.setDate(candidate.getDate() + 7);
+        break;
+      }
+    }
+    return { orderDate, delivDate, note: cfg.note };
+  }
+}
+
+function fmtDate(d) {
+  if (!d) return "-";
+  return `${DAY_NAMES[d.getDay()]} ${d.getDate().toString().padStart(2,"0")}.${(d.getMonth()+1).toString().padStart(2,"0")}`;
+}
+
 function renderOrders() {
   const container = document.getElementById("order-content");
   const summary   = document.getElementById("order-summary");
-  const catSel    = document.getElementById("order-cat");
   if (!container) return;
 
-  // Build map: rmCode → { needed, inStock, shortfall, unit, mepSources[] }
-  const rmNeeds = {};
+  const days = parseInt(document.getElementById("order-days")?.value || "2");
+  const q    = (document.getElementById("order-search")?.value || "").toLowerCase();
+  const SAFETY = 1.5;
 
+  // Step 1: Aggregate raw material daily needs from recipes × mepMax
+  const rmNeeds = {}; // rmCode → { needed1day, unit, mepSources[] }
   Object.entries(allProducts).forEach(([mepCode, p]) => {
     const targetGN = Number(p.tagesziel > 0 ? p.tagesziel : p.mepMax) || 0;
     if (!targetGN) return;
-    const productRecipes = allRecipes.filter(r => r.mepCode === mepCode);
-    productRecipes.forEach(r => {
-      const needed = targetGN * Number(r.menge || 0);
-      if (!needed) return;
-      if (!rmNeeds[r.rmCode]) rmNeeds[r.rmCode] = { needed: 0, unit: r.einheit || "", mepSources: [] };
-      rmNeeds[r.rmCode].needed += needed;
-      rmNeeds[r.rmCode].mepSources.push(`${p.name || mepCode} (${targetGN} GN × ${r.menge} ${r.einheit})`);
+    allRecipes.filter(r => r.mepCode === mepCode).forEach(r => {
+      const needed1day = targetGN * Number(r.menge || 0);
+      if (!needed1day) return;
+      if (!rmNeeds[r.rmCode]) rmNeeds[r.rmCode] = { needed1day: 0, unit: r.einheit || "", mepSources: [] };
+      rmNeeds[r.rmCode].needed1day += needed1day;
+      rmNeeds[r.rmCode].mepSources.push(`${p.name||mepCode} (${targetGN} GN × ${r.menge} ${r.einheit})`);
     });
   });
 
-  // Match against inventory, collect items below required amount
+  // Step 2: Build order items — ALL items where stock < required (days × 150%)
   let items = [];
   Object.entries(rmNeeds).forEach(([rmCode, req]) => {
     const inv = allInventory.find(x => x.code === rmCode);
     if (!inv) return;
-    const inStock = Number(inv.quantity || 0) * Number(inv.weightUnit || 1);
-    if (inStock < req.needed) {
+    const inStock  = Number(inv.quantity || 0) * Number(inv.weightUnit || 1);
+    const required = req.needed1day * days * SAFETY;
+    const toOrder  = Math.max(0, required - inStock);
+    // Show ALL items (not just shortfalls) so kitchen can see the full order list
+    items.push({
+      ...inv,
+      _needed1day:  req.needed1day,
+      _required:    required,
+      _inStock:     inStock,
+      _toOrder:     toOrder,
+      _unit:        req.unit || inv.unit || "",
+      _mepSources:  req.mepSources,
+      _shortage:    toOrder > 0
+    });
+  });
+
+  // Step 3: Also add plain below-minimum items not in recipe list
+  allInventory.forEach(r => {
+    if (items.find(x => x.code === r.code)) return;
+    const qty = Number(r.quantity || 0);
+    const min = Number(r.minimum  || 0);
+    if (min > 0 && qty < min) {
       items.push({
-        ...inv,
-        _reason:    "mep_requirement",
-        _needed:    req.needed,
-        _inStock:   inStock,
-        _shortfall: (req.needed - inStock).toFixed(2),
-        _unit:      req.unit || inv.unit || "",
-        _mepSources: req.mepSources
+        ...r,
+        _needed1day: min,
+        _required:   min * days * SAFETY,
+        _inStock:    qty,
+        _toOrder:    Math.max(0, min * days * SAFETY - qty),
+        _unit:       r.unit || "",
+        _mepSources: [],
+        _shortage:   true
       });
     }
   });
 
-  // Also catch plain below-minimum inventory items not already in list
-  allInventory.forEach(r => {
-    const qty = r.quantity !== null ? Number(r.quantity) : null;
-    const min = r.minimum  !== null ? Number(r.minimum)  : null;
-    if (qty !== null && min !== null && qty < min && !items.find(x => x.code === r.code)) {
-      items.push({ ...r, _reason: "below_min", _needed: min, _inStock: qty,
-        _shortfall: (min - qty).toFixed(2), _unit: r.unit || "", _mepSources: [] });
-    }
-  });
+  // Filter by search
+  if (q) items = items.filter(x =>
+    (x.name||"").toLowerCase().includes(q) ||
+    (x.code||"").toLowerCase().includes(q) ||
+    (x.lieferant||"").toLowerCase().includes(q));
 
-  // Populate category filter
-  const cats   = [...new Set(allInventory.map(r => r.kategorie || "").filter(Boolean))].sort();
-  const curCat = catSel ? catSel.value : "";
-  if (catSel) catSel.innerHTML = `<option value="">All categories</option>`
-    + cats.map(c => `<option value="${c}" ${c === curCat ? "selected" : ""}>${c}</option>`).join("");
-
-  // Filter by search + category
-  const q = (document.getElementById("order-search")?.value || "").toLowerCase();
-  if (curCat)  items = items.filter(x => (x.kategorie || "") === curCat);
-  if (q)       items = items.filter(x => (x.name || x.code || "").toLowerCase().includes(q));
+  // Sort: shortage first, then by name
+  items.sort((a,b) => (b._shortage - a._shortage) || (a.name||"").localeCompare(b.name||""));
 
   if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>No items to order</div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div>No items to order</div>`;
     if (summary) summary.textContent = "";
     return;
   }
 
-  container.innerHTML = `<div class="inv-table-wrap"><table class="inv-table">
-    <thead><tr>
-      <th>Raw material</th><th>In stock</th><th>Required</th><th>Short</th><th>Reason</th>
-    </tr></thead>
-    <tbody>${items.map(r => {
-      const reasonLabel = r._reason === "mep_requirement"
-        ? `<span title="${r._mepSources.join('\n')}" style="cursor:help;color:var(--amber)">MEP req.</span>`
-        : `<span style="color:var(--red)">Below min</span>`;
-      return `<tr>
-        <td><strong>${r.name || r.code}</strong><br><span style="font-size:10px;color:var(--muted)">${r.code}${r.lieferant ? " · " + r.lieferant : ""}</span></td>
-        <td style="color:var(--red)">${Number(r._inStock).toFixed(2)} ${r._unit}</td>
-        <td>${Number(r._needed).toFixed(2)} ${r._unit}</td>
-        <td style="color:var(--red);font-weight:600">+${r._shortfall} ${r._unit}</td>
-        <td>${reasonLabel}</td>
-      </tr>`;
-    }).join("")}</tbody>
-  </table></div>`;
+  // Step 4: Group by supplier
+  const bySupplier = {};
+  items.forEach(r => {
+    const sup = r.lieferant || "— No supplier —";
+    if (!bySupplier[sup]) bySupplier[sup] = [];
+    bySupplier[sup].push(r);
+  });
 
-  if (summary) summary.textContent = `${items.length} item${items.length > 1 ? "s" : ""} to reorder`;
+  let html = "";
+  let totalItems = 0;
+  let shortageCount = 0;
+
+  Object.entries(bySupplier).sort(([a],[b]) => a.localeCompare(b)).forEach(([sup, rows]) => {
+    const sched = getOrderDeliveryDates(sup);
+    const cfg   = SUPPLIER_SCHEDULE[sup];
+
+    html += `
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text)">🏭 ${sup}</div>
+          ${cfg ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${cfg.note}</div>` : ""}
+        </div>
+        <div style="text-align:right;font-size:12px">
+          <div style="color:var(--amber)">📋 Order by: <strong>${fmtDate(sched.orderDate)}</strong>${cfg ? ` before ${cfg.orderCutoffHour}:00` : ""}</div>
+          <div style="color:var(--green)">🚚 Delivery: <strong>${fmtDate(sched.delivDate)}</strong></div>
+          ${cfg?.isThailand ? `<div style="color:var(--red);font-size:11px">⚠ Thailand — 1 week lead time</div>` : ""}
+        </div>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="inv-table" style="width:max-content;min-width:100%">
+        <thead><tr>
+          <th>Code</th><th>Product</th><th>In stock</th>
+          <th>1-day need</th><th>Required (${days}d×150%)</th>
+          <th style="color:var(--amber)">To order</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+        ${rows.map(r => {
+          const statusColor = r._toOrder > 0 ? "var(--red)" : "var(--green)";
+          const statusLabel = r._toOrder > 0 ? "⚠ Order needed" : "✓ OK";
+          shortageCount += r._shortage ? 1 : 0;
+          totalItems++;
+          return `<tr style="${r._shortage ? "background:rgba(255,80,80,0.05)" : ""}">
+            <td style="font-size:11px;color:var(--muted)">${r.code||"-"}</td>
+            <td style="font-weight:500">${r.name||r.code}<br>
+              ${r._mepSources.length ? `<span style="font-size:10px;color:var(--muted)" title="${r._mepSources.join('\n')}">${r._mepSources.length} MEP product${r._mepSources.length>1?"s":""}</span>` : ""}
+            </td>
+            <td style="color:${r._inStock>0?"var(--text)":"var(--red)"}">${r._inStock.toFixed(2)} ${r._unit}</td>
+            <td style="color:var(--muted)">${r._needed1day.toFixed(2)} ${r._unit}</td>
+            <td>${r._required.toFixed(2)} ${r._unit}</td>
+            <td style="color:${statusColor};font-weight:600">${r._toOrder > 0 ? "+"+r._toOrder.toFixed(2)+" "+r._unit : "—"}</td>
+            <td><span class="stock-pill stock-${r._toOrder>0?"out":"ok"}">${statusLabel}</span></td>
+          </tr>`;
+        }).join("")}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+  if (summary) summary.textContent =
+    `${totalItems} item${totalItems!==1?"s":""} across ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length!==1?"s":""} — ${shortageCount} need ordering`;
 }
 
 async function markOrdered(code, btn) {
