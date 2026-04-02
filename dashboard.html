@@ -762,37 +762,39 @@
         <div class="admin-msg" id="wf-msg"></div>
       </div>
     </div>
-   <!-- Edit Worker Popup -->
-      <div id="workerEditPopup" class="popup-overlay" style="display:none">
-        <div class="popup-box">
-          <div class="popup-title">Worker bearbeiten</div>
+<!-- Edit Worker Modal -->
+      <div class="edit-modal" id="editWorkerModal">
+        <div class="edit-modal-content">
+          <div class="edit-modal-header">
+            <h3 id="editWorkerTitle">Edit Worker</h3>
+            <button class="edit-modal-close" onclick="closeWorkerEditModal()">×</button>
+          </div>
           <input type="hidden" id="editWorkerOriginalName">
-          
-          <div class="popup-field">
-            <label class="popup-label">Name</label>
-            <input type="text" id="editWorkerName" class="popup-input">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label">Name *</label>
+              <input class="form-input" id="editWorkerName">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Rolle</label>
+              <select class="form-input" id="editWorkerRole">
+                <option value="">-- Rolle wählen --</option>
+                <option value="Küchenchef">Küchenchef</option>
+                <option value="Teamleader">Teamleader</option>
+                <option value="Sushikoch">Sushikoch</option>
+                <option value="Wokkoch">Wokkoch</option>
+                <option value="Küchehilfe">Küchehilfe</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label">PIN (4 digits)</label>
+              <input class="form-input" id="editWorkerPin" type="text" inputmode="numeric" maxlength="4" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
+            </div>
           </div>
-          
-          <div class="popup-field">
-            <label class="popup-label">Rolle</label>
-            <select id="editWorkerRole" class="popup-input">
-              <option value="">-- Rolle wählen --</option>
-              <option value="Küchenchef">Küchenchef</option>
-              <option value="Teamleader">Teamleader</option>
-              <option value="Sushikoch">Sushikoch</option>
-              <option value="Wokkoch">Wokkoch</option>
-              <option value="Küchehilfe">Küchehilfe</option>
-            </select>
-          </div>
-          
-          <div class="popup-field">
-            <label class="popup-label">PIN (4 digits)</label>
-            <input type="text" id="editWorkerPin" class="popup-input" maxlength="4" inputmode="numeric" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
-          </div>
-          
-          <div class="popup-actions">
-            <button class="popup-btn popup-btn-save" onclick="saveWorkerEditPopup()">Speichern</button>
-            <button class="popup-btn popup-btn-cancel" onclick="closeWorkerEditPopup()">Abbrechen</button>
+          <div class="admin-msg" id="editWorkerMsg"></div>
+          <div class="form-actions">
+            <button class="btn-save" onclick="saveWorkerEditModal()">Save</button>
+            <button class="btn-edit" onclick="closeWorkerEditModal()">Cancel</button>
           </div>
         </div>
       </div>
@@ -1850,29 +1852,36 @@ function openWorkerEditPopup(name) {
   document.getElementById('editWorkerName').value = wName;
   document.getElementById('editWorkerRole').value = wRole;
   document.getElementById('editWorkerPin').value = wPin;
+  document.getElementById('editWorkerTitle').textContent = "Edit - " + wName;
+  document.getElementById('editWorkerMsg').textContent = "";
   
-  document.getElementById('workerEditPopup').style.display = 'flex';
+  document.getElementById('editWorkerModal').classList.add('active');
 }
 
-function closeWorkerEditPopup() {
-  document.getElementById('workerEditPopup').style.display = 'none';
+function closeWorkerEditModal() {
+  document.getElementById('editWorkerModal').classList.remove('active');
 }
 
-async function saveWorkerEditPopup() {
+async function saveWorkerEditModal() {
   const originalName = document.getElementById('editWorkerOriginalName').value;
   const name = document.getElementById('editWorkerName').value.trim();
   const role = document.getElementById('editWorkerRole').value.trim();
   const pin = document.getElementById('editWorkerPin').value.trim();
   
   if (!name) {
-    alert('Name erforderlich');
+    document.getElementById('editWorkerMsg').textContent = "Name erforderlich";
+    document.getElementById('editWorkerMsg').className = "admin-msg err";
     return;
   }
   
   if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) {
-    alert('PIN must be 4 digits');
+    document.getElementById('editWorkerMsg').textContent = "PIN must be 4 digits";
+    document.getElementById('editWorkerMsg').className = "admin-msg err";
     return;
   }
+  
+  const btn = document.querySelector('#editWorkerModal .btn-save');
+  if (btn) { btn.disabled = true; btn.textContent = "Saving..."; }
   
   try {
     const data = await adminCall({
@@ -1886,16 +1895,20 @@ async function saveWorkerEditPopup() {
     
     if (data.error) throw new Error(data.error);
     
+    document.getElementById('editWorkerMsg').textContent = "Saved OK";
+    document.getElementById('editWorkerMsg').className = "admin-msg ok";
+    
     // Refresh workers list
     const wd = await adminCall({ action: "allWorkers" });
     allWorkersAdmin = Array.isArray(wd.workers) ? wd.workers : [];
     renderAdminWorkers();
     
-    closeWorkerEditPopup();
-    alert('Gespeichert');
+    setTimeout(() => closeWorkerEditModal(), 800);
   } catch (e) {
-    alert('Fehler: ' + e.message);
-    console.error(e);
+    document.getElementById('editWorkerMsg').textContent = "Error: " + e.message;
+    document.getElementById('editWorkerMsg').className = "admin-msg err";
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Save"; }
   }
 }
 function clearWorkerForm() {
