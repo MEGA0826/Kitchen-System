@@ -710,7 +710,10 @@
     <div class="admin-section">
       <div class="admin-section-title">Workers</div>
       <div class="admin-section-sub">Settings sheet</div>
-      <div class="admin-list" id="admin-worker-list"></div>
+     <div style="margin-bottom:10px">
+        <input class="form-input" id="admin-worker-search" placeholder="Search worker…" oninput="renderAdminWorkers()" style="width:100%">
+      </div>
+      <div class="admin-list" id="admin-workers-list"></div>
       <div class="admin-form" id="worker-form">
         <div class="admin-form-title" id="wf-form-title">Add new worker</div>
         <div class="form-grid">
@@ -735,8 +738,11 @@
       <div class="admin-section-sub">Lager sheet</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <input class="form-input" id="admin-inv-search" placeholder="Search inventory…" oninput="renderAdminInventory()" style="flex:1;min-width:160px">
-        <select class="form-input" id="admin-inv-cat" onchange="renderAdminInventory()" style="flex:1;min-width:140px">
-          <option value="">Select category</option>
+        <select class="form-input" id="admin-inv-cat" onchange="renderAdminInventory()" style="flex:0 1 160px">
+          <option value="">All categories</option>
+        </select>
+        <select class="form-input" id="admin-inv-sup" onchange="renderAdminInventory()" style="flex:0 1 160px">
+          <option value="">All suppliers</option>
         </select>
       </div>
       <div class="admin-list" id="admin-inv-list"></div>
@@ -1724,45 +1730,35 @@ document.getElementById("pf-code")?.addEventListener("blur", () => {
 // WORKERS ADMIN
 // ─────────────────────────────────────────────
 function renderAdminWorkers() {
-  const list    = document.getElementById("admin-worker-list");
-  const roleSel = document.getElementById("admin-worker-role");
+  const list = document.getElementById("admin-workers-list");
   if (!list) return;
-  const workers = Array.isArray(allWorkersAdmin) ? allWorkersAdmin : [];
 
-  // Populate role dropdown
-  if (roleSel) {
-    const curRole = roleSel.value;
-    const roles = [...new Set(workers.map(w => typeof w==="object" ? (w.role||"") : "").filter(Boolean))].sort();
-    roleSel.innerHTML = `<option value="">All staff</option>`
-      + roles.map(r => `<option value="${r}" ${r===curRole?"selected":""}>${r}</option>`).join("");
-    roleSel.value = curRole;
+  const q = (document.getElementById("admin-worker-search")?.value || "").toLowerCase();
+  let workers = allWorkersAdmin || [];
+
+  if (q) workers = workers.filter(w => {
+    const name = typeof w === "string" ? w : (w.name || "");
+    const role = typeof w === "object" ? (w.role || "") : "";
+    return name.toLowerCase().includes(q) || role.toLowerCase().includes(q);
+  });
+
+  if (!workers.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found.</div>`;
+    return;
   }
 
-  const filterRole = roleSel ? roleSel.value : "";
-  const filtered = filterRole
-    ? workers.filter(w => (typeof w==="object" ? (w.role||"") : "") === filterRole)
-    : workers;
-
-  if (!filtered.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found</div>`; return; }
-
-  list.innerHTML = filtered.map(w => {
-    const name   = typeof w === "object" ? w.name   : w;
-    const role   = typeof w === "object" ? (w.role  || "") : "";
+  list.innerHTML = workers.map(w => {
+    const name   = typeof w === "string" ? w : (w.name || "?");
+    const role   = typeof w === "object" ? (w.role   || "") : "";
     const active = typeof w === "object" ? w.active !== false : true;
-    const pin    = typeof w === "object" ? (w.pin   || "") : "";
-    const hasPIN = pin && pin.length === 4;
-    return `<div class="admin-item" style="opacity:${active?1:0.45}">
+    return `<div class="admin-item" style="opacity:${active?1:0.5}">
       <div style="flex:1">
-        <div class="admin-item-name">${name}${!active?`<span style="font-size:10px;color:var(--red);letter-spacing:1px;margin-left:6px">INACTIVE</span>`:""}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px">
-          ${role?`<span>${role}</span>`:""}
-          <span style="color:${hasPIN?"var(--green)":"var(--red)"}">${hasPIN?"✓ PIN set":"⚠ No PIN"}</span>
-        </div>
+        <span style="font-size:13px;font-weight:500">${name}</span>
+        ${role ? `<span style="font-size:11px;color:var(--muted);margin-left:8px">${role}</span>` : ""}
+        ${!active ? `<span style="font-size:11px;color:var(--red);margin-left:8px">inactive</span>` : ""}
       </div>
-      <div class="admin-item-actions">
-        <button class="btn-edit" onclick="openEditWorkerModal('${name.replace(/'/g,"\\'")}')">Edit</button>
-        <button class="btn-del"  onclick="delWorker('${name.replace(/'/g,"\\'")}'">${active?"Deactivate":"Reactivate"}</button>
-      </div>
+      <button class="btn-edit" onclick="editWorker('${name}')">Edit</button>
+      <button class="btn-del" onclick="delWorker('${name}')">${active?"Deactivate":"Reactivate"}</button>
     </div>`;
   }).join("");
 }
@@ -1823,42 +1819,54 @@ async function delWorker(name) {
 // INVENTORY ADMIN
 // ─────────────────────────────────────────────
 function renderAdminInventory() {
-  const list    = document.getElementById("admin-inv-list");
-  const catSel  = document.getElementById("admin-inv-cat");
-  const search  = (document.getElementById("admin-inv-search")?.value || "").toLowerCase();
+  const list = document.getElementById("admin-inv-list");
   if (!list) return;
 
-  // Populate category dropdown
+  // Populate category + supplier dropdowns
+  const catSel = document.getElementById("admin-inv-cat");
+  const supSel = document.getElementById("admin-inv-sup");
   if (catSel) {
     const curCat = catSel.value;
     const cats = [...new Set(allInventory.map(r => r.kategorie||"").filter(Boolean))].sort();
-    catSel.innerHTML = `<option value="">All categories</option>`
-      + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
-    catSel.value = curCat;
+    catSel.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("");
+  }
+  if (supSel) {
+    const curSup = supSel.value;
+    const sups = [...new Set(allInventory.map(r => r.lieferant||"").filter(Boolean))].sort();
+    supSel.innerHTML = `<option value="">All suppliers</option>` + sups.map(s => `<option value="${s}" ${s===curSup?"selected":""}>${s}</option>`).join("");
   }
 
-  const filterCat = catSel ? catSel.value : "";
-  let rows = allInventory;
-  if (filterCat) rows = rows.filter(r => (r.kategorie||"") === filterCat);
-  if (search)    rows = rows.filter(r => (r.name||"").toLowerCase().includes(search) || (r.code||"").toLowerCase().includes(search));
+  const q   = (document.getElementById("admin-inv-search")?.value || "").toLowerCase();
+  const cat = catSel?.value || "";
+  const sup = supSel?.value || "";
 
-  if (!rows.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory items found</div>`; return; }
+  // Show prompt if nothing selected
+  if (!q && !cat && !sup) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">Select a category or supplier, or search to view items.</div>`;
+    return;
+  }
+
+  let rows = allInventory;
+  if (cat) rows = rows.filter(r => (r.kategorie||"") === cat);
+  if (sup) rows = rows.filter(r => (r.lieferant||"") === sup);
+  if (q)   rows = rows.filter(r =>
+    (r.name||"").toLowerCase().includes(q) ||
+    (r.code||"").toLowerCase().includes(q) ||
+    (r.kategorie||"").toLowerCase().includes(q) ||
+    (r.lieferant||"").toLowerCase().includes(q));
+
+  if (!rows.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No items found.</div>`; return; }
 
   list.innerHTML = rows.map(r => {
-    const qty = r.quantity !== null && r.quantity !== undefined ? Number(r.quantity) : null;
-    const min = r.minimum  !== null && r.minimum  !== undefined ? Number(r.minimum)  : null;
-    const [cls] = stockClass(qty??0, min??0);
+    const totKg = (r.quantity !== null && r.weightUnit !== null)
+      ? (Number(r.quantity) * Number(r.weightUnit)).toFixed(1) + " kg" : "";
     return `<div class="admin-item">
-      <div style="flex:1;min-width:0">
-        <div class="admin-item-name">${r.name||r.code}
-          ${r.kategorie?`<span style="font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:10px;margin-left:4px">${r.kategorie}</span>`:""}
-          <span class="stock-${cls}" style="font-size:10px;margin-left:4px">${qty??"-"} ${r.unit||""}</span>
-        </div>
-        <div class="admin-item-sub">${r.code} · min ${min??"-"} · ${r.lieferant||"no supplier"}</div>
+      <div style="flex:1">
+        <span style="font-size:13px;font-weight:500">${r.name||r.code}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.code}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">${r.quantity??"-"} ${r.unit||""} ${totKg?"· "+totKg:""} ${r.lieferant?"· "+r.lieferant:""}</span>
       </div>
-      <div class="admin-item-actions">
-        <button class="btn-edit" onclick="openEditInventoryModal('${r.code}')">Edit</button>
-      </div>
+      <button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button>
     </div>`;
   }).join("");
 }
