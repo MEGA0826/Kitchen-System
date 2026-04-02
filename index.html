@@ -1481,43 +1481,51 @@ async function send(action) {
     if (e.target.id === "worker") localStorage.setItem("worker", e.target.value);
   });
 
-  window.addEventListener("DOMContentLoaded", async () => {
-    const code = new URLSearchParams(window.location.search).get("code") || "";
-    setUsedWasteState(0);
+window.addEventListener("DOMContentLoaded", async () => {
+  const code = new URLSearchParams(window.location.search).get("code") || "";
+  setUsedWasteState(0);
 
-    if (!code) {
-      // -- No code - show scanner and open camera immediately --
-      document.getElementById("scanHome").style.display      = "flex";
-      preloadProducts();
-      preloadWorkers();
-      // Start inline camera - show retry button if permission not yet granted
-      startInlineScanner();
-      return;
+  if (!code) {
+    document.getElementById("scanHome").style.display = "flex";
+    preloadProducts();
+    preloadWorkers();
+    startInlineScanner();
+    return;
+  }
+
+  // -- Has code --
+  sessionStorage.setItem("lastScanUrl", window.location.href);
+  document.getElementById("scanHome").style.display      = "none";
+  document.getElementById("productScreen").style.display = "flex";
+  document.getElementById("productScreen").style.flexDirection = "column";
+
+  // Show cached product data instantly (zero delay)
+  const cached = sessionStorage.getItem("productMap");
+  if (cached) {
+    try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
+  }
+
+  // Single API call: mepStatus now returns product fields too
+  const [mepResult] = await Promise.allSettled([
+    fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" })
+      .then(r => r.json()),
+    preloadWorkers(),
+  ]);
+
+  if (mepResult?.status === "fulfilled" && mepResult.value) {
+    const d = mepResult.value;
+    // Merge product fields into PRODUCT_MAP from the single response
+    if (d.name || d.mepMax) {
+      PRODUCT_MAP[code] = Object.assign(PRODUCT_MAP[code] || {}, {
+        name: d.name, image: d.image, mepMax: d.mepMax,
+        gnSize: d.gnSize, gnWeight: d.gnWeight, tagesziel: d.tagesziel,
+      });
+      try { sessionStorage.setItem("productMap", JSON.stringify(PRODUCT_MAP)); } catch(e) {}
+      showProduct();
     }
-
-    // -- Has code - show product screen --
-    sessionStorage.setItem("lastScanUrl", window.location.href);
-    document.getElementById("scanHome").style.display      = "none";
-    document.getElementById("productScreen").style.display = "flex";
-    document.getElementById("productScreen").style.flexDirection = "column";
-
-    // Show cached product data instantly
-    const cached = sessionStorage.getItem("productMap");
-    if (cached) {
-      try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
-    }
-
-    // Load all in parallel
-    const [, , mepData] = await Promise.allSettled([
-      preloadProducts().then(() => showProduct()),
-      preloadWorkers(),
-      fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
-    ]);
-
-    if (mepData?.status === "fulfilled" && mepData.value) {
-      updateMepUI(mepData.value);
-    }
-  });
+    updateMepUI(d);
+  }
+});
 
   // -- OFFLINE SCAN QUEUE - IndexedDB + auto-retry --
   const DB_NAME    = "mep-offline";
