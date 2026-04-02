@@ -557,8 +557,11 @@
         <div class="form-field"><label class="form-label">Raw Material *</label>
           <select class="form-input" id="rf-rm"><option value="">Select raw material…</option></select>
         </div>
-        <div class="form-field"><label class="form-label">Quantity per GN</label>
-          <input class="form-input" type="number" id="rf-menge" placeholder="3" min="0" step="0.01">
+        <div class="form-field">
+          <label class="form-label">Quantity per GN
+            <span id="rf-mep-hint" style="font-size:10px;color:var(--amber);margin-left:6px;font-weight:400"></span>
+          </label>
+          <input class="form-input" type="number" id="rf-menge" placeholder="auto from MEP" min="0" step="0.001">
         </div>
         <div class="form-field"><label class="form-label">Unit</label>
           <input class="form-input" id="rf-einheit" placeholder="kg / l / pcs">
@@ -2234,16 +2237,63 @@ function renderRecipeList() {
 function populateRecipeDropdowns() {
   const mepSel = document.getElementById("rf-mep");
   const rmSel  = document.getElementById("rf-rm");
-  if (mepSel) mepSel.innerHTML = `<option value="">Select MEP product…</option>`
-    + Object.entries(allProducts).filter(([,p])=>p.name&&p.name!=="(deleted)").sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||""))
-      .map(([code,p])=>`<option value="${code}">${p.name} (${code})</option>`).join("");
+
+  if (mepSel) {
+    mepSel.innerHTML = `<option value="">Select MEP product…</option>`
+      + Object.entries(allProducts)
+          .filter(([,p]) => p.name && p.name !== "(deleted)")
+          .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
+          .map(([code,p]) => {
+            const hint = p.gnWeight ? ` · ${p.gnWeight}kg/GN` : "";
+            return `<option value="${code}">${p.name} (${code})${hint}</option>`;
+          }).join("");
+
+    // Auto-fill menge + hint when MEP is selected
+    mepSel.addEventListener("change", () => {
+      const p       = allProducts[mepSel.value] || {};
+      const hint    = document.getElementById("rf-mep-hint");
+      const mengeEl = document.getElementById("rf-menge");
+      const einheitEl = document.getElementById("rf-einheit");
+
+      if (p.gnWeight) {
+        mengeEl.value = p.gnWeight;
+        if (hint) hint.textContent = `← ${p.gnWeight} kg per GN (${p.gnSize || p.mepMax + " GN max"})`;
+      } else {
+        mengeEl.value = "";
+        if (hint) hint.textContent = p.name ? "no gnWeight set on this product" : "";
+      }
+
+      // Auto-fill unit from selected raw material if already chosen
+      const rmCode = rmSel?.value;
+      if (rmCode) {
+        const inv = allInventory.find(x => x.code === rmCode);
+        if (inv?.unit && !einheitEl.value) einheitEl.value = inv.unit;
+      } else if (!einheitEl.value) {
+        einheitEl.value = "kg";
+      }
+    });
+  }
+
   if (rmSel) {
     rmSel.innerHTML = `<option value="">Select raw material…</option>`
-      + allInventory.filter(r=>r.code).sort((a,b)=>(a.name||"").localeCompare(b.name||""))
-        .map(r=>`<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+      + allInventory
+          .filter(r => r.code)
+          .sort((a,b) => (a.name||"").localeCompare(b.name||""))
+          .map(r => `<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+
+    // Auto-fill unit from inventory when RM selected; also re-check menge from MEP
     rmSel.addEventListener("change", () => {
-      const inv = allInventory.find(x=>x.code===rmSel.value);
-      if (inv && !document.getElementById("rf-einheit").value) document.getElementById("rf-einheit").value = inv.unit||"";
+      const inv       = allInventory.find(x => x.code === rmSel.value);
+      const einheitEl = document.getElementById("rf-einheit");
+      const mengeEl   = document.getElementById("rf-menge");
+
+      if (inv?.unit) einheitEl.value = inv.unit;
+
+      // If MEP already selected and menge is empty, fill from gnWeight
+      if (!mengeEl.value && mepSel?.value) {
+        const p = allProducts[mepSel.value] || {};
+        if (p.gnWeight) mengeEl.value = p.gnWeight;
+      }
     });
   }
 }
