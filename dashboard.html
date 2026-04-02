@@ -571,25 +571,26 @@
     </div>
   </div>
 
-  <!-- ORDERS -->
+<!-- ORDERS -->
   <div class="panel" id="panel-orders">
     <div class="section-title">Orders</div>
-    <div class="section-sub" style="margin-bottom:16px">Raw material order list by supplier — based on MEP daily max</div>
-
+    <div class="section-sub" style="margin-bottom:16px">Order plan by supplier — based on MEP daily max × safety stock</div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:12px;color:var(--muted);white-space:nowrap">Coverage days:</span>
-      <select class="search-input" id="order-days" onchange="renderOrders()" style="flex:0 1 160px">
+      <label style="font-size:12px;color:var(--muted);white-space:nowrap">Coverage:</label>
+      <select class="search-input" id="order-days" onchange="renderOrders()" style="flex:0 1 170px">
         <option value="1">1 day × 150%</option>
         <option value="2" selected>2 days × 150%</option>
         <option value="3">3 days × 150%</option>
       </select>
-      <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()" style="flex:1;min-width:140px">
+      <label style="font-size:12px;color:var(--muted);white-space:nowrap">Show:</label>
+      <select class="search-input" id="order-show" onchange="renderOrders()" style="flex:0 1 170px">
+        <option value="shortage">Shortage only</option>
+        <option value="all">All items</option>
+      </select>
+      <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()" style="flex:1;min-width:130px">
     </div>
-
-    <div id="order-content">
-      <div class="empty-state"><div class="empty-icon">📦</div>Loading…</div>
-    </div>
-    <div id="order-summary" style="margin-top:16px;font-size:12px;color:var(--muted)"></div>
+    <div id="order-content"><div class="empty-state"><div class="empty-icon">📦</div>Loading…</div></div>
+    <div id="order-summary" style="margin-top:12px;font-size:12px;color:var(--muted)"></div>
   </div>
 
   <!-- DEDUCTIONS -->
@@ -1956,117 +1957,62 @@ function populateInvDataLists() {
 // ─────────────────────────────────────────────
 // ORDERS
 // ─────────────────────────────────────────────
-
-// Supplier delivery schedule config
-const SUPPLIER_SCHEDULE = {
-  "Kellerberger": {
-    deliveryDays: [2, 4, 5],        // Tue, Thu, Fri
-    orderCutoffHour: 14,
-    orderLeadDays: 1,
-    isThailand: false,
-    note: "Order by 14:00 day before. Delivery: Tue, Thu, Fri."
-  },
-  "G.Bianchi AG": {
-    deliveryDays: [1,2,3,4,5,6],    // Mon–Sat
-    orderCutoffHour: 15,
-    orderLeadDays: 1,
-    isThailand: false,
-    note: "Order by 15:00 day before. Delivery: Mon–Sat."
-  },
-  "Saviva Food Services": {
-    deliveryDays: [2, 4],           // Tue, Thu (Mon/Wed/Fri = Ersatz)
-    ersatzDays: [1, 3, 5],
-    orderCutoffHour: 12,
-    orderLeadDays: 1,
-    isThailand: false,
-    note: "Order by 12:00 day before. Delivery: Tue & Thu. Ersatz: Mon, Wed, Fri."
-  },
-  "Stutzer Service AG": {
-    deliveryDays: [2, 4],           // Tue & Thu only
-    orderCutoffHour: 23,
-    orderLeadDays: 7,               // 1 week advance
-    isThailand: true,
-    note: "Thailand products — order 1 WEEK in advance. Delivery: Tue & Thu only."
-  },
-  "The Asia Company SA": {
-    deliveryDays: [3, 5],           // Wed & Fri (Mon/Tue = Ersatz)
-    ersatzDays: [1, 2],
-    orderCutoffHour: 12,
-    orderLeadDays: 1,
-    isThailand: false,
-    note: "Order by 12:00 day before. Delivery: Wed & Fri. Ersatz: Mon & Tue."
-  }
+const SUPPLIER_CFG = {
+  "Kellerberger":        { days:[2,4,5],     cutoff:14, lead:1, thailand:false, ersatz:[],  note:"Delivery: Tue/Thu/Fri · Order by 14:00 day before" },
+  "G.Bianchi AG":        { days:[1,2,3,4,5,6],cutoff:15,lead:1, thailand:false, ersatz:[],  note:"Delivery: Mon–Sat · Order by 15:00 day before" },
+  "Saviva Food Services":{ days:[2,4],       cutoff:12, lead:1, thailand:false, ersatz:[1,3,5], note:"Delivery: Tue/Thu · Ersatz: Mon/Wed/Fri · Order by 12:00 day before" },
+  "Stutzer Service AG":  { days:[2,4],       cutoff:12, lead:7, thailand:true,  ersatz:[],  note:"🇹🇭 Thailand — order 1 WEEK in advance · Delivery: Tue/Thu only" },
+  "The Asia Company SA": { days:[3,5],       cutoff:12, lead:1, thailand:false, ersatz:[1,2], note:"Delivery: Wed/Fri · Ersatz: Mon/Tue · Order by 12:00 day before" },
+  "Stützer":             { days:[2,4],       cutoff:12, lead:7, thailand:true,  ersatz:[],  note:"🇹🇭 Thailand — order 1 WEEK in advance · Delivery: Tue/Thu only" }
 };
+const _DN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const DAY_NAMES_FULL = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-
-function getOrderDeliveryDates(supplierName) {
-  const cfg = SUPPLIER_SCHEDULE[supplierName];
+function _nextDelivery(supName) {
+  const cfg = SUPPLIER_CFG[supName];
   const now = new Date();
-  const todayDow = now.getDay(); // 0=Sun
-  const todayHour = now.getHours();
+  const h   = now.getHours();
+  // start searching from tomorrow if past cutoff, else today+1
+  const start = new Date(now);
+  start.setHours(0,0,0,0);
+  start.setDate(start.getDate() + 1); // earliest possible order day = tomorrow
 
   if (!cfg) {
-    // Unknown supplier — generic +1 day
-    const orderDate = new Date(now); orderDate.setDate(orderDate.getDate() + 1);
-    const delivDate = new Date(now); delivDate.setDate(delivDate.getDate() + 2);
-    return { orderDate, delivDate, note: "No schedule configured. Estimate +1 day." };
+    // unknown supplier: order tomorrow, deliver day after
+    const od = new Date(start);
+    const dd = new Date(start); dd.setDate(dd.getDate()+1);
+    return { orderDate:od, delivDate:dd, urgent:false, note:"No schedule — estimate" };
   }
 
-  // Find next valid delivery day from today+leadDays
-  const leadDays = cfg.isThailand ? 7 : 1;
-  let checkFrom = new Date(now);
+  const lead = cfg.lead;
+  // find next delivery day (searching up to 14 days ahead of today)
+  for (let i = 1; i <= 21; i++) {
+    const candidate = new Date(now);
+    candidate.setHours(0,0,0,0);
+    candidate.setDate(candidate.getDate() + i);
+    if (!cfg.days.includes(candidate.getDay())) continue;
 
-  // If today is past cutoff, start searching from tomorrow
-  if (todayHour >= cfg.orderCutoffHour) {
-    checkFrom.setDate(checkFrom.getDate() + 1);
-  }
+    // order date = delivery - lead days
+    const orderDate = new Date(candidate);
+    orderDate.setDate(candidate.getDate() - lead);
 
-  // Advance by lead days
-  let orderDate = new Date(checkFrom);
-  if (!cfg.isThailand) {
-    // Find earliest day such that orderDate + leadDays = deliveryDay
-    // i.e. find next delivery day, order day = delivDay - leadDays
-    let delivDate = null;
-    for (let i = 1; i <= 14; i++) {
-      const candidate = new Date(checkFrom);
-      candidate.setDate(checkFrom.getDate() + i);
-      if (cfg.deliveryDays.includes(candidate.getDay())) {
-        delivDate = candidate;
-        orderDate = new Date(candidate);
-        orderDate.setDate(candidate.getDate() - leadDays);
-        // Make sure orderDate is not in the past
-        if (orderDate < now && todayHour < cfg.orderCutoffHour) orderDate = new Date(now);
-        break;
-      }
-    }
-    return {
-      orderDate,
-      delivDate,
-      note: cfg.note
-    };
-  } else {
-    // Thailand: order day → same weekday +7 days = delivery
-    // Find next Tuesday or Thursday to order
-    let delivDate = null;
-    for (let i = 1; i <= 14; i++) {
-      const candidate = new Date(checkFrom);
-      candidate.setDate(checkFrom.getDate() + i);
-      if (cfg.deliveryDays.includes(candidate.getDay())) {
-        orderDate = new Date(candidate);
-        delivDate = new Date(candidate);
-        delivDate.setDate(candidate.getDate() + 7);
-        break;
-      }
-    }
-    return { orderDate, delivDate, note: cfg.note };
+    // if order date is today but past cutoff → skip to next delivery slot
+    const isToday = orderDate.toDateString() === now.toDateString();
+    if (isToday && h >= cfg.cutoff) continue;
+    // if order date is in the past → skip
+    if (orderDate < new Date(now.toDateString())) continue;
+
+    const urgent = orderDate.toDateString() === now.toDateString();
+    return { orderDate, delivDate: candidate, urgent, note: cfg.note, cutoff: cfg.cutoff, thailand: cfg.thailand };
   }
+  // fallback
+  const od = new Date(start);
+  const dd = new Date(start); dd.setDate(dd.getDate()+lead);
+  return { orderDate:od, delivDate:dd, urgent:false, note: cfg?.note||"" };
 }
 
-function fmtDate(d) {
-  if (!d) return "-";
-  return `${DAY_NAMES[d.getDay()]} ${d.getDate().toString().padStart(2,"0")}.${(d.getMonth()+1).toString().padStart(2,"0")}`;
+function _fmtDate(d) {
+  if (!d) return "—";
+  return `${_DN[d.getDay()]} ${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}`;
 }
 
 function renderOrders() {
@@ -2074,133 +2020,137 @@ function renderOrders() {
   const summary   = document.getElementById("order-summary");
   if (!container) return;
 
-  const days = parseInt(document.getElementById("order-days")?.value || "2");
-  const q    = (document.getElementById("order-search")?.value || "").toLowerCase();
-  const SAFETY = 1.5;
+  const days     = parseInt(document.getElementById("order-days")?.value  || "2");
+  const showMode = document.getElementById("order-show")?.value || "shortage";
+  const q        = (document.getElementById("order-search")?.value || "").toLowerCase();
+  const SAFETY   = 1.5;
 
-  // Step 1: Aggregate raw material daily needs from recipes × mepMax
+  // ── Step 1: Aggregate daily raw material needs from Rezept × mepMax ──
   const rmNeeds = {}; // rmCode → { needed1day, unit, mepSources[] }
   Object.entries(allProducts).forEach(([mepCode, p]) => {
     const targetGN = Number(p.tagesziel > 0 ? p.tagesziel : p.mepMax) || 0;
     if (!targetGN) return;
     allRecipes.filter(r => r.mepCode === mepCode).forEach(r => {
-      const needed1day = targetGN * Number(r.menge || 0);
-      if (!needed1day) return;
-      if (!rmNeeds[r.rmCode]) rmNeeds[r.rmCode] = { needed1day: 0, unit: r.einheit || "", mepSources: [] };
-      rmNeeds[r.rmCode].needed1day += needed1day;
-      rmNeeds[r.rmCode].mepSources.push(`${p.name||mepCode} (${targetGN} GN × ${r.menge} ${r.einheit})`);
+      const n = targetGN * Number(r.menge || 0);
+      if (!n) return;
+      if (!rmNeeds[r.rmCode]) rmNeeds[r.rmCode] = { needed1day:0, unit:r.einheit||"", mepSources:[] };
+      rmNeeds[r.rmCode].needed1day += n;
+      rmNeeds[r.rmCode].mepSources.push(`${p.name||mepCode} (${targetGN}GN × ${r.menge}${r.einheit})`);
     });
   });
 
-  // Step 2: Build order items — ALL items where stock < required (days × 150%)
-  let items = [];
+  // ── Step 2: Build item list — match rmCode → allInventory ──
+  const items = [];
   Object.entries(rmNeeds).forEach(([rmCode, req]) => {
     const inv = allInventory.find(x => x.code === rmCode);
-    if (!inv) return;
+    if (!inv) return; // raw material not in Lager sheet
     const inStock  = Number(inv.quantity || 0) * Number(inv.weightUnit || 1);
     const required = req.needed1day * days * SAFETY;
     const toOrder  = Math.max(0, required - inStock);
-    // Show ALL items (not just shortfalls) so kitchen can see the full order list
     items.push({
-      ...inv,
-      _needed1day:  req.needed1day,
-      _required:    required,
-      _inStock:     inStock,
-      _toOrder:     toOrder,
-      _unit:        req.unit || inv.unit || "",
-      _mepSources:  req.mepSources,
-      _shortage:    toOrder > 0
+      code:       rmCode,
+      name:       inv.name || rmCode,
+      lieferant:  inv.lieferant || "",
+      unit:       req.unit || inv.unit || "",
+      inStock,
+      needed1day: req.needed1day,
+      required,
+      toOrder,
+      shortage:   toOrder > 0,
+      mepSources: req.mepSources
     });
   });
 
-  // Step 3: Also add plain below-minimum items not in recipe list
-  allInventory.forEach(r => {
-    if (items.find(x => x.code === r.code)) return;
-    const qty = Number(r.quantity || 0);
-    const min = Number(r.minimum  || 0);
+  // ── Step 3: Also catch below-minimum items not linked to any recipe ──
+  allInventory.forEach(inv => {
+    if (items.find(x => x.code === inv.code)) return;
+    const qty = Number(inv.quantity || 0);
+    const min = Number(inv.minimum  || 0);
     if (min > 0 && qty < min) {
+      const required = min * days * SAFETY;
       items.push({
-        ...r,
-        _needed1day: min,
-        _required:   min * days * SAFETY,
-        _inStock:    qty,
-        _toOrder:    Math.max(0, min * days * SAFETY - qty),
-        _unit:       r.unit || "",
-        _mepSources: [],
-        _shortage:   true
+        code: inv.code, name: inv.name||inv.code,
+        lieferant: inv.lieferant||"", unit: inv.unit||"",
+        inStock: qty, needed1day: min, required,
+        toOrder: Math.max(0, required - qty),
+        shortage: true, mepSources: []
       });
     }
   });
 
-  // Filter by search
-  if (q) items = items.filter(x =>
-    (x.name||"").toLowerCase().includes(q) ||
-    (x.code||"").toLowerCase().includes(q) ||
-    (x.lieferant||"").toLowerCase().includes(q));
+  // ── Step 4: Filter ──
+  let visible = showMode === "shortage" ? items.filter(x => x.shortage) : items;
+  if (q) visible = visible.filter(x =>
+    x.name.toLowerCase().includes(q) ||
+    x.code.toLowerCase().includes(q) ||
+    x.lieferant.toLowerCase().includes(q));
 
-  // Sort: shortage first, then by name
-  items.sort((a,b) => (b._shortage - a._shortage) || (a.name||"").localeCompare(b.name||""));
-
-  if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div>No items to order</div>`;
+  if (!visible.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">${showMode==="shortage"?"✅":"📦"}</div>${showMode==="shortage"?"No shortages — stock is sufficient":"No items found"}</div>`;
     if (summary) summary.textContent = "";
     return;
   }
 
-  // Step 4: Group by supplier
+  // ── Step 5: Group by supplier ──
   const bySupplier = {};
-  items.forEach(r => {
-    const sup = r.lieferant || "— No supplier —";
-    if (!bySupplier[sup]) bySupplier[sup] = [];
-    bySupplier[sup].push(r);
+  visible.forEach(r => {
+    const s = r.lieferant || "— No supplier —";
+    if (!bySupplier[s]) bySupplier[s] = [];
+    bySupplier[s].push(r);
   });
 
   let html = "";
-  let totalItems = 0;
-  let shortageCount = 0;
+  let totalShortage = 0;
 
-  Object.entries(bySupplier).sort(([a],[b]) => a.localeCompare(b)).forEach(([sup, rows]) => {
-    const sched = getOrderDeliveryDates(sup);
-    const cfg   = SUPPLIER_SCHEDULE[sup];
+  Object.entries(bySupplier).sort(([a],[b])=>a.localeCompare(b)).forEach(([sup, rows]) => {
+    const sched = _nextDelivery(sup);
+    const isUrgent   = sched.urgent;
+    const isThailand = sched.thailand;
+    const shortage   = rows.filter(r=>r.shortage).length;
+    totalShortage   += shortage;
+
+    rows.sort((a,b) => (b.shortage - a.shortage) || a.name.localeCompare(b.name));
 
     html += `
-    <div style="margin-bottom:28px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div style="margin-bottom:28px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div>
-          <div style="font-size:15px;font-weight:600;color:var(--text)">🏭 ${sup}</div>
-          ${cfg ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${cfg.note}</div>` : ""}
+          <div style="font-size:15px;font-weight:600">🏭 ${sup}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${sched.note}</div>
         </div>
-        <div style="text-align:right;font-size:12px">
-          <div style="color:var(--amber)">📋 Order by: <strong>${fmtDate(sched.orderDate)}</strong>${cfg ? ` before ${cfg.orderCutoffHour}:00` : ""}</div>
-          <div style="color:var(--green)">🚚 Delivery: <strong>${fmtDate(sched.delivDate)}</strong></div>
-          ${cfg?.isThailand ? `<div style="color:var(--red);font-size:11px">⚠ Thailand — 1 week lead time</div>` : ""}
+        <div style="text-align:right;font-size:12px;line-height:1.7">
+          <div style="color:${isUrgent?"var(--red)":"var(--amber)"}">
+            ${isUrgent?"⚡ ORDER TODAY":"📋 Order by"}: <strong>${_fmtDate(sched.orderDate)}</strong>
+            ${sched.cutoff ? `before ${sched.cutoff}:00` : ""}
+          </div>
+          <div style="color:var(--green)">🚚 Expected delivery: <strong>${_fmtDate(sched.delivDate)}</strong></div>
+          ${isThailand ? `<div style="color:var(--red);font-size:11px;font-weight:600">⚠ 1-week lead time</div>` : ""}
+          ${shortage > 0 ? `<div style="color:var(--red)">${shortage} item${shortage>1?"s":""} need ordering</div>` : `<div style="color:var(--green)">✓ Stock OK</div>`}
         </div>
       </div>
+
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="inv-table" style="width:max-content;min-width:100%">
         <thead><tr>
           <th>Code</th><th>Product</th><th>In stock</th>
-          <th>1-day need</th><th>Required (${days}d×150%)</th>
-          <th style="color:var(--amber)">To order</th><th>Status</th>
+          <th>Per day</th><th>${days}d × 150% needed</th>
+          <th>To order</th><th>Status</th>
         </tr></thead>
-        <tbody>
-        ${rows.map(r => {
-          const statusColor = r._toOrder > 0 ? "var(--red)" : "var(--green)";
-          const statusLabel = r._toOrder > 0 ? "⚠ Order needed" : "✓ OK";
-          shortageCount += r._shortage ? 1 : 0;
-          totalItems++;
-          return `<tr style="${r._shortage ? "background:rgba(255,80,80,0.05)" : ""}">
-            <td style="font-size:11px;color:var(--muted)">${r.code||"-"}</td>
-            <td style="font-weight:500">${r.name||r.code}<br>
-              ${r._mepSources.length ? `<span style="font-size:10px;color:var(--muted)" title="${r._mepSources.join('\n')}">${r._mepSources.length} MEP product${r._mepSources.length>1?"s":""}</span>` : ""}
+        <tbody>${rows.map(r => `
+          <tr style="${r.shortage?"background:rgba(220,50,50,0.07)":""}">
+            <td style="font-size:11px;color:var(--muted)">${r.code}</td>
+            <td>
+              <span style="font-weight:500">${r.name}</span>
+              ${r.mepSources.length ? `<br><span style="font-size:10px;color:var(--muted)" title="${r.mepSources.join('\n')}">${r.mepSources.length} MEP recipe${r.mepSources.length>1?"s":""}</span>` : ""}
             </td>
-            <td style="color:${r._inStock>0?"var(--text)":"var(--red)"}">${r._inStock.toFixed(2)} ${r._unit}</td>
-            <td style="color:var(--muted)">${r._needed1day.toFixed(2)} ${r._unit}</td>
-            <td>${r._required.toFixed(2)} ${r._unit}</td>
-            <td style="color:${statusColor};font-weight:600">${r._toOrder > 0 ? "+"+r._toOrder.toFixed(2)+" "+r._unit : "—"}</td>
-            <td><span class="stock-pill stock-${r._toOrder>0?"out":"ok"}">${statusLabel}</span></td>
-          </tr>`;
-        }).join("")}
+            <td style="color:${r.inStock>0?"var(--text)":"var(--red)"}">${r.inStock.toFixed(2)} ${r.unit}</td>
+            <td style="color:var(--muted)">${r.needed1day.toFixed(2)} ${r.unit}</td>
+            <td>${r.required.toFixed(2)} ${r.unit}</td>
+            <td style="color:${r.shortage?"var(--red)":"var(--green)"};font-weight:600">
+              ${r.shortage ? `+${r.toOrder.toFixed(2)} ${r.unit}` : "—"}
+            </td>
+            <td><span class="stock-pill stock-${r.shortage?"out":"ok"}">${r.shortage?"⚠ Order":"✓ OK"}</span></td>
+          </tr>`).join("")}
         </tbody>
       </table>
       </div>
@@ -2209,7 +2159,7 @@ function renderOrders() {
 
   container.innerHTML = html;
   if (summary) summary.textContent =
-    `${totalItems} item${totalItems!==1?"s":""} across ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length!==1?"s":""} — ${shortageCount} need ordering`;
+    `${visible.length} item${visible.length!==1?"s":""} · ${Object.keys(bySupplier).length} supplier${Object.keys(bySupplier).length!==1?"s":""} · ${totalShortage} need ordering`;
 }
 
 async function markOrdered(code, btn) {
