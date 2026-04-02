@@ -1764,13 +1764,8 @@ function renderAdminWorkers() {
   const roleFilter = document.getElementById('admin-worker-role-filter').value;
   const list = document.getElementById('admin-workers-list');
   
-  // Check if allSettings exists, if not use empty array
-  let workers = [];
-  if (typeof allSettings !== 'undefined' && allSettings && allSettings.workers) {
-    workers = allSettings.workers;
-  }
-  
-  console.log('workers data:', workers);
+  // Use allWorkersAdmin instead of allSettings.workers
+  let workers = allWorkersAdmin || [];
   
   let filtered = workers;
   
