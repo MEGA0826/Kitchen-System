@@ -956,40 +956,39 @@
     });
   }
 
-  function updateMepUI(data) {
+function updateMepUI(data) {
     const status  = document.getElementById("mepStatus");
     const fullMsg = document.getElementById("mepFullMsg");
+
+    // If mepStatus response includes product fields, refresh name/image
+    if (data.name || data.image) {
+      PRODUCT_MAP[CURRENT_CODE] = Object.assign(PRODUCT_MAP[CURRENT_CODE] || {}, {
+        name: data.name, image: data.image,
+        mepMax: data.mepMax, gnSize: data.gnSize,
+        gnWeight: data.gnWeight, tagesziel: data.tagesziel,
+      });
+      showProduct();
+    }
 
     // Always update Used/Waste state - even when mepMax is 0
     const _avail = data.available !== undefined ? data.available : (data.doneCount || 0);
     setUsedWasteState(_avail);
-
     if (!data.mepMax || data.mepMax === 0) {
       status.style.display = "none";
       fullMsg.classList.remove("visible");
       return;
     }
-
     status.style.display = "flex";
-
     const gnSize   = data.gnSize   || "";
     const gnWeight = data.gnWeight || 0;
-
-    // inProgress: items in MEP list right now (produce - done)
     const inProg  = data.inProgress !== undefined
       ? data.inProgress
       : Math.max(0, (data.produceCount||0) - (data.doneCount||0));
-
-    // available: finished MEPs still usable (done - waste)
-    // Use server field if present, otherwise fall back to doneCount
     const avail   = data.available !== undefined
       ? data.available
       : (data.doneCount || 0);
-
     const listWt  = gnWeight * inProg;
     const availWt = gnWeight * avail;
-
-    // Row 1 - Available (one compact line)
     const labelDone = document.getElementById("mepLabelDone");
     const dotDone   = document.getElementById("mepDotDone");
     let doneText = `<strong>Available: ${avail}`;
@@ -998,64 +997,47 @@
     doneText += `</strong>`;
     labelDone.innerHTML = doneText;
     dotDone.className   = "mep-dot green";
-
-// Row 2 - To produce: target - available (when target set) OR 0 when target covered
-const tagesziel2 = data.tagesziel || 0;
-const mepMax2 = data.mepMax || 0;
-const targetQtyCalc = tagesziel2 > 0 ? tagesziel2 : mepMax2;
-
-// When available meets/exceeds target, toProduce = 0
-// When used, toProduce increases as available drops below target
-const toProduce = targetQtyCalc > 0 ? Math.max(0, targetQtyCalc - avail) : inProg;
-
-const toProdWt = gnWeight * toProduce;
-const labelList = document.getElementById("mepLabelList");
-const dotList = document.getElementById("mepDotList");
-let listText = `<strong>To produce: ${toProduce}`;
-if (gnSize) listText += ` ${gnSize}`;
-if (gnWeight && toProduce > 0) listText += ` = ${toProdWt} kg`;
-listText += `</strong>`;
-labelList.innerHTML = listText;
-
-// Finish is active when there is work in the MEP list (inProg > 0)
-// Also keep active when toProduce > 0 - items are being made
-const btnDone = document.querySelector(".btn-done");
-if (btnDone) {
-  const canFinish = inProg > 0 || toProduce > 0;
-  if (canFinish) {
-    btnDone.classList.remove("inactive");
-    btnDone.title = "";
-  } else {
-    btnDone.classList.add("inactive");
-    btnDone.title = "Nothing in MEP list to finish";
+    const tagesziel2 = data.tagesziel || 0;
+    const mepMax2 = data.mepMax || 0;
+    const targetQtyCalc = tagesziel2 > 0 ? tagesziel2 : mepMax2;
+    const toProduce = targetQtyCalc > 0 ? Math.max(0, targetQtyCalc - avail) : inProg;
+    const toProdWt = gnWeight * toProduce;
+    const labelList = document.getElementById("mepLabelList");
+    const dotList = document.getElementById("mepDotList");
+    let listText = `<strong>To produce: ${toProduce}`;
+    if (gnSize) listText += ` ${gnSize}`;
+    if (gnWeight && toProduce > 0) listText += ` = ${toProdWt} kg`;
+    listText += `</strong>`;
+    labelList.innerHTML = listText;
+    const btnDone = document.querySelector(".btn-done");
+    if (btnDone) {
+      const canFinish = inProg > 0 || toProduce > 0;
+      if (canFinish) {
+        btnDone.classList.remove("inactive");
+        btnDone.title = "";
+      } else {
+        btnDone.classList.add("inactive");
+        btnDone.title = "Nothing in MEP list to finish";
+      }
+    }
+    window._lastAvail = avail;
+    window._lastInProg = inProg;
+    const tagesziel = data.tagesziel || 0;
+    const mepMax = data.mepMax || 0;
+    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+    const covered = targetQty > 0 && avail >= targetQty;
+    if (covered) {
+      dotList.className = "mep-dot green";
+      labelList.classList.add("full");
+      fullMsg.textContent = "Daily target covered OK";
+      fullMsg.classList.add("visible");
+    } else {
+      dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
+      labelList.classList.remove("full");
+      fullMsg.classList.remove("visible");
+    }
   }
-}
-
-// Used/Waste state already set above via setUsedWasteState()
-
-// Remember last known values for optimistic UI
-window._lastAvail = avail;
-window._lastInProg = inProg;
-
-// "Daily target covered" only when available has reached the target
-const tagesziel = data.tagesziel || 0;
-const mepMax = data.mepMax || 0;
-const targetQty = tagesziel > 0 ? tagesziel : mepMax;
-const covered = targetQty > 0 && avail >= targetQty;
-
-if (covered) {
-  dotList.className = "mep-dot green";
-  labelList.classList.add("full");
-  fullMsg.textContent = "Daily target covered OK";
-  fullMsg.classList.add("visible");
-} else {
-    dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
-    labelList.classList.remove("full");
-    fullMsg.classList.remove("visible");
-  }
-}
     
-
   function showProduct() {
     CURRENT_CODE = new URLSearchParams(window.location.search).get("code") || "";
     const pd    = PRODUCT_MAP[CURRENT_CODE] || {};
