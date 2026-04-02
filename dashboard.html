@@ -762,32 +762,38 @@
         <div class="admin-msg" id="wf-msg"></div>
       </div>
     </div>
-    <!-- Edit Worker Popup -->
-      <div id="workerEditPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:25px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:9999; min-width:320px;">
-        <h3 style="margin-top:0">Worker bearbeiten</h3>
-        <input type="hidden" id="editWorkerOriginalName">
-        <div style="margin-bottom:12px">
-          <label style="display:block; margin-bottom:4px; font-weight:600">Name:</label>
-          <input type="text" id="editWorkerName" class="form-input">
-        </div>
-        <div style="margin-bottom:12px">
-          <label style="display:block; margin-bottom:4px; font-weight:600">Rolle:</label>
-          <select id="editWorkerRole" class="form-input">
-            <option value="">-- Rolle wählen --</option>
-            <option value="Küchenchef">Küchenchef</option>
-            <option value="Teamleader">Teamleader</option>
-            <option value="Sushikoch">Sushikoch</option>
-            <option value="Wokkoch">Wokkoch</option>
-            <option value="Küchehilfe">Küchehilfe</option>
-          </select>
-        </div>
-        <div style="margin-bottom:12px">
-          <label style="display:block; margin-bottom:4px; font-weight:600">PIN (4 digits):</label>
-          <input type="text" id="editWorkerPin" class="form-input" maxlength="4" inputmode="numeric" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
-        </div>
-        <div style="display:flex; gap:10px; margin-top:20px">
-          <button onclick="saveWorkerEditPopup()" class="btn-save" style="flex:1">Speichern</button>
-          <button onclick="closeWorkerEditPopup()" class="btn-edit" style="flex:1">Abbrechen</button>
+   <!-- Edit Worker Popup -->
+      <div id="workerEditPopup" class="popup-overlay" style="display:none">
+        <div class="popup-box">
+          <div class="popup-title">Worker bearbeiten</div>
+          <input type="hidden" id="editWorkerOriginalName">
+          
+          <div class="popup-field">
+            <label class="popup-label">Name</label>
+            <input type="text" id="editWorkerName" class="popup-input">
+          </div>
+          
+          <div class="popup-field">
+            <label class="popup-label">Rolle</label>
+            <select id="editWorkerRole" class="popup-input">
+              <option value="">-- Rolle wählen --</option>
+              <option value="Küchenchef">Küchenchef</option>
+              <option value="Teamleader">Teamleader</option>
+              <option value="Sushikoch">Sushikoch</option>
+              <option value="Wokkoch">Wokkoch</option>
+              <option value="Küchehilfe">Küchehilfe</option>
+            </select>
+          </div>
+          
+          <div class="popup-field">
+            <label class="popup-label">PIN (4 digits)</label>
+            <input type="text" id="editWorkerPin" class="popup-input" maxlength="4" inputmode="numeric" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
+          </div>
+          
+          <div class="popup-actions">
+            <button class="popup-btn popup-btn-save" onclick="saveWorkerEditPopup()">Speichern</button>
+            <button class="popup-btn popup-btn-cancel" onclick="closeWorkerEditPopup()">Abbrechen</button>
+          </div>
         </div>
       </div>
       <div id="workerEditOverlay" onclick="closeWorkerEditPopup()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9998"></div>
@@ -1822,7 +1828,7 @@ function renderAdminWorkers() {
     const role = typeof w === 'object' ? (w.role || '—') : '—';
     const pin = typeof w === 'object' ? (w.pin || '—') : '—';
     return `
-      <div class="admin-list-item">
+      <div class="admin-list-item" style="display:flex; align-items:center; gap:10px">
         <div style="flex:1">
           <div class="admin-list-item-main">${name || '(no name)'}</div>
           <div class="admin-list-item-sub">${role} · PIN: ${pin}</div>
@@ -1845,13 +1851,11 @@ function openWorkerEditPopup(name) {
   document.getElementById('editWorkerRole').value = wRole;
   document.getElementById('editWorkerPin').value = wPin;
   
-  document.getElementById('workerEditPopup').style.display = 'block';
-  document.getElementById('workerEditOverlay').style.display = 'block';
+  document.getElementById('workerEditPopup').style.display = 'flex';
 }
 
 function closeWorkerEditPopup() {
   document.getElementById('workerEditPopup').style.display = 'none';
-  document.getElementById('workerEditOverlay').style.display = 'none';
 }
 
 async function saveWorkerEditPopup() {
