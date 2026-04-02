@@ -1786,7 +1786,7 @@ function renderAdminWorkers() {
   list.innerHTML = filtered.map((w, i) => {
     const originalIndex = workers.indexOf(w);
     return `
-      <div class="admin-list-item" onclick="editWorkerAdmin(${originalIndex})">
+      <div class="admin-list-item" ondblclick="editWorkerAdmin(${originalIndex})">
         <div class="admin-list-item-main">${w.name || '(no name)'}</div>
         <div class="admin-list-item-sub">${w.role || '—'} · PIN: ${w.pin || '—'}</div>
       </div>
