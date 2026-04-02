@@ -960,16 +960,6 @@ function updateMepUI(data) {
     const status  = document.getElementById("mepStatus");
     const fullMsg = document.getElementById("mepFullMsg");
 
-    // If mepStatus response includes product fields, refresh name/image
-    if (data.name || data.image) {
-      PRODUCT_MAP[CURRENT_CODE] = Object.assign(PRODUCT_MAP[CURRENT_CODE] || {}, {
-        name: data.name, image: data.image,
-        mepMax: data.mepMax, gnSize: data.gnSize,
-        gnWeight: data.gnWeight, tagesziel: data.tagesziel,
-      });
-      showProduct();
-    }
-
     // Always update Used/Waste state - even when mepMax is 0
     const _avail = data.available !== undefined ? data.available : (data.doneCount || 0);
     setUsedWasteState(_avail);
@@ -1467,6 +1457,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   const code = new URLSearchParams(window.location.search).get("code") || "";
   setUsedWasteState(0);
 
+  // Fix: moved out of nested listener
+  updateBadge();
+  if (navigator.onLine) retryQueue();
+
   if (!code) {
     document.getElementById("scanHome").style.display = "flex";
     preloadProducts();
@@ -1475,35 +1469,35 @@ window.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // -- Has code --
+  // -- Has code - show product screen --
   sessionStorage.setItem("lastScanUrl", window.location.href);
   document.getElementById("scanHome").style.display      = "none";
   document.getElementById("productScreen").style.display = "flex";
   document.getElementById("productScreen").style.flexDirection = "column";
 
-  // Show cached product data instantly (zero delay)
+  // Show cached product data instantly
   const cached = sessionStorage.getItem("productMap");
   if (cached) {
     try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
   }
 
-  // Single API call: mepStatus now returns product fields too
+  // Single fetch: mepStatus returns name+image+stats
   const [mepResult] = await Promise.allSettled([
-    fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" })
-      .then(r => r.json()),
+    fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
     preloadWorkers(),
   ]);
 
   if (mepResult?.status === "fulfilled" && mepResult.value) {
     const d = mepResult.value;
-    // Merge product fields into PRODUCT_MAP from the single response
-    if (d.name || d.mepMax) {
+    // Merge product fields first, then showProduct, then updateMepUI
+    if (d.name || d.image) {
       PRODUCT_MAP[code] = Object.assign(PRODUCT_MAP[code] || {}, {
-        name: d.name, image: d.image, mepMax: d.mepMax,
-        gnSize: d.gnSize, gnWeight: d.gnWeight, tagesziel: d.tagesziel,
+        name: d.name, image: d.image,
+        mepMax: d.mepMax, gnSize: d.gnSize,
+        gnWeight: d.gnWeight, tagesziel: d.tagesziel,
       });
       try { sessionStorage.setItem("productMap", JSON.stringify(PRODUCT_MAP)); } catch(e) {}
-      showProduct();
+      showProduct(); // re-run with real name/image
     }
     updateMepUI(d);
   }
