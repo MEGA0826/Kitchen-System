@@ -2640,13 +2640,11 @@ setInterval(updateLiveTime, 1000);
 
 // Fire all in parallel — no sequential delays
 Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()])
-  .then(() => loadKDS())
   .then(() => {
-    const savedTab = sessionStorage.getItem("activeTab");
-    if (savedTab && savedTab !== "kds") {
-      const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-      if (btn) switchTab(btn);
-    }
+    const savedTab = sessionStorage.getItem("activeTab") || "kds";
+    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+    if (btn) switchTab(btn);
+    if (savedTab === "kds") loadKDS();
   });
 
 // Auto-refresh every 60s
