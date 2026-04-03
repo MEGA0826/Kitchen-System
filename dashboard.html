@@ -1781,39 +1781,6 @@ function initSwipe() {
     el.addEventListener('mousedown',   e => swipeStart(e, idx));
     window.addEventListener('mousemove', e => swipeMove(e, idx));
     window.addEventListener('mouseup',   e => swipeEnd(e, idx));
-    window.addEventListener("DOMContentLoaded", async () => {
-
-      // Prevent KDS flash before data loads
-(function immediateTabRestore() {
-  const saved = sessionStorage.getItem("activeTab");
-  if (!saved || saved === "admin" || saved === "kds") return;
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  const btn = document.querySelector(`.tab[data-tab="${saved}"]`);
-  if (btn) btn.classList.add("active");
-  const panel = document.getElementById("panel-" + saved);
-  if (panel) panel.classList.add("active");
-})();
-
-try {
-  await Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()]);
-  await loadKDS();
-
-  // Restore active tab — runs after all data ready
-  const savedTab = sessionStorage.getItem("activeTab");
-  if (savedTab && savedTab !== "kds") {
-    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-    if (btn) {
-      switchTab(btn);
-      const dropdown = document.getElementById("nav-dropdown");
-      if (dropdown) dropdown.value = savedTab;
-    }
-  }
-} catch(e) {
-  console.error("Init error:", e);
-  await loadKDS();
-}
-});
   });
 }
 function _cx(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
@@ -2986,21 +2953,17 @@ async function initDashboard() {
     await Promise.all([loadProducts(), loadInventory()]);
     await loadKDS();
 
-   // Restore active tab with full content load after data is ready
-const savedTab = sessionStorage.getItem("activeTab");
-if (savedTab && savedTab !== "kds") {
-  if (savedTab === "admin") {
-    sessionStorage.removeItem("activeTab");
-    requestAdminAccess();
-  } else {
-    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-    if (btn) {
-      switchTab(btn);
-      const dropdown = document.getElementById("nav-dropdown");
-      if (dropdown) dropdown.value = savedTab;
+    // Restore active tab with full content load after data is ready
+    const savedTab = sessionStorage.getItem("activeTab");
+    if (savedTab && savedTab !== "kds" && savedTab !== "admin") {
+      const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+      if (btn) {
+        switchTab(btn);
+        const dropdown = document.getElementById("nav-dropdown");
+        if (dropdown) dropdown.value = savedTab;
+      }
     }
-  }
-} catch(e) {
+  } catch(e) {
     console.error("Init error:", e);
     await loadKDS();
   }
