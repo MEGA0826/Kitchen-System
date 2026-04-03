@@ -2964,20 +2964,28 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
   } catch(e) { console.error("cache error:", e); }
 })();
 
+// Prevent KDS flash — restore panel visually before any fetch
+(function immediateTabRestore() {
+  const saved = sessionStorage.getItem("activeTab");
+  if (!saved || saved === "admin" || saved === "kds") return;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  const btn = document.querySelector(`.tab[data-tab="${saved}"]`);
+  if (btn) btn.classList.add("active");
+  const panel = document.getElementById("panel-" + saved);
+  if (panel) panel.classList.add("active");
+})();
+
 async function initDashboard() {
   try {
-    // Preload workers immediately for instant PIN verification
     get({ action: "allWorkers" }).then(d => {
       allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
     }).catch(() => {});
-    
-    await Promise.all([
-      loadProducts(),
-      loadInventory()
-    ]);
+
+    await Promise.all([loadProducts(), loadInventory()]);
     await loadKDS();
-    
-    // Restore active tab
+
+    // Restore active tab with full content load after data is ready
     const savedTab = sessionStorage.getItem("activeTab");
     if (savedTab && savedTab !== "kds") {
       const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
@@ -2992,18 +3000,15 @@ async function initDashboard() {
     await loadKDS();
   }
 }
-
 initDashboard();
 setTimeout(loadRecipes, 800);
 
-// Auto-refresh every 60s
 setInterval(async () => {
   const prevLen = allScans.length;
   await loadKDS();
   if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
 }, 60_000);
 
-// Keep Apps Script warm
 setInterval(() => {
   fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
 }, 4 * 60 * 1000);
