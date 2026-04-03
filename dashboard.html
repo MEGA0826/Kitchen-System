@@ -2953,16 +2953,16 @@ async function initDashboard() {
     await Promise.all([loadProducts(), loadInventory()]);
     await loadKDS();
 
-    // Restore active tab with full content load after data is ready
-    const savedTab = sessionStorage.getItem("activeTab");
-    if (savedTab && savedTab !== "kds" && savedTab !== "admin") {
-      const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-      if (btn) {
-        switchTab(btn);
-        const dropdown = document.getElementById("nav-dropdown");
-        if (dropdown) dropdown.value = savedTab;
-      }
-    }
+// Restore active tab with full content load after data is ready
+const savedTab = sessionStorage.getItem("activeTab");
+if (savedTab && savedTab !== "kds") {
+  const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+  if (btn) {
+    switchTab(btn);
+    const dropdown = document.getElementById("nav-dropdown");
+    if (dropdown) dropdown.value = savedTab;
+  }
+}
   } catch(e) {
     console.error("Init error:", e);
     await loadKDS();
