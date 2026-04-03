@@ -1055,24 +1055,26 @@ function goBack(e) {
 // TAB SWITCHING  — FIX: btn is the DOM element
 // ─────────────────────────────────────────────
 function switchTab(btn) {
-  const tab = btn.dataset.tab;
-  
-  sessionStorage.setItem("activeTab", tab);
-  
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
-  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
-  document.getElementById(tab).classList.add("active");
-  
-  if (tab === "products" && !allProducts.length) {
-    loadProducts();
-  } else if (tab === "orders" && !allRecipes.length) {
-    Promise.allSettled([loadInventory(), loadRecipes()]);
-  } else if (tab === "inventory" && !allInventory.length) {
-    loadInventory();
-  } else if (tab === "kds") {
-    if (!allProducts.length) loadProducts();
-    loadKDS();
+  const tabId = btn.dataset.tab;
+  if (!tabId) return;
+  const panel = document.getElementById("panel-" + tabId);
+  if (panel) panel.classList.add("active");
+
+  try {
+    if (tabId === "inventory")    { /* already rendered, filterInventory re-applies */ filterInventory && filterInventory(); }
+    if (tabId === "orders")       renderOrders();
+    if (tabId === "products")     { /* rendered on demand in admin */ }
+    if (tabId === "recipes")      { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+    if (tabId === "deductions")   loadDeductions();
+    if (tabId === "reports")      loadReportsTab();
+    if (tabId === "mep-overview") loadMepOverview();
+    if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
+  } catch(e) {
+    console.error("switchTab error [" + tabId + "]:", e);
+    if (panel) panel.innerHTML += `<div style="color:var(--red);padding:16px;font-size:12px">Tab error: ${e.message}</div>`;
   }
 }
 function restoreActiveTab() {
