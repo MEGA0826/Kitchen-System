@@ -658,23 +658,29 @@
     <div class="admin-msg" id="mf-msg"></div>
   </div>
 
-  <!-- ADD MEP TO MENU FORM -->
-  <div class="admin-form" id="mep-to-menu-form" style="display:none;margin-top:16px">
-    <div class="admin-form-title">Add MEP Product to <span id="mep-menu-label" style="color:var(--amber)">—</span></div>
-    <div class="form-grid">
-      <div class="form-field"><label class="form-label">MEP Product *</label>
-        <select class="form-input" id="mtm-mep"></select>
-      </div>
-      <div class="form-field"><label class="form-label">Schritt / Step</label>
-        <input class="form-input" id="mtm-step" placeholder="Schritt 1" value="Schritt 1">
-      </div>
+<!-- ADD MEP TO MENU FORM -->
+<div class="admin-form" id="mep-to-menu-form" style="display:none;margin-top:16px">
+  <div class="admin-form-title">Add MEP Product to <span id="mep-menu-label" style="color:var(--amber)">—</span></div>
+  <div class="form-grid">
+    <div class="form-field"><label class="form-label">MEP Product *</label>
+      <select class="form-input" id="mtm-mep"></select>
     </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn-save" onclick="saveMepToMenu()">Add</button>
-      <button class="btn-del" onclick="document.getElementById('mep-to-menu-form').style.display='none'">Cancel</button>
+    <div class="form-field"><label class="form-label">Schritt / Step</label>
+      <input class="form-input" id="mtm-step" placeholder="Schritt 1" value="Schritt 1">
     </div>
-    <div class="admin-msg" id="mtm-msg"></div>
+    <div class="form-field"><label class="form-label">Weight (kg/GN)</label>
+      <input class="form-input" id="mtm-weight" type="number" step="0.001" placeholder="auto-filled">
+    </div>
+    <div class="form-field"><label class="form-label">Description / Category</label>
+      <input class="form-input" id="mtm-desc" placeholder="auto-filled">
+    </div>
   </div>
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button class="btn-save" onclick="saveMepToMenu()">Add</button>
+    <button class="btn-del" onclick="document.getElementById('mep-to-menu-form').style.display='none'">Cancel</button>
+  </div>
+  <div class="admin-msg" id="mtm-msg"></div>
+</div>
 
   <!-- ADD RAW MATERIAL TO MEP FORM -->
   <div class="admin-form" id="rm-to-mep-form" style="display:none;margin-top:16px">
@@ -2896,7 +2902,14 @@ function openAddMepToMenu() {
         .filter(([code,p])=>p.name&&p.name!=="(deleted)"&&!already.includes(code))
         .sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||""))
         .map(([code,p])=>`<option value="${code}">${p.name} (${code})</option>`).join("");
-  document.getElementById("mtm-step").value = "Schritt 1";
+  sel.onchange = () => {
+    const p = allProducts[sel.value]||{};
+    document.getElementById("mtm-weight").value = p.gnWeight||"";
+    document.getElementById("mtm-desc").value   = p.kategorie||"";
+  };
+  document.getElementById("mtm-step").value   = "Schritt 1";
+  document.getElementById("mtm-weight").value = "";
+  document.getElementById("mtm-desc").value   = "";
   document.getElementById("mtm-msg").textContent = "";
   f.scrollIntoView({behavior:"smooth"});
 }
@@ -2904,6 +2917,8 @@ function openAddMepToMenu() {
 async function saveMepToMenu() {
   const mepCode = document.getElementById("mtm-mep").value;
   const step    = document.getElementById("mtm-step").value.trim();
+  const weight  = document.getElementById("mtm-weight").value;
+  const desc    = document.getElementById("mtm-desc").value.trim();
   if (!mepCode) { adminMsg("mtm-msg","Select a MEP product","err"); return; }
   const btn = document.querySelector("#mep-to-menu-form .btn-save");
   if (btn) { btn.disabled=true; btn.textContent="Adding…"; }
