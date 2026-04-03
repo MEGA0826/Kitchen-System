@@ -547,7 +547,7 @@
   
   <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
     <select class="search-input" id="prodCatFilter" onchange="filterProducts()" style="flex:0 1 200px">
-      <option value="">-- Kategorie wählen --</option>
+      <option value="">-- Choose category --</option>
     </select>
     <input class="search-input" id="prod-search" type="text" placeholder="Search..." oninput="filterProducts()" style="flex:1;min-width:160px;display:none;">
   </div>
@@ -1678,6 +1678,7 @@ async function loadProducts() {
     allProducts = (data && !data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
     try { sessionStorage.setItem("dash_products", JSON.stringify(allProducts)); } catch(e) {}
     populateProductCategories();
+    // DO NOT call renderProductGrid here - only populate dropdown
     return allProducts;
   } catch(e) {
     document.getElementById("product-grid").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
@@ -1739,6 +1740,7 @@ function filterProducts() {
 
   if (!cat) {
     grid.style.display = 'none';
+    grid.innerHTML = ''; // CLEAR CONTENT
     prompt.style.display = 'block';
     searchBox.style.display = 'none';
     return;
