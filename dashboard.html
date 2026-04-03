@@ -2903,13 +2903,32 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
   } catch(e) { console.error("cache error:", e); }
 })();
 
+// Restore last active tab (skip admin — requires PIN)
+(function restoreTab() {
+  const saved = sessionStorage.getItem("dash_active_tab");
+  if (saved && saved !== "admin") {
+    const btn = document.querySelector(`.tab[data-tab="${saved}"]`);
+    if (btn) switchTab(btn);
+  }
+})();
+
 Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()])
   .then(() => loadKDS())
-  .catch(e  => {
+  .catch(e => {
     console.error("init error:", e);
     const pb = document.getElementById("product-bars");
     if (pb) pb.innerHTML = `<div style="color:var(--red);padding:12px">Load error: ${e.message}</div>`;
   });
+
+setInterval(async () => {
+  const prevLen = allScans.length;
+  await loadKDS();
+  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
+}, 60_000);
+
+setInterval(() => {
+  fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
+}, 4 * 60 * 1000);
 
 // Auto-refresh every 60s
 setInterval(async () => {
