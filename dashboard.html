@@ -420,7 +420,7 @@
 
 <div class="body">
 
-  <!-- KDS -->
+  <!-- KDS Tab-->
   <div class="panel active" id="panel-kds">
     <div class="section-title">Kitchen Display</div>
     <div class="section-sub">Real-time MEP production tracking</div>
@@ -474,7 +474,7 @@
     </div>
   </div>
 
-  <!-- MEP OVERVIEW -->
+  <!-- MEP OVERVIEW Tab -->
   <div class="panel" id="panel-mep-overview">
     <div class="section-title">MEP Overview Today</div>
     <div class="section-sub">Status of all products</div>
@@ -498,7 +498,7 @@
     </div>
   </div>
 
-<!-- INVENTORY -->
+<!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
     <div class="section-title">Inventory</div>
     <div class="section-sub">Select a category or supplier to load items</div>
@@ -516,24 +516,30 @@
     </div>
   </div>
 
-  <!-- PRODUCTS -->
-  <div class="panel" id="panel-products">
-    <div class="section-title">Products</div>
-    <div class="section-sub">Click any product for scan stats</div>
-    <div class="inv-controls">
-      <input class="search-input" id="prod-search" type="text" placeholder="Search product…" oninput="filterProducts()">
-      <select class="search-input" id="prod-cat-filter" onchange="filterProducts()" style="flex:0 1 180px">
-        <option value="">All categories</option>
+<!-- Products Tab -->
+<div class="tab-content" id="productsTab">
+  <div class="section-header">
+    <h2>MEP-Produkte (Mise en Place)</h2>
+  </div>
+  
+  <div class="filter-bar">
+    <label>
+      Kategorie:
+      <select id="prodCatFilter" onchange="filterProducts()">
+        <option value="">-- Kategorie wählen --</option>
       </select>
-    </div>
-    <div class="product-grid" id="product-grid">
-      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
-      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
-      <div class="skeleton" style="height:200px;border-radius:14px;"></div>
-    </div>
+    </label>
+    <input type="text" id="prod-search" placeholder="Search..." oninput="filterProducts()" style="display:none;">
   </div>
 
-  <!-- RECIPES -->
+  <div id="prodPrompt" class="prompt-message">
+    Bitte wähle eine Kategorie aus
+  </div>
+
+  <div id="product-grid" class="product-grid" style="display:none;"></div>
+</div>
+
+  <!-- RECIPES Tab-->
   <div class="panel" id="panel-recipes">
     <div class="section-title">Recipes</div>
     <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products</div>
@@ -571,7 +577,7 @@
     </div>
   </div>
 
-<!-- ORDERS -->
+<!-- ORDERS Tab-->
   <div class="panel" id="panel-orders">
     <div class="section-title">Orders</div>
     <div class="section-sub" style="margin-bottom:16px">Order plan by supplier — based on MEP daily max × safety stock</div>
@@ -593,7 +599,7 @@
     <div id="order-summary" style="margin-top:12px;font-size:12px;color:var(--muted)"></div>
   </div>
 
-  <!-- DEDUCTIONS -->
+  <!-- DEDUCTIONS Tab-->
   <div class="panel" id="panel-deductions">
     <div class="section-title">Lager deductions — auto-logged when MEP is finished</div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -620,7 +626,7 @@
     </div>
   </div>
 
-  <!-- REPORTS -->
+  <!-- REPORTS Tab-->
   <div class="panel" id="panel-reports">
     <div class="section-title">Weekly kitchen performance report</div>
     <div class="section-sub">Send weekly summaries via email</div>
@@ -656,7 +662,7 @@
     </div>
   </div>
 
-  <!-- ADMIN -->
+  <!-- ADMIN Tab-->
   <div class="panel" id="panel-admin">
     <div class="admin-section" id="archive-card" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -717,16 +723,16 @@
       <div class="admin-section-title">Workers</div>
       <div class="admin-section-sub">Settings sheet</div>
       
-      <div style="margin-bottom:10px; display:flex; gap:8px;">
+<div style="margin-bottom:10px; display:flex; gap:8px;">
+        <input class="form-input" id="admin-worker-search" placeholder="Search worker…" oninput="renderAdminWorkers()" style="flex:1">
         <select class="form-input" id="admin-worker-role-filter" onchange="renderAdminWorkers()" style="flex:0 0 160px">
-          <option value="">Alle Rollen</option>
+          <option value="">-- Choose Rolle --</option>
           <option value="Küchenchef">Küchenchef</option>
           <option value="Teamleader">Teamleader</option>
           <option value="Sushikoch">Sushikoch</option>
           <option value="Wokkoch">Wokkoch</option>
           <option value="Küchehilfe">Küchehilfe</option>
         </select>
-        <input class="form-input" id="admin-worker-search" placeholder="Search worker…" oninput="renderAdminWorkers()" style="flex:1">
       </div>
       
       <div class="admin-list" id="admin-workers-list"></div>
@@ -760,6 +766,43 @@
           <button class="btn-edit" onclick="clearWorkerForm()" style="display:none" id="wf-cancel">Cancel edit</button>
         </div>
         <div class="admin-msg" id="wf-msg"></div>
+      </div>
+      
+      <!-- Edit Worker Modal -->
+      <div class="edit-modal" id="editWorkerModal">
+        <div class="edit-modal-content">
+          <div class="edit-modal-header">
+            <h3 id="editWorkerTitle">Edit Worker</h3>
+            <button class="edit-modal-close" onclick="closeWorkerEditModal()">×</button>
+          </div>
+          <input type="hidden" id="editWorkerOriginalName">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label">Name *</label>
+              <input class="form-input" id="editWorkerName">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Rolle</label>
+              <select class="form-input" id="editWorkerRole">
+                <option value="">-- Rolle wählen --</option>
+                <option value="Küchenchef">Küchenchef</option>
+                <option value="Teamleader">Teamleader</option>
+                <option value="Sushikoch">Sushikoch</option>
+                <option value="Wokkoch">Wokkoch</option>
+                <option value="Küchehilfe">Küchehilfe</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label">PIN (4 digits)</label>
+              <input class="form-input" id="editWorkerPin" type="text" inputmode="numeric" maxlength="4" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
+            </div>
+          </div>
+          <div class="admin-msg" id="editWorkerMsg"></div>
+          <div class="form-actions">
+            <button class="btn-save" onclick="saveWorkerEditModal()">Save</button>
+            <button class="btn-edit" onclick="closeWorkerEditModal()">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
 <!-- Edit Worker Modal -->
@@ -999,21 +1042,25 @@ function goBack(e) {
 // TAB SWITCHING  — FIX: btn is the DOM element
 // ─────────────────────────────────────────────
 function switchTab(btn) {
+  const tab = btn.dataset.tab;
+  
+  sessionStorage.setItem("activeTab", tab);
+  
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
-  const tabId = btn.dataset.tab;
-  if (tabId) {
-    document.getElementById("panel-" + tabId).classList.add("active");
-    sessionStorage.setItem("activeTab", tabId);
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  document.getElementById(tab).classList.add("active");
+  
+  if (tab === "products" && !allProducts.length) {
+    loadProducts();
+  } else if (tab === "orders" && !allRecipes.length) {
+    Promise.allSettled([loadInventory(), loadRecipes()]);
+  } else if (tab === "inventory" && !allInventory.length) {
+    loadInventory();
+  } else if (tab === "kds") {
+    if (!allProducts.length) loadProducts();
+    loadKDS();
   }
-
-  if (tabId === "admin")      { loadAdminTab(); loadArchiveStats(); }
-  if (tabId === "orders")     renderOrders();
-  if (tabId === "recipes")    { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
-  if (tabId === "deductions") loadDeductions();
-  if (tabId === "reports")    loadReportsTab();
-  if (tabId === "mep-overview") loadMepOverview();
 }
 function restoreActiveTab() {
   const savedTab = sessionStorage.getItem("activeTab");
@@ -1548,13 +1595,23 @@ async function loadProducts() {
     const data = await get({ action: "allProducts" });
     allProducts = (data && !data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
     try { sessionStorage.setItem("dash_products", JSON.stringify(allProducts)); } catch(e) {}
-    renderProductGrid(Object.entries(allProducts));
+    populateProductCategories();
     return allProducts;
   } catch(e) {
     document.getElementById("product-grid").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
   }
 }
-
+  function populateProductCategories() {
+  const cats = [...new Set(Object.values(allProducts).map(p => p.kategorie).filter(Boolean))].sort();
+  const sel = document.getElementById('prodCatFilter');
+  sel.innerHTML = '<option value="">-- Kategorie wählen --</option>';
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    sel.appendChild(opt);
+  });
+}
 function renderProductGrid(entries) {
   if (!entries.length) {
     document.getElementById("product-grid").innerHTML =
@@ -1592,9 +1649,30 @@ function renderProductGrid(entries) {
 }
 
 function filterProducts() {
-  const q = document.getElementById("prod-search").value.toLowerCase();
-  renderProductGrid(Object.entries(allProducts).filter(([code, p]) =>
-    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)));
+  const cat = document.getElementById('prodCatFilter').value;
+  const search = document.getElementById('prod-search').value.toLowerCase();
+  const grid = document.getElementById('product-grid');
+  const prompt = document.getElementById('prodPrompt');
+  const searchBox = document.getElementById('prod-search');
+
+  if (!cat) {
+    grid.style.display = 'none';
+    prompt.style.display = 'block';
+    searchBox.style.display = 'none';
+    return;
+  }
+
+  prompt.style.display = 'none';
+  grid.style.display = 'grid';
+  searchBox.style.display = 'block';
+
+  const filtered = Object.entries(allProducts).filter(([code, p]) => {
+    const matchCat = p.kategorie === cat;
+    const matchSearch = !search || (p.name||"").toLowerCase().includes(search) || code.toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+
+  renderProductGrid(filtered);
 }
 
 function openModal(code) {
@@ -1801,11 +1879,16 @@ function renderAdminWorkers() {
   const roleFilter = document.getElementById('admin-worker-role-filter').value;
   const list = document.getElementById('admin-workers-list');
   
-  let workers = allWorkersAdmin || [];
+  // Show prompt if nothing selected
+  if (!search && !roleFilter) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">Select a role or search to view workers.</div>`;
+    return;
+  }
   
+  let workers = allWorkersAdmin || [];
   let filtered = workers;
   
-  // Filter by role (empty string = show all)
+  // Filter by role
   if (roleFilter) {
     filtered = filtered.filter(w => {
       const role = typeof w === 'object' ? w.role : '';
@@ -1818,27 +1901,27 @@ function renderAdminWorkers() {
     filtered = filtered.filter(w => {
       const name = typeof w === 'object' ? w.name : w;
       const role = typeof w === 'object' ? (w.role || '') : '';
-      const pin = typeof w === 'object' ? (w.pin || '') : '';
       return (name || '').toLowerCase().includes(search) ||
-             role.toLowerCase().includes(search) ||
-             pin.toString().includes(search);
+             role.toLowerCase().includes(search);
     });
+  }
+  
+  if (!filtered.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found.</div>`;
+    return;
   }
   
   list.innerHTML = filtered.map(w => {
     const name = typeof w === 'object' ? w.name : w;
-    const role = typeof w === 'object' ? (w.role || '—') : '—';
-    const pin = typeof w === 'object' ? (w.pin || '—') : '—';
-    return `
-      <div class="admin-list-item" style="display:flex; align-items:center; gap:10px">
-        <div style="flex:1">
-          <div class="admin-list-item-main">${name || '(no name)'}</div>
-          <div class="admin-list-item-sub">${role} · PIN: ${pin}</div>
-        </div>
-        <button class="btn-edit" onclick="openWorkerEditPopup('${name.replace(/'/g, "\\'")}')">Edit</button>
+    const role = typeof w === 'object' ? (w.role || '') : '';
+    return `<div class="admin-item">
+      <div style="flex:1">
+        <span style="font-size:13px;font-weight:500">${name || '(no name)'}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px">${role || '—'}</span>
       </div>
-    `;
-  }).join('') || '<div style="padding:12px;color:#999;text-align:center">No workers found</div>';
+      <button class="btn-edit" onclick="openWorkerEditPopup('${name.replace(/'/g, "\\'")}')">Edit</button>
+    </div>`;
+  }).join('');
 }
 function openWorkerEditPopup(name) {
   const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
@@ -2651,14 +2734,12 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 updateLiveTime();
 setInterval(updateLiveTime, 1000);
 
-// Fire all in parallel — no sequential delays
-Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()])
-  .then(() => {
-    const savedTab = sessionStorage.getItem("activeTab") || "kds";
-    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-    if (btn) switchTab(btn);
-    if (savedTab === "kds") loadKDS();
-  });
+// Instant load — data fetched on-demand per tab
+const savedTab = sessionStorage.getItem("activeTab") || "orders";
+const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+if (btn) switchTab(btn);
+
+updateLiveTime();
 
 // Auto-refresh every 60s
 setInterval(async () => {
