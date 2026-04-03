@@ -2708,7 +2708,45 @@ async function loadRecipes() {
     allRecipes = Array.isArray(data.recipes) ? data.recipes : [];
   } catch(e) { console.error("loadRecipes:", e); }
 }
+async function loadRequirements() {
+  const el = document.getElementById("req-content");
+  if (!el) return;
+  try {
+    const data = await adminCall({ action:"getRequirements" });
+    const reqs = Array.isArray(data.requirements) ? data.requirements : [];
+    if (!reqs.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`;
+      return;
+    }
+    const byMep = {};
+    reqs.forEach(r => {
+      if (!byMep[r.mepCode]) byMep[r.mepCode] = { name:r.mepName, stillNeeded:r.stillNeeded, items:[] };
+      byMep[r.mepCode].items.push(r);
+    });
+    el.innerHTML = Object.entries(byMep).map(([code, g]) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">
+          ${g.name}<span style="font-size:11px;color:var(--amber);margin-left:6px">need ${g.stillNeeded} more GN today</span>
+        </div>
+        <div class="inv-table-wrap"><table class="inv-table">
+          <thead><tr><th>Raw material</th><th>Need</th><th>In stock</th><th>Status</th></tr></thead>
+          <tbody>${g.items.map(r => `<tr>
+            <td>${r.rmName}</td>
+            <td style="font-weight:500">${r.required} ${r.unit}</td>
+            <td style="color:${r.sufficient?"var(--green)":"var(--red)"}">${r.inStock} ${r.unit}</td>
+            <td>${r.sufficient
+              ? `<span class="stock-pill stock-ok">OK</span>`
+              : `<span class="stock-pill stock-out">Short ${r.shortage.toFixed(1)} ${r.unit}</span>`
+            }</td>
+          </tr>`).join("")}</tbody>
+        </table></div>
+      </div>`).join("");
+  } catch(e) {
+    el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
 
+async function loadMenus() {
 async function loadMenus() {
   try {
     const data = await adminCall({ action:"getMenus" });
