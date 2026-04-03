@@ -1128,17 +1128,7 @@ function switchTab(btn) {
     if (panel) panel.innerHTML += `<div style="color:var(--red);padding:16px;font-size:12px">Tab error: ${e.message}</div>`;
   }
 }
-function restoreActiveTab() {
-  const savedTab = sessionStorage.getItem("activeTab");
-  if (savedTab && savedTab !== "kds") {
-    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-    if (btn) {
-      switchTab(btn);
-      const dropdown = document.getElementById("nav-dropdown");
-      if (dropdown) dropdown.value = savedTab;
-    }
-  }
-}
+
 function requestAdminAccess() {
   const modal = document.getElementById("pinModal");
   const msg = document.getElementById("pinMsg");
@@ -1791,16 +1781,37 @@ function initSwipe() {
     window.addEventListener('mousemove', e => swipeMove(e, idx));
     window.addEventListener('mouseup',   e => swipeEnd(e, idx));
     window.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await Promise.all([
-      loadProducts(),
-      loadInventory(),
-      loadKDS()
-    ]);
-    restoreActiveTab();
-  } catch(e) {
-    console.error("Init error:", e);
+
+      // Prevent KDS flash before data loads
+(function immediateTabRestore() {
+  const saved = sessionStorage.getItem("activeTab");
+  if (!saved || saved === "admin" || saved === "kds") return;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  const btn = document.querySelector(`.tab[data-tab="${saved}"]`);
+  if (btn) btn.classList.add("active");
+  const panel = document.getElementById("panel-" + saved);
+  if (panel) panel.classList.add("active");
+})();
+
+try {
+  await Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()]);
+  await loadKDS();
+
+  // Restore active tab — runs after all data ready
+  const savedTab = sessionStorage.getItem("activeTab");
+  if (savedTab && savedTab !== "kds") {
+    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+    if (btn) {
+      switchTab(btn);
+      const dropdown = document.getElementById("nav-dropdown");
+      if (dropdown) dropdown.value = savedTab;
+    }
   }
+} catch(e) {
+  console.error("Init error:", e);
+  await loadKDS();
+}
 });
   });
 }
