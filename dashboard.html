@@ -582,43 +582,124 @@
   </div>
 </div>
 
-  <!-- RECIPES Tab-->
-  <div class="panel" id="panel-recipes">
-    <div class="section-title">Recipes</div>
-    <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products</div>
-    <div style="margin-bottom:24px">
-      <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
-      <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
-    </div>
-    <div class="admin-section-title" style="margin-bottom:10px">Edit recipes</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <select class="form-input" id="recipe-mep-filter" onchange="renderRecipeList()" style="flex:1">
-        <option value="">All MEP products</option>
-      </select>
-    </div>
-    <div id="recipe-list" style="margin-bottom:16px"></div>
-    <div class="admin-form">
-      <div class="admin-form-title">Add ingredient to recipe</div>
-      <div class="form-grid">
-        <div class="form-field"><label class="form-label">MEP Product *</label>
-         <select class="form-input" id="rf-mep" onchange="onRecipeMepChange(this.value)"><option value="">Select MEP product…</option></select>
-        </div>
-        <div class="form-field"><label class="form-label">Raw Material *</label>
-         <select class="form-input" id="rf-rm" onchange="onRecipeRmChange(this.value)"><option value="">Select raw material…</option></select>
-        </div>
-       <div class="form-field"><label class="form-label">Quantity per GN <span id="rf-mep-hint" style="font-size:10px;color:var(--amber);font-weight:400"></span></label>
-          <input class="form-input" type="number" id="rf-menge" placeholder="auto from MEP" min="0" step="0.001">
-        </div>
-        <div class="form-field"><label class="form-label">Unit</label>
-          <input class="form-input" id="rf-einheit" placeholder="kg / l / pcs">
-        </div>
+<!-- RECIPES -->
+<div class="panel" id="panel-recipes">
+  <div class="section-title">Recipes</div>
+  <div class="section-sub" style="margin-bottom:20px">Menu → MEP Products → Raw Materials</div>
+
+  <!-- TODAY'S NEEDS (unchanged) -->
+  <div style="margin-bottom:24px">
+    <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
+    <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
+  </div>
+
+  <!-- 3-COLUMN EDITOR -->
+  <div class="admin-section-title" style="margin-bottom:12px">Edit recipes</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start;overflow-x:auto" id="recipe-editor-grid">
+
+    <!-- COL 1: MENUS -->
+    <div class="admin-form" style="min-width:180px">
+      <div class="admin-form-title" style="display:flex;justify-content:space-between;align-items:center">
+        Menus
+        <button class="btn-save" style="padding:4px 10px;font-size:11px" onclick="openNewMenuForm()">+ New</button>
       </div>
-      <div class="form-actions">
-        <button class="btn-save" onclick="saveRecipe()">Add ingredient</button>
+      <div id="menu-list"><div style="color:var(--muted);font-size:12px">Loading…</div></div>
+    </div>
+
+    <!-- COL 2: MEP PRODUCTS -->
+    <div class="admin-form" style="min-width:180px;opacity:0.4;pointer-events:none;transition:opacity .2s" id="col-mep">
+      <div class="admin-form-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span id="col-mep-title">MEP Products</span>
+        <button class="btn-save" style="padding:4px 10px;font-size:11px" onclick="openAddMepToMenu()">+ Add</button>
       </div>
-      <div class="admin-msg" id="rf-msg"></div>
+      <div id="menu-mep-list"><div style="color:var(--muted);font-size:12px">← Select a menu</div></div>
+    </div>
+
+    <!-- COL 3: RAW MATERIALS -->
+    <div class="admin-form" style="min-width:180px;opacity:0.4;pointer-events:none;transition:opacity .2s" id="col-rm">
+      <div class="admin-form-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span id="col-rm-title">Raw Materials</span>
+        <button class="btn-save" style="padding:4px 10px;font-size:11px" onclick="openAddRmToMep()">+ Add</button>
+      </div>
+      <div id="recipe-list"><div style="color:var(--muted);font-size:12px">← Select MEP product</div></div>
     </div>
   </div>
+
+  <!-- MENU META FORM -->
+  <div class="admin-form" id="menu-form" style="display:none;margin-top:16px">
+    <div class="admin-form-title" id="menu-form-title">New Menu</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Menu Code *</label>
+        <input class="form-input" id="mf-code" placeholder="BEIJING_NIGHT" oninput="this.value=this.value.toUpperCase().replace(/\s+/g,'_')">
+      </div>
+      <div class="form-field"><label class="form-label">Menu Name *</label>
+        <input class="form-input" id="mf-name" placeholder="Beijing Night">
+      </div>
+      <div class="form-field"><label class="form-label">Gruppe / Category</label>
+        <input class="form-input" id="mf-gruppe" placeholder="Favourites - Asiaten">
+      </div>
+      <div class="form-field"><label class="form-label">Saison</label>
+        <input class="form-input" id="mf-saison" placeholder="All Year">
+      </div>
+      <div class="form-field"><label class="form-label">Verkaufspreis (CHF)</label>
+        <input class="form-input" id="mf-price" type="number" step="0.50" placeholder="24.50">
+      </div>
+      <div class="form-field"><label class="form-label">Gewicht (kg/Port.)</label>
+        <input class="form-input" id="mf-weight" type="number" step="0.001" placeholder="0.602">
+      </div>
+      <div class="form-field" style="grid-column:1/-1"><label class="form-label">Allergene</label>
+        <input class="form-input" id="mf-allergy" placeholder="Glutenhaltiges Getreide, Soja, Sesam">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-save" onclick="saveMenu()">Save Menu</button>
+      <button class="btn-del" onclick="document.getElementById('menu-form').style.display='none'">Cancel</button>
+    </div>
+    <div class="admin-msg" id="mf-msg"></div>
+  </div>
+
+  <!-- ADD MEP TO MENU FORM -->
+  <div class="admin-form" id="mep-to-menu-form" style="display:none;margin-top:16px">
+    <div class="admin-form-title">Add MEP Product to <span id="mep-menu-label" style="color:var(--amber)">—</span></div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">MEP Product *</label>
+        <select class="form-input" id="mtm-mep"></select>
+      </div>
+      <div class="form-field"><label class="form-label">Schritt / Step</label>
+        <input class="form-input" id="mtm-step" placeholder="Schritt 1" value="Schritt 1">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-save" onclick="saveMepToMenu()">Add</button>
+      <button class="btn-del" onclick="document.getElementById('mep-to-menu-form').style.display='none'">Cancel</button>
+    </div>
+    <div class="admin-msg" id="mtm-msg"></div>
+  </div>
+
+  <!-- ADD RAW MATERIAL TO MEP FORM -->
+  <div class="admin-form" id="rm-to-mep-form" style="display:none;margin-top:16px">
+    <div class="admin-form-title">Add Ingredient to <span id="rm-mep-label" style="color:var(--amber)">—</span></div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Raw Material *</label>
+        <select class="form-input" id="rf-rm"></select>
+      </div>
+      <div class="form-field"><label class="form-label">Menge / GN *</label>
+        <input class="form-input" id="rf-menge" type="number" step="0.001" placeholder="0.150">
+      </div>
+      <div class="form-field"><label class="form-label">Einheit</label>
+        <input class="form-input" id="rf-einheit" placeholder="kg">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-save" onclick="saveRecipe()">Add Ingredient</button>
+      <button class="btn-del" onclick="document.getElementById('rm-to-mep-form').style.display='none'">Cancel</button>
+    </div>
+    <div class="admin-msg" id="rf-msg"></div>
+  </div>
+
+  <!-- hidden field used by saveRecipe() -->
+  <input type="hidden" id="rf-mep">
+</div>
 
 <!-- ORDERS Tab-->
   <div class="panel" id="panel-orders">
@@ -1124,7 +1205,7 @@ function switchTab(btn) {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
     if (tabId === "products")     { }
-    if (tabId === "recipes")      { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+    if (tabId === "recipes")    initRecipesTab();
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
     if (tabId === "mep-overview") loadMepOverview();
@@ -2614,142 +2695,285 @@ function renderOrders() {
 }
 
 // ─────────────────────────────────────────────
-// RECIPES
+// RECIPES  (3-level: Menu → MEP → Raw Material)
 // ─────────────────────────────────────────────
+let allMenus   = [];   // [{menuCode,menuName,gruppe,saison,price,weight,allergy}]
+let allMenuMep = [];   // [{menuCode,mepCode,step}]
+let _selMenu   = null;
+let _selMep    = null;
+
 async function loadRecipes() {
   try {
     const data = await adminCall({ action:"getRecipes" });
     allRecipes = Array.isArray(data.recipes) ? data.recipes : [];
   } catch(e) { console.error("loadRecipes:", e); }
 }
-async function loadRequirements() {
-  const el = document.getElementById("req-content");
-  if (!el) return;
+
+async function loadMenus() {
   try {
-    const data = await adminCall({ action:"getRequirements" });
-    const reqs = Array.isArray(data.requirements) ? data.requirements : [];
-    if (!reqs.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`; return; }
-    const byMep = {};
-    reqs.forEach(r => { if (!byMep[r.mepCode]) byMep[r.mepCode] = { name:r.mepName, stillNeeded:r.stillNeeded, items:[] }; byMep[r.mepCode].items.push(r); });
-    el.innerHTML = Object.entries(byMep).map(([code, g]) => `
-      <div style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">${g.name}<span style="font-size:11px;color:var(--amber);margin-left:6px">need ${g.stillNeeded} more GN today</span></div>
-        <div class="inv-table-wrap"><table class="inv-table">
-          <thead><tr><th>Raw material</th><th>Need</th><th>In stock</th><th>Status</th></tr></thead>
-          <tbody>${g.items.map(r => `<tr>
-            <td>${r.rmName}</td>
-            <td style="font-weight:500">${r.required} ${r.unit}</td>
-            <td style="color:${r.sufficient?"var(--green)":"var(--red)"}">${r.inStock} ${r.unit}</td>
-            <td>${r.sufficient?`<span class="stock-pill stock-ok">OK</span>`:`<span class="stock-pill stock-out">Short ${r.shortage.toFixed(1)} ${r.unit}</span>`}</td>
-          </tr>`).join("")}</tbody>
-        </table></div>
-      </div>`).join("");
-  } catch(e) { el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`; }
+    const data = await adminCall({ action:"getMenus" });
+    allMenus   = Array.isArray(data.menus)   ? data.menus   : [];
+    allMenuMep = Array.isArray(data.menuMep) ? data.menuMep : [];
+  } catch(e) { console.error("loadMenus:", e); }
 }
-function renderRecipeList() {
-  const el = document.getElementById("recipe-list");
-  const filterSel = document.getElementById("recipe-mep-filter");
+
+// ── INIT (called by switchTab) ──────────────
+async function initRecipesTab() {
+  await Promise.all([loadMenus(), loadRecipes()]);
+  renderMenuList();
+  loadRequirements();
+}
+
+// ── COL 1: MENUS ────────────────────────────
+function renderMenuList() {
+  const el = document.getElementById("menu-list");
   if (!el) return;
-  const mepCodes = [...new Set(allRecipes.map(r => r.mepCode))].sort();
-  const curFilter = filterSel ? filterSel.value : "";
-  if (filterSel) {
-    filterSel.innerHTML = `<option value="">All MEP products (${mepCodes.length})</option>`
-      + mepCodes.map(c => { const p = allProducts[c]; return `<option value="${c}" ${c===curFilter?"selected":""}>${p?p.name:c}</option>`; }).join("");
+  if (!allMenus.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:4px 0">No menus yet. Click + New.</div>`;
+    return;
   }
-  const recipes = curFilter ? allRecipes.filter(r => r.mepCode === curFilter) : allRecipes;
-  if (!recipes.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px">No recipes yet. Add ingredients below.</div>`; return; }
-  const grouped = {};
-  recipes.forEach(r => { if (!grouped[r.mepCode]) grouped[r.mepCode] = []; grouped[r.mepCode].push(r); });
-  el.innerHTML = Object.entries(grouped).map(([mepCode, rows]) => {
-    const p = allProducts[mepCode] || {};
-    return `<div class="admin-form" style="margin-bottom:10px">
-      <div class="admin-form-title">${p.name||mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></div>
-      ${rows.map(r => { const inv = allInventory.find(x => x.code===r.rmCode)||{};
-        return `<div class="admin-item" style="margin-top:6px">
-          <div style="flex:1"><span style="font-size:13px">${inv.name||r.rmCode}</span>
-          <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN · ${r.rmCode}</span></div>
-          <button class="btn-del" onclick="deleteRecipeRow('${mepCode}','${r.rmCode}')">Remove</button>
-        </div>`; }).join("")}
+  el.innerHTML = allMenus.map(m => `
+    <div class="admin-item" style="cursor:pointer;border-radius:6px;padding:6px 4px;margin-bottom:2px;background:${_selMenu===m.menuCode?"var(--amber-dim)":"transparent"}"
+         onclick="selectMenu('${m.menuCode}')">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.menuName}</div>
+        <div style="font-size:10px;color:var(--muted)">${m.gruppe||""} · CHF ${m.price||"—"}</div>
+      </div>
+      <button class="btn-del" style="font-size:10px;padding:2px 6px;flex-shrink:0"
+              onclick="event.stopPropagation();deleteMenu('${m.menuCode}')">✕</button>
+    </div>`).join("");
+}
+
+function selectMenu(menuCode) {
+  _selMenu = menuCode;
+  _selMep  = null;
+  renderMenuList();
+  const col2 = document.getElementById("col-mep");
+  col2.style.opacity = "1"; col2.style.pointerEvents = "auto";
+  const m = allMenus.find(x=>x.menuCode===menuCode)||{};
+  document.getElementById("col-mep-title").textContent = m.menuName || menuCode;
+  renderMepInMenu();
+  // reset col3
+  const col3 = document.getElementById("col-rm");
+  col3.style.opacity = "0.4"; col3.style.pointerEvents = "none";
+  document.getElementById("col-rm-title").textContent = "Raw Materials";
+  document.getElementById("recipe-list").innerHTML = `<div style="color:var(--muted);font-size:12px">← Select MEP product</div>`;
+  document.getElementById("rm-to-mep-form").style.display = "none";
+}
+
+function openNewMenuForm() {
+  const f = document.getElementById("menu-form");
+  f.style.display = "block";
+  document.getElementById("menu-form-title").textContent = "New Menu";
+  ["mf-code","mf-name","mf-gruppe","mf-saison","mf-price","mf-weight","mf-allergy"]
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=""; });
+  document.getElementById("mf-msg").textContent = "";
+  f.scrollIntoView({behavior:"smooth"});
+}
+
+async function saveMenu() {
+  const menuCode = document.getElementById("mf-code").value.trim();
+  const menuName = document.getElementById("mf-name").value.trim();
+  if (!menuCode||!menuName) { adminMsg("mf-msg","Code and Name required","err"); return; }
+  const btn = document.querySelector("#menu-form .btn-save");
+  if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
+  try {
+    const data = await adminCall({ action:"saveMenu", menuCode, menuName,
+      gruppe:  document.getElementById("mf-gruppe").value.trim(),
+      saison:  document.getElementById("mf-saison").value.trim(),
+      price:   document.getElementById("mf-price").value,
+      weight:  document.getElementById("mf-weight").value,
+      allergy: document.getElementById("mf-allergy").value.trim()
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("mf-msg","Saved OK","ok");
+    await loadMenus();
+    renderMenuList();
+    document.getElementById("menu-form").style.display = "none";
+  } catch(e) { adminMsg("mf-msg","Error: "+e.message,"err"); }
+  finally { if (btn) { btn.disabled=false; btn.textContent="Save Menu"; } }
+}
+
+async function deleteMenu(menuCode) {
+  if (!confirm("Delete menu "+menuCode+" and all its MEP links?")) return;
+  try {
+    await adminCall({ action:"deleteMenu", menuCode });
+    if (_selMenu===menuCode) {
+      _selMenu=null; _selMep=null;
+      const col2=document.getElementById("col-mep"), col3=document.getElementById("col-rm");
+      col2.style.opacity="0.4"; col2.style.pointerEvents="none";
+      col3.style.opacity="0.4"; col3.style.pointerEvents="none";
+      document.getElementById("menu-mep-list").innerHTML=`<div style="color:var(--muted);font-size:12px">← Select a menu</div>`;
+      document.getElementById("recipe-list").innerHTML=`<div style="color:var(--muted);font-size:12px">← Select MEP product</div>`;
+    }
+    await loadMenus(); renderMenuList();
+  } catch(e) { alert("Error: "+e.message); }
+}
+
+// ── COL 2: MEP IN MENU ───────────────────────
+function renderMepInMenu() {
+  const el = document.getElementById("menu-mep-list");
+  if (!el || !_selMenu) return;
+  const rows = allMenuMep.filter(r=>r.menuCode===_selMenu);
+  if (!rows.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:4px 0">No MEP products. Click + Add.</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const p = allProducts[r.mepCode]||{};
+    const cnt = allRecipes.filter(x=>x.mepCode===r.mepCode).length;
+    return `<div class="admin-item" style="cursor:pointer;border-radius:6px;padding:6px 4px;margin-bottom:2px;background:${_selMep===r.mepCode?"var(--amber-dim)":"transparent"}"
+                 onclick="selectMep('${r.mepCode}')">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name||r.mepCode}</div>
+        <div style="font-size:10px;color:var(--muted)">${r.step||""} · ${cnt} ingredient${cnt!==1?"s":""}</div>
+      </div>
+      <button class="btn-del" style="font-size:10px;padding:2px 6px;flex-shrink:0"
+              onclick="event.stopPropagation();deleteMepFromMenu('${r.menuCode}','${r.mepCode}')">✕</button>
     </div>`;
   }).join("");
 }
-function populateRecipeDropdowns() {
-  const mepSel = document.getElementById("rf-mep");
-  const rmSel  = document.getElementById("rf-rm");
-  if (mepSel) {
-    const cur = mepSel.value;
-    mepSel.innerHTML = `<option value="">Select MEP product…</option>`
-      + Object.entries(allProducts)
-          .filter(([,p]) => p.name && p.name !== "(deleted)")
-          .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
-          .map(([code,p]) => {
-            const w = p.gnWeight ? ` · ${p.gnWeight} kg/GN` : "";
-            return `<option value="${code}" ${code===cur?"selected":""}>${p.name} (${code})${w}</option>`;
-          }).join("");
-  }
-  if (rmSel) {
-    const cur = rmSel.value;
-    rmSel.innerHTML = `<option value="">Select raw material…</option>`
-      + allInventory
-          .filter(r => r.code)
-          .sort((a,b) => (a.name||"").localeCompare(b.name||""))
-          .map(r => `<option value="${r.code}" ${r.code===cur?"selected":""}>${r.name||r.code} (${r.code})</option>`).join("");
-  }
+
+function selectMep(mepCode) {
+  _selMep = mepCode;
+  renderMepInMenu();
+  const col3 = document.getElementById("col-rm");
+  col3.style.opacity = "1"; col3.style.pointerEvents = "auto";
+  const p = allProducts[mepCode]||{};
+  document.getElementById("col-rm-title").textContent = p.name||mepCode;
+  document.getElementById("rf-mep").value = mepCode;
+  document.getElementById("rm-mep-label").textContent = p.name||mepCode;
+  renderRmInMep();
 }
 
-function onRecipeMepChange(mepCode) {
-  const p         = allProducts[mepCode] || {};
-  const mengeEl   = document.getElementById("rf-menge");
-  const einheitEl = document.getElementById("rf-einheit");
-  const hintEl    = document.getElementById("rf-mep-hint");
-
-  if (p.gnWeight) {
-    mengeEl.value = p.gnWeight;
-    if (hintEl) hintEl.textContent = `← auto: ${p.gnWeight} kg per GN${p.gnSize ? " · "+p.gnSize : ""}${p.mepMax ? " · max "+p.mepMax+" GN/day" : ""}`;
-  } else {
-    mengeEl.value = "";
-    if (hintEl) hintEl.textContent = mepCode ? "⚠ no GN Gewicht set for this product" : "";
-  }
-
-  // Set unit to kg if not yet filled
-  if (!einheitEl.value) einheitEl.value = "kg";
+function openAddMepToMenu() {
+  if (!_selMenu) { alert("Select a menu first."); return; }
+  const f = document.getElementById("mep-to-menu-form");
+  f.style.display = "block";
+  const m = allMenus.find(x=>x.menuCode===_selMenu)||{};
+  document.getElementById("mep-menu-label").textContent = m.menuName || _selMenu;
+  const sel = document.getElementById("mtm-mep");
+  const already = allMenuMep.filter(r=>r.menuCode===_selMenu).map(r=>r.mepCode);
+  sel.innerHTML = `<option value="">Select MEP product…</option>`
+    + Object.entries(allProducts)
+        .filter(([code,p])=>p.name&&p.name!=="(deleted)"&&!already.includes(code))
+        .sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||""))
+        .map(([code,p])=>`<option value="${code}">${p.name} (${code})</option>`).join("");
+  document.getElementById("mtm-step").value = "Schritt 1";
+  document.getElementById("mtm-msg").textContent = "";
+  f.scrollIntoView({behavior:"smooth"});
 }
 
-function onRecipeRmChange(rmCode) {
-  const inv       = allInventory.find(x => x.code === rmCode);
-  const einheitEl = document.getElementById("rf-einheit");
-  const mengeEl   = document.getElementById("rf-menge");
-
-  if (inv?.unit) einheitEl.value = inv.unit;
-
-  // If MEP already chosen but menge still empty, fill now
-  const mepCode = document.getElementById("rf-mep")?.value;
-  if (!mengeEl.value && mepCode) {
-    const p = allProducts[mepCode] || {};
-    if (p.gnWeight) mengeEl.value = p.gnWeight;
-  }
+async function saveMepToMenu() {
+  const mepCode = document.getElementById("mtm-mep").value;
+  const step    = document.getElementById("mtm-step").value.trim();
+  if (!mepCode) { adminMsg("mtm-msg","Select a MEP product","err"); return; }
+  const btn = document.querySelector("#mep-to-menu-form .btn-save");
+  if (btn) { btn.disabled=true; btn.textContent="Adding…"; }
+  try {
+    const data = await adminCall({ action:"saveMenuMep", menuCode:_selMenu, mepCode, step });
+    if (data.error) throw new Error(data.error);
+    adminMsg("mtm-msg","Added OK","ok");
+    await loadMenus();
+    renderMepInMenu();
+    document.getElementById("mep-to-menu-form").style.display = "none";
+  } catch(e) { adminMsg("mtm-msg","Error: "+e.message,"err"); }
+  finally { if (btn) { btn.disabled=false; btn.textContent="Add"; } }
 }
+
+async function deleteMepFromMenu(menuCode, mepCode) {
+  if (!confirm("Remove MEP from this menu?")) return;
+  try {
+    await adminCall({ action:"deleteMenuMep", menuCode, mepCode });
+    if (_selMep===mepCode) {
+      _selMep=null;
+      const col3=document.getElementById("col-rm");
+      col3.style.opacity="0.4"; col3.style.pointerEvents="none";
+      document.getElementById("recipe-list").innerHTML=`<div style="color:var(--muted);font-size:12px">← Select MEP product</div>`;
+      document.getElementById("rm-to-mep-form").style.display="none";
+    }
+    await loadMenus(); renderMepInMenu();
+  } catch(e) { alert("Error: "+e.message); }
+}
+
+// ── COL 3: RAW MATERIALS IN MEP ─────────────
+function renderRmInMep() {
+  const el = document.getElementById("recipe-list");
+  if (!el || !_selMep) return;
+  const rows = allRecipes.filter(r=>r.mepCode===_selMep);
+  if (!rows.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:4px 0">No ingredients. Click + Add.</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const inv = allInventory.find(x=>x.code===r.rmCode)||{};
+    return `<div class="admin-item" style="padding:6px 4px;margin-bottom:2px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${inv.name||r.rmCode}</div>
+        <div style="font-size:10px;color:var(--muted)">${r.menge} ${r.einheit} / GN · ${r.rmCode}</div>
+      </div>
+      <button class="btn-del" style="font-size:10px;padding:2px 6px;flex-shrink:0"
+              onclick="deleteRecipeRow('${r.mepCode}','${r.rmCode}')">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function openAddRmToMep() {
+  if (!_selMep) { alert("Select a MEP product first."); return; }
+  const f = document.getElementById("rm-to-mep-form");
+  f.style.display = "block";
+  const p = allProducts[_selMep]||{};
+  document.getElementById("rm-mep-label").textContent = p.name||_selMep;
+  const rmSel = document.getElementById("rf-rm");
+  const already = allRecipes.filter(r=>r.mepCode===_selMep).map(r=>r.rmCode);
+  rmSel.innerHTML = `<option value="">Select raw material…</option>`
+    + allInventory.filter(r=>r.code&&!already.includes(r.code))
+        .sort((a,b)=>(a.name||"").localeCompare(b.name||""))
+        .map(r=>`<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+  rmSel.onchange = () => {
+    const inv = allInventory.find(x=>x.code===rmSel.value);
+    if (inv) document.getElementById("rf-einheit").value = inv.unit||"";
+  };
+  document.getElementById("rf-menge").value = "";
+  document.getElementById("rf-einheit").value = "";
+  document.getElementById("rf-msg").textContent = "";
+  f.scrollIntoView({behavior:"smooth"});
+}
+
 async function saveRecipe() {
   const mepCode = document.getElementById("rf-mep").value;
   const rmCode  = document.getElementById("rf-rm").value;
   const menge   = document.getElementById("rf-menge").value;
   if (!mepCode||!rmCode) { adminMsg("rf-msg","Select MEP product and raw material","err"); return; }
-  const btn = document.querySelector("#panel-recipes .admin-form .btn-save");
+  const btn = document.querySelector("#rm-to-mep-form .btn-save");
   if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
   try {
-    const data = await adminCall({ action:"saveRecipe", mepCode, rmCode, menge, einheit:document.getElementById("rf-einheit").value.trim() });
+    const data = await adminCall({ action:"saveRecipe", mepCode, rmCode, menge,
+      einheit: document.getElementById("rf-einheit").value.trim() });
     if (data.error) throw new Error(data.error);
     adminMsg("rf-msg","Saved OK","ok");
-    await loadRecipes(); renderRecipeList(); loadRequirements();
+    await loadRecipes();
+    renderRmInMep();
+    loadRequirements();
+    document.getElementById("rm-to-mep-form").style.display = "none";
   } catch(e) { adminMsg("rf-msg","Error: "+e.message,"err"); }
-  finally { if (btn) { btn.disabled=false; btn.textContent="Add ingredient"; } }
+  finally { if (btn) { btn.disabled=false; btn.textContent="Add Ingredient"; } }
 }
+
 async function deleteRecipeRow(mepCode, rmCode) {
-  if (!confirm("Remove this ingredient from the recipe?")) return;
-  const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
-  if (data.error) { alert("Error: "+data.error); return; }
-  await loadRecipes(); renderRecipeList(); loadRequirements();
+  if (!confirm("Remove this ingredient?")) return;
+  try {
+    const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
+    if (data.error) { alert("Error: "+data.error); return; }
+    await loadRecipes();
+    renderRmInMep();
+    loadRequirements();
+  } catch(e) { alert("Error: "+e.message); }
 }
+
+// kept as no-ops — called from old code paths, safe to leave
+function populateRecipeDropdowns() {}
+function renderRecipeList() {}
 
 // ─────────────────────────────────────────────
 // DEDUCTIONS
