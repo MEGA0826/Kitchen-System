@@ -1132,25 +1132,32 @@ function restoreActiveTab() {
   }
 }
 function requestAdminAccess() {
-  document.getElementById("pinModal").classList.add("active");
+  const modal = document.getElementById("pinModal");
+  const msg = document.getElementById("pinMsg");
+  
+  modal.classList.add("active");
   document.getElementById("pinInput").value = "";
-  document.getElementById("pinMsg").textContent = "";
-  // Load workers in background so PIN check has data
+  msg.textContent = "";
+  
+  // Load workers immediately if not already loaded
   if (!allWorkersAdmin.length) {
+    msg.style.color = "var(--muted)";
+    msg.textContent = "Loading...";
     get({ action: "allWorkers" }).then(d => {
       allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
-    }).catch(() => {});
+      msg.textContent = "";
+    }).catch(() => {
+      msg.style.color = "var(--red)";
+      msg.textContent = "Network error";
+    });
   }
 }
 
-// ─────────────────────────────────────────────
-// PIN
-// ─────────────────────────────────────────────
 function addPinDigit(d) {
   const el = document.getElementById("pinInput");
   if (el.value.length < 4) {
     el.value += d;
-    if (el.value.length === 4) submitPin();   // auto-submit on 4th digit
+    if (el.value.length === 4) submitPin();
   }
 }
 
@@ -1163,9 +1170,30 @@ function clearPin() {
 async function submitPin() {
   const pin = document.getElementById("pinInput").value;
   const msg = document.getElementById("pinMsg");
-  if (pin.length !== 4) { msg.style.color = "var(--red)"; msg.textContent = "Enter 4 digits"; return; }
+  
+  if (pin.length !== 4) {
+    msg.style.color = "var(--red)";
+    msg.textContent = "Enter 4 digits";
+    return;
+  }
 
-  // Check PIN locally against loaded workers
+  // If workers not loaded yet, wait for them
+  if (!allWorkersAdmin.length) {
+    msg.style.color = "var(--muted)";
+    msg.textContent = "Loading...";
+    try {
+      const data = await get({ action: "allWorkers" });
+      allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
+      msg.textContent = "";
+    } catch(e) {
+      msg.style.color = "var(--red)";
+      msg.textContent = "Network error";
+      document.getElementById("pinInput").value = "";
+      return;
+    }
+  }
+
+  // Check PIN locally
   const matched = allWorkersAdmin.find(w =>
     typeof w === "object" && w.pin && String(w.pin) === String(pin) && w.active !== false
   );
@@ -1176,21 +1204,12 @@ async function submitPin() {
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     document.querySelector(".tab[onclick='requestAdminAccess()']")?.classList.add("active");
     document.getElementById("panel-admin").classList.add("active");
+    sessionStorage.setItem("activeTab", "admin");
     loadAdminTab();
     loadArchiveStats();
-  } else if (allWorkersAdmin.length === 0) {
-    // Workers not loaded yet — fall back to API check
-    msg.style.color = "var(--muted)"; msg.textContent = "Checking...";
-    try {
-      const data = await get({ action: "allWorkers" });
-      allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
-      document.getElementById("pinInput").value = "";
-      await submitPin();   // retry now that we have data
-    } catch(e) {
-      msg.style.color = "var(--red)"; msg.textContent = "Network error";
-    }
   } else {
-    msg.style.color = "var(--red)"; msg.textContent = "Wrong PIN";
+    msg.style.color = "var(--red)";
+    msg.textContent = "Wrong PIN";
     document.getElementById("pinInput").value = "";
   }
 }
@@ -2890,45 +2909,50 @@ async function submitManualScan() {
 document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") closeManualScan(); });
 
 // ─────────────────────────────────────────────
-// INIT — show cache instantly, then fetch fresh
+// INIT
 // ─────────────────────────────────────────────
 (function initFromCache() {
   try {
     const cp = sessionStorage.getItem("dash_products");
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
-    if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
+    if (cp) { allProducts = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
     if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); }
     if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
   } catch(e) { console.error("cache error:", e); }
 })();
 
-// Restore last active tab (skip admin — requires PIN)
-(function restoreTab() {
-  const saved = sessionStorage.getItem("dash_active_tab");
-  if (saved && saved !== "admin") {
-    const btn = document.querySelector(`.tab[data-tab="${saved}"]`);
-    if (btn) switchTab(btn);
+async function initDashboard() {
+  try {
+    // Preload workers immediately for instant PIN verification
+    get({ action: "allWorkers" }).then(d => {
+      allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
+    }).catch(() => {});
+    
+    await Promise.all([
+      loadProducts(),
+      loadInventory()
+    ]);
+    await loadKDS();
+    
+    // Restore active tab
+    const savedTab = sessionStorage.getItem("activeTab");
+    if (savedTab && savedTab !== "kds") {
+      const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
+      if (btn) {
+        switchTab(btn);
+        const dropdown = document.getElementById("nav-dropdown");
+        if (dropdown) dropdown.value = savedTab;
+      }
+    }
+  } catch(e) {
+    console.error("Init error:", e);
+    await loadKDS();
   }
-})();
+}
 
-Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()])
-  .then(() => loadKDS())
-  .catch(e => {
-    console.error("init error:", e);
-    const pb = document.getElementById("product-bars");
-    if (pb) pb.innerHTML = `<div style="color:var(--red);padding:12px">Load error: ${e.message}</div>`;
-  });
-
-setInterval(async () => {
-  const prevLen = allScans.length;
-  await loadKDS();
-  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
-}, 60_000);
-
-setInterval(() => {
-  fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
-}, 4 * 60 * 1000);
+initDashboard();
+setTimeout(loadRecipes, 800);
 
 // Auto-refresh every 60s
 setInterval(async () => {
@@ -2937,7 +2961,7 @@ setInterval(async () => {
   if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
 }, 60_000);
 
-// Keep Apps Script warm — ping every 4 min
+// Keep Apps Script warm
 setInterval(() => {
   fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
 }, 4 * 60 * 1000);
