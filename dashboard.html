@@ -3282,9 +3282,7 @@ async function initDashboard() {
     } else if (savedTab === "orders") {
       renderOrders();
     } else if (savedTab === "recipes") {
-      loadRequirements();
-      renderRecipeList();
-      populateRecipeDropdowns();
+  initRecipesTab();
     } else if (savedTab === "deductions") {
       loadDeductions();
     } else if (savedTab === "reports") {
