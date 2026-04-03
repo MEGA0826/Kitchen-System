@@ -2941,11 +2941,14 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 // Prevent KDS flash — restore panel visually before any fetch
 (function immediateTabRestore() {
   const saved = sessionStorage.getItem("activeTab");
-  if (!saved || saved === "admin" || saved === "kds") return;
+  if (!saved) return;
+  
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  
   const btn = document.querySelector(`.tab[data-tab="${saved}"]`);
   if (btn) btn.classList.add("active");
+  
   const panel = document.getElementById("panel-" + saved);
   if (panel) panel.classList.add("active");
 })();
