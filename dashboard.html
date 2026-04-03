@@ -1176,7 +1176,6 @@ async function submitPin() {
     return;
   }
 
-  // If workers not loaded yet, wait for them
   if (!allWorkersAdmin.length) {
     msg.style.color = "var(--muted)";
     msg.textContent = "Loading...";
@@ -1192,22 +1191,28 @@ async function submitPin() {
     }
   }
 
-  // Check PIN locally
   const matched = allWorkersAdmin.find(w =>
     typeof w === "object" && w.pin && String(w.pin) === String(pin) && w.active !== false
   );
 
   if (matched) {
-  cancelPin();
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  document.querySelector(".tab[onclick='requestAdminAccess()']")?.classList.add("active");
-  document.getElementById("panel-admin").classList.add("active");
-  sessionStorage.setItem("activeTab", "admin");   // ← add this
-  loadAdminTab();
-  loadArchiveStats();
-} 
-  else {
+    cancelPin();
+    
+    // Just activate admin tab - don't switch away
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    
+    const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
+    if (adminBtn) adminBtn.classList.add("active");
+    
+    const adminPanel = document.getElementById("panel-admin");
+    if (adminPanel) adminPanel.classList.add("active");
+    
+    sessionStorage.setItem("activeTab", "admin");
+    
+    loadAdminTab();
+    loadArchiveStats();
+  } else {
     msg.style.color = "var(--red)";
     msg.textContent = "Wrong PIN";
     document.getElementById("pinInput").value = "";
@@ -2955,7 +2960,15 @@ async function initDashboard() {
     
     const savedTab = sessionStorage.getItem("activeTab") || "kds";
     
-    // Restore UI first
+    // Skip PIN check on page load - let admin button handle it
+    if (savedTab === "admin") {
+      // Show KDS initially, user can click admin button to re-enter PIN
+      sessionStorage.setItem("activeTab", "kds");
+      loadKDS();
+      return;
+    }
+    
+    // Restore non-admin tabs normally
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     
@@ -2970,7 +2983,6 @@ async function initDashboard() {
     
     sessionStorage.setItem("activeTab", savedTab);
     
-    // Load tab-specific content
     if (savedTab === "kds") loadKDS();
     else if (savedTab === "inventory") filterInventory && filterInventory();
     else if (savedTab === "orders") renderOrders();
@@ -2978,7 +2990,6 @@ async function initDashboard() {
     else if (savedTab === "deductions") loadDeductions();
     else if (savedTab === "reports") loadReportsTab();
     else if (savedTab === "mep-overview") loadMepOverview();
-    else if (savedTab === "admin") { loadAdminTab(); loadArchiveStats(); }
     
   } catch(e) {
     console.error("Init error:", e);
