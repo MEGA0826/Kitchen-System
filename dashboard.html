@@ -585,126 +585,58 @@
 <!-- RECIPES -->
 <div class="panel" id="panel-recipes">
   <div class="section-title">Recipes</div>
-  <div class="section-sub" style="margin-bottom:20px">Menu → MEP Products → Raw Materials</div>
-
-  <!-- TODAY'S NEEDS (unchanged) -->
+  <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products · Link MEP products to menus</div>
   <div style="margin-bottom:24px">
     <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
     <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
   </div>
-
-  <!-- 3-COLUMN EDITOR -->
-  <div class="admin-section-title" style="margin-bottom:12px">Edit recipes</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start;overflow-x:auto" id="recipe-editor-grid">
-
-    <!-- COL 1: MENUS -->
-    <div class="admin-form" style="min-width:180px">
-      <div class="admin-form-title" style="display:flex;justify-content:space-between;align-items:center">
-        Menus
-        <button class="btn-save" style="padding:4px 10px;font-size:11px" onclick="openNewMenuForm()">+ New</button>
-      </div>
-      <div id="menu-list"><div style="color:var(--muted);font-size:12px">Loading…</div></div>
-    </div>
-
-    <!-- COL 2: MEP PRODUCTS -->
-    <div class="admin-form" style="min-width:180px;opacity:0.4;pointer-events:none;transition:opacity .2s" id="col-mep">
-      <div class="admin-form-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span id="col-mep-title">MEP Products</span>
-        <button class="btn-save" style="padding:4px 10px;font-size:11px" onclick="openAddMepToMenu()">+ Add</button>
-      </div>
-      <div id="menu-mep-list"><div style="color:var(--muted);font-size:12px">← Select a menu</div></div>
-    </div>
-
-    <!-- COL 3: RAW MATERIALS -->
-    <div class="admin-form" style="min-width:180px;opacity:0.4;pointer-events:none;transition:opacity .2s" id="col-rm">
-      <div class="admin-form-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span id="col-rm-title">Raw Materials</span>
-        <button class="btn-save" style="padding:4px 10px;font-size:11px" onclick="openAddRmToMep()">+ Add</button>
-      </div>
-      <div id="recipe-list"><div style="color:var(--muted);font-size:12px">← Select MEP product</div></div>
-    </div>
+  <div class="admin-section-title" style="margin-bottom:10px">Edit recipes</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <select class="form-input" id="recipe-mep-filter" onchange="renderRecipeList()" style="flex:1">
+      <option value="">All MEP products</option>
+    </select>
   </div>
+  <div id="recipe-list" style="margin-bottom:16px"></div>
+  <div class="admin-form">
+    <div class="admin-form-title">Add ingredient / menu link</div>
 
-  <!-- MENU META FORM -->
-  <div class="admin-form" id="menu-form" style="display:none;margin-top:16px">
-    <div class="admin-form-title" id="menu-form-title">New Menu</div>
+    <!-- Type toggle -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button id="rf-type-rm"  class="btn-save"   onclick="setRecipeType('rm')"  style="flex:1;font-size:13px">MEP ← Raw Material</button>
+      <button id="rf-type-mep" class="btn-outline" onclick="setRecipeType('mep')" style="flex:1;font-size:13px">Menu ← MEP Product</button>
+    </div>
+
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Menu Code *</label>
-        <input class="form-input" id="mf-code" placeholder="BEIJING_NIGHT" oninput="this.value=this.value.toUpperCase().replace(/\s+/g,'_')">
+      <!-- Row A: parent selector (label changes by type) -->
+      <div class="form-field" id="rf-parent-wrap">
+        <label class="form-label" id="rf-parent-label">MEP Product *</label>
+        <select class="form-input" id="rf-mep"><option value="">Select…</option></select>
       </div>
-      <div class="form-field"><label class="form-label">Menu Name *</label>
-        <input class="form-input" id="mf-name" placeholder="Beijing Night">
-      </div>
-      <div class="form-field"><label class="form-label">Gruppe / Category</label>
-        <input class="form-input" id="mf-gruppe" placeholder="Favourites - Asiaten">
-      </div>
-      <div class="form-field"><label class="form-label">Saison</label>
-        <input class="form-input" id="mf-saison" placeholder="All Year">
-      </div>
-      <div class="form-field"><label class="form-label">Verkaufspreis (CHF)</label>
-        <input class="form-input" id="mf-price" type="number" step="0.50" placeholder="24.50">
-      </div>
-      <div class="form-field"><label class="form-label">Gewicht (kg/Port.)</label>
-        <input class="form-input" id="mf-weight" type="number" step="0.001" placeholder="0.602">
-      </div>
-      <div class="form-field" style="grid-column:1/-1"><label class="form-label">Allergene</label>
-        <input class="form-input" id="mf-allergy" placeholder="Glutenhaltiges Getreide, Soja, Sesam">
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn-save" onclick="saveMenu()">Save Menu</button>
-      <button class="btn-del" onclick="document.getElementById('menu-form').style.display='none'">Cancel</button>
-    </div>
-    <div class="admin-msg" id="mf-msg"></div>
-  </div>
 
-<!-- ADD MEP TO MENU FORM -->
-<div class="admin-form" id="mep-to-menu-form" style="display:none;margin-top:16px">
-  <div class="admin-form-title">Add MEP Product to <span id="mep-menu-label" style="color:var(--amber)">—</span></div>
-  <div class="form-grid">
-    <div class="form-field"><label class="form-label">MEP Product *</label>
-      <select class="form-input" id="mtm-mep"></select>
-    </div>
-    <div class="form-field"><label class="form-label">Schritt / Step</label>
-      <input class="form-input" id="mtm-step" placeholder="Schritt 1" value="Schritt 1">
-    </div>
-    <div class="form-field"><label class="form-label">Weight (kg/GN)</label>
-      <input class="form-input" id="mtm-weight" type="number" step="0.001" placeholder="auto-filled">
-    </div>
-    <div class="form-field"><label class="form-label">Description / Category</label>
-      <input class="form-input" id="mtm-desc" placeholder="auto-filled">
-    </div>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:10px">
-    <button class="btn-save" onclick="saveMepToMenu()">Add</button>
-    <button class="btn-del" onclick="document.getElementById('mep-to-menu-form').style.display='none'">Cancel</button>
-  </div>
-  <div class="admin-msg" id="mtm-msg"></div>
-</div>
+      <!-- Row B: child selector — RM (type=rm) or MEP (type=mep) -->
+      <div class="form-field" id="rf-child-wrap">
+        <label class="form-label" id="rf-child-label">Raw Material *</label>
+        <select class="form-input" id="rf-rm"><option value="">Select raw material…</option></select>
+      </div>
 
-  <!-- ADD RAW MATERIAL TO MEP FORM -->
-  <div class="admin-form" id="rm-to-mep-form" style="display:none;margin-top:16px">
-    <div class="admin-form-title">Add Ingredient to <span id="rm-mep-label" style="color:var(--amber)">—</span></div>
-    <div class="form-grid">
-      <div class="form-field"><label class="form-label">Raw Material *</label>
-        <select class="form-input" id="rf-rm"></select>
+      <!-- Quantity -->
+      <div class="form-field">
+        <label class="form-label" id="rf-menge-label">Quantity per GN</label>
+        <input class="form-input" type="number" id="rf-menge" placeholder="0.00" min="0" step="0.01">
       </div>
-      <div class="form-field"><label class="form-label">Menge / GN *</label>
-        <input class="form-input" id="rf-menge" type="number" step="0.001" placeholder="0.150">
-      </div>
-      <div class="form-field"><label class="form-label">Einheit</label>
-        <input class="form-input" id="rf-einheit" placeholder="kg">
+
+      <!-- Unit — hidden for mep type (always kg) -->
+      <div class="form-field" id="rf-einheit-wrap">
+        <label class="form-label">Unit</label>
+        <input class="form-input" id="rf-einheit" placeholder="kg / l / pcs">
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn-save" onclick="saveRecipe()">Add Ingredient</button>
-      <button class="btn-del" onclick="document.getElementById('rm-to-mep-form').style.display='none'">Cancel</button>
+
+    <div class="form-actions">
+      <button class="btn-save" onclick="saveRecipe()">Add</button>
     </div>
     <div class="admin-msg" id="rf-msg"></div>
   </div>
-
-  <!-- hidden field used by saveRecipe() -->
-  <input type="hidden" id="rf-mep">
 </div>
 
 <!-- ORDERS Tab-->
@@ -3012,20 +2944,166 @@ async function saveRecipe() {
   finally { if (btn) { btn.disabled=false; btn.textContent="Add Ingredient"; } }
 }
 
-async function deleteRecipeRow(mepCode, rmCode) {
-  if (!confirm("Remove this ingredient?")) return;
+async function deleteRecipeRow(mepCode, rmCode, recipeType) {
+  if (!confirm("Remove this ingredient from the recipe?")) return;
   try {
-    const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
-    if (data.error) { alert("Error: "+data.error); return; }
-    await loadRecipes();
-    renderRmInMep();
-    loadRequirements();
+    const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode, recipeType: recipeType||"rm" });
+    if (data.error) throw new Error(data.error);
+    await loadRecipes(); renderRecipeList(); loadRequirements();
   } catch(e) { alert("Error: "+e.message); }
 }
 
 // kept as no-ops — called from old code paths, safe to leave
-function populateRecipeDropdowns() {}
-function renderRecipeList() {}
+// ── Recipe type toggle ──────────────────────────────────────
+let _recipeType = "rm"; // "rm" | "mep"
+
+function setRecipeType(t) {
+  _recipeType = t;
+  const isRM = t === "rm";
+  document.getElementById("rf-type-rm").className  = isRM ? "btn-save"    : "btn-outline";
+  document.getElementById("rf-type-mep").className = isRM ? "btn-outline"  : "btn-save";
+  document.getElementById("rf-parent-label").textContent = isRM ? "MEP Product *" : "Menu name *";
+  document.getElementById("rf-child-label").textContent  = isRM ? "Raw Material *" : "MEP Product *";
+  document.getElementById("rf-menge-label").textContent  = isRM ? "Quantity per GN" : "Weight per menu (kg)";
+  document.getElementById("rf-einheit-wrap").style.display = isRM ? "" : "none";
+  if (!isRM) document.getElementById("rf-einheit").value = "kg";
+  populateRecipeDropdowns();
+}
+
+function populateRecipeDropdowns() {
+  const isRM = _recipeType === "rm";
+  const parentSel = document.getElementById("rf-mep");
+  const childSel  = document.getElementById("rf-rm");
+
+  if (isRM) {
+    // parent = MEP products
+    parentSel.innerHTML = `<option value="">Select MEP product…</option>`
+      + Object.entries(allProducts)
+          .filter(([,p]) => p.name && p.name !== "(deleted)")
+          .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
+          .map(([code,p]) => `<option value="${code}">${p.name} (${code})</option>`).join("");
+    // child = Raw materials
+    childSel.innerHTML = `<option value="">Select raw material…</option>`
+      + allInventory.filter(r => r.code)
+          .sort((a,b) => (a.name||"").localeCompare(b.name||""))
+          .map(r => `<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+    // Auto-fill unit on RM select
+    childSel.onchange = () => {
+      const inv = allInventory.find(x => x.code === childSel.value);
+      if (inv && !document.getElementById("rf-einheit").value) document.getElementById("rf-einheit").value = inv.unit||"";
+    };
+  } else {
+    // parent = free-text menu name (repurpose parentSel as text input substitute)
+    parentSel.innerHTML = `<option value="">Type menu name below…</option>`;
+    // Replace select with text for menu name — use a hidden input trick
+    const wrap = document.getElementById("rf-parent-wrap");
+    wrap.innerHTML = `<label class="form-label">Menu name *</label>
+      <input class="form-input" id="rf-mep" placeholder="e.g. Ramen Bowl" style="width:100%">`;
+    // child = MEP products
+    childSel.innerHTML = `<option value="">Select MEP product…</option>`
+      + Object.entries(allProducts)
+          .filter(([,p]) => p.name && p.name !== "(deleted)")
+          .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
+          .map(([code,p]) => `<option value="${code}">${p.name} (${code})</option>`).join("");
+    childSel.onchange = null;
+  }
+  // In the section where panel-recipes tab becomes active, or after loadRecipes():
+setRecipeType('rm');
+}
+
+async function saveRecipe() {
+  const isRM   = _recipeType === "rm";
+  const parent = document.getElementById("rf-mep").value.trim();
+  const child  = document.getElementById("rf-rm").value.trim();
+  const menge  = document.getElementById("rf-menge").value;
+  const einheit = isRM ? document.getElementById("rf-einheit").value.trim() : "kg";
+
+  if (!parent || !child) { adminMsg("rf-msg", "Both fields required","err"); return; }
+  if (!menge || isNaN(menge) || +menge <= 0) { adminMsg("rf-msg","Enter a valid quantity","err"); return; }
+
+  const btn = document.querySelector("#panel-recipes .admin-form .btn-save:last-of-type");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    // type="rm": mepCode=parent, rmCode=child | type="mep": mepCode=parent(menuName), rmCode=child(mepCode)
+    const data = await adminCall({
+      action: "saveRecipe",
+      mepCode: parent,
+      rmCode:  child,
+      menge,
+      einheit,
+      recipeType: _recipeType   // NEW field — backend uses to tag the row
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("rf-msg","Saved OK","ok");
+    // Reset child only, keep parent for multi-add
+    document.getElementById("rf-rm").value = "";
+    document.getElementById("rf-menge").value = "";
+    if (isRM) document.getElementById("rf-einheit").value = "";
+    await loadRecipes(); renderRecipeList(); loadRequirements();
+  } catch(e) { adminMsg("rf-msg","Error: "+e.message,"err"); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "Add"; } }
+}
+
+function renderRecipeList() {
+  const el = document.getElementById("recipe-list");
+  const filterSel = document.getElementById("recipe-mep-filter");
+  if (!el) return;
+
+  // Separate rm vs mep-type recipes
+  const rmRecipes  = allRecipes.filter(r => !r.recipeType || r.recipeType === "rm");
+  const mepRecipes = allRecipes.filter(r => r.recipeType === "mep");
+
+  const mepCodes = [...new Set(rmRecipes.map(r => r.mepCode))].sort();
+  const curFilter = filterSel ? filterSel.value : "";
+  if (filterSel) {
+    filterSel.innerHTML = `<option value="">All MEP products (${mepCodes.length})</option>`
+      + mepCodes.map(c => { const p = allProducts[c]; return `<option value="${c}" ${c===curFilter?"selected":""}>${p?p.name:c}</option>`; }).join("");
+  }
+
+  const visibleRM = curFilter ? rmRecipes.filter(r => r.mepCode === curFilter) : rmRecipes;
+  let html = "";
+
+  // ── MEP ← RM section ──
+  if (visibleRM.length) {
+    const grouped = {};
+    visibleRM.forEach(r => { if (!grouped[r.mepCode]) grouped[r.mepCode] = []; grouped[r.mepCode].push(r); });
+    html += Object.entries(grouped).map(([mepCode, rows]) => {
+      const p = allProducts[mepCode] || {};
+      return `<div class="admin-form" style="margin-bottom:10px">
+        <div class="admin-form-title">${p.name||mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></div>
+        ${rows.map(r => { const inv = allInventory.find(x => x.code===r.rmCode)||{};
+          return `<div class="admin-item" style="margin-top:6px">
+            <div style="flex:1"><span style="font-size:13px">${inv.name||r.rmCode}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} ${r.einheit} / GN · ${r.rmCode}</span></div>
+            <button class="btn-del" onclick="deleteRecipeRow('${mepCode}','${r.rmCode}','rm')">Remove</button>
+          </div>`; }).join("")}
+      </div>`;
+    }).join("");
+  }
+
+  // ── Menu ← MEP section ──
+  if (mepRecipes.length && !curFilter) {
+    const menuGrouped = {};
+    mepRecipes.forEach(r => { if (!menuGrouped[r.mepCode]) menuGrouped[r.mepCode] = []; menuGrouped[r.mepCode].push(r); });
+    html += `<div style="margin-top:16px"><div class="admin-section-title" style="margin-bottom:8px">Menu compositions</div>`
+      + Object.entries(menuGrouped).map(([menu, rows]) => `
+        <div class="admin-form" style="margin-bottom:10px">
+          <div class="admin-form-title">🍽 ${menu}</div>
+          ${rows.map(r => { const p = allProducts[r.rmCode]||{};
+            return `<div class="admin-item" style="margin-top:6px">
+              <div style="flex:1"><span style="font-size:13px">${p.name||r.rmCode}</span>
+              <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.menge} kg / menu · ${r.rmCode}</span></div>
+              <button class="btn-del" onclick="deleteRecipeRow('${menu}','${r.rmCode}','mep')">Remove</button>
+            </div>`; }).join("")}
+        </div>`).join("") + `</div>`;
+  }
+
+  if (!html) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px">No recipes yet. Add ingredients below.</div>`;
+  } else {
+    el.innerHTML = html;
+  }
+}
 
 // ─────────────────────────────────────────────
 // DEDUCTIONS
