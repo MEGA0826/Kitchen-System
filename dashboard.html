@@ -2953,18 +2953,35 @@ async function initDashboard() {
     
     await Promise.all([loadProducts(), loadInventory()]);
     
-    // Restore active tab with full content load after data is ready
     const savedTab = sessionStorage.getItem("activeTab") || "kds";
+    
+    // Restore UI first
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    
     const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-    if (btn) {
-      switchTab(btn);
-      const dropdown = document.getElementById("nav-dropdown");
-      if (dropdown) dropdown.value = savedTab;
-    }
+    if (btn) btn.classList.add("active");
+    
+    const panel = document.getElementById("panel-" + savedTab);
+    if (panel) panel.classList.add("active");
+    
+    const dropdown = document.getElementById("nav-dropdown");
+    if (dropdown) dropdown.value = savedTab;
+    
+    sessionStorage.setItem("activeTab", savedTab);
+    
+    // Load tab-specific content
+    if (savedTab === "kds") loadKDS();
+    else if (savedTab === "inventory") filterInventory && filterInventory();
+    else if (savedTab === "orders") renderOrders();
+    else if (savedTab === "recipes") { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+    else if (savedTab === "deductions") loadDeductions();
+    else if (savedTab === "reports") loadReportsTab();
+    else if (savedTab === "mep-overview") loadMepOverview();
+    else if (savedTab === "admin") { loadAdminTab(); loadArchiveStats(); }
+    
   } catch(e) {
     console.error("Init error:", e);
-    const savedTab = sessionStorage.getItem("activeTab") || "kds";
-    if (savedTab === "kds") await loadKDS();
   }
 }
 initDashboard();
