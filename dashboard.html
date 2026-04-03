@@ -1315,21 +1315,22 @@ function buildMepAlerts() {
   const alertBox = document.getElementById("mep-alerts");
   if (!alertBox) return;
   const alerts = [];
-
   Object.entries(allProducts).forEach(([code, p]) => {
     if (!p.mepMax && !p.tagesziel) return;
     const st           = (window.todayScanStats || {})[code] || {};
     const produceCount = st.produce || 0;
     const doneCount    = st.done    || 0;
     const wasteCount   = st.waste   || 0;
+    const usedCount    = st.used    || 0;
     const name         = p.name      || code;
     const gnSize       = p.gnSize    || "";
     const gnWeight     = p.gnWeight  || 0;
     const tagesziel    = p.tagesziel || 0;
     const mepMax       = p.mepMax    || 0;
-    const inProgress   = Math.max(0, mepMax - available);
-    const usedCount    = st.used  || 0;
+    
+    // FIX: Declare available BEFORE using it
     const available    = Math.max(0, doneCount - wasteCount - usedCount);
+    const inProgress   = Math.max(0, mepMax - available);
     const availableWt  = available   * gnWeight;
     const listWeight   = inProgress  * gnWeight;
     const overDone     = tagesziel > 0 && available > tagesziel;
@@ -1337,12 +1338,10 @@ function buildMepAlerts() {
     const listFull     = mepMax > 0 && inProgress >= mepMax;
     const targetQty    = tagesziel > 0 ? tagesziel : mepMax;
     const shelfLife    = p.shelfLife || 2;
-
     const expiredBatch = (allScans || []).filter(s => {
       if (s.code !== code || s.action !== "done") return false;
       return (Date.now() - new Date(s.timestamp).getTime()) / (1000*60*60*24) > shelfLife;
     }).length;
-
     if (expiredBatch > 0) {
       alerts.push({ type:"yellow", icon:"⚠", code,
         title: `Check shelf life - ${name}`,
@@ -1379,7 +1378,6 @@ function buildMepAlerts() {
       }
     }
   });
-
   alertBox.innerHTML = alerts.map((a, idx) => `
     <div class="alert-wrap" id="aw-${idx}">
       <div class="alert-delete-bg">Delete</div>
