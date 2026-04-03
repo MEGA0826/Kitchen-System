@@ -2738,21 +2738,18 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
     if (cp) { allProducts  = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
-    if (ci) { allInventory = JSON.parse(ci); populateInvFilters(); renderOrders(); }
+    if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); }
     if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
   } catch(e) { console.error("cache error:", e); }
 })();
 
-// Clock — independent of data
-updateLiveTime();
-setInterval(updateLiveTime, 1000);
-
-// Instant load — data fetched on-demand per tab
-const savedTab = sessionStorage.getItem("activeTab") || "orders";
-const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-if (btn) switchTab(btn);
-
-updateLiveTime();
+Promise.allSettled([loadProducts(), loadInventory(), loadRecipes()])
+  .then(() => loadKDS())
+  .catch(e  => {
+    console.error("init error:", e);
+    const pb = document.getElementById("product-bars");
+    if (pb) pb.innerHTML = `<div style="color:var(--red);padding:12px">Load error: ${e.message}</div>`;
+  });
 
 // Auto-refresh every 60s
 setInterval(async () => {
