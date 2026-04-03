@@ -720,21 +720,29 @@
 
   <!-- ADMIN Tab-->
   <div class="panel" id="panel-admin">
-    <div class="admin-section" id="archive-card" style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:500">Scan sheet archive</div>
-        <button onclick="runArchiveNow()" id="btnArchiveNow"
-          style="padding:7px 14px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
-          Archive now
-        </button>
-      </div>
-      <div id="archive-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div style="text-align:center"><div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-scan-rows">--</div><div style="font-size:11px;color:var(--muted)">Active scans</div></div>
-        <div style="text-align:center"><div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-archive-rows">--</div><div style="font-size:11px;color:var(--muted)">Archived scans</div></div>
-        <div style="text-align:center"><div style="font-size:22px;font-weight:500;color:var(--text)" id="stat-last-run">--</div><div style="font-size:11px;color:var(--muted)">Last archive</div></div>
-      </div>
-      <div id="archive-msg" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center"></div>
+ <div class="admin-section">
+  <div class="admin-section-title">Scan Sheet Archive</div>
+  <div class="admin-section-sub">Move old scans to Archive sheet</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+    <div class="stat-box">
+      <div style="font-size:11px;color:var(--muted)">Current scans</div>
+      <div style="font-size:20px;font-weight:500;color:var(--text)" id="archive-scan-rows">—</div>
     </div>
+    <div class="stat-box">
+      <div style="font-size:11px;color:var(--muted)">Archived</div>
+      <div style="font-size:20px;font-weight:500;color:var(--amber)" id="archive-archive-rows">—</div>
+    </div>
+    <div class="stat-box">
+      <div style="font-size:11px;color:var(--muted)">Last archive</div>
+      <div style="font-size:10px;font-weight:500;color:var(--text)" id="archive-last-run">—</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button class="btn-save" onclick="archiveScanSheet()" style="flex:1">Archive old scans now</button>
+    <button class="btn-edit" onclick="loadArchivedScans()" style="flex:1">View archived scans</button>
+  </div>
+  <div id="archived-scan-list" style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)"></div>
+</div>
 
     <div class="section-title">Admin</div>
     <div class="section-sub" style="margin-bottom:24px">Manage without opening Google Sheets</div>
@@ -2749,22 +2757,45 @@ function filterDeductions() {
 // ─────────────────────────────────────────────
 async function loadArchiveStats() {
   try {
-    const data = await get({ action:"archiveStats" });
-    const el = id => document.getElementById(id);
-    if (el("stat-scan-rows"))    el("stat-scan-rows").textContent    = data.scanRows    ?? "--";
-    if (el("stat-archive-rows")) el("stat-archive-rows").textContent = data.archiveRows ?? "--";
-    if (el("stat-last-run")) {
-      el("stat-last-run").textContent = data.lastRun
-        ? new Date(data.lastRun).toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"})
-        : "Never";
+    const data = await adminCall({ action: "getArchiveStats" });
+    document.getElementById("archive-scan-rows").textContent = data.scanRows || 0;
+    document.getElementById("archive-archive-rows").textContent = data.archiveRows || 0;
+    document.getElementById("archive-last-run").textContent = data.lastRun || "Never";
+  } catch(e) {
+    console.error("Archive stats error:", e);
+  }
+}
+
+async function loadArchivedScans() {
+  const list = document.getElementById("archived-scan-list");
+  if (!list) return;
+  
+  list.innerHTML = `<div style="padding:12px;color:var(--muted)">Loading...</div>`;
+  
+  try {
+    const data = await get({ action: "archivedScans" });
+    const scans = Array.isArray(data.scans) ? data.scans : [];
+    
+    if (!scans.length) {
+      list.innerHTML = `<div class="empty-state">No archived scans</div>`;
+      return;
     }
-    const msg = document.getElementById("archive-msg");
-    if (msg) {
-      if      (data.scanRows > 500) { msg.style.color="var(--red)";   msg.textContent=data.scanRows+" rows — recommend archiving now"; }
-      else if (data.scanRows > 200) { msg.style.color="var(--amber)"; msg.textContent=data.scanRows+" rows — auto-archive runs 1st of each month"; }
-      else                          { msg.style.color="var(--green)"; msg.textContent=data.scanRows+" rows — healthy"; }
-    }
-  } catch(e) { console.warn("Archive stats failed:", e); }
+    
+    const rows = scans.slice(0, 200).map(s => {
+      return `<div class="feed-row" style="font-size:11px;padding:8px 12px">
+        <span>${fmt(s.timestamp)}</span>
+        <span>${s.worker || "-"}</span>
+        <span class="action-badge ${s.action || ""}">${s.action || "-"}</span>
+        <span>${s.product || s.code || "-"}</span>
+      </div>`;
+    }).join("");
+    
+    list.innerHTML = `<div class="feed-row hdr" style="font-size:11px;font-weight:500;padding:8px 12px;background:var(--surface2)">
+      <span>Time</span><span>Worker</span><span>Action</span><span>Product</span>
+    </div>${rows}${scans.length > 200 ? `<div style="padding:12px;text-align:center;color:var(--muted);font-size:11px">Showing first 200 of ${scans.length} records</div>` : ""}`;
+  } catch(e) {
+    list.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
 }
 async function runArchiveNow() {
   const btn = document.getElementById("btnArchiveNow");
