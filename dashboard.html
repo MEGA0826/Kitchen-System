@@ -1113,11 +1113,11 @@ function switchTab(btn) {
   if (!tabId) return;
   const panel = document.getElementById("panel-" + tabId);
   if (panel) panel.classList.add("active");
-
+  sessionStorage.setItem("activeTab", tabId);
   try {
-    if (tabId === "inventory")    { /* already rendered, filterInventory re-applies */ filterInventory && filterInventory(); }
+    if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
-    if (tabId === "products")     { /* rendered on demand in admin */ }
+    if (tabId === "products")     { }
     if (tabId === "recipes")      { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
