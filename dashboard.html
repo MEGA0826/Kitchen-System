@@ -516,23 +516,20 @@
     </div>
   </div>
 
-<!-- Products Tab -->
-<div class="tab-content" id="productsTab">
-  <div class="section-header">
-    <h2>MEP Produkte</h2>
-  </div>
+<!-- PRODUCTS Tab -->
+<div class="panel" id="panel-products">
+  <div class="section-title">MEP Produkte</div>
+  <div class="section-sub">Select a category to view production items</div>
   
-  <div class="filter-bar">
-    <label>
-      Kategorie:
-      <select id="prodCatFilter" onchange="filterProducts()">
-        <option value="">-- Kategorie wählen --</option>
-      </select>
-    </label>
-    <input type="text" id="prod-search" placeholder="Search..." oninput="filterProducts()" style="display:none;">
+  <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
+    <select class="search-input" id="prodCatFilter" onchange="filterProducts()" style="flex:0 1 200px">
+      <option value="">-- Kategorie wählen --</option>
+    </select>
+    <input class="search-input" id="prod-search" type="text" placeholder="Search..." oninput="filterProducts()" style="flex:1;min-width:160px;display:none;">
   </div>
 
-  <div id="prodPrompt" class="prompt-message">
+  <div id="prodPrompt" class="empty-state" style="margin-top:20px">
+    <div class="empty-icon">🍽</div>
     Bitte wähle eine Kategorie aus
   </div>
 
