@@ -2955,44 +2955,37 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 
 async function initDashboard() {
   try {
+    // Load workers for PIN check
     get({ action: "allWorkers" }).then(d => {
       allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
     }).catch(() => {});
     
+    // Load core data
     await Promise.all([loadProducts(), loadInventory()]);
     
     const savedTab = sessionStorage.getItem("activeTab") || "kds";
     
-    // Skip PIN check on page load - let admin button handle it
-    if (savedTab === "admin") {
-      // Show KDS initially, user can click admin button to re-enter PIN
-      sessionStorage.setItem("activeTab", "kds");
+    // Load tab-specific content based on what's already shown
+    if (savedTab === "kds") {
       loadKDS();
-      return;
+    } else if (savedTab === "inventory") {
+      filterInventory && filterInventory();
+    } else if (savedTab === "orders") {
+      renderOrders();
+    } else if (savedTab === "recipes") {
+      loadRequirements();
+      renderRecipeList();
+      populateRecipeDropdowns();
+    } else if (savedTab === "deductions") {
+      loadDeductions();
+    } else if (savedTab === "reports") {
+      loadReportsTab();
+    } else if (savedTab === "mep-overview") {
+      loadMepOverview();
+    } else if (savedTab === "admin") {
+      loadAdminTab();
+      loadArchiveStats();
     }
-    
-    // Restore non-admin tabs normally
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-    
-    const btn = document.querySelector(`.tab[data-tab="${savedTab}"]`);
-    if (btn) btn.classList.add("active");
-    
-    const panel = document.getElementById("panel-" + savedTab);
-    if (panel) panel.classList.add("active");
-    
-    const dropdown = document.getElementById("nav-dropdown");
-    if (dropdown) dropdown.value = savedTab;
-    
-    sessionStorage.setItem("activeTab", savedTab);
-    
-    if (savedTab === "kds") loadKDS();
-    else if (savedTab === "inventory") filterInventory && filterInventory();
-    else if (savedTab === "orders") renderOrders();
-    else if (savedTab === "recipes") { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
-    else if (savedTab === "deductions") loadDeductions();
-    else if (savedTab === "reports") loadReportsTab();
-    else if (savedTab === "mep-overview") loadMepOverview();
     
   } catch(e) {
     console.error("Init error:", e);
