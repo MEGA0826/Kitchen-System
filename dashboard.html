@@ -519,7 +519,7 @@
 <!-- Products Tab -->
 <div class="tab-content" id="productsTab">
   <div class="section-header">
-    <h2>MEP-Produkte (Mise en Place)</h2>
+    <h2>MEP Produkte</h2>
   </div>
   
   <div class="filter-bar">
@@ -537,6 +537,22 @@
   </div>
 
   <div id="product-grid" class="product-grid" style="display:none;"></div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <div id="m-img-ph" class="product-thumb-ph" style="height:200px;display:flex">🍽</div>
+      <img id="m-img" class="product-thumb" alt="" style="height:200px;display:none">
+      <h2 id="m-name"></h2>
+      <p id="m-code" style="color:#888"></p>
+      <div class="prod-stats">
+        <span class="prod-stat green">OK <span id="m-done">0</span></span>
+        <span class="prod-stat amber">↻ <span id="m-produce">0</span></span>
+        <span class="prod-stat red">✕ <span id="m-waste">0</span></span>
+      </div>
+    </div>
+  </div>
 </div>
 
   <!-- RECIPES Tab-->
