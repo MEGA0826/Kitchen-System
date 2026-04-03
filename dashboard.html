@@ -307,11 +307,11 @@
   .nav-tabs {
     display: none;
   }
-  
-  .nav-dropdown {
+    .nav-dropdown {
     display: block;
   }
 }
+    
 .edit-modal {
   display: none;
   position: fixed;
@@ -549,7 +549,7 @@
   
   <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
     <select class="search-input" id="prodCatFilter" onchange="filterProducts()" style="flex:0 1 200px">
-      <option value="">-- Choose category --</option>
+      <option value="">-- Kategorie wählen --</option>
     </select>
     <input class="search-input" id="prod-search" type="text" placeholder="Search..." oninput="filterProducts()" style="flex:1;min-width:160px;display:none;">
   </div>
@@ -561,18 +561,22 @@
 
   <div id="product-grid" class="product-grid" style="display:none;margin-top:20px;"></div>
 
-  <!-- Modal -->
-  <div id="modal" class="modal" onclick="if(event.target===this) closeModal()">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <div id="m-img-ph" class="product-thumb-ph" style="height:200px;display:flex">🍽</div>
-      <img id="m-img" class="product-thumb" alt="" style="height:200px;display:none">
-      <h2 id="m-name"></h2>
-      <p id="m-code" style="color:#888"></p>
-      <div class="prod-stats">
-        <span class="prod-stat green">OK <span id="m-done">0</span></span>
-        <span class="prod-stat amber">↻ <span id="m-produce">0</span></span>
-        <span class="prod-stat red">✕ <span id="m-waste">0</span></span>
+  <!-- Product Detail Modal -->
+  <div id="product-detail-modal" class="edit-modal" onclick="if(event.target===this) closeProductModal()">
+    <div class="edit-modal-content">
+      <div class="edit-modal-header">
+        <h3 id="pm-name"></h3>
+        <button class="edit-modal-close" onclick="closeProductModal()">&times;</button>
+      </div>
+      <div style="text-align:center">
+        <div id="pm-img-ph" class="product-thumb-ph" style="height:200px;width:200px;display:flex;align-items:center;justify-content:center;font-size:48px;margin:0 auto 16px;border-radius:8px">🍽</div>
+        <img id="pm-img" alt="" style="height:200px;display:none;margin:0 auto 16px;border-radius:8px">
+        <p id="pm-code" style="color:var(--muted);margin:4px 0 16px;font-family:var(--mono);font-size:12px"></p>
+        <div class="prod-stats" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <span class="prod-stat green">OK <span id="pm-done">0</span></span>
+          <span class="prod-stat amber">↻ <span id="pm-produce">0</span></span>
+          <span class="prod-stat red">✕ <span id="pm-waste">0</span></span>
+        </div>
       </div>
     </div>
   </div>
@@ -1686,15 +1690,17 @@ async function loadProducts() {
     allProducts = (data && !data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
     try { sessionStorage.setItem("dash_products", JSON.stringify(allProducts)); } catch(e) {}
     populateProductCategories();
-    // DO NOT call renderProductGrid here - only populate dropdown
     return allProducts;
   } catch(e) {
-    document.getElementById("product-grid").innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+    const grid = document.getElementById("product-grid");
+    if (grid) grid.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
   }
 }
-  function populateProductCategories() {
+
+function populateProductCategories() {
   const cats = [...new Set(Object.values(allProducts).map(p => p.kategorie).filter(Boolean))].sort();
   const sel = document.getElementById('prodCatFilter');
+  if (!sel) return;
   sel.innerHTML = '<option value="">-- Kategorie wählen --</option>';
   cats.forEach(c => {
     const opt = document.createElement('option');
@@ -1703,52 +1709,21 @@ async function loadProducts() {
     sel.appendChild(opt);
   });
 }
-function renderProductGrid(entries) {
-  if (!entries.length) {
-    document.getElementById("product-grid").innerHTML =
-      `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
-    return;
-  }
-  document.getElementById("product-grid").innerHTML = entries.map(([code, p]) => {
-    const st      = (window.todayScanStats || {})[code] || {};
-    const done    = st.done    || 0;
-    const waste   = st.waste   || 0;
-    const produce = st.produce || 0;
-    const avail   = Math.max(0, done - waste);
-    const inProg  = (produce === 0 && p.mepMax > 0)
-      ? Math.max(0, p.mepMax - done)
-      : Math.max(0, produce - done);
-    const gnLabel = p.gnSize ? " " + p.gnSize : "";
-    const img     = p.image
-      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" style="height:80px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
-      : `<div class="product-thumb-ph" style="height:80px">🍽</div>`;
-    const statsHtml = p.mepMax ? `
-      <div class="prod-stats">
-        <span class="prod-stat green">OK ${avail}${gnLabel}</span>
-        <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
-        <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
-      </div>` : "";
-    return `<div class="product-card" onclick="openModal('${code}')">
-      ${img}
-      <div class="product-body">
-        <div class="product-name-card">${p.name||code}</div>
-        <div class="product-code-card">CODE . ${code}</div>
-        ${statsHtml}
-      </div>
-    </div>`;
-  }).join("");
-}
 
 function filterProducts() {
-  const cat = document.getElementById('prodCatFilter').value;
-  const search = document.getElementById('prod-search').value.toLowerCase();
+  const catSel = document.getElementById('prodCatFilter');
   const grid = document.getElementById('product-grid');
   const prompt = document.getElementById('prodPrompt');
   const searchBox = document.getElementById('prod-search');
+  
+  if (!catSel || !grid || !prompt || !searchBox) return;
+  
+  const cat = catSel.value;
+  const search = searchBox.value.toLowerCase();
 
   if (!cat) {
     grid.style.display = 'none';
-    grid.innerHTML = ''; // CLEAR CONTENT
+    grid.innerHTML = '';
     prompt.style.display = 'block';
     searchBox.style.display = 'none';
     return;
@@ -1767,22 +1742,84 @@ function filterProducts() {
   renderProductGrid(filtered);
 }
 
-function openModal(code) {
-  const p  = allProducts[code] || {};
-  const st = scanStats[code] || { produce:0, done:0, waste:0 };
-  document.getElementById("m-code").textContent    = "CODE . " + code;
-  document.getElementById("m-name").textContent    = p.name || code;
-  document.getElementById("m-produce").textContent = st.produce;
-  document.getElementById("m-done").textContent    = st.done;
-  document.getElementById("m-waste").textContent   = st.waste;
-  const img = document.getElementById("m-img");
-  const ph  = document.getElementById("m-img-ph");
-  img.classList.remove("shown");
-  ph.style.display = "flex";
-  if (p.image) { img.src = p.image; img.onload = () => { img.classList.add("shown"); ph.style.display = "none"; }; }
-  document.getElementById("modal").classList.add("open");
+function renderProductGrid(entries) {
+  const grid = document.getElementById("product-grid");
+  if (!grid) return;
+  
+  if (!entries || !entries.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
+    return;
+  }
+  
+  grid.innerHTML = entries.map(([code, p]) => {
+    const st = (window.todayScanStats || {})[code] || {};
+    const done = st.done || 0;
+    const waste = st.waste || 0;
+    const produce = st.produce || 0;
+    const avail = Math.max(0, done - waste);
+    const inProg = (produce === 0 && p.mepMax > 0) ? Math.max(0, p.mepMax - done) : Math.max(0, produce - done);
+    const gnLabel = p.gnSize ? " " + p.gnSize : "";
+    const img = p.image
+      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" style="height:80px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
+      : `<div class="product-thumb-ph" style="height:80px">🍽</div>`;
+    const statsHtml = p.mepMax ? `
+      <div class="prod-stats">
+        <span class="prod-stat green">OK ${avail}${gnLabel}</span>
+        <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
+        <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
+      </div>` : "";
+    return `<div class="product-card" onclick="openProductModal('${code}')">
+      ${img}
+      <div class="product-body">
+        <div class="product-name-card">${p.name||code}</div>
+        <div class="product-code-card">CODE . ${code}</div>
+        ${statsHtml}
+      </div>
+    </div>`;
+  }).join("");
 }
-function closeModal() { document.getElementById("modal").classList.remove("open"); }
+
+function openProductModal(code) {
+  const p = allProducts[code] || {};
+  const st = (window.todayScanStats || {})[code] || { produce:0, done:0, waste:0 };
+  
+  const modal = document.getElementById("product-detail-modal");
+  if (!modal) return;
+  
+  const mCode = document.getElementById("pm-code");
+  const mName = document.getElementById("pm-name");
+  const mProduce = document.getElementById("pm-produce");
+  const mDone = document.getElementById("pm-done");
+  const mWaste = document.getElementById("pm-waste");
+  const img = document.getElementById("pm-img");
+  const ph = document.getElementById("pm-img-ph");
+  
+  if (mCode) mCode.textContent = "CODE . " + code;
+  if (mName) mName.textContent = p.name || code;
+  if (mProduce) mProduce.textContent = st.produce || 0;
+  if (mDone) mDone.textContent = st.done || 0;
+  if (mWaste) mWaste.textContent = st.waste || 0;
+  
+  if (img && ph) {
+    img.style.display = "none";
+    ph.style.display = "flex";
+    
+    if (p.image) {
+      img.src = p.image;
+      img.onload = () => {
+        img.style.display = "block";
+        ph.style.display = "none";
+      };
+    }
+  }
+  
+  modal.classList.add("active");
+}
+
+function closeProductModal() {
+  const modal = document.getElementById("product-detail-modal");
+  if (modal) modal.classList.remove("active");
+}
 
 // ─────────────────────────────────────────────
 // SWIPEABLE ALERTS
