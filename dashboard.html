@@ -1283,25 +1283,26 @@ async function submitPin() {
 
   if (matched) {
     cancelPin();
-    
-    // Just activate admin tab - don't switch away
+
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-    
+
+    // Force Admin tab visible and active regardless of role
     const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
     if (adminBtn) {
-      adminBtn.classList.add("active");
       adminBtn.style.display = "";
+      adminBtn.style.setProperty("display", "inline-block", "important");
+      adminBtn.classList.add("active");
     }
-    
+
     const adminPanel = document.getElementById("panel-admin");
     if (adminPanel) adminPanel.classList.add("active");
-    
+
     sessionStorage.setItem("activeTab", "admin");
-    
     loadAdminTab();
     loadArchiveStats();
-  } else {
+  } 
+    else {
     msg.style.color = "var(--red)";
     msg.textContent = "Wrong PIN";
     document.getElementById("pinInput").value = "";
