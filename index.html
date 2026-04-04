@@ -1837,6 +1837,7 @@ async function send(action) {
   });
 
 window.addEventListener("DOMContentLoaded", async () => {
+  closeRoleDrawer();
     const code = new URLSearchParams(window.location.search).get("code") || "";
     setUsedWasteState(0);
 
