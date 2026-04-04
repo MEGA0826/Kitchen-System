@@ -1071,16 +1071,18 @@
         <div class="brand-sub">212.Nooch Richti</div>
       </div>
       <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
-        style="display:inline-flex;align-items:center;padding:6px 12px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;white-space:nowrap">
-        Dashboard
-      </a>
+          class="menu-item menu-item-admin"
+          style="display:flex;align-items:center;gap:10px;padding:14px 16px;color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);background:var(--amber-dim);text-decoration:none;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-top:8px">
+          <span>⚙</span> Admin
+        </a>
     </div>
-    <div class="header-right">
-        <div class="live-badge">
+  <div class="header-right">
+      <div class="live-badge">
         <div class="live-badge-row">
-          <span class="status-dot"></span>LIVE</div>
-       <div class="live-time" 
-         id="liveTime2"></div>
+          <span class="status-dot"></span>LIVE
+        </div>
+        <div class="live-time" id="liveTime2" style="font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:0.5px;margin-top:2px"></div>
+      </div>
     </div>
   </header>
 
@@ -1098,12 +1100,15 @@
 <!-- Staff Home: camera fills, header overlay, MEP split below -->
   <!-- Staff Home: default landing page -->
   <div id="staffHome" style="display:none;flex:1;flex-direction:column;overflow:hidden;background:#0d0d0d">
-    <!-- Header -->
+   <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid #1e1e1e">
       <button class="home-hamburger" onclick="openRoleDrawer()">
         <span></span><span></span><span></span>
       </button>
-      <div style="font-family:'Instrument Serif',serif;font-size:16px;color:rgba(255,255,255,0.7)">Kitchen <em>MEP</em></div>
+      <div style="text-align:center">
+        <div style="font-family:'Instrument Serif',serif;font-size:16px;color:rgba(255,255,255,0.7)">Kitchen <em>MEP</em></div>
+        <div id="homeLiveTime" style="font-size:10px;color:#555;font-family:var(--mono);letter-spacing:0.5px;margin-top:1px"></div>
+      </div>
       <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
     </div>
     <!-- MEP split -->
@@ -1136,11 +1141,8 @@
       </div>
       <div class="scan-hint-text">Hold QR code in frame</div>
 
-      <!-- Header overlay on camera -->
+<!-- Header overlay on camera -->
       <div class="home-header">
-        <button class="home-hamburger" onclick="openRoleDrawer()">
-          <span></span><span></span><span></span>
-        </button>
         <span class="scan-app-name">Kitchen <em>MEP</em></span>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="scan-tb-btn" id="btnFlash" onclick="toggleFlash()" style="flex-direction:row;gap:4px;padding:4px 8px">
@@ -1159,29 +1161,9 @@
       </div>
     </div>
 
-    <!-- MEP split blocks (bottom ~45%) -->
-    <div style="background:#0d0d0d;border-top:1px solid #222;display:flex;flex-direction:column;flex:1;overflow:hidden">
-      <div class="mep-split">
-
-        <!-- To Produce (left) -->
-        <div class="mep-col">
-          <div class="mep-col-title produce">⚠ To Produce</div>
-          <div class="mep-col-scroll" id="home-produce-list">
-            <div style="color:#444;font-size:11px;text-align:center;padding:12px">Loading…</div>
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div style="width:1px;background:#222;flex-shrink:0;margin:24px 0 4px"></div>
-
-        <!-- Available (right) -->
-        <div class="mep-col">
-          <div class="mep-col-title avail">✓ Available</div>
-          <div class="mep-col-scroll" id="home-avail-list">
-            <div style="color:#444;font-size:11px;text-align:center;padding:12px">Loading…</div>
-          </div>
-        </div>
-      </div>
+ <!-- Scan hint bottom bar -->
+    <div style="background:#0d0d0d;border-top:1px solid #222;flex:1;display:flex;align-items:center;justify-content:center">
+      <div style="font-size:11px;color:#444;letter-spacing:1.5px;text-transform:uppercase">Point camera at QR code</div>
     </div>
     <input type="file" id="galleryInput" accept="image/*" onchange="scanFromGallery(event)" style="display:none">
   </div>
@@ -1304,6 +1286,8 @@
     const el2 = document.getElementById("liveTime2");
     if (el1) el1.textContent = combined;
     if (el2) el2.textContent = combined;
+    const el3 = document.getElementById("homeLiveTime");
+    if (el3) el3.textContent = combined;
   }
   setInterval(updateLiveTime, 1000);
   updateLiveTime();
@@ -2346,9 +2330,14 @@ function checkRolePin() {
     <button class="role-btn" onclick="selectRole('Küchenchef')">
       <div class="role-dot" style="background:#fb923c"></div> Küchenchef
     </button>
-    <button class="role-btn" onclick="selectRole('Manager')">
+   <button class="role-btn" onclick="selectRole('Manager')">
       <div class="role-dot" style="background:#a78bfa"></div> Manager
     </button>
+    <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
+      onclick="closeRoleDrawer()"
+      style="display:flex;align-items:center;gap:10px;padding:13px 16px;color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);background:var(--amber-dim);text-decoration:none;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-top:8px">
+      ⚙ &nbsp;Admin
+    </a>
   </div>
 
   <!-- Role PIN modal -->
