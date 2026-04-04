@@ -1096,6 +1096,33 @@
   
   <div class="scan-home" 
 <!-- Staff Home: camera fills, header overlay, MEP split below -->
+  <!-- Staff Home: default landing page -->
+  <div id="staffHome" style="display:none;flex:1;flex-direction:column;overflow:hidden;background:#0d0d0d">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid #1e1e1e">
+      <button class="home-hamburger" onclick="openRoleDrawer()">
+        <span></span><span></span><span></span>
+      </button>
+      <div style="font-family:'Instrument Serif',serif;font-size:16px;color:rgba(255,255,255,0.7)">Kitchen <em>MEP</em></div>
+      <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
+    </div>
+    <!-- MEP split -->
+    <div class="mep-split" style="flex:1;overflow:hidden">
+      <div class="mep-col">
+        <div class="mep-col-title produce">⚠ To Produce</div>
+        <div class="mep-col-scroll" id="home-produce-list">
+          <div style="color:#444;font-size:11px;text-align:center;padding:16px">Loading…</div>
+        </div>
+      </div>
+      <div style="width:1px;background:#222;flex-shrink:0;margin:24px 0 4px"></div>
+      <div class="mep-col">
+        <div class="mep-col-title avail">✓ Available</div>
+        <div class="mep-col-scroll" id="home-avail-list">
+          <div style="color:#444;font-size:11px;text-align:center;padding:16px">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>  
   <div id="scanHome" style="display:none;flex:1;flex-direction:column;position:relative;overflow:hidden">
 
     <!-- Camera area (top ~55% of screen) -->
@@ -1854,54 +1881,43 @@ async function send(action) {
   });
 
 window.addEventListener("DOMContentLoaded", async () => {
-  const code = new URLSearchParams(window.location.search).get("code") || "";
-  setUsedWasteState(0);
+    const code = new URLSearchParams(window.location.search).get("code") || "";
+    setUsedWasteState(0);
 
-  // Fix: moved out of nested listener
-  updateBadge();
-  if (navigator.onLine) retryQueue();
-
-  if (!code) {
-    document.getElementById("scanHome").style.display = "flex";
-    preloadProducts();
-    preloadWorkers();
-    startInlineScanner();
-    return;
-  }
-
-  // -- Has code - show product screen --
-  sessionStorage.setItem("lastScanUrl", window.location.href);
-  document.getElementById("scanHome").style.display      = "none";
-  document.getElementById("productScreen").style.display = "flex";
-  document.getElementById("productScreen").style.flexDirection = "column";
-
-  // Show cached product data instantly
-  const cached = sessionStorage.getItem("productMap");
-  if (cached) {
-    try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
-  }
-
-  // Single fetch: mepStatus returns name+image+stats
-  const [mepResult] = await Promise.allSettled([
-    fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
-    preloadWorkers(),
-  ]);
-
-  if (mepResult?.status === "fulfilled" && mepResult.value) {
-    const d = mepResult.value;
-    // Merge product fields first, then showProduct, then updateMepUI
-    if (d.name || d.image) {
-      PRODUCT_MAP[code] = Object.assign(PRODUCT_MAP[code] || {}, {
-        name: d.name, image: d.image,
-        mepMax: d.mepMax, gnSize: d.gnSize,
-        gnWeight: d.gnWeight, tagesziel: d.tagesziel,
-      });
-      try { sessionStorage.setItem("productMap", JSON.stringify(PRODUCT_MAP)); } catch(e) {}
-      showProduct(); // re-run with real name/image
+    if (!code) {
+      // ── Show Staff Home (MEP list), NOT scanner ──
+      document.getElementById("staffHome").style.display    = "flex";
+      document.getElementById("scanHome").style.display     = "none";
+      document.getElementById("productScreen").style.display = "none";
+      preloadProducts();
+      preloadWorkers();
+      Promise.allSettled([loadHomeMepStatus(), loadRolePins()]);
+      setInterval(loadHomeMepStatus, 60000);
+      return;
     }
-    updateMepUI(d);
-  }
-});
+
+    // -- Has code - show product screen --
+    sessionStorage.setItem("lastScanUrl", window.location.href);
+    document.getElementById("staffHome").style.display      = "none";
+    document.getElementById("scanHome").style.display       = "none";
+    document.getElementById("productScreen").style.display  = "flex";
+    document.getElementById("productScreen").style.flexDirection = "column";
+
+    const cached = sessionStorage.getItem("productMap");
+    if (cached) {
+      try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
+    }
+
+    const [, , mepData] = await Promise.allSettled([
+      preloadProducts().then(() => showProduct()),
+      preloadWorkers(),
+      fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
+    ]);
+
+    if (mepData?.status === "fulfilled" && mepData.value) {
+      updateMepUI(mepData.value);
+    }
+  });
 
   // -- OFFLINE SCAN QUEUE - IndexedDB + auto-retry --
   const DB_NAME    = "mep-offline";
@@ -2183,11 +2199,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function checkRolePin() {
+function checkRolePin() {
     const correct = _rolePins[_pendingRole];
     if (!correct) {
-      // No PIN configured — allow access
-      openRoleDashboard(_pendingRole);
+      // PIN not configured in Settings — deny access, don't guess
+      document.getElementById("rolePinMsg").textContent = "No PIN set for this role";
+      _rolePinEntry = "";
+      updateRolePinDots();
       return;
     }
     if (_rolePinEntry === correct) {
@@ -2197,6 +2215,20 @@ window.addEventListener("DOMContentLoaded", async () => {
       _rolePinEntry = "";
       updateRolePinDots();
     }
+  }
+
+  // ← Scan button: show scanner, start camera, hide staffHome
+  function openScanPage() {
+    document.getElementById("staffHome").style.display  = "none";
+    document.getElementById("scanHome").style.display   = "flex";
+    startInlineScanner();
+  }
+
+  // Back from scanner to staffHome (without ?code)
+  function goToStaffHome() {
+    stopInlineScanner();
+    document.getElementById("scanHome").style.display  = "none";
+    document.getElementById("staffHome").style.display = "flex";
   }
 
   function closeRolePinModal() {
