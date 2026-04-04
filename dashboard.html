@@ -421,8 +421,9 @@
   </div>
 </div>
 
-<div class="nav" id="main-nav">
-  <button class="tab active" data-tab="kds"          onclick="closeMenuOnTabSelect(this)">KDS</button>
+<div class="tabs">
+  <span id="roleBadge" style="display:none;font-size:10px;letter-spacing:1px;padding:3px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-family:var(--mono);text-transform:uppercase;align-self:center;margin-right:2px"></span>
+  <button class="tab active"  data-tab="kds"          onclick="closeMenuOnTabSelect(this)">KDS</button>
   <button class="tab"        data-tab="mep-overview" onclick="closeMenuOnTabSelect(this)">MEP Overview</button>
   <button class="tab"        data-tab="inventory"    onclick="closeMenuOnTabSelect(this)">Inventory</button>
   <button class="tab"        data-tab="products"     onclick="closeMenuOnTabSelect(this)">Products</button>
@@ -1112,7 +1113,7 @@ function updateLiveTime() {
   const ss   = String(now.getSeconds()).padStart(2, "0");
   const el   = document.getElementById("liveTime");
   if (el) el.innerHTML =
-    `<span style="color:var(--muted);font-size:9px">Day</span> ${day} ${dd}.${mm}.${yy}&nbsp;&nbsp;<span style="color:var(--muted);font-size:9px">Time</span> ${hh}:${min}:${ss}`;
+    `<span style="color:var(--muted);font-size:9px"> </span> ${day} ${dd}.${mm}.${yy}&nbsp;&nbsp;<span style="color:var(--muted);font-size:9px">Time</span> ${hh}:${min}:${ss}`;
 }
   
 updateLiveTime();
@@ -1149,9 +1150,13 @@ function closeMenuOnTabSelect(btn) {
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
-  if (!tabId) return;
-  const panel = document.getElementById("panel-" + tabId);
-  if (panel) panel.classList.add("active");
+  if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
+  // Hide edit/delete buttons for readonly roles after render
+  setTimeout(() => {
+    if (window._inventoryReadonly && (tabId === "inventory")) {
+      document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #panel-inventory .btn-save, #inv-form").forEach(el => el.style.display = "none");
+    }
+  }, 200);
   sessionStorage.setItem("activeTab", tabId);
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
@@ -1161,14 +1166,82 @@ function closeMenuOnTabSelect(btn) {
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
     if (tabId === "mep-overview") loadMepOverview();
-    if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
+    if (tabId === "admin")      { loadAdminTab(); loadArchiveStats(); }
+  // Re-apply readonly restrictions after dynamic content renders
+  const role = sessionStorage.getItem("dashRole") || "Manager";
+  const readonly = ROLE_READONLY[role] || [];
+  if (readonly.includes("inventory") && tabId === "inventory") {
+    setTimeout(() => {
+      document.querySelectorAll(
+        "#inv-form, .btn-save, .btn-del, .btn-edit, #pf-cancel, #wf-cancel"
+      ).forEach(el => el.style.display = "none");
+    }, 300);
+  }
     if (tabId === "kds")          loadKDS();
   } catch(e) {
     console.error("switchTab error [" + tabId + "]:", e);
     if (panel) panel.innerHTML += `<div style="color:var(--red);padding:16px;font-size:12px">Tab error: ${e.message}</div>`;
   }
 }
+// ─────────────────────────────────────────────
+// ROLE ACCESS CONTROL
+// ─────────────────────────────────────────────
+const ROLE_TABS = {
+  Teamleader : ['kds','mep-overview','inventory'],
+  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
+  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
+};
+const ROLE_READONLY = {
+  Teamleader : ['inventory'],          // limited = read only, no edit buttons
+  Küchenchef : ['reports'],            // limited = can preview but not send
+};
 
+function applyRoleAccess() {
+  const role = sessionStorage.getItem("dashRole") || "Manager";
+  const allowed = ROLE_TABS[role] || ROLE_TABS["Manager"];
+  const readonly = ROLE_READONLY[role] || [];
+
+  // Show/hide tab buttons
+  document.querySelectorAll(".tab[data-tab]").forEach(btn => {
+    const tab = btn.dataset.tab;
+    btn.style.display = allowed.includes(tab) ? "" : "none";
+  });
+
+  // Hide Admin button entirely unless Manager
+  const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
+  if (adminBtn) adminBtn.style.display = (role === "Manager") ? "" : "none";
+
+  // Show role badge in header
+  const badge = document.getElementById("roleBadge");
+  if (badge) {
+    const colors = { Teamleader:"#facc15", Küchenchef:"#fb923c", Manager:"#a78bfa" };
+    badge.textContent = role;
+    badge.style.color = colors[role] || "#888";
+    badge.style.display = "inline";
+  }
+
+  // Inventory readonly for Teamleader — hide all edit/save/delete buttons
+  if (readonly.includes("inventory")) {
+    document.querySelectorAll(
+      "#inv-form, #worker-form, .btn-save, .btn-del, .btn-edit, #pf-cancel, #wf-cancel"
+    ).forEach(el => el.style.display = "none");
+  }
+
+  // Reports readonly for Küchenchef — hide send button
+  if (readonly.includes("reports")) {
+    const sendBtn = document.querySelector("[onclick='sendReportNow()']");
+    if (sendBtn) sendBtn.style.display = "none";
+  }
+
+  // Alerts: hide mep-alerts for Teamleader (limited view = they still see it)
+  // Per matrix: Teamleader ✓ Alerts — so no restriction needed
+
+  // MEP Overview limited for Staff — not applicable (Staff don't reach dashboard)
+
+  // Switch to first allowed tab
+  const firstTab = document.querySelector(`.tab[data-tab="${allowed[0]}"]`);
+  if (firstTab) switchTab(firstTab);
+}
 function requestAdminAccess() {
   const modal = document.getElementById("pinModal");
   const msg = document.getElementById("pinMsg");
@@ -3430,7 +3503,70 @@ async function initDashboard() {
     console.error("Init error:", e);
   }
 }
+// ─────────────────────────────────────────────
+// ROLE ACCESS CONTROL
+// ─────────────────────────────────────────────
+const ROLE_TABS = {
+  Teamleader : ['kds','mep-overview','inventory','deductions'],
+  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
+  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports'],
+};
+const ROLE_READONLY = {
+  Teamleader : ['inventory','deductions','mep-overview'],
+  Küchenchef : ['reports'],
+};
+
+function applyRoleAccess() {
+  const role    = sessionStorage.getItem("dashRole") || "Manager";
+  const allowed = ROLE_TABS[role] || Object.values(ROLE_TABS).pop();
+  const readonly = ROLE_READONLY[role] || [];
+
+  // Show/hide tab buttons
+  document.querySelectorAll(".tab[data-tab]").forEach(btn => {
+    btn.style.display = allowed.includes(btn.dataset.tab) ? "" : "none";
+  });
+
+  // Admin button: Manager only
+  const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
+  if (adminBtn) adminBtn.style.display = (role === "Manager") ? "" : "none";
+
+  // Role badge
+  const badge = document.getElementById("roleBadge");
+  if (badge) {
+    const colors = { Teamleader:"#facc15", Küchenchef:"#fb923c", Manager:"#a78bfa" };
+    badge.textContent = role;
+    badge.style.color = colors[role] || "#888";
+    badge.style.display = "inline-block";
+  }
+
+  // Inventory readonly for Teamleader — hide edit buttons after render
+  if (readonly.includes("inventory")) {
+    // Override openEditInventoryModal to block editing
+    window._inventoryReadonly = true;
+  } else {
+    window._inventoryReadonly = false;
+  }
+
+  // Reports: hide send button for Küchenchef
+  if (readonly.includes("reports")) {
+    const sendBtn = document.querySelector("[onclick='sendReportNow()']");
+    if (sendBtn) sendBtn.style.display = "none";
+  }
+
+  // Navigate to first allowed tab
+  const firstTab = document.querySelector(`.tab[data-tab="${allowed[0]}"]`);
+  if (firstTab) switchTab(firstTab);
+}
+
+// Patch openEditInventoryModal to respect readonly
+const _origOpenEditInv = window.openEditInventoryModal;
+window.openEditInventoryModal = function(code) {
+  if (window._inventoryReadonly) return;
+  _origOpenEditInv && _origOpenEditInv(code);
+};
+
 initDashboard();
+applyRoleAccess();
 setTimeout(loadRecipes, 800);
 
 setInterval(async () => {
