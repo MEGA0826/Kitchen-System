@@ -162,33 +162,34 @@
       object-fit: cover;
       opacity: 0.55;
     }
-    .mep-card-ph {
+   .mep-card-ph {
       position: absolute;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 28px;
-      opacity: 0.2;
+      opacity: 0.12;
     }
     .mep-card-body {
       position: relative;
       z-index: 2;
       padding: 6px 6px 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.0) 100%);
     }
     .mep-card-hl {
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 100%;
       z-index: 1;
-      opacity: 0.18;
+      opacity: 0.12;
     }
     .mep-card.hl-red    .mep-card-hl { background: #f87171; }
     .mep-card.hl-yellow .mep-card-hl { background: #facc15; }
     .mep-card.hl-green  .mep-card-hl { background: #4ade80; }
     .mep-card.hl-blue   .mep-card-hl { background: #60a5fa; }
     .mep-card-name {
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 700;
       color: #fff;
       line-height: 1.2;
@@ -197,8 +198,8 @@
     }
     .mep-bar-wrap {
       position: relative;
-      height: 6px;
-      background: rgba(255,255,255,0.12);
+      height: 7px;
+      background: rgba(255,255,255,0.25);
       border-radius: 3px;
       margin: 5px 0 0;
       overflow: hidden;
@@ -213,8 +214,8 @@
     .mep-card.hl-green  .mep-bar-fill { background: #4ade80; }
     .mep-card.hl-blue   .mep-bar-fill { background: #60a5fa; }
     .mep-bar-label {
-      font-size: 9px;
-      color: rgba(255,255,255,0.6);
+      font-size: 10px;
+      color: rgba(255,255,255,0.9);
       text-align: right;
       padding: 1px 0 4px;
     }
@@ -1089,7 +1090,7 @@
     <!-- MEP split -->
     <div class="mep-split" style="flex:1;overflow:hidden">
       <div class="mep-col">
-        <div class="mep-col-title produce">⚠ To Produce</div>
+        <div class="mep-col-title produce" onclick="cycleSortMode()" style="cursor:pointer;user-select:none">⚠ To Produce</div>
         <div class="mep-col-scroll" id="home-produce-list">
           <div style="color:#444;font-size:11px;text-align:center;padding:16px">Loading…</div>
         </div>
@@ -1159,33 +1160,33 @@
       <button onclick="goToScanHome()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;color:#666;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;cursor:pointer">← Scan</button>
     </div>
 
-    <!-- Product hero: image centered, name below -->
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;overflow:hidden">
+   <!-- Product hero: scrollable middle -->
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 16px 8px;gap:10px;overflow-y:auto;-webkit-overflow-scrolling:touch">
 
       <!-- Image -->
-      <div style="width:220px;height:220px;border-radius:16px;overflow:hidden;background:#1a1a1a;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <div style="width:160px;height:160px;border-radius:14px;overflow:hidden;background:#1a1a1a;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <img id="productImage" alt="" style="display:none;width:100%;height:100%;object-fit:cover">
-        <div id="imgPlaceholder" style="font-size:80px;opacity:0.2">🍽</div>
+        <div id="imgPlaceholder" style="font-size:60px;opacity:0.2">🍽</div>
       </div>
 
       <!-- Name -->
-      <div id="product" style="font-family:'Instrument Serif',serif;font-size:36px;line-height:1.2;color:#fff;text-align:center"><div class="skeleton" style="width:200px;height:36px"></div></div>
+      <div id="product" style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1.2;color:#fff;text-align:center"><div class="skeleton" style="width:200px;height:32px"></div></div>
       <div id="productCode" style="font-size:11px;color:#444;font-family:var(--mono);text-align:center"></div>
 
       <!-- MEP info -->
-      <div id="mepStatus" style="flex-direction:column;gap:10px;width:100%;max-width:360px;background:#141414;border:1px solid #222;border-radius:10px;padding:16px 20px;display:none">
+      <div id="mepStatus" style="flex-direction:column;gap:8px;width:100%;max-width:360px;background:#141414;border:1px solid #222;border-radius:10px;padding:12px 16px;display:none">
         <div style="display:flex;align-items:center;gap:12px">
           <span id="mepDotDone" style="width:12px;height:12px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
-          <span id="mepLabelDone" style="font-size:18px;color:#ccc"></span>
+          <span id="mepLabelDone" style="font-size:16px;color:#ccc"></span>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <span id="mepDotList" style="width:12px;height:12px;border-radius:50%;background:#e8a020;flex-shrink:0"></span>
-          <span id="mepLabelList" style="font-size:18px;color:#ccc"></span>
+          <span id="mepLabelList" style="font-size:16px;color:#ccc"></span>
         </div>
       </div>
 
       <!-- Daily target covered -->
-      <div id="mepFullMsg" style="font-size:16px;color:#22c55e;text-align:center;display:none"></div>
+      <div id="mepFullMsg" style="font-size:15px;color:#22c55e;text-align:center;display:none"></div>
 
     </div>
 
@@ -1295,6 +1296,7 @@ function updateLiveTime() {
       const data    = await res.json();
       const select  = document.getElementById("worker");
       const workers = Array.isArray(data.workers) ? data.workers : [];
+      window._homeWorkerList = workers;
       select.innerHTML = `<option value="">-- Select your name --</option>`;
       workers.forEach(w => {
         const name = typeof w === "object" ? (w.name || w) : w;
@@ -2025,8 +2027,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   
 
 // ── MEP HOME LIST ──────────────────────────────────────────────────────────
-  let _homeMepData   = {};   // code → { avail, target, mepMax, name, image, allergy, priority, gnSize }
-  let _rolePins      = {};   // { Teamleader:"1234", ... }
+  let _homeMepData   = {};
+  let _rolePins      = {};
+  let _sortMode      = 'priority'; // 'priority' | 'az' | 'colour'
+  const _sortModes   = ['priority','az','colour'];
+  const _sortLabels  = { priority:'⚠ To Produce', az:'⚠ To Produce  A→Z', colour:'⚠ To Produce  🎨' };
   let _pendingRole   = "";
   let _rolePinEntry  = "";
   let _popupCode     = "";
@@ -2053,13 +2058,28 @@ window.addEventListener("DOMContentLoaded", async () => {
     return "hl-red";
   }
 
+  function cycleSortMode() {
+    const idx = _sortModes.indexOf(_sortMode);
+    _sortMode = _sortModes[(idx + 1) % _sortModes.length];
+    document.querySelector('.mep-col-title.produce').textContent = _sortLabels[_sortMode];
+    renderHomeMep();
+  }
+
+  function sortEntries(entries) {
+    if (_sortMode === 'az') return entries.sort((a,b) => a[1].name.localeCompare(b[1].name));
+    if (_sortMode === 'colour') {
+      const rank = e => { const h=hlClass(e[1].avail,e[1].target); return {' hl-red':0,'hl-yellow':1,'hl-green':2,'hl-blue':3}[h]??0; };
+      return entries.sort((a,b) => rank(a)-rank(b));
+    }
+    return entries.sort((a,b) => (a[1].priority||99)-(b[1].priority||99));
+  }
+
   function renderHomeMep() {
     const produce = [], avail = [];
-    Object.entries(_homeMepData)
-      .sort((a, b) => (a[1].priority||99) - (b[1].priority||99))
+    sortEntries(Object.entries(_homeMepData))
       .forEach(([code, d]) => {
+        if (d.avail > 0) avail.push([code, d]);
         if (d.avail < d.target) produce.push([code, d]);
-        else avail.push([code, d]);
       });
 
     const makeCard = ([code, d]) => {
@@ -2163,15 +2183,17 @@ const statusMap = statusData.statuses || {};
   }
 
 function checkRolePin() {
-    const correct = _rolePins[_pendingRole];
-    if (!correct) {
-      // PIN not configured in Settings — deny access, don't guess
-      document.getElementById("rolePinMsg").textContent = "No PIN set for this role";
-      _rolePinEntry = "";
-      updateRolePinDots();
+    if (_pendingRole === 'Admin') {
+      openRoleDashboard('Admin');
       return;
     }
-    if (_rolePinEntry === correct) {
+    // Match PIN against workers who have matching role
+    const correct = _rolePins[_pendingRole];
+    // Also check against any worker with this role name
+    const workerMatch = (window._homeWorkerList || []).find(w =>
+      typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false
+    );
+    if ((correct && _rolePinEntry === correct) || workerMatch) {
       openRoleDashboard(_pendingRole);
     } else {
       document.getElementById("rolePinMsg").textContent = "Wrong PIN";
@@ -2245,10 +2267,14 @@ function goToScanHome() {
     document.getElementById("mepPopupAllergy").innerHTML = allergyStr
       ? `Allergens: ${allergyStr}` : "";
 
-    // Populate worker select from existing select
-    const src = document.getElementById("worker");
+    // Populate worker select from global list
     const dst = document.getElementById("popupWorker");
-    dst.innerHTML = src.innerHTML;
+    const workers = window._homeWorkerList || [];
+    dst.innerHTML = `<option value="">-- Select worker --</option>` +
+      workers.map(w => {
+        const name = typeof w === 'object' ? w.name : w;
+        return `<option value="${name}">${name}</option>`;
+      }).join('');
     const saved = localStorage.getItem("worker");
     if (saved) dst.value = saved;
 
@@ -2307,11 +2333,9 @@ function goToScanHome() {
    <button class="role-btn" onclick="selectRole('Manager')">
       <div class="role-dot" style="background:#a78bfa"></div> Manager
     </button>
-    <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
-      onclick="closeRoleDrawer()"
-      style="display:flex;align-items:center;gap:10px;padding:13px 16px;color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);background:var(--amber-dim);text-decoration:none;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-top:8px">
-      ⚙ &nbsp;Admin
-    </a>
+    <button class="role-btn" onclick="selectRole('Admin')" style="color:var(--amber);border-top:1px solid #2a2a2a;margin-top:8px">
+      <div class="role-dot" style="background:var(--amber)"></div> ⚙ Admin
+    </button>
   </div>
 
   <!-- Role PIN modal -->
