@@ -565,9 +565,6 @@
     <rect x="16" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
     <rect x="108" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
   </svg>
-  <div class="section-title">MEP Overview Today <span class="section-title-icon">🗂️</span></div>
-  <div class="section-sub">Status of all products</div>
-</div>
 
     <div class="inv-controls">
       <select class="search-input" id="mep-cat-filter" onchange="filterMepOverview()" style="flex:0 1 200px">
@@ -958,43 +955,6 @@
         </div>
       </div>
     </div>
-<!-- Edit Worker Modal -->
-      <div class="edit-modal" id="editWorkerModal">
-        <div class="edit-modal-content">
-          <div class="edit-modal-header">
-            <h3 id="editWorkerTitle">Edit Worker</h3>
-            <button class="edit-modal-close" onclick="closeWorkerEditModal()">×</button>
-          </div>
-          <input type="hidden" id="editWorkerOriginalName">
-          <div class="form-grid">
-            <div class="form-field">
-              <label class="form-label">Name *</label>
-              <input class="form-input" id="editWorkerName">
-            </div>
-            <div class="form-field">
-              <label class="form-label">Rolle</label>
-              <select class="form-input" id="editWorkerRole">
-                <option value="">-- Rolle wählen --</option>
-                <option value="Küchenchef">Küchenchef</option>
-                <option value="Teamleader">Teamleader</option>
-                <option value="Sushikoch">Sushikoch</option>
-                <option value="Wokkoch">Wokkoch</option>
-                <option value="Küchehilfe">Küchehilfe</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label class="form-label">PIN (4 digits)</label>
-              <input class="form-input" id="editWorkerPin" type="text" inputmode="numeric" maxlength="4" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
-            </div>
-          </div>
-          <div class="admin-msg" id="editWorkerMsg"></div>
-          <div class="form-actions">
-            <button class="btn-save" onclick="saveWorkerEditModal()">Save</button>
-            <button class="btn-edit" onclick="closeWorkerEditModal()">Cancel</button>
-          </div>
-        </div>
-      </div>
-      <div id="workerEditOverlay" onclick="closeWorkerEditPopup()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9998"></div>
 
     <div class="admin-section">
       <div class="admin-section-title">Inventory</div>
