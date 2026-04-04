@@ -1174,7 +1174,7 @@
       <div id="productCode" style="font-size:10px;color:#444;font-family:var(--mono);text-align:center"></div>
 
       <!-- MEP info -->
-      <div id="mepStatus" style="display:none;flex-direction:column;gap:6px;width:100%;max-width:320px;background:#141414;border:1px solid #222;border-radius:8px;padding:12px 16px">
+      <div id="mepStatus" style="flex-direction:column;gap:6px;width:100%;max-width:320px;background:#141414;border:1px solid #222;border-radius:8px;padding:12px 16px;display:none">
         <div class="mep-row" style="display:flex;align-items:center;gap:8px">
           <span class="mep-dot green" id="mepDotDone" style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
           <span id="mepLabelDone" style="font-size:13px;color:#ccc"></span>
@@ -1186,8 +1186,7 @@
       </div>
 
       <!-- Daily target covered -->
-      <div class="mep-full-msg" id="mepFullMsg" style="font-size:12px;color:#22c55e;text-align:center;display:none">Daily target covered ✓</div>
-
+      <div id="mepFullMsg" style="font-size:12px;color:#22c55e;text-align:center;display:none"></div>
     </div>
 
     <!-- Worker + Actions pinned to bottom -->
@@ -1397,20 +1396,21 @@ function updateMepUI(data) {
     if (covered) {
       dotList.className = "mep-dot green";
       labelList.classList.add("full");
-      fullMsg.textContent = "Daily target covered OK";
-      fullMsg.classList.add("visible");
+      fullMsg.textContent = "Daily target covered ✓";
+      fullMsg.style.display = "block";
     } else {
       dotList.className = toProduce > 0 ? "mep-dot amber" : "mep-dot green";
       labelList.classList.remove("full");
-      fullMsg.classList.remove("visible");
+      fullMsg.style.display = "none";
     }
   }
     
-  function showProduct() {
+    function showProduct() {
     CURRENT_CODE = new URLSearchParams(window.location.search).get("code") || "";
     const pd    = PRODUCT_MAP[CURRENT_CODE] || {};
     const name  = pd.name || CURRENT_CODE || "Unknown product";
     const image = pd.image || "";
+    console.log("showProduct:", CURRENT_CODE, "name:", name, "image:", image, "pd:", JSON.stringify(pd));
 
     document.getElementById("product").textContent = name;
     if (CURRENT_CODE) document.getElementById("productCode").textContent = "CODE . " + CURRENT_CODE;
