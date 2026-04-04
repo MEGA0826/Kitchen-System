@@ -1183,7 +1183,7 @@
       <div style="text-align:center">
         <div style="font-family:'Instrument Serif',serif;font-size:22px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
       </div>
-      <button onclick="history.back()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;color:#666;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;cursor:pointer">← Back</button>
+      <button onclick="goToScanHome()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;color:#666;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;cursor:pointer">← Scan</button>
     </div>
 
     <!-- Product card -->
@@ -1299,7 +1299,7 @@
 
   async function preloadProducts() {
     try {
-      const res  = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
+      const res  = await fetch(`${API_URL}?action=allProducts`, { cache: "no-store" });
       const data = await res.json();
       PRODUCT_MAP = (!data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
       // Cache for instant next load
@@ -2206,11 +2206,18 @@ function checkRolePin() {
   // Back from scanner to staffHome (without ?code)
 function goToStaffHome() {
     stopInlineScanner();
-    document.getElementById("scanHome").style.display  = "none";
-    document.getElementById("staffHome").style.display = "flex";
+    document.getElementById("scanHome").style.display      = "none";
+    document.getElementById("productScreen").style.display = "none";
+    document.getElementById("staffHome").style.display     = "flex";
     loadHomeMepStatus();
   }
-
+function goToScanHome() {
+    document.getElementById("productScreen").style.display = "none";
+    document.getElementById("staffHome").style.display     = "none";
+    document.getElementById("scanHome").style.display      = "flex";
+    document.getElementById("scanHome").style.flexDirection = "column";
+    startInlineScanner();
+  }
   function closeRolePinModal() {
     document.getElementById("rolePinModal").classList.remove("active");
     _pendingRole = "";
