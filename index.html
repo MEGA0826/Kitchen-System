@@ -67,7 +67,381 @@
       --radius:    14px;
       --radius-sm: 8px;
     }
+/* 
+    ── STAFF HOME MEP LIST ── */
+    .home-header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.75), transparent);
+      z-index: 10;
+    }
+    .home-hamburger {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+    .home-hamburger span {
+      display: block;
+      width: 22px;
+      height: 3px;
+      border-radius: 2px;
+    }
+    .home-hamburger span:nth-child(1) { background: #4ade80; }
+    .home-hamburger span:nth-child(2) { background: #facc15; }
+    .home-hamburger span:nth-child(3) { background: #f87171; }
+    .home-scan-btn {
+      background: rgba(232,160,32,0.18);
+      color: #e8a020;
+      border: 1px solid rgba(232,160,32,0.4);
+      border-radius: 20px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+    }
+    .mep-split {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      flex: 1;
+      overflow: hidden;
+    }
+    .mep-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .mep-col-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 4px 6px;
+      text-align: center;
+    }
+    .mep-col-title.produce { color: #facc15; }
+    .mep-col-title.avail   { color: #4ade80; }
+    .mep-col-scroll {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 4px;
+    }
+    .mep-card {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      min-height: 72px;
+      background: #1a1a1a;
+      border: 2px solid transparent;
+      flex-shrink: 0;
+    }
+    .mep-card.hl-red    { border-color: #f87171; }
+    .mep-card.hl-yellow { border-color: #facc15; }
+    .mep-card.hl-green  { border-color: #4ade80; }
+    .mep-card.hl-blue   { border-color: #60a5fa; }
+    .mep-card-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.55;
+    }
+    .mep-card-ph {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      opacity: 0.2;
+    }
+    .mep-card-body {
+      position: relative;
+      z-index: 2;
+      padding: 6px 6px 0;
+    }
+    .mep-card-hl {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 100%;
+      z-index: 1;
+      opacity: 0.18;
+    }
+    .mep-card.hl-red    .mep-card-hl { background: #f87171; }
+    .mep-card.hl-yellow .mep-card-hl { background: #facc15; }
+    .mep-card.hl-green  .mep-card-hl { background: #4ade80; }
+    .mep-card.hl-blue   .mep-card-hl { background: #60a5fa; }
+    .mep-card-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      word-break: break-word;
+    }
+    .mep-bar-wrap {
+      position: relative;
+      height: 6px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 3px;
+      margin: 5px 0 0;
+      overflow: hidden;
+    }
+    .mep-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s;
+    }
+    .mep-card.hl-red    .mep-bar-fill { background: #f87171; }
+    .mep-card.hl-yellow .mep-bar-fill { background: #facc15; }
+    .mep-card.hl-green  .mep-bar-fill { background: #4ade80; }
+    .mep-card.hl-blue   .mep-bar-fill { background: #60a5fa; }
+    .mep-bar-label {
+      font-size: 9px;
+      color: rgba(255,255,255,0.6);
+      text-align: right;
+      padding: 1px 0 4px;
+    }
 
+    /* Submenu drawer */
+    .role-drawer {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 220px;
+      background: #111;
+      border-right: 1px solid #2a2a2a;
+      z-index: 300;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      padding: 56px 0 24px;
+    }
+    .role-drawer.open { transform: translateX(0); }
+    .role-drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 299;
+      display: none;
+    }
+    .role-drawer-overlay.open { display: block; }
+    .role-drawer-title {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #555;
+      text-transform: uppercase;
+      padding: 0 20px 12px;
+    }
+    .role-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .role-btn:hover { background: #1a1a1a; color: #fff; }
+    .role-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Role PIN modal */
+    .role-pin-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 400;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .role-pin-modal.active { display: flex; }
+    .role-pin-box {
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 28px 24px 20px;
+      width: 88%;
+      max-width: 320px;
+    }
+    .role-pin-title {
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+    .role-pin-sub {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .role-pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .role-pin-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid #444;
+      background: transparent;
+      transition: all 0.15s;
+    }
+    .role-pin-dot.filled { background: #e8a020; border-color: #e8a020; }
+    .role-pin-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .role-pin-key {
+      padding: 16px 8px;
+      background: #1e1e1e;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .role-pin-key:active { background: #2a2a2a; transform: scale(0.96); }
+    .role-pin-msg { font-size: 12px; color: #f87171; text-align: center; min-height: 18px; margin-bottom: 10px; }
+    .role-pin-cancel {
+      width: 100%;
+      padding: 11px;
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #555;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    /* MEP popup (click card) */
+    .mep-popup {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 350;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      backdrop-filter: blur(3px);
+    }
+    .mep-popup.active { display: flex; }
+    .mep-popup-box {
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px 16px 0 0;
+      padding: 20px 18px 32px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .mep-popup-img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .mep-popup-ph {
+      width: 100%;
+      height: 120px;
+      background: #1e1e1e;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+    .mep-popup-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .mep-popup-stats {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0 14px;
+      flex-wrap: wrap;
+    }
+    .mep-popup-stat {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #1e1e1e;
+      color: #aaa;
+    }
+    .mep-popup-allergy {
+      font-size: 13px;
+      margin-bottom: 14px;
+      color: #888;
+    }
+    .mep-popup-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .mep-popup-btn {
+      padding: 14px 4px;
+      border-radius: 10px;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+    }
+    .mep-popup-btn.done  { background: #166534; color: #4ade80; }
+    .mep-popup-btn.used  { background: #1e3a5f; color: #60a5fa; }
+    .mep-popup-btn.waste { background: #4c1d1d; color: #f87171; }
+    .mep-popup-close {
+      width: 100%;
+      margin-top: 10px;
+      padding: 11px;
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #555;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
     html, body {
       height: 100%;
       background: var(--bg);
@@ -719,47 +1093,73 @@
     font-family: Arial;
   }
 </style>
-  <div class="scan-home" id="scanHome" style="display:none">
+  
+  <div class="scan-home" 
+<!-- Staff Home: camera fills, header overlay, MEP split below -->
+  <div id="scanHome" style="display:none;flex:1;flex-direction:column;position:relative;overflow:hidden">
 
-    <div class="scan-home-video-wrap">
-      <video id="scanner-video-inline" autoplay playsinline muted></video>
-
-      <!-- centred transparent scan frame -->
+    <!-- Camera area (top ~55% of screen) -->
+    <div class="scan-home-video-wrap" style="flex:0 0 52vh;min-height:180px">
+      <video id="scanner-video-inline" autoplay muted playsinline></video>
+      <div class="scan-vignette"></div>
       <div class="scan-frame-box">
-        <div class="scan-c tl"></div>
-        <div class="scan-c tr"></div>
-        <div class="scan-c bl"></div>
-        <div class="scan-c br"></div>
+        <div class="scan-c tl"></div><div class="scan-c tr"></div>
+        <div class="scan-c bl"></div><div class="scan-c br"></div>
         <div class="scan-line"></div>
       </div>
+      <div class="scan-hint-text">Hold QR code in frame</div>
 
-      <!-- top bar -->
-      <div class="scan-topbar">
-        <div class="scan-app-name">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
-        <a href="https://mega0826.github.io/Kitchen-System/dashboard.html"
-        style="display:inline-flex;align-items:center;padding:6px 12px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;white-space:nowrap">
-        Dashboard </a>
+      <!-- Header overlay on camera -->
+      <div class="home-header">
+        <button class="home-hamburger" onclick="openRoleDrawer()">
+          <span></span><span></span><span></span>
+        </button>
+        <span class="scan-app-name">Kitchen <em>MEP</em></span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="scan-tb-btn" id="btnFlash" onclick="toggleFlash()" style="flex-direction:row;gap:4px;padding:4px 8px">
+            <span id="flashIcon">⚡</span>
+          </button>
+          <button class="scan-tb-btn" id="btnToggleCamera" onclick="toggleCamera()" style="flex-direction:row;gap:4px;padding:4px 8px">
+            <span>⇄</span>
+          </button>
+        </div>
       </div>
-      <!-- hint -->
-      <div class="scan-hint-text">Point camera at QR code</div>
 
-      <!-- messages -->
-      <div class="scan-msg" id="scanMsg"></div>
-
-      <!-- retry -->
-      <button class="btn-scan-camera" id="btnRetry" onclick="startInlineScanner()" style="display:none">
-        <span>⟳</span><span>Tap to start camera</span>
-      </button>
-
-      <!-- zoom slider - shown only if device supports zoom -->
-      <div class="scan-zoom-wrap" id="zoomWrap" style="display:none">
-        <span class="scan-zoom-label" style="font-size:16px">−</span>
-        <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" oninput="applyZoom(this.value)">
-        <span class="scan-zoom-label" style="font-size:16px">+</span>
-        <span class="scan-zoom-label" id="zoomLabel">1x</span>
+      <!-- Zoom slider -->
+      <div class="scan-zoom-wrap" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:6;width:60%">
+        <input type="range" id="zoomSlider" class="zoom-slider" min="1" max="4" step="0.1" value="1"
+          oninput="applyZoom(this.value)" style="width:100%">
       </div>
     </div>
 
+    <!-- MEP split blocks (bottom ~45%) -->
+    <div style="background:#0d0d0d;border-top:1px solid #222;display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="mep-split">
+
+        <!-- To Produce (left) -->
+        <div class="mep-col">
+          <div class="mep-col-title produce">⚠ To Produce</div>
+          <div class="mep-col-scroll" id="home-produce-list">
+            <div style="color:#444;font-size:11px;text-align:center;padding:12px">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div style="width:1px;background:#222;flex-shrink:0;margin:24px 0 4px"></div>
+
+        <!-- Available (right) -->
+        <div class="mep-col">
+          <div class="mep-col-title avail">✓ Available</div>
+          <div class="mep-col-scroll" id="home-avail-list">
+            <div style="color:#444;font-size:11px;text-align:center;padding:12px">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="galleryInput" accept="image/*" onchange="scanFromGallery(event)" style="display:none">
+  </div>
+</div>
+  
     <!-- bottom toolbar -->
     <div class="scan-toolbar">
       <button class="scan-tb-btn" onclick="openGallery()">
@@ -1648,8 +2048,328 @@ window.addEventListener("DOMContentLoaded", async () => {
   // -- PIN pad --------------------------------------------------
   
 
+// ── MEP HOME LIST ──────────────────────────────────────────────────────────
+  let _homeMepData   = {};   // code → { avail, target, mepMax, name, image, allergy, priority, gnSize }
+  let _rolePins      = {};   // { Teamleader:"1234", ... }
+  let _pendingRole   = "";
+  let _rolePinEntry  = "";
+  let _popupCode     = "";
 
+  const ALLERGY_ICONS = {
+    nuts:"🥜", gluten:"🌾", fish:"🐟", milk:"🥛", dairy:"🥛",
+    eggs:"🥚", soy:"🫘", celery:"🌿", mustard:"🌭", sesame:"🌱",
+    shellfish:"🦐", sulphites:"🍷", lupin:"🫘"
+  };
+
+  function allergyIcons(str) {
+    if (!str) return "";
+    return str.split(",").map(a => {
+      const k = a.trim().toLowerCase();
+      return ALLERGY_ICONS[k] ? `${ALLERGY_ICONS[k]} ${a.trim()}` : a.trim();
+    }).join("  ");
+  }
+
+  function hlClass(avail, target) {
+    if (!target || target === 0) return "";
+    if (avail > target)              return "hl-blue";
+    if (avail === target)            return "hl-green";
+    if (avail >= target * 0.3)       return "hl-yellow";
+    return "hl-red";
+  }
+
+  function renderHomeMep() {
+    const produce = [], avail = [];
+    Object.entries(_homeMepData)
+      .sort((a, b) => (a[1].priority||99) - (b[1].priority||99))
+      .forEach(([code, d]) => {
+        if (d.avail < d.target) produce.push([code, d]);
+        else avail.push([code, d]);
+      });
+
+    const makeCard = ([code, d]) => {
+      const hl  = hlClass(d.avail, d.target);
+      const pct = d.mepMax > 0 ? Math.min(100, Math.round(d.avail / d.mepMax * 100)) : 0;
+      const img = d.image
+        ? `<img class="mep-card-img" src="${d.image}" loading="lazy" onerror="this.style.display='none'">`
+        : `<div class="mep-card-ph">🍽</div>`;
+      return `<div class="mep-card ${hl}" onclick="openMepPopup('${code}')">
+        ${img}
+        <div class="mep-card-hl"></div>
+        <div class="mep-card-body">
+          <div class="mep-card-name">${d.name}</div>
+          <div class="mep-bar-wrap">
+            <div class="mep-bar-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="mep-bar-label">${d.avail}/${d.mepMax} GN</div>
+        </div>
+      </div>`;
+    };
+
+    document.getElementById("home-produce-list").innerHTML =
+      produce.length ? produce.map(makeCard).join("") :
+      `<div style="color:#444;font-size:11px;text-align:center;padding:16px">All done ✓</div>`;
+    document.getElementById("home-avail-list").innerHTML =
+      avail.length ? avail.map(makeCard).join("") :
+      `<div style="color:#444;font-size:11px;text-align:center;padding:16px">None yet</div>`;
+  }
+
+  async function loadHomeMepStatus() {
+    try {
+      const data = await fetch(`${API_URL}?action=getProductsExtended`, { cache: "no-store" }).then(r => r.json());
+      const products = data.products || [];
+      const statusArr = await Promise.allSettled(
+        products.map(p => fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(p.code)}`, { cache: "no-store" }).then(r => r.json()))
+      );
+      _homeMepData = {};
+      products.forEach((p, i) => {
+        if (!p.mepMax) return;
+        const st = statusArr[i].status === "fulfilled" ? statusArr[i].value : {};
+        _homeMepData[p.code] = {
+          name    : p.name,
+          image   : p.driveLink || "",
+          allergy : p.allergy || "",
+          priority: p.priority || 99,
+          mepMax  : p.mepMax,
+          target  : p.tagesziel || p.mepMax,
+          gnSize  : p.gnSize || "",
+          avail   : st.available !== undefined ? st.available : 0,
+          inProg  : st.inProgress || 0,
+        };
+      });
+      renderHomeMep();
+    } catch(e) { console.error("loadHomeMepStatus", e); }
+  }
+
+  // ── ROLE DRAWER ────────────────────────────────────────────────────────────
+  function openRoleDrawer() {
+    document.getElementById("roleDrawer").classList.add("open");
+    document.getElementById("roleDrawerOverlay").classList.add("open");
+  }
+  function closeRoleDrawer() {
+    document.getElementById("roleDrawer").classList.remove("open");
+    document.getElementById("roleDrawerOverlay").classList.remove("open");
+  }
+
+  async function loadRolePins() {
+    try {
+      const data = await fetch(`${API_URL}?action=getRolePINs`, { cache: "no-store" }).then(r => r.json());
+      _rolePins = data.pins || {};
+    } catch(e) { console.error("getRolePINs", e); }
+  }
+
+  function selectRole(role) {
+    closeRoleDrawer();
+    _pendingRole  = role;
+    _rolePinEntry = "";
+    updateRolePinDots();
+    document.getElementById("rolePinTitle").textContent = role;
+    document.getElementById("rolePinMsg").textContent = "";
+    document.getElementById("rolePinModal").classList.add("active");
+  }
+
+  function rolePinKey(k) {
+    if (k === "back") {
+      _rolePinEntry = _rolePinEntry.slice(0, -1);
+    } else if (_rolePinEntry.length < 4) {
+      _rolePinEntry += k;
+    }
+    updateRolePinDots();
+    if (_rolePinEntry.length === 4) checkRolePin();
+  }
+
+  function updateRolePinDots() {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById("rpd" + i).classList.toggle("filled", i < _rolePinEntry.length);
+    }
+  }
+
+  function checkRolePin() {
+    const correct = _rolePins[_pendingRole];
+    if (!correct) {
+      // No PIN configured — allow access
+      openRoleDashboard(_pendingRole);
+      return;
+    }
+    if (_rolePinEntry === correct) {
+      openRoleDashboard(_pendingRole);
+    } else {
+      document.getElementById("rolePinMsg").textContent = "Wrong PIN";
+      _rolePinEntry = "";
+      updateRolePinDots();
+    }
+  }
+
+  function closeRolePinModal() {
+    document.getElementById("rolePinModal").classList.remove("active");
+    _pendingRole = "";
+    _rolePinEntry = "";
+  }
+
+  function openRoleDashboard(role) {
+    closeRolePinModal();
+    sessionStorage.setItem("dashRole", role);
+    window.location.href = "dashboard.html";
+  }
+
+  // ── MEP POPUP ──────────────────────────────────────────────────────────────
+  function openMepPopup(code) {
+    const d = _homeMepData[code];
+    if (!d) return;
+    _popupCode = code;
+
+    // Image
+    const img = document.getElementById("mepPopupImg");
+    const ph  = document.getElementById("mepPopupPh");
+    if (d.image) {
+      img.src = d.image;
+      img.style.display = "block";
+      ph.style.display  = "none";
+    } else {
+      img.style.display = "none";
+      ph.style.display  = "flex";
+    }
+
+    document.getElementById("mepPopupName").textContent = d.name;
+
+    const hl = hlClass(d.avail, d.target);
+    const statusColor = { "hl-red":"#f87171","hl-yellow":"#facc15","hl-green":"#4ade80","hl-blue":"#60a5fa" }[hl] || "#aaa";
+    document.getElementById("mepPopupStats").innerHTML =
+      `<span class="mep-popup-stat">Available: <b style="color:${statusColor}">${d.avail}</b></span>
+       <span class="mep-popup-stat">Target: ${d.target}</span>
+       <span class="mep-popup-stat">Max: ${d.mepMax} ${d.gnSize}</span>`;
+
+    const allergyStr = allergyIcons(d.allergy);
+    document.getElementById("mepPopupAllergy").innerHTML = allergyStr
+      ? `Allergens: ${allergyStr}` : "";
+
+    // Populate worker select from existing select
+    const src = document.getElementById("worker");
+    const dst = document.getElementById("popupWorker");
+    dst.innerHTML = src.innerHTML;
+    const saved = localStorage.getItem("worker");
+    if (saved) dst.value = saved;
+
+    document.getElementById("mepPopup").classList.add("active");
+  }
+
+  function closeMepPopup() {
+    document.getElementById("mepPopup").classList.remove("active");
+    _popupCode = "";
+  }
+
+  async function popupSend(action) {
+    const worker = document.getElementById("popupWorker").value;
+    if (!worker) { alert("Select a worker first"); return; }
+
+    // Save worker choice
+    localStorage.setItem("worker", worker);
+    document.getElementById("worker").value = worker;
+
+    const code = _popupCode;
+    closeMepPopup();
+
+    // Optimistic update
+    const d = _homeMepData[code];
+    if (d) {
+      if (action === "done")  d.avail = Math.min(d.mepMax, d.avail + 1);
+      if (action === "used")  d.avail = Math.max(0, d.avail - 1);
+      if (action === "waste") d.avail = Math.max(0, d.avail - 1);
+      renderHomeMep();
+    }
+
+    // Send to server (reuse existing send logic via direct API call)
+    try {
+      await fetch(`${API_URL}?action=scan&code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&act=${action}`, { cache: "no-store" });
+      // Refresh from server after 1.5s
+      setTimeout(loadHomeMepStatus, 1500);
+    } catch(e) {
+      console.error("popupSend error", e);
+    }
+  }
+
+  // ── PATCH DOMContentLoaded to also load MEP home data ─────────────────────
+  // This hooks into the existing DOMContentLoaded flow without replacing it
+  const _origLoad = window.onload;
+  document.addEventListener("DOMContentLoaded", () => {
+    const code = new URLSearchParams(window.location.search).get("code") || "";
+    if (!code) {
+      // Staff home: load MEP status + role PINs
+      Promise.allSettled([loadHomeMepStatus(), loadRolePins()]);
+      // Auto-refresh every 60s
+      setInterval(loadHomeMepStatus, 60000);
+    }
+  }, { capture: false });
 
 </script>
+
+ <!-- Role drawer overlay -->
+  <div class="role-drawer-overlay" id="roleDrawerOverlay" onclick="closeRoleDrawer()"></div>
+
+  <!-- Role drawer -->
+  <div class="role-drawer" id="roleDrawer">
+    <div class="role-drawer-title">Switch Role</div>
+    <button class="role-btn" onclick="selectRole('Teamleader')">
+      <div class="role-dot" style="background:#facc15"></div> Teamleader
+    </button>
+    <button class="role-btn" onclick="selectRole('Küchenchef')">
+      <div class="role-dot" style="background:#fb923c"></div> Küchenchef
+    </button>
+    <button class="role-btn" onclick="selectRole('Manager')">
+      <div class="role-dot" style="background:#a78bfa"></div> Manager
+    </button>
+  </div>
+
+  <!-- Role PIN modal -->
+  <div class="role-pin-modal" id="rolePinModal">
+    <div class="role-pin-box">
+      <div class="role-pin-title" id="rolePinTitle">Teamleader</div>
+      <div class="role-pin-sub">Enter PIN to continue</div>
+      <div class="role-pin-dots">
+        <div class="role-pin-dot" id="rpd0"></div>
+        <div class="role-pin-dot" id="rpd1"></div>
+        <div class="role-pin-dot" id="rpd2"></div>
+        <div class="role-pin-dot" id="rpd3"></div>
+      </div>
+      <div class="role-pin-keypad">
+        <button class="role-pin-key" onclick="rolePinKey('1')">1</button>
+        <button class="role-pin-key" onclick="rolePinKey('2')">2</button>
+        <button class="role-pin-key" onclick="rolePinKey('3')">3</button>
+        <button class="role-pin-key" onclick="rolePinKey('4')">4</button>
+        <button class="role-pin-key" onclick="rolePinKey('5')">5</button>
+        <button class="role-pin-key" onclick="rolePinKey('6')">6</button>
+        <button class="role-pin-key" onclick="rolePinKey('7')">7</button>
+        <button class="role-pin-key" onclick="rolePinKey('8')">8</button>
+        <button class="role-pin-key" onclick="rolePinKey('9')">9</button>
+        <button class="role-pin-key" onclick="rolePinKey('back')" style="color:#f87171">⌫</button>
+        <button class="role-pin-key" onclick="rolePinKey('0')">0</button>
+        <button class="role-pin-key" onclick="closeRolePinModal()" style="font-size:11px;color:#555">✕</button>
+      </div>
+      <div class="role-pin-msg" id="rolePinMsg"></div>
+      <button class="role-pin-cancel" onclick="closeRolePinModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- MEP card popup -->
+  <div class="mep-popup" id="mepPopup">
+    <div class="mep-popup-box">
+      <img id="mepPopupImg" class="mep-popup-img" alt="" style="display:none">
+      <div id="mepPopupPh" class="mep-popup-ph">🍽</div>
+      <div class="mep-popup-name" id="mepPopupName"></div>
+      <div class="mep-popup-stats" id="mepPopupStats"></div>
+      <div class="mep-popup-allergy" id="mepPopupAllergy"></div>
+      <!-- Worker select inside popup -->
+      <div style="margin-bottom:12px">
+        <select class="worker-select" id="popupWorker" style="width:100%;padding:10px;background:#1e1e1e;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-size:14px">
+          <option value="">-- Select worker --</option>
+        </select>
+      </div>
+      <div class="mep-popup-btns">
+        <button class="mep-popup-btn done"  onclick="popupSend('done')">✓ Done</button>
+        <button class="mep-popup-btn used"  onclick="popupSend('used')">↺ Used</button>
+        <button class="mep-popup-btn waste" onclick="popupSend('waste')">✕ Waste</button>
+      </div>
+      <button class="mep-popup-close" onclick="closeMepPopup()">Close</button>
+    </div>
+  </div> 
 </body>
 </html>
