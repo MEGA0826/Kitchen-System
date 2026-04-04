@@ -1287,13 +1287,8 @@ async function submitPin() {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
 
-    // Force Admin tab visible and active regardless of role
     const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
-    if (adminBtn) {
-      adminBtn.style.display = "";
-      adminBtn.style.setProperty("display", "inline-block", "important");
-      adminBtn.classList.add("active");
-    }
+    if (adminBtn) adminBtn.classList.add("active");
 
     const adminPanel = document.getElementById("panel-admin");
     if (adminPanel) adminPanel.classList.add("active");
@@ -1301,7 +1296,7 @@ async function submitPin() {
     sessionStorage.setItem("activeTab", "admin");
     loadAdminTab();
     loadArchiveStats();
-  } 
+  }
     else {
     msg.style.color = "var(--red)";
     msg.textContent = "Wrong PIN";
@@ -3506,9 +3501,9 @@ function applyRoleAccess() {
     btn.style.display = allowed.includes(btn.dataset.tab) ? "" : "none";
   });
 
-  // Admin button: Manager only
+  // Admin button: always visible — access controlled by PIN
   const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
-  if (adminBtn) adminBtn.style.display = (role === "Manager") ? "" : "none";
+  if (adminBtn) adminBtn.style.display = "";
 
   // Role badge
   const badge = document.getElementById("roleBadge");
