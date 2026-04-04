@@ -1105,9 +1105,9 @@
       <button class="home-hamburger" onclick="openRoleDrawer()">
         <span></span><span></span><span></span>
       </button>
-      <div style="text-align:center">
-        <div style="font-family:'Instrument Serif',serif;font-size:16px;color:rgba(255,255,255,0.7)">Kitchen <em>MEP</em></div>
-        <div id="homeLiveTime" style="font-size:10px;color:#555;font-family:var(--mono);letter-spacing:0.5px;margin-top:1px"></div>
+     <div style="text-align:center">
+        <div style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
+        <div id="homeLiveTime" style="font-size:13px;color:#888;font-family:var(--mono);letter-spacing:1px;margin-top:4px"></div>
       </div>
       <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
     </div>
@@ -1128,10 +1128,10 @@
       </div>
     </div>
   </div>  
-  <div id="scanHome" style="display:none;flex:1;flex-direction:column;position:relative;overflow:hidden">
+  <div id="scanHome" style="display:none;flex-direction:column;position:relative;overflow:hidden;height:100vh;height:100dvh">
 
     <!-- Camera area (top ~55% of screen) -->
-    <div class="scan-home-video-wrap" style="flex:1;min-height:180px">
+    <div class="scan-home-video-wrap" style="flex:1;min-height:180px;position:relative">
       <video id="scanner-video-inline" autoplay muted playsinline></video>
       <div class="scan-vignette"></div>
       <div class="scan-frame-box">
@@ -1142,9 +1142,9 @@
       <div class="scan-hint-text">Hold QR code in frame</div>
 
 <!-- Header overlay on camera -->
-      <div style="position:absolute;top:0;left:0;right:0;z-index:5;background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent);padding:14px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:4px">
-        <div style="font-family:'Instrument Serif',serif;font-size:17px;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
-        <button onclick="openStaffHome()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.55);font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;cursor:pointer">⌂ Home</button>
+      <div style="position:absolute;top:0;left:0;right:0;z-index:5;background:linear-gradient(to bottom,rgba(0,0,0,0.75),transparent);padding:16px 16px 24px;display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="font-family:'Instrument Serif',serif;font-size:28px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
+        <button onclick="goToStaffHome()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.6);font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 14px;cursor:pointer;margin-top:2px">⌂ Home</button>
       </div>
 
       <!-- Zoom slider -->
@@ -2198,10 +2198,11 @@ function checkRolePin() {
   }
 
   // Back from scanner to staffHome (without ?code)
-  function goToStaffHome() {
+function goToStaffHome() {
     stopInlineScanner();
     document.getElementById("scanHome").style.display  = "none";
     document.getElementById("staffHome").style.display = "flex";
+    loadHomeMepStatus();
   }
 
   function closeRolePinModal() {
