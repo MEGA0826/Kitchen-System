@@ -46,9 +46,30 @@
   .mep-alerts { display: flex !important; }
   .mep-alert { display: flex !important; }
   .hamburger-btn { display: flex; }
-  .nav { display: none !important; flex-direction: column; padding: 8px 0; position: fixed; top: 90px; left: 0; right: 0; z-index: 200; background: var(--surface); box-shadow: 0 8px 24px rgba(0,0,0,0.6); border-bottom: 1px solid var(--border); }
-  .tab { border-bottom: none; border-left: 2px solid transparent; padding: 13px 24px; font-size: 12px; text-align: left; }
-  .tab.active { border-left-color: var(--amber); border-bottom-color: transparent; }
+  .nav {
+    display: none;
+    flex-direction: column;
+    padding: 8px 0;
+    position: fixed;
+    top: 68px; left: 0; right: 0;
+    z-index: 500;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+    border-bottom: 1px solid var(--border);
+    overflow-y: auto;
+    max-height: calc(100vh - 68px);
+  }
+  .nav.open { display: flex !important; }
+  .tab {
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid transparent;
+    padding: 14px 24px;
+    font-size: 13px;
+    text-align: left;
+    width: 100%;
+  }
+  .tab.active { border-left-color: var(--amber); color: var(--amber); border-bottom-color: var(--border); }
+  .tab[style*="display: none"] { display: none !important; }
 }
 
     /* HEADER */
@@ -421,7 +442,7 @@
   </div>
 </div>
 
-<div class="tabs">
+<div class="tabs nav" id="main-nav">
   <span id="roleBadge" style="display:none;font-size:10px;letter-spacing:1px;padding:3px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-family:var(--mono);text-transform:uppercase;align-self:center;margin-right:2px"></span>
   <button class="tab active"  data-tab="kds"          onclick="closeMenuOnTabSelect(this)">KDS</button>
   <button class="tab"        data-tab="mep-overview" onclick="closeMenuOnTabSelect(this)">MEP Overview</button>
