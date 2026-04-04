@@ -1243,18 +1243,24 @@
   let PRODUCT_MAP = {};
   let CURRENT_CODE = "";
 
-  function updateLiveTime() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = now.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' });
-    const combined = `${dateStr} ${timeStr}`;
-    const el1 = document.getElementById("liveTime");
-    const el2 = document.getElementById("liveTime2");
-    if (el1) el1.textContent = combined;
-    if (el2) el2.textContent = combined;
-    const el3 = document.getElementById("homeLiveTime");
-    if (el3) el3.textContent = combined;
-  }
+function updateLiveTime() {
+  const now  = new Date();
+  const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const day  = days[now.getDay()];
+  const dd   = String(now.getDate()).padStart(2,"0");
+  const mm   = String(now.getMonth()+1).padStart(2,"0");
+  const yy   = String(now.getFullYear()).slice(2);
+  const hh   = String(now.getHours()).padStart(2,"0");
+  const min  = String(now.getMinutes()).padStart(2,"0");
+  const ss   = String(now.getSeconds()).padStart(2,"0");
+  const combined = `Day ${day} ${dd}.${mm}.${yy}  Time ${hh}:${min}:${ss}`;
+  const el1 = document.getElementById("liveTime");
+  const el2 = document.getElementById("liveTime2");
+  if (el1) el1.textContent = combined;
+  if (el2) el2.textContent = combined;
+  const el3 = document.getElementById("homeLiveTime");
+  if (el3) el3.textContent = combined;
+}
   setInterval(updateLiveTime, 1000);
   updateLiveTime();
   
@@ -2085,11 +2091,13 @@ window.addEventListener("DOMContentLoaded", async () => {
 async function loadHomeMepStatus() {
     try {
       const [prodData, statusData] = await Promise.all([
-        fetch(`${API_URL}?action=getProductsExtended`, { cache: "no-store" }).then(r => r.json()),
-        fetch(`${API_URL}?action=allMepStatus`, { cache: "no-store" }).then(r => r.json()),
-      ]);
-      const products  = prodData.products  || [];
-      const statusMap = statusData.statuses || {};
+  fetch(`${API_URL}?action=allProducts`, { cache: "no-store" }).then(r => r.json()),
+  fetch(`${API_URL}?action=allMepStatus`, { cache: "no-store" }).then(r => r.json()),
+]);
+// allProducts returns object {code: {...}}, convert to array
+const productsObj = (!prodData.error && typeof prodData === "object") ? prodData : {};
+const products = Object.entries(productsObj).map(([code, p]) => ({ ...p, code }));
+const statusMap = statusData.statuses || {};
       _homeMepData = {};
       products.forEach(p => {
         if (!p.mepMax) return;
