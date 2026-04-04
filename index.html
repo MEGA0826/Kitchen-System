@@ -1161,37 +1161,37 @@
     </div>
 
    <!-- Product hero: fixed top half -->
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;overflow:hidden">
+    <div style="height:46vh;display:flex;flex-direction:column;align-items:center;padding:8px 16px 6px;gap:6px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-shrink:0">
 
       <!-- Image -->
       <div style="width:220px;height:220px;border-radius:16px;overflow:hidden;background:#1a1a1a;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <img id="productImage" alt="" style="display:none;width:100%;height:100%;object-fit:cover">
-        <div id="imgPlaceholder" style="font-size:80px;opacity:0.2">🍽</div>
+        <div id="imgPlaceholder" style="font-size:48px;opacity:0.2">🍽</div>
       </div>
 
       <!-- Name -->
-      <div id="product" style="font-family:'Instrument Serif',serif;font-size:36px;line-height:1.2;color:#fff;text-align:center"><div class="skeleton" style="width:200px;height:36px"></div></div>
+      <div id="product" style="font-family:'Instrument Serif',serif;font-size:28px;line-height:1.2;color:#fff;text-align:center"><div class="skeleton" style="width:200px;height:28px"></div></div>
       <div id="productCode" style="font-size:11px;color:#444;font-family:var(--mono);text-align:center"></div>
 
       <!-- MEP info -->
-      <div id="mepStatus" style="flex-direction:column;gap:10px;width:100%;max-width:360px;background:#141414;border:1px solid #222;border-radius:10px;padding:16px 20px;display:none">
-        <div style="display:flex;align-items:center;gap:12px">
-          <span id="mepDotDone" style="width:12px;height:12px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
-          <span id="mepLabelDone" style="font-size:18px;color:#ccc"></span>
+      <div id="mepStatus" style="flex-direction:column;gap:6px;width:100%;max-width:360px;background:#141414;border:1px solid #222;border-radius:10px;padding:10px 14px;display:none">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="mepDotDone" style="width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
+          <span id="mepLabelDone" style="font-size:14px;color:#ccc"></span>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span id="mepDotList" style="width:12px;height:12px;border-radius:50%;background:#e8a020;flex-shrink:0"></span>
-          <span id="mepLabelList" style="font-size:18px;color:#ccc"></span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="mepDotList" style="width:10px;height:10px;border-radius:50%;background:#e8a020;flex-shrink:0"></span>
+          <span id="mepLabelList" style="font-size:14px;color:#ccc"></span>
         </div>
       </div>
 
       <!-- Daily target covered -->
-      <div id="mepFullMsg" style="font-size:16px;color:#22c55e;text-align:center;display:none"></div>
+      <div id="mepFullMsg" style="font-size:14px;color:#22c55e;text-align:center;display:none"></div>
 
     </div>
 
     <!-- Spacer pushes actions to bottom half -->
-    <div style="flex:1"></div>
+    <div style="flex:0"></div>
 
     <!-- Worker + Actions pinned to bottom -->
     <div style="flex-shrink:0;padding:6px 14px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #1e1e1e">
