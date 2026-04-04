@@ -1097,7 +1097,7 @@
       </div>
       <div style="width:1px;background:#222;flex-shrink:0;margin:24px 0 4px"></div>
       <div class="mep-col">
-        <div class="mep-col-title avail">✓ Available</div>
+        <div class="mep-col-title avail" onclick="cycleSortModeAvail()" style="cursor:pointer;user-select:none">✓ Available</div>
         <div class="mep-col-scroll" id="home-avail-list">
           <div style="color:#444;font-size:11px;text-align:center;padding:16px">Loading…</div>
         </div>
@@ -1191,27 +1191,27 @@
     </div>
 
     <!-- Worker + Actions pinned to bottom -->
-    <div style="flex-shrink:0;padding:0 14px 20px;display:flex;flex-direction:column;gap:8px;border-top:1px solid #1e1e1e;padding-top:12px">
+    <div style="flex-shrink:0;padding:6px 14px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #1e1e1e">
 
-      <!-- Worker select -->
+     <!-- Worker select -->
       <select id="worker" class="worker-select" onchange="localStorage.setItem('worker',this.value)"
-        style="width:100%;padding:14px 16px;background:#141414;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-family:var(--mono);font-size:18px;letter-spacing:0.5px;cursor:pointer">
+        style="width:100%;padding:9px 14px;background:#141414;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-family:var(--mono);font-size:16px;letter-spacing:0.5px;cursor:pointer">
         <option value="">-- Select staff member --</option>
       </select>
 
       <!-- Finish MEP -->
-      <button class="btn btn-done" onclick="send('done')" style="width:100%;padding:14px;border-radius:8px;font-size:15px">
+      <button class="btn btn-done" onclick="send('done')" style="width:100%;padding:11px;border-radius:8px;font-size:15px">
         <span class="btn-icon">✓</span>
         <span class="btn-label">Finish MEP</span>
       </button>
 
       <!-- Used + Waste -->
       <div style="display:flex;gap:8px">
-        <button class="btn btn-used" id="btnUsed" onclick="send('used')" style="flex:1;padding:12px">
+        <button class="btn btn-used" id="btnUsed" onclick="send('used')" style="flex:1;padding:10px">
           <span class="btn-icon">→</span>
           <span class="btn-label">Used</span>
         </button>
-        <button class="btn btn-waste" id="btnWaste" onclick="send('waste')" style="flex:1;padding:12px">
+        <button class="btn btn-waste" id="btnWaste" onclick="send('waste')" style="flex:1;padding:10px">
           <span class="btn-icon">✕</span>
           <span class="btn-label">Waste</span>
         </button>
@@ -1290,11 +1290,11 @@ function updateLiveTime() {
     }
   }
 
-  async function preloadWorkers() {
+async function preloadWorkers() {
     try {
-      const res     = await fetch(`${API_URL}?action=workers`, { cache: "no-store" });
-      const data    = await res.json();
-      const select  = document.getElementById("worker");
+      const res    = await fetch(`${API_URL}?action=workers`, { cache: "no-store" });
+      const data   = await res.json();
+      const select = document.getElementById("worker");
       const workers = Array.isArray(data.workers) ? data.workers : [];
       window._homeWorkerList = workers;
       select.innerHTML = `<option value="">-- Select your name --</option>`;
@@ -1306,9 +1306,15 @@ function updateLiveTime() {
       });
       const saved = localStorage.getItem("worker") || localStorage.getItem("mep_worker");
       if (saved) select.value = saved;
-    } catch (err) {
-      console.error("Worker load error:", err);
-    }
+    } catch (err) { console.error("Worker load error:", err); }
+  }
+
+  async function loadHomeWorkers() {
+    try {
+      const res  = await fetch(`${API_URL}?action=allWorkers`, { cache: "no-store" });
+      const data = await res.json();
+      window._homeWorkerList = Array.isArray(data.workers) ? data.workers : [];
+    } catch(e) { console.error("loadHomeWorkers", e); }
   }
 
   // -- MEP status --
@@ -1852,7 +1858,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("productScreen").style.display = "none";
       preloadProducts();
       preloadWorkers();
-      Promise.allSettled([loadHomeMepStatus(), loadRolePins()]);
+      Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
       setInterval(loadHomeMepStatus, 60000);
       return;
     }
@@ -2029,9 +2035,11 @@ window.addEventListener("DOMContentLoaded", async () => {
 // ── MEP HOME LIST ──────────────────────────────────────────────────────────
   let _homeMepData   = {};
   let _rolePins      = {};
-  let _sortMode      = 'priority'; // 'priority' | 'az' | 'colour'
+ let _sortMode      = 'priority';
+  let _sortModeAvail = 'priority';
   const _sortModes   = ['priority','az','colour'];
-  const _sortLabels  = { priority:'⚠ To Produce', az:'⚠ To Produce  A→Z', colour:'⚠ To Produce  🎨' };
+  const _sortLabels        = { priority:'⚠ To Produce', az:'⚠ To Produce  A→Z', colour:'⚠ To Produce  🎨' };
+  const _sortLabelsAvail   = { priority:'✓ Available',  az:'✓ Available  A→Z',  colour:'✓ Available  🎨' };
   let _pendingRole   = "";
   let _rolePinEntry  = "";
   let _popupCode     = "";
@@ -2064,11 +2072,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     document.querySelector('.mep-col-title.produce').textContent = _sortLabels[_sortMode];
     renderHomeMep();
   }
+  function cycleSortModeAvail() {
+    const idx = _sortModes.indexOf(_sortModeAvail);
+    _sortModeAvail = _sortModes[(idx + 1) % _sortModes.length];
+    document.querySelector('.mep-col-title.avail').textContent = _sortLabelsAvail[_sortModeAvail];
+    renderHomeMep();
+  }
 
-  function sortEntries(entries) {
-    if (_sortMode === 'az') return entries.sort((a,b) => a[1].name.localeCompare(b[1].name));
-    if (_sortMode === 'colour') {
-      const rank = e => { const h=hlClass(e[1].avail,e[1].target); return {' hl-red':0,'hl-yellow':1,'hl-green':2,'hl-blue':3}[h]??0; };
+  function sortEntries(entries, mode) {
+    if (mode === 'az') return entries.sort((a,b) => a[1].name.localeCompare(b[1].name));
+    if (mode === 'colour') {
+      const rank = e => ({'hl-red':0,'hl-yellow':1,'hl-green':2,'hl-blue':3}[hlClass(e[1].avail,e[1].target)] ?? 0);
       return entries.sort((a,b) => rank(a)-rank(b));
     }
     return entries.sort((a,b) => (a[1].priority||99)-(b[1].priority||99));
@@ -2076,11 +2090,12 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   function renderHomeMep() {
     const produce = [], avail = [];
-    sortEntries(Object.entries(_homeMepData))
-      .forEach(([code, d]) => {
-        if (d.avail > 0) avail.push([code, d]);
-        if (d.avail < d.target) produce.push([code, d]);
-      });
+    Object.entries(_homeMepData).forEach(([code, d]) => {
+      if (d.avail < d.target) produce.push([code, d]);
+      if (d.avail > 0) avail.push([code, d]);
+    });
+    const sortedProduce = sortEntries(produce, _sortMode);
+    const sortedAvail   = sortEntries(avail,   _sortModeAvail);
 
     const makeCard = ([code, d]) => {
       const hl  = hlClass(d.avail, d.target);
@@ -2102,10 +2117,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     };
 
     document.getElementById("home-produce-list").innerHTML =
-      produce.length ? produce.map(makeCard).join("") :
+      sortedProduce.length ? sortedProduce.map(makeCard).join("") :
       `<div style="color:#444;font-size:11px;text-align:center;padding:16px">All done ✓</div>`;
     document.getElementById("home-avail-list").innerHTML =
-      avail.length ? avail.map(makeCard).join("") :
+      sortedAvail.length ? sortedAvail.map(makeCard).join("") :
       `<div style="color:#444;font-size:11px;text-align:center;padding:16px">None yet</div>`;
   }
 
@@ -2183,17 +2198,12 @@ const statusMap = statusData.statuses || {};
   }
 
 function checkRolePin() {
-    if (_pendingRole === 'Admin') {
-      openRoleDashboard('Admin');
-      return;
-    }
-    // Match PIN against workers who have matching role
-    const correct = _rolePins[_pendingRole];
-    // Also check against any worker with this role name
-    const workerMatch = (window._homeWorkerList || []).find(w =>
+    if (_rolePinEntry.length < 4) return;
+    // Match against workers with PIN
+    const matched = (window._homeWorkerList || []).find(w =>
       typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false
     );
-    if ((correct && _rolePinEntry === correct) || workerMatch) {
+    if (matched) {
       openRoleDashboard(_pendingRole);
     } else {
       document.getElementById("rolePinMsg").textContent = "Wrong PIN";
@@ -2286,34 +2296,50 @@ function goToScanHome() {
     _popupCode = "";
   }
 
-  async function popupSend(action) {
+async function popupSend(action) {
     const worker = document.getElementById("popupWorker").value;
     if (!worker) { alert("Select a worker first"); return; }
 
-    // Save worker choice
     localStorage.setItem("worker", worker);
     document.getElementById("worker").value = worker;
 
     const code = _popupCode;
-    closeMepPopup();
 
-    // Optimistic update
+    // Optimistic update — keep popup open
     const d = _homeMepData[code];
     if (d) {
       if (action === "done")  d.avail = Math.min(d.mepMax, d.avail + 1);
       if (action === "used")  d.avail = Math.max(0, d.avail - 1);
       if (action === "waste") d.avail = Math.max(0, d.avail - 1);
+      // Update popup stats live
+      const hl = hlClass(d.avail, d.target);
+      const statusColor = {'hl-red':'#f87171','hl-yellow':'#facc15','hl-green':'#4ade80','hl-blue':'#60a5fa'}[hl] || '#aaa';
+      document.getElementById("mepPopupStats").innerHTML =
+        `<span class="mep-popup-stat">Available: <b style="color:${statusColor}">${d.avail}</b></span>
+         <span class="mep-popup-stat">Target: ${d.target}</span>
+         <span class="mep-popup-stat">Max: ${d.mepMax} ${d.gnSize}</span>`;
       renderHomeMep();
     }
 
-    // Send to server (reuse existing send logic via direct API call)
+    // Send to server
     try {
-      await fetch(`${API_URL}?action=scan&code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&act=${action}`, { cache: "no-store" });
-      // Refresh from server after 1.5s
-      setTimeout(loadHomeMepStatus, 1500);
-    } catch(e) {
-      console.error("popupSend error", e);
-    }
+      const res  = await fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`, { cache: "no-store" });
+      const data = await res.json();
+      // Refresh from server after short delay but keep popup open
+      setTimeout(async () => {
+        await loadHomeMepStatus();
+        // Re-sync popup stats after server refresh
+        const d2 = _homeMepData[code];
+        if (d2 && document.getElementById("mepPopup").classList.contains("active")) {
+          const hl2 = hlClass(d2.avail, d2.target);
+          const sc2 = {'hl-red':'#f87171','hl-yellow':'#facc15','hl-green':'#4ade80','hl-blue':'#60a5fa'}[hl2] || '#aaa';
+          document.getElementById("mepPopupStats").innerHTML =
+            `<span class="mep-popup-stat">Available: <b style="color:${sc2}">${d2.avail}</b></span>
+             <span class="mep-popup-stat">Target: ${d2.target}</span>
+             <span class="mep-popup-stat">Max: ${d2.mepMax} ${d2.gnSize}</span>`;
+        }
+      }, 1500);
+    } catch(e) { console.error("popupSend error", e); }
   }
 </script>
 </div>
