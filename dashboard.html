@@ -1105,15 +1105,14 @@ function updateLiveTime() {
   const now  = new Date();
   const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const day  = days[now.getDay()];
-  const dd   = String(now.getDate()).padStart(2, "0");
-  const mm   = String(now.getMonth() + 1).padStart(2, "0");
+  const dd   = String(now.getDate()).padStart(2,"0");
+  const mm   = String(now.getMonth()+1).padStart(2,"0");
   const yy   = String(now.getFullYear()).slice(2);
-  const hh   = String(now.getHours()).padStart(2, "0");
-  const min  = String(now.getMinutes()).padStart(2, "0");
-  const ss   = String(now.getSeconds()).padStart(2, "0");
+  const hh   = String(now.getHours()).padStart(2,"0");
+  const min  = String(now.getMinutes()).padStart(2,"0");
+  const ss   = String(now.getSeconds()).padStart(2,"0");
   const el   = document.getElementById("liveTime");
-  if (el) el.innerHTML =
-    `<span style="color:var(--muted);font-size:9px"> </span> ${day} ${dd}.${mm}.${yy}&nbsp;&nbsp;<span style="color:var(--muted);font-size:9px">Time</span> ${hh}:${min}:${ss}`;
+  if (el) el.textContent = `${day} ${dd}.${mm}.${yy}  ${hh}:${min}:${ss}`;
 }
   
 updateLiveTime();
@@ -1124,8 +1123,7 @@ setInterval(updateLiveTime, 1000);
 // ─────────────────────────────────────────────
 function goBack(e) {
   e.preventDefault();
-  const saved = sessionStorage.getItem("lastScanUrl");
-  window.location.href = saved || "https://mega0826.github.io/Kitchen-System/index.html";
+  window.location.href = "https://mega0826.github.io/Kitchen-System/index.html";
 }
 
 // ─────────────────────────────────────────────
@@ -1157,6 +1155,7 @@ function closeMenuOnTabSelect(btn) {
       document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #panel-inventory .btn-save, #inv-form").forEach(el => el.style.display = "none");
     }
   }, 200);
+}
   sessionStorage.setItem("activeTab", tabId);
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
@@ -3469,14 +3468,16 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 
 async function initDashboard() {
   try {
+    applyRoleAccess();   // apply tab visibility before data loads
+
     // Load workers for PIN check
     get({ action: "allWorkers" }).then(d => {
       allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
     }).catch(() => {});
-    
+
     // Load core data
     await Promise.all([loadProducts(), loadInventory()]);
-    
+
     const savedTab = sessionStorage.getItem("activeTab") || "kds";
     
     // Load tab-specific content based on what's already shown
@@ -3553,9 +3554,18 @@ function applyRoleAccess() {
     if (sendBtn) sendBtn.style.display = "none";
   }
 
-  // Navigate to first allowed tab
-  const firstTab = document.querySelector(`.tab[data-tab="${allowed[0]}"]`);
-  if (firstTab) switchTab(firstTab);
+  // Show/hide mobile dropdown options too
+  const mobileSelect = document.getElementById("tab-select-mobile");
+  if (mobileSelect) {
+    Array.from(mobileSelect.options).forEach(opt => {
+      if (opt.value && opt.value !== "admin") {
+        opt.style.display = allowed.includes(opt.value) ? "" : "none";
+      }
+      if (opt.value === "admin") {
+        opt.style.display = (role === "Manager") ? "" : "none";
+      }
+    });
+  }
 }
 
 // Patch openEditInventoryModal to respect readonly
@@ -3566,7 +3576,6 @@ window.openEditInventoryModal = function(code) {
 };
 
 initDashboard();
-applyRoleAccess();
 setTimeout(loadRecipes, 800);
 
 setInterval(async () => {
