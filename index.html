@@ -1299,7 +1299,6 @@ async function preloadWorkers() {
       const data   = await res.json();
       const select = document.getElementById("worker");
       const workers = Array.isArray(data.workers) ? data.workers : [];
-      window._homeWorkerList = workers;
       select.innerHTML = `<option value="">-- Select your name --</option>`;
       workers.forEach(w => {
         const name = typeof w === "object" ? (w.name || w) : w;
