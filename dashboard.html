@@ -409,7 +409,7 @@
    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
   <span></span><span></span><span></span>
 </button>
-    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Scan</a>
+    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Home</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge">
       <div class="live-badge-row">
@@ -1289,7 +1289,10 @@ async function submitPin() {
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     
     const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
-    if (adminBtn) adminBtn.classList.add("active");
+    if (adminBtn) {
+      adminBtn.classList.add("active");
+      adminBtn.style.display = "";
+    }
     
     const adminPanel = document.getElementById("panel-admin");
     if (adminPanel) adminPanel.classList.add("active");
@@ -3485,7 +3488,7 @@ async function initDashboard() {
 const ROLE_TABS = {
   Teamleader : ['kds','mep-overview','inventory','deductions'],
   Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
-  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports'],
+  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
 };
 const ROLE_READONLY = {
   Teamleader : ['inventory','deductions','mep-overview'],
