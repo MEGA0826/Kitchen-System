@@ -37,39 +37,53 @@
 .hamburger-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 .hamburger-btn.open span { background: var(--amber); }
 
+/* Hamburger always hidden on desktop */
+.hamburger-btn { display: none; }
+
 @media (max-width: 700px) {
-  .body, .header { padding-left: 16px; padding-right: 16px; }
+  .body { padding-left: 16px; padding-right: 16px; }
+  .header { padding-left: 16px; padding-right: 16px; }
   .feed-row { grid-template-columns: 90px 1fr 70px; }
   .feed-row span:nth-child(3) { display: none; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .bar-row { grid-template-columns: 90px 1fr 36px; }
   .mep-alerts { display: flex !important; }
   .mep-alert { display: flex !important; }
+
+  /* Show hamburger on mobile */
   .hamburger-btn { display: flex; }
+
+  /* Hide tab bar entirely on mobile — shown only when open */
   .nav {
-    display: none;
+    display: none !important;
     flex-direction: column;
     padding: 8px 0;
     position: fixed;
-    top: 68px; left: 0; right: 0;
+    top: 70px; left: 0; right: 0;
     z-index: 500;
     background: var(--surface);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
     border-bottom: 1px solid var(--border);
     overflow-y: auto;
-    max-height: calc(100vh - 68px);
+    max-height: calc(100vh - 70px);
   }
-  .nav.open { display: flex !important; }
+  .nav.open {
+    display: flex !important;
+  }
   .tab {
     border-bottom: 1px solid var(--border);
     border-left: 3px solid transparent;
-    padding: 14px 24px;
-    font-size: 13px;
+    border-top: none;
+    padding: 15px 24px;
+    font-size: 14px;
     text-align: left;
     width: 100%;
+    white-space: normal;
   }
-  .tab.active { border-left-color: var(--amber); color: var(--amber); border-bottom-color: var(--border); }
-  .tab[style*="display: none"] { display: none !important; }
+  .tab.active {
+    border-left-color: var(--amber);
+    color: var(--amber);
+  }
 }
 
     /* HEADER */
@@ -422,14 +436,16 @@
 <body>
 
 <div class="header">
-  <div>
-    <div class="logo">Kitchen <em>MEP</em></div>
-    <div class="logo-sub">212 Nooch Richti — Dashboard</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div>
+      <div class="logo">Kitchen <em>MEP</em></div>
+      <div class="logo-sub">212 Nooch Richti — Dashboard</div>
+    </div>
   </div>
   <div class="header-right">
-   <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
-  <span></span><span></span><span></span>
-</button>
     <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Home</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge">
@@ -1156,6 +1172,17 @@ function toggleMenu() {
   const isOpen = nav.classList.toggle("open");
   btn.classList.toggle("open", isOpen);
 }
+
+// Close menu when clicking outside
+document.addEventListener("click", e => {
+  const nav = document.getElementById("main-nav");
+  const btn = document.getElementById("hamburgerBtn");
+  if (!nav || !btn) return;
+  if (!nav.contains(e.target) && !btn.contains(e.target)) {
+    nav.classList.remove("open");
+    btn.classList.remove("open");
+  }
+});
 
 function closeMenuOnTabSelect(btn) {
   switchTab(btn);
