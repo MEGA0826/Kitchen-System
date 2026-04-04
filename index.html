@@ -2128,32 +2128,32 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function loadHomeMepStatus() {
     try {
+      // Step 1: get all products
       const prodRes  = await fetch(`${API_URL}?action=allProducts`, { cache: "no-store" });
       const prodData = await prodRes.json();
       const productsObj = (!prodData.error && typeof prodData === "object") ? prodData : {};
-
-      // Build list of codes that have mepMax
-      const codes = Object.entries(productsObj)
-        .filter(([, p]) => p.mepMax && p.mepMax > 0)
-        .map(([code, p]) => ({ code, ...p }));
-
+      const codes = Object.entries(productsObj).filter(([, p]) => p.mepMax && p.mepMax > 0);
       if (!codes.length) { renderHomeMep(); return; }
 
-      // Fetch allMepStatus for counts — same source as KDS
-      const statusRes  = await fetch(`${API_URL}?action=allMepStatus`, { cache: "no-store" });
-      const statusData = await statusRes.json();
-      const statusMap  = statusData.statuses || {};
+      // Step 2: fetch mepStatus per product — SAME endpoint as scan page and KDS
+      const results = await Promise.all(
+        codes.map(([code]) =>
+          fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" })
+            .then(r => r.json())
+            .catch(() => null)
+        )
+      );
 
+      // Step 3: build _homeMepData using SAME fields as scan page updateMepUI()
       _homeMepData = {};
-      codes.forEach(p => {
-        const st = statusMap[p.code] || {};
-        // Use same fields as mepStatus endpoint
-        const avail  = st.available  !== undefined ? Number(st.available)  : 0;
-        const inProg = st.inProgress !== undefined ? Number(st.inProgress) : 0;
-        const target = Number(p.tagesziel || p.mepMax || 0);
-        const mepMax = Number(p.mepMax || 0);
-        _homeMepData[p.code] = {
-          name    : p.name     || p.code,
+      codes.forEach(([code, p], i) => {
+        const st      = results[i] || {};
+        const avail   = st.available  !== undefined ? Number(st.available)  : 0;
+        const inProg  = st.inProgress !== undefined ? Number(st.inProgress) : 0;
+        const mepMax  = Number(p.mepMax  || 0);
+        const target  = Number(p.tagesziel || p.mepMax || 0);
+        _homeMepData[code] = {
+          name    : p.name     || code,
           image   : p.image    || p.driveLink || "",
           allergy : p.allergy  || "",
           priority: Number(p.priority || 99),
