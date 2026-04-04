@@ -1149,37 +1149,24 @@ function closeMenuOnTabSelect(btn) {
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
   if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
-  // Hide edit/delete buttons for readonly roles after render
-  setTimeout(() => {
-    if (window._inventoryReadonly && (tabId === "inventory")) {
-      document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #panel-inventory .btn-save, #inv-form").forEach(el => el.style.display = "none");
-    }
-  }, 200);
-}
   sessionStorage.setItem("activeTab", tabId);
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
-    if (tabId === "products")     { }
-    if (tabId === "recipes")    initRecipesTab();
+    if (tabId === "recipes")      initRecipesTab();
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
     if (tabId === "mep-overview") loadMepOverview();
-    if (tabId === "admin")      { loadAdminTab(); loadArchiveStats(); }
-  // Re-apply readonly restrictions after dynamic content renders
-  const role = sessionStorage.getItem("dashRole") || "Manager";
-  const readonly = ROLE_READONLY[role] || [];
-  if (readonly.includes("inventory") && tabId === "inventory") {
-    setTimeout(() => {
-      document.querySelectorAll(
-        "#inv-form, .btn-save, .btn-del, .btn-edit, #pf-cancel, #wf-cancel"
-      ).forEach(el => el.style.display = "none");
-    }, 300);
-  }
+    if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
     if (tabId === "kds")          loadKDS();
+    // Re-apply readonly after dynamic render
+    if (window._inventoryReadonly && tabId === "inventory") {
+      setTimeout(() => {
+        document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #inv-form").forEach(el => el.style.display = "none");
+      }, 300);
+    }
   } catch(e) {
     console.error("switchTab error [" + tabId + "]:", e);
-    if (panel) panel.innerHTML += `<div style="color:var(--red);padding:16px;font-size:12px">Tab error: ${e.message}</div>`;
   }
 }
 // ─────────────────────────────────────────────
