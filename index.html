@@ -1175,7 +1175,83 @@
 </div>
 
 <!-- Product + Actions screen (shown after scan) -->
-  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:var(--bg)">
+  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:#0d0d0d">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
+      <button onclick="goToStaffHome()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;color:#666;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;cursor:pointer">⌂ Home</button>
+      <div style="font-family:'Instrument Serif',serif;font-size:22px;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
+      <button onclick="goToScanHome()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;color:#666;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;cursor:pointer">← Scan</button>
+    </div>
+
+    <!-- Product hero: image centered, name below -->
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:10px;overflow:hidden">
+
+      <!-- Image -->
+      <div style="width:140px;height:140px;border-radius:12px;overflow:hidden;background:#1a1a1a;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <img id="productImage" alt="" style="display:none;width:100%;height:100%;object-fit:cover">
+        <div id="imgPlaceholder" style="font-size:48px;opacity:0.2">🍽</div>
+      </div>
+
+      <!-- Name -->
+      <div id="product" style="font-family:'Instrument Serif',serif;font-size:28px;line-height:1.2;color:#fff;text-align:center"><div class="skeleton" style="width:160px;height:28px"></div></div>
+      <div id="productCode" style="font-size:10px;color:#444;font-family:var(--mono);text-align:center"></div>
+
+      <!-- MEP info -->
+      <div id="mepStatus" style="display:none;flex-direction:column;gap:6px;width:100%;max-width:320px;background:#141414;border:1px solid #222;border-radius:8px;padding:12px 16px">
+        <div class="mep-row" style="display:flex;align-items:center;gap:8px">
+          <span class="mep-dot green" id="mepDotDone" style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
+          <span id="mepLabelDone" style="font-size:13px;color:#ccc"></span>
+        </div>
+        <div class="mep-row" style="display:flex;align-items:center;gap:8px">
+          <span class="mep-dot amber" id="mepDotList" style="width:8px;height:8px;border-radius:50%;background:#e8a020;flex-shrink:0"></span>
+          <span id="mepLabelList" style="font-size:13px;color:#ccc"></span>
+        </div>
+      </div>
+
+      <!-- Daily target covered -->
+      <div class="mep-full-msg" id="mepFullMsg" style="font-size:12px;color:#22c55e;text-align:center;display:none">Daily target covered ✓</div>
+
+    </div>
+
+    <!-- Worker + Actions pinned to bottom -->
+    <div style="flex-shrink:0;padding:0 14px 20px;display:flex;flex-direction:column;gap:8px;border-top:1px solid #1e1e1e;padding-top:12px">
+
+      <!-- Worker select -->
+      <select id="worker" class="worker-select" onchange="localStorage.setItem('worker',this.value)"
+        style="width:100%;padding:10px 12px;background:#141414;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;font-family:var(--mono);font-size:12px;letter-spacing:0.5px">
+        <option value="">-- Select staff member --</option>
+      </select>
+
+      <!-- Finish MEP -->
+      <button class="btn btn-done" onclick="send('done')" style="width:100%;padding:14px;border-radius:8px;font-size:15px">
+        <span class="btn-icon">✓</span>
+        <span class="btn-label">Finish MEP</span>
+      </button>
+
+      <!-- Used + Waste -->
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-used" id="btnUsed" onclick="send('used')" style="flex:1;padding:12px">
+          <span class="btn-icon">→</span>
+          <span class="btn-label">Used</span>
+        </button>
+        <button class="btn btn-waste" id="btnWaste" onclick="send('waste')" style="flex:1;padding:12px">
+          <span class="btn-icon">✕</span>
+          <span class="btn-label">Waste</span>
+        </button>
+      </div>
+
+      <!-- Undo / feedback -->
+      <div class="status-row" id="statusRow" style="min-height:36px;display:flex;align-items:center;justify-content:center">
+        <div class="feedback-inner" id="msg"></div>
+        <button class="btn btn-undo" id="btnUndo" onclick="undoAction()" style="display:none;width:100%">
+          <span class="btn-icon">←</span>
+          <span class="btn-label" id="undoLabel">Undo (3)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
@@ -1212,14 +1288,6 @@
           <span class="mep-row-label" id="mepLabelList"></span>
         </div>
       </div>
-    </div>
-
-    <!-- Worker select -->
-    <div class="field-wrap" id="workerWrap" style="margin:10px 14px 0;flex-shrink:0">
-      <label class="field-label" for="worker">Staff member</label>
-      <select class="worker-select" id="worker">
-        <option value="">-- Select your name --</option>
-      </select>
     </div>
 
     <!-- Action buttons -->
