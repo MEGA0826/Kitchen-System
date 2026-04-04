@@ -1071,8 +1071,7 @@
     font-family: Arial;
   }
 </style>
-   <div class="scan-home" 
-<!-- Staff Home: camera fills, header overlay, MEP split below -->
+ 
   <!-- Staff Home: default landing page -->
   <div id="staffHome" style="display:none;flex:1;flex-direction:column;overflow:hidden;background:#0d0d0d">
   
@@ -1253,7 +1252,7 @@ function updateLiveTime() {
   const hh   = String(now.getHours()).padStart(2,"0");
   const min  = String(now.getMinutes()).padStart(2,"0");
   const ss   = String(now.getSeconds()).padStart(2,"0");
-  const combined = `Day ${day} ${dd}.${mm}.${yy}  Time ${hh}:${min}:${ss}`;
+  const combined = `${day} ${dd}.${mm}.${yy}  Time ${hh}:${min}:${ss}`;
   const el1 = document.getElementById("liveTime");
   const el2 = document.getElementById("liveTime2");
   if (el1) el1.textContent = combined;
@@ -2104,7 +2103,7 @@ const statusMap = statusData.statuses || {};
         const st = statusMap[p.code] || {};
         _homeMepData[p.code] = {
           name    : p.name,
-          image   : p.driveLink || "",
+          image   : p.image || p.driveLink || "",
           allergy : p.allergy   || "",
           priority: p.priority  || 99,
           mepMax  : p.mepMax,
