@@ -1169,18 +1169,6 @@ function closeMenuOnTabSelect(btn) {
     console.error("switchTab error [" + tabId + "]:", e);
   }
 }
-// ─────────────────────────────────────────────
-// ROLE ACCESS CONTROL
-// ─────────────────────────────────────────────
-const ROLE_TABS = {
-  Teamleader : ['kds','mep-overview','inventory'],
-  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
-  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
-};
-const ROLE_READONLY = {
-  Teamleader : ['inventory'],          // limited = read only, no edit buttons
-  Küchenchef : ['reports'],            // limited = can preview but not send
-};
 
 function applyRoleAccess() {
   const role = sessionStorage.getItem("dashRole") || "Manager";
