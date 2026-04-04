@@ -1076,6 +1076,7 @@
   
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid #1e1e1e">
+    <!-- Hamburger button -->
       <button class="home-hamburger" onclick="openRoleDrawer()">
         <span></span><span></span><span></span>
       </button>
@@ -1233,6 +1234,7 @@
     <div class="popup-title">Over Produce!</div>
     <div class="popup-sub" id="overPopupSub">You have finished more than the daily target.</div>
     <button class="popup-btn" onclick="closeOverPopup()">OK - Understood</button>
+    </div>
   </div>
 </div>
 <script>
@@ -2287,9 +2289,9 @@ function goToScanHome() {
       console.error("popupSend error", e);
     }
   }
-
 </script>
-
+</div>
+  
  <!-- Role drawer overlay -->
   <div class="role-drawer-overlay" id="roleDrawerOverlay" onclick="closeRoleDrawer()"></div>
 
