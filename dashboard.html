@@ -54,16 +54,20 @@
   .hamburger-btn { display: flex; }
 
   /* Hide tab bar entirely on mobile — shown only when open */
-  .nav {
+.nav {
     display: none !important;
     flex-direction: column;
     padding: 8px 0;
     position: fixed;
-    top: 70px; left: 0; right: 0;
+    top: 70px; left: 0;
+    width: fit-content;
+    min-width: 200px;
     z-index: 500;
     background: var(--surface);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    box-shadow: 4px 8px 32px rgba(0,0,0,0.8);
+    border-right: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
+    border-radius: 0 0 12px 0;
     overflow-y: auto;
     max-height: calc(100vh - 70px);
   }
