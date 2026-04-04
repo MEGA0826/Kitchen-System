@@ -105,11 +105,20 @@
     .back-btn:hover { color: var(--text); border-color: var(--amber); }
 
     /* NAV */
-.nav { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; overflow-y: visible; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; }
+.nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); overflow-x: auto; overflow-y: visible; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; }
 .nav::-webkit-scrollbar { display: none; }
-.tab { padding: 11px 20px; white-space: nowrap; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
+.tab { padding: 8px 16px; white-space: nowrap; font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .tab:hover { color: var(--text); }
 .tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+/* ▼ NEW: tab icon */
+.tab-icon { font-size: 18px; line-height: 1; display: block; }
+/* ▼ NEW: section header background watermark */
+.section-header-wrap { position: relative; margin-bottom: 6px; overflow: hidden; border-radius: var(--radius-sm); padding: 18px 20px 12px; background: var(--surface); border: 1px solid var(--border); }
+.section-header-wrap .section-title { margin-bottom: 4px; position: relative; z-index: 1; }
+.section-header-wrap .section-sub { margin-bottom: 0; position: relative; z-index: 1; }
+.section-header-bg { position: absolute; right: -10px; top: 50%; transform: translateY(-50%); opacity: 0.055; pointer-events: none; z-index: 0; }
+/* ▼ NEW: bar row icon */
+.bar-icon { font-size: 15px; margin-right: 4px; flex-shrink: 0; }
 
     /* BODY */
     .body { padding: 24px; max-width: 1100px; margin: 0 auto; }
@@ -462,25 +471,50 @@
   </div>
 </div>
 
-<div class="tabs nav" id="main-nav">
-  <span id="roleBadge" style="display:none;font-size:10px;letter-spacing:1px;padding:3px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-family:var(--mono);text-transform:uppercase;align-self:center;margin-right:2px"></span>
-  <button class="tab active"  data-tab="kds"          onclick="closeMenuOnTabSelect(this)">KDS</button>
-  <button class="tab"        data-tab="mep-overview" onclick="closeMenuOnTabSelect(this)">MEP Overview</button>
-  <button class="tab"        data-tab="inventory"    onclick="closeMenuOnTabSelect(this)">Inventory</button>
-  <button class="tab"        data-tab="products"     onclick="closeMenuOnTabSelect(this)">Products</button>
-  <button class="tab"        data-tab="recipes"      onclick="closeMenuOnTabSelect(this)">Recipes</button>
-  <button class="tab"        data-tab="orders"       onclick="closeMenuOnTabSelect(this)">Orders</button>
-  <button class="tab"        data-tab="reports"      onclick="closeMenuOnTabSelect(this)">Reports</button>
-  <button class="tab"        data-tab="deductions"   onclick="closeMenuOnTabSelect(this)">Deductions</button>
-  <button class="tab"                                onclick="requestAdminAccess()">Admin</button>
+<div class="nav" id="main-nav">
+  <button class="tab active" data-tab="kds"          onclick="switchTab(this)">
+    <span class="tab-icon">📺</span>KDS
+  </button>
+  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)">
+    <span class="tab-icon">🗂️</span>MEP
+  </button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)">
+    <span class="tab-icon">📦</span>Inventory
+  </button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)">
+    <span class="tab-icon">🥗</span>Products
+  </button>
+  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)">
+    <span class="tab-icon">📋</span>Recipes
+  </button>
+  <button class="tab"        data-tab="orders"       onclick="switchTab(this)">
+    <span class="tab-icon">🛒</span>Orders
+  </button>
+  <button class="tab"        data-tab="reports"      onclick="switchTab(this)">
+    <span class="tab-icon">📊</span>Reports
+  </button>
+  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)">
+    <span class="tab-icon">✂️</span>Deductions
+  </button>
+  <button class="tab"                                onclick="requestAdminAccess()">
+    <span class="tab-icon">🔐</span>Admin
+  </button>
 </div>
 
 <div class="body">
 
   <!-- KDS Tab-->
   <div class="panel active" id="panel-kds">
-    <div class="section-title">Kitchen Display</div>
-    <div class="section-sub">Real-time MEP production tracking</div>
+    <div class="section-header-wrap">
+  <svg class="section-header-bg" width="160" height="120" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="140" height="90" rx="10" stroke="currentColor" stroke-width="6"/>
+    <rect x="30" y="30" width="100" height="55" rx="4" fill="currentColor" opacity="0.5"/>
+    <circle cx="80" cy="108" r="6" fill="currentColor"/>
+    <rect x="60" y="102" width="40" height="4" rx="2" fill="currentColor"/>
+  </svg>
+  <div class="section-title">Kitchen Display</div>
+  <div class="section-sub">Real-time MEP production tracking</div>
+</div>
 
     <!-- FIX: IDs now match renderStats() — stat-total, stat-produce, stat-done, stat-waste -->
     <div class="stats-grid">
@@ -541,8 +575,18 @@
 
   <!-- MEP OVERVIEW Tab -->
   <div class="panel" id="panel-mep-overview">
-    <div class="section-title">MEP Overview Today</div>
-    <div class="section-sub">Status of all products</div>
+    <div class="section-header-wrap">
+  <svg class="section-header-bg" width="160" height="120" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="8" width="52" height="52" rx="8" stroke="currentColor" stroke-width="6"/>
+    <rect x="100" y="8" width="52" height="52" rx="8" stroke="currentColor" stroke-width="6"/>
+    <rect x="8" y="78" width="52" height="34" rx="8" fill="currentColor" opacity="0.4"/>
+    <rect x="100" y="78" width="52" height="34" rx="8" fill="currentColor" opacity="0.4"/>
+    <rect x="16" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
+    <rect x="108" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
+  </svg>
+  <div class="section-title">MEP Overview Today</div>
+  <div class="section-sub">Status of all products</div>
+</div>
 
     <div class="inv-controls">
       <select class="search-input" id="mep-cat-filter" onchange="filterMepOverview()" style="flex:0 1 200px">
@@ -1564,10 +1608,12 @@ function buildMepAlerts(products, stats) {
   initSwipe();
 }
 
+const BAR_ICONS = { blue:"📊", amber:"🍽️", green:"✅", red:"⚠️" };
 function bar(label, val, max, color) {
-  const pct = max > 0 ? Math.round(val / max * 100) : 0;
+  const pct = max ? Math.round((val / max) * 100) : 0;
+  const icon = BAR_ICONS[color] || "▪️";
   return `<div class="bar-row">
-    <div class="bar-name" title="${label}">${label}</div>
+    <div class="bar-name"><span class="bar-icon">${icon}</span>${label}</div>
     <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--${color})"></div></div>
     <div class="bar-count">${val}</div>
   </div>`;
