@@ -1556,11 +1556,11 @@ async function send(action) {
       secs--;
       if (label) label.textContent = `Undo (${secs})`;
       if (secs <= 0) {
-        clearInterval(_undoTimer);
-        btn.style.display = "none";
-        _lastAction = null;
-        window.location.href = window.location.pathname;
-      }
+          clearInterval(_undoTimer);
+          btn.style.display = "none";
+          _lastAction = null;
+          goToStaffHome();
+        }
     }, 1000);
   }
 
@@ -1582,7 +1582,7 @@ async function send(action) {
         // Reload MEP status then return to scanner after short delay
         loadMepStatus(CURRENT_CODE);
         setTimeout(() => {
-          window.location.href = window.location.pathname;
+          goToStaffHome();
         }, 1200);
       })
       .catch(() => showMsg("Network error - undo failed", "error"));
@@ -2095,10 +2095,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     const produce = [], avail = [];
     Object.entries(_homeMepData).forEach(([code, d]) => {
       if (d.avail < d.target) produce.push([code, d]);
-      if (d.avail > 0) avail.push([code, d]);
+      if (d.avail > 0)        avail.push([code, d]);
     });
-    const sortedProduce = sortEntries(produce, _sortMode);
-    const sortedAvail   = sortEntries(avail,   _sortModeAvail);
+
+    const sortedProduce = sortEntries([...produce], _sortMode);
+    const sortedAvail   = sortEntries([...avail],   _sortModeAvail);
 
     const makeCard = ([code, d]) => {
       const hl  = hlClass(d.avail, d.target);
@@ -2111,9 +2112,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         <div class="mep-card-hl"></div>
         <div class="mep-card-body">
           <div class="mep-card-name">${d.name}</div>
-          <div class="mep-bar-wrap">
-            <div class="mep-bar-fill" style="width:${pct}%"></div>
-          </div>
+          <div class="mep-bar-wrap"><div class="mep-bar-fill" style="width:${pct}%"></div></div>
           <div class="mep-bar-label">${d.avail}/${d.mepMax} GN</div>
         </div>
       </div>`;
@@ -2129,28 +2128,40 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function loadHomeMepStatus() {
     try {
-      const [prodData, statusData] = await Promise.all([
-  fetch(`${API_URL}?action=allProducts`, { cache: "no-store" }).then(r => r.json()),
-  fetch(`${API_URL}?action=allMepStatus`, { cache: "no-store" }).then(r => r.json()),
-]);
-// allProducts returns object {code: {...}}, convert to array
-const productsObj = (!prodData.error && typeof prodData === "object") ? prodData : {};
-const products = Object.entries(productsObj).map(([code, p]) => ({ ...p, code }));
-const statusMap = statusData.statuses || {};
+      const prodRes  = await fetch(`${API_URL}?action=allProducts`, { cache: "no-store" });
+      const prodData = await prodRes.json();
+      const productsObj = (!prodData.error && typeof prodData === "object") ? prodData : {};
+
+      // Build list of codes that have mepMax
+      const codes = Object.entries(productsObj)
+        .filter(([, p]) => p.mepMax && p.mepMax > 0)
+        .map(([code, p]) => ({ code, ...p }));
+
+      if (!codes.length) { renderHomeMep(); return; }
+
+      // Fetch allMepStatus for counts — same source as KDS
+      const statusRes  = await fetch(`${API_URL}?action=allMepStatus`, { cache: "no-store" });
+      const statusData = await statusRes.json();
+      const statusMap  = statusData.statuses || {};
+
       _homeMepData = {};
-      products.forEach(p => {
-        if (!p.mepMax) return;
+      codes.forEach(p => {
         const st = statusMap[p.code] || {};
+        // Use same fields as mepStatus endpoint
+        const avail  = st.available  !== undefined ? Number(st.available)  : 0;
+        const inProg = st.inProgress !== undefined ? Number(st.inProgress) : 0;
+        const target = Number(p.tagesziel || p.mepMax || 0);
+        const mepMax = Number(p.mepMax || 0);
         _homeMepData[p.code] = {
-          name    : p.name,
-          image   : p.image || p.driveLink || "",
-          allergy : p.allergy   || "",
-          priority: p.priority  || 99,
-          mepMax  : p.mepMax,
-          target  : p.tagesziel || p.mepMax,
-          gnSize  : p.gnSize    || "",
-          avail   : st.available !== undefined ? st.available : 0,
-          inProg  : st.inProgress || 0,
+          name    : p.name     || p.code,
+          image   : p.image    || p.driveLink || "",
+          allergy : p.allergy  || "",
+          priority: Number(p.priority || 99),
+          mepMax,
+          target,
+          gnSize  : p.gnSize   || "",
+          avail,
+          inProg,
         };
       });
       renderHomeMep();
@@ -2302,47 +2313,48 @@ function goToScanHome() {
 async function popupSend(action) {
     const worker = document.getElementById("popupWorker").value;
     if (!worker) { alert("Select a worker first"); return; }
-
     localStorage.setItem("worker", worker);
-    document.getElementById("worker").value = worker;
 
     const code = _popupCode;
+    const d    = _homeMepData[code];
+    if (!d) return;
 
-    // Optimistic update — keep popup open
-    const d = _homeMepData[code];
-    if (d) {
-      if (action === "done")  d.avail = Math.min(d.mepMax, d.avail + 1);
-      if (action === "used")  d.avail = Math.max(0, d.avail - 1);
-      if (action === "waste") d.avail = Math.max(0, d.avail - 1);
-      // Update popup stats live
-      const hl = hlClass(d.avail, d.target);
-      const statusColor = {'hl-red':'#f87171','hl-yellow':'#facc15','hl-green':'#4ade80','hl-blue':'#60a5fa'}[hl] || '#aaa';
-      document.getElementById("mepPopupStats").innerHTML =
-        `<span class="mep-popup-stat">Available: <b style="color:${statusColor}">${d.avail}</b></span>
-         <span class="mep-popup-stat">Target: ${d.target}</span>
-         <span class="mep-popup-stat">Max: ${d.mepMax} ${d.gnSize}</span>`;
-      renderHomeMep();
-    }
+    // Optimistic update
+    if (action === "done")  d.avail = Math.min(d.mepMax, d.avail + 1);
+    if (action === "used")  d.avail = Math.max(0, d.avail - 1);
+    if (action === "waste") d.avail = Math.max(0, d.avail - 1);
 
-    // Send to server
+    // Update popup stats live without closing
+    const hl = hlClass(d.avail, d.target);
+    const sc = {'hl-red':'#f87171','hl-yellow':'#facc15','hl-green':'#4ade80','hl-blue':'#60a5fa'}[hl] || '#aaa';
+    document.getElementById("mepPopupStats").innerHTML =
+      `<span class="mep-popup-stat">Available: <b style="color:${sc}">${d.avail}</b></span>
+       <span class="mep-popup-stat">Target: ${d.target}</span>
+       <span class="mep-popup-stat">Max: ${d.mepMax} ${d.gnSize}</span>`;
+    renderHomeMep();
+
+    // Send to server — same URL pattern as scan page send()
     try {
-      const res  = await fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`, { cache: "no-store" });
-      const data = await res.json();
-      // Refresh from server after short delay but keep popup open
-      setTimeout(async () => {
-        await loadHomeMepStatus();
-        // Re-sync popup stats after server refresh
-        const d2 = _homeMepData[code];
-        if (d2 && document.getElementById("mepPopup").classList.contains("active")) {
-          const hl2 = hlClass(d2.avail, d2.target);
-          const sc2 = {'hl-red':'#f87171','hl-yellow':'#facc15','hl-green':'#4ade80','hl-blue':'#60a5fa'}[hl2] || '#aaa';
-          document.getElementById("mepPopupStats").innerHTML =
-            `<span class="mep-popup-stat">Available: <b style="color:${sc2}">${d2.avail}</b></span>
-             <span class="mep-popup-stat">Target: ${d2.target}</span>
-             <span class="mep-popup-stat">Max: ${d2.mepMax} ${d2.gnSize}</span>`;
-        }
-      }, 1500);
+      await fetch(`${API_URL}?code=${encodeURIComponent(code)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`, { cache: "no-store" });
     } catch(e) { console.error("popupSend error", e); }
+
+    // Refresh from server after delay — update background cards but keep popup open
+    setTimeout(async () => {
+      await loadHomeMepStatus();
+      // Re-sync popup with fresh server data
+      const d2 = _homeMepData[code];
+      if (d2 && document.getElementById("mepPopup").classList.contains("active")) {
+        const hl2 = hlClass(d2.avail, d2.target);
+        const sc2 = {'hl-red':'#f87171','hl-yellow':'#facc15','hl-green':'#4ade80','hl-blue':'#60a5fa'}[hl2] || '#aaa';
+        document.getElementById("mepPopupStats").innerHTML =
+          `<span class="mep-popup-stat">Available: <b style="color:${sc2}">${d2.avail}</b></span>
+           <span class="mep-popup-stat">Target: ${d2.target}</span>
+           <span class="mep-popup-stat">Max: ${d2.mepMax} ${d2.gnSize}</span>`;
+        // Update worker select in case list reloaded
+        const saved = localStorage.getItem("worker");
+        if (saved) document.getElementById("popupWorker").value = saved;
+      }
+    }, 2000);
   }
 </script>
 </div>
@@ -2412,7 +2424,7 @@ async function popupSend(action) {
         </select>
       </div>
       <div class="mep-popup-btns">
-        <button class="mep-popup-btn done"  onclick="popupSend('done')">✓ Done</button>
+        <button class="mep-popup-btn done"  onclick="popupSend('done')">✓ Finish MEP</button>
         <button class="mep-popup-btn used"  onclick="popupSend('used')">↺ Used</button>
         <button class="mep-popup-btn waste" onclick="popupSend('waste')">✕ Waste</button>
       </div>
