@@ -46,7 +46,7 @@
   .mep-alerts { display: flex !important; }
   .mep-alert { display: flex !important; }
   .hamburger-btn { display: flex; }
-  .nav { display: none !important; flex-direction: column; padding: 8px 0; position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--surface); box-shadow: 0 8px 24px rgba(0,0,0,0.5); border-bottom: 1px solid var(--border); }
+  .nav { display: none !important; flex-direction: column; padding: 8px 0; position: fixed; top: 65px; left: 0; right: 0; z-index: 200; background: var(--surface); box-shadow: 0 8px 24px rgba(0,0,0,0.6); border-bottom: 1px solid var(--border); }
   .nav.open { display: flex !important; }
   .tab { border-bottom: none; border-left: 2px solid transparent; padding: 13px 24px; font-size: 12px; text-align: left; }
   .tab.active { border-left-color: var(--amber); border-bottom-color: transparent; }
@@ -423,8 +423,6 @@
 </div>
 
 <div class="nav" id="main-nav">
-  <!-- Desktop: Horizontal tabs -->
- <div class="nav" id="main-nav">
   <button class="tab active" data-tab="kds"          onclick="closeMenuOnTabSelect(this)">KDS</button>
   <button class="tab"        data-tab="mep-overview" onclick="closeMenuOnTabSelect(this)">MEP Overview</button>
   <button class="tab"        data-tab="inventory"    onclick="closeMenuOnTabSelect(this)">Inventory</button>
@@ -434,20 +432,6 @@
   <button class="tab"        data-tab="reports"      onclick="closeMenuOnTabSelect(this)">Reports</button>
   <button class="tab"        data-tab="deductions"   onclick="closeMenuOnTabSelect(this)">Deductions</button>
   <button class="tab"                                onclick="requestAdminAccess()">Admin</button>
-</div>
-  
-  <!-- Mobile: Dropdown -->
-  <select class="nav-dropdown" id="nav-dropdown" onchange="switchTabMobile(this)">
-    <option value="kds">KDS</option>
-    <option value="mep-overview">MEP Overview</option>
-    <option value="inventory">Inventory</option>
-    <option value="products">Products</option>
-    <option value="recipes">Recipes</option>
-    <option value="orders">Orders</option>
-    <option value="reports">Reports</option>
-    <option value="deductions">Deductions</option>
-    <option value="admin">Admin</option>
-  </select>
 </div>
 
 <div class="body">
