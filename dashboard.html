@@ -1279,6 +1279,7 @@ let ipContext     = 'menu';
 let ipSelectedItem = null;
 let editingMenuId = null;
 let _viewingMenu  = null;
+let _grSelectedItem = null;
 
 const ROLE_TABS = {
   Teamleader : ['kds','mep-overview','inventory','deductions'],
@@ -3850,7 +3851,6 @@ function confirmIngredient() {
 // ─────────────────────────────────────────────
 // GR PICKER
 // ─────────────────────────────────────────────
-let _grSelectedItem = null;
 
 function openGrPopup() {
   _grSelectedItem = null;
