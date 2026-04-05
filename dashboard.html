@@ -1445,7 +1445,7 @@ function _renderKDS() {
 }
 
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
-// NEW:
+
 function renderStats() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toISOString().slice(0, 10) === todayStr);
@@ -1453,28 +1453,21 @@ function renderStats() {
   document.getElementById("stat-produce").textContent = todayScans.filter(s => s.action === "produce").length;
   document.getElementById("stat-done").textContent    = todayScans.filter(s => s.action === "done").length;
   document.getElementById("stat-waste").textContent   = todayScans.filter(s => s.action === "waste").length;
-}
 
   // Aggregate To Produce and Available across all products with a target
   let totalAvail = 0, totalToProduce = 0;
   Object.entries(allProducts).forEach(([code, p]) => {
-    const st         = (window.todayScanStats || {})[code] || {};
-    const produce    = st.produce || 0;
-    const done       = st.done    || 0;
-    const waste      = st.waste   || 0;
-    const mepMax     = p.mepMax   || 0;
-    const tagesziel  = p.tagesziel || 0;
+    const st        = (window.todayScanStats || {})[code] || {};
+    const done      = st.done    || 0;
+    const waste     = st.waste   || 0;
+    const mepMax    = p.mepMax   || 0;
+    const tagesziel = p.tagesziel || 0;
     if (!mepMax && !tagesziel) return;
-    const available  = Math.max(0, done - waste);
-    const inProgress = (produce === 0 && mepMax > 0)
-      ? Math.max(0, mepMax - done)
-      : Math.max(0, produce - done);
-    const targetQty  = tagesziel > 0 ? tagesziel : mepMax;
-    const toProduce  = targetQty > 0
-      ? Math.max(0, targetQty - available)
-      : inProgress;
-    totalAvail      += available;
-    totalToProduce  += toProduce;
+    const available = Math.max(0, done - waste);
+    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+    const toProduce = Math.max(0, targetQty - available);
+    totalAvail     += available;
+    totalToProduce += toProduce;
   });
   document.getElementById("stat-available").textContent  = totalAvail;
   document.getElementById("stat-toproduce").textContent  = totalToProduce;
@@ -1706,31 +1699,46 @@ async function loadMepOverview() {
   } catch(e) { console.error("Failed to load MEP overview:", e); }
 }
 
-// NEW:
 function renderMepThumbs() {
   const catFilter = document.getElementById("mep-cat-filter")?.value || "";
+
+  // Populate category filter if empty
+  const catSel = document.getElementById("mep-cat-filter");
+  if (catSel && catSel.options.length <= 1) {
+    const cats = [...new Set(Object.values(allProducts).map(p => p.kategorie).filter(Boolean))].sort();
+    cats.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      catSel.appendChild(o);
+    });
+  }
+
   let products = Object.entries(allProducts);
   if (catFilter) products = products.filter(([, p]) => p.kategorie === catFilter);
+
   const html = products.map(([code, p]) => {
-    // Derive status from todayScanStats (in-memory, always current)
-    const st        = (window.todayScanStats || {})[code] || {};
-    const done      = st.done    || 0;
-    const waste     = st.waste   || 0;
-    const produce   = st.produce || 0;
-    const avail     = Math.max(0, done - waste);
-    const inProg    = Math.max(0, produce - done);
-    const target    = p.tagesziel || p.mepMax || 0;
+    const st      = (window.todayScanStats || {})[code] || {};
+    const done    = st.done    || 0;
+    const waste   = st.waste   || 0;
+    const produce = st.produce || 0;
+    const avail   = Math.max(0, done - waste);
+    const inProg  = Math.max(0, produce - done);
+    const target  = p.tagesziel || p.mepMax || 0;
 
     let statusClass = "status-red";
-    if (target > 0 && avail >= target)      statusClass = "status-green";
-    else if (avail > 0 || inProg > 0)       statusClass = "status-amber";
+    if (target > 0 && avail >= target) statusClass = "status-green";
+    else if (avail > 0 || inProg > 0)  statusClass = "status-amber";
 
-    // Status label shown in overlay
     const statusLabel = target > 0
       ? `${avail} / ${target}`
       : avail > 0 ? `${avail} done` : inProg > 0 ? `${inProg} in prep` : "—";
-    const img = toDirectImg(p.image)
-      ? `<img src="${toDirectImg(p.image)}" class="mep-thumb-img" onerror="this.style.display='none'">` : '<div class="mep-thumb-ph">📦</div>';
+
+    // ✅ Use toDirectImg() to convert Google Drive links
+    const imgSrc = toDirectImg(p.image);
+    const img = imgSrc
+      ? `<img src="${imgSrc}" class="mep-thumb-img" onerror="this.style.display='none'">`
+      : `<div class="mep-thumb-ph">📦</div>`;
+
     return `<div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
       ${img}
       <div class="mep-thumb-overlay">
@@ -1740,6 +1748,7 @@ function renderMepThumbs() {
       </div>
     </div>`;
   }).join("");
+
   document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
 }
 
@@ -1998,35 +2007,42 @@ function filterProducts() {
 function renderProductGrid(entries) {
   const grid = document.getElementById("product-grid");
   if (!grid) return;
-  
+
   if (!entries || !entries.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
     return;
   }
-  
+
   grid.innerHTML = entries.map(([code, p]) => {
-    const st = (window.todayScanStats || {})[code] || {};
-    const done = st.done || 0;
-    const waste = st.waste || 0;
+    const st      = (window.todayScanStats || {})[code] || {};
+    const done    = st.done    || 0;
+    const waste   = st.waste   || 0;
     const produce = st.produce || 0;
-    const avail = Math.max(0, done - waste);
-    const inProg = (produce === 0 && p.mepMax > 0) ? Math.max(0, p.mepMax - done) : Math.max(0, produce - done);
+    const avail   = Math.max(0, done - waste);
+    const inProg  = (produce === 0 && p.mepMax > 0)
+      ? Math.max(0, p.mepMax - done)
+      : Math.max(0, produce - done);
     const gnLabel = p.gnSize ? " " + p.gnSize : "";
-    const imgSrc  = toDirectImg(p.image);
-    const img     = imgSrc
-      ? `<img class="product-thumb" src="${imgSrc}" loading="lazy" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
+
+    // ✅ Use toDirectImg() to convert Google Drive links
+    const imgSrc = toDirectImg(p.image);
+    const img = imgSrc
+      ? `<img class="product-thumb" src="${imgSrc}" loading="lazy" alt=""
+            onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
       : `<div class="product-thumb-ph">🍽</div>`;
+
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
-        <span class="prod-stat green">OK ${avail}${gnLabel}</span>
+        <span class="prod-stat green">✅ ${avail}${gnLabel}</span>
         <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
         <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
       </div>` : "";
+
     return `<div class="product-card" onclick="openProductModal('${code}')">
       ${img}
       <div class="product-body">
-        <div class="product-name-card">${p.name||code}</div>
-        <div class="product-code-card">CODE . ${code}</div>
+        <div class="product-name-card">${p.name || code}</div>
+        <div class="product-code-card">CODE · ${code}</div>
         ${statsHtml}
       </div>
     </div>`;
