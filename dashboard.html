@@ -215,17 +215,6 @@
     .mep-alert-title { font-weight: 500; letter-spacing: 0.3px; }
     .mep-alert-sub { font-size: 11px; opacity: 0.8; letter-spacing: 0.3px; }
 
-    .mep-thumb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-    .mep-thumb { aspect-ratio: 1; background: var(--surface); border: 2px solid; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; transition: all .15s; }
-    .mep-thumb:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .mep-thumb.status-green { border-color: var(--green-brd); }
-    .mep-thumb.status-amber { border-color: var(--amber-brd); }
-    .mep-thumb.status-red { border-color: var(--red-brd); }
-    .mep-thumb-img { width: 100%; height: 100%; object-fit: cover; }
-    .mep-thumb-ph { font-size: 32px; opacity: 0.3; }
-    .mep-thumb-overlay { position: absolute; inset: 0; background: rgba(15,15,13,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; }
-    .mep-thumb-code { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
-    .mep-thumb-name { font-size: 22px; font-weight: 500; text-align: center; line-height: 1.2; }
 
     /* INVENTORY */
     .inv-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -328,24 +317,6 @@
     .pin-msg { font-size: 12px; text-align: center; min-height: 18px; margin-bottom: 12px; }
     .pin-cancel { width: 100%; padding: 12px; background: var(--surface); color: var(--muted); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
     .pin-cancel:hover { color: var(--text); }
-
-    .mep-detail-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 150; backdrop-filter: blur(4px); overflow-y: auto; padding: 20px; }
-    .mep-detail-modal.active { display: flex; }
-    .mep-detail-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 500px; width: 100%; }
-    .mep-detail-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .mep-detail-img-wrap { width: 100px; height: 75px; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .mep-detail-img { width: 100%; height: 100%; object-fit: cover; }
-    .mep-detail-ph { font-size: 32px; opacity: 0.2; }
-    .mep-detail-info { flex: 1; min-width: 0; }
-    .mep-detail-name { font-family: var(--serif); font-size: 20px; margin-bottom: 4px; }
-    .mep-detail-code { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
-    .mep-detail-stats { display: flex; flex-direction: column; gap: 12px; }
-    .mep-detail-stat { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
-    .mep-detail-stat:last-child { border-bottom: none; }
-    .mep-detail-label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; }
-    .mep-detail-value { font-size: 18px; font-weight: 500; }
-    .mep-detail-close { margin-top: 16px; width: 100%; padding: 12px; background: var(--surface); color: var(--muted); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
-    .mep-detail-close:hover { color: var(--text); border-color: var(--amber-brd); }
 
     /* Nav dropdown for mobile */
 .nav-dropdown {
@@ -480,7 +451,6 @@
 
 <div class="nav" id="main-nav">
   <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
-  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)"><span class="tab-icon">🗂️</span>MEP</button>
   <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
   <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
   <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
@@ -567,37 +537,6 @@
       </div>
     </div>
   
-  </div>
-
-  <!-- MEP OVERVIEW Tab -->
-<div class="panel" id="panel-mep-overview">
-  <div class="section-title">MEP Overview Today <span class="section-title-icon">🗂️</span></div>
-  <div class="section-sub">Status of all products</div>
-    <svg class="section-header-bg" width="160" height="120" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="8" y="8" width="52" height="52" rx="8" stroke="currentColor" stroke-width="6"/>
-    <rect x="100" y="8" width="52" height="52" rx="8" stroke="currentColor" stroke-width="6"/>
-    <rect x="8" y="78" width="52" height="34" rx="8" fill="currentColor" opacity="0.4"/>
-    <rect x="100" y="78" width="52" height="34" rx="8" fill="currentColor" opacity="0.4"/>
-    <rect x="16" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
-    <rect x="108" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
-  </svg>
-
-    <div class="inv-controls">
-      <select class="search-input" id="mep-cat-filter" onchange="filterMepOverview()" style="flex:0 1 200px">
-        <option value="">All categories</option>
-      </select>
-    </div>
-
-    <div class="mep-home-list" id="mep-thumb-grid">
-      <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
-      <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
-      <div class="skeleton" style="height:64px;border-radius:8px"></div>
-    </div>
-
-    <div class="chart-wrap">
-      <div class="chart-title">Production capacity (Available vs Max)</div>
-      <div class="bars" id="mep-capacity-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
-    </div>
   </div>
 
 <!-- INVENTORY Tab-->
@@ -1050,30 +989,6 @@
   </div>
 </div>
 
-<!-- MEP Detail modal -->
-<div class="mep-detail-modal" id="mepDetailModal">
-  <div class="mep-detail-content">
-    <div class="mep-detail-header">
-      <div class="mep-detail-img-wrap">
-        <img id="mepDetailImg" class="mep-detail-img" style="display:none">
-        <div id="mepDetailPh" class="mep-detail-ph">📦</div>
-      </div>
-      <div class="mep-detail-info">
-        <div class="mep-detail-name" id="mepDetailName">—</div>
-        <div class="mep-detail-code" id="mepDetailCode">—</div>
-      </div>
-    </div>
-    <div class="mep-detail-stats">
-      <div class="mep-detail-stat"><div class="mep-detail-label">Available</div><div class="mep-detail-value" id="mepDetailAvail" style="color:var(--green)">—</div></div>
-      <div class="mep-detail-stat"><div class="mep-detail-label">To produce</div><div class="mep-detail-value" id="mepDetailProg" style="color:var(--amber)">—</div></div>
-      <div class="mep-detail-stat"><div class="mep-detail-label">Finished today</div><div class="mep-detail-value" id="mepDetailDone">—</div></div>
-      <div class="mep-detail-stat"><div class="mep-detail-label">Waste today</div><div class="mep-detail-value" id="mepDetailWaste" style="color:var(--red)">—</div></div>
-      <div class="mep-detail-stat"><div class="mep-detail-label">Daily target</div><div class="mep-detail-value" id="mepDetailTarget">—</div></div>
-    </div>
-    <button class="mep-detail-close" onclick="closeMepDetail()">Close</button>
-  </div>
-</div>
-
 <!-- Product detail modal -->
 <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -1208,7 +1123,8 @@ function closeMenuOnTabSelect(btn) {
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
   if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
-  document.getElementById("main-nav")?.classList.remove("open");
+  const _hbBtn = document.querySelector("[onclick*='toggleNav'], [onclick*='toggleMobile'], [onclick*='hamburger'], .hamburger-btn, #hamburger-btn");
+if (_hbBtn) _hbBtn.textContent = "☰";
     sessionStorage.setItem("activeTab", tabId);
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
@@ -1216,7 +1132,6 @@ function closeMenuOnTabSelect(btn) {
     if (tabId === "recipes")      initRecipesTab();
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
-    if (tabId === "mep-overview") loadMepOverview();
     if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
     if (tabId === "kds")          loadKDS();
     // Re-apply readonly after dynamic render
@@ -1402,7 +1317,7 @@ function fmt(raw) {
 function buildScanStats() {
   scanStats = {};
   window.todayScanStats = {};
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toLocaleDateString('en-CA');
   allScans.forEach(s => {
     const c = s.code || "";
     if (!scanStats[c]) scanStats[c] = { produce:0, done:0, waste:0, used:0, total:0 };
@@ -1412,7 +1327,7 @@ function buildScanStats() {
   });
   allScans.forEach(s => {
     if (!s.timestamp) return;
-    const d = new Date(s.timestamp).toISOString().slice(0, 10);
+    const d = new Date(s.timestamp).toLocaleDateString('en-CA')
     if (d !== todayStr) return;
     const c = s.code || "";
     if (!window.todayScanStats[c]) window.todayScanStats[c] = { produce:0, done:0, waste:0, used:0 };
@@ -1447,8 +1362,8 @@ function _renderKDS() {
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
 
 function renderStats() {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toISOString().slice(0, 10) === todayStr);
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toLocaleDateString('en-CA') === todayStr);
   document.getElementById("stat-total").textContent   = todayScans.length;
   document.getElementById("stat-produce").textContent = todayScans.filter(s => s.action === "produce").length;
   document.getElementById("stat-done").textContent    = todayScans.filter(s => s.action === "done").length;
@@ -1678,129 +1593,6 @@ function renderFeed() {
   document.getElementById("scan-feed").innerHTML =
     `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Action</span><span>Product</span></div>`
     + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
-}
-
-// ─────────────────────────────────────────────
-// MEP OVERVIEW
-// ─────────────────────────────────────────────
-async function loadMepOverview() {
-  try {
-    // ✅ single call instead of N parallel mepStatus calls
-    const data = await get({ action: "getMepOverview" });
-    if (!data || !data.products) return;
-    allMepStatus = {};
-    Object.entries(data.products).forEach(([code, p]) => {
-      allMepStatus[code] = p;
-      // keep allProducts in sync if already loaded
-      if (allProducts[code]) allProducts[code] = { ...allProducts[code], ...p };
-    });
-    renderMepThumbs();
-    renderMepCapacityBars();
-  } catch(e) { console.error("Failed to load MEP overview:", e); }
-}
-
-function renderMepThumbs() {
-  const catFilter = document.getElementById("mep-cat-filter")?.value || "";
-
-  // Populate category filter if empty
-  const catSel = document.getElementById("mep-cat-filter");
-  if (catSel && catSel.options.length <= 1) {
-    const cats = [...new Set(Object.values(allProducts).map(p => p.kategorie).filter(Boolean))].sort();
-    cats.forEach(c => {
-      const o = document.createElement("option");
-      o.value = c; o.textContent = c;
-      catSel.appendChild(o);
-    });
-  }
-
-  let products = Object.entries(allProducts);
-  if (catFilter) products = products.filter(([, p]) => p.kategorie === catFilter);
-
-  const html = products.map(([code, p]) => {
-    const st      = (window.todayScanStats || {})[code] || {};
-    const done    = st.done    || 0;
-    const waste   = st.waste   || 0;
-    const produce = st.produce || 0;
-    const avail   = Math.max(0, done - waste);
-    const inProg  = Math.max(0, produce - done);
-    const target  = p.tagesziel || p.mepMax || 0;
-
-    let statusClass = "status-red";
-    if (target > 0 && avail >= target) statusClass = "status-green";
-    else if (avail > 0 || inProg > 0)  statusClass = "status-amber";
-
-    const statusLabel = target > 0
-      ? `${avail} / ${target}`
-      : avail > 0 ? `${avail} done` : inProg > 0 ? `${inProg} in prep` : "—";
-
-    // ✅ Use toDirectImg() to convert Google Drive links
-    const imgSrc = toDirectImg(p.image);
-    const img = imgSrc
-      ? `<img src="${imgSrc}" class="mep-thumb-img" onerror="this.style.display='none'">`
-      : `<div class="mep-thumb-ph">📦</div>`;
-
-    return `<div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
-      ${img}
-      <div class="mep-thumb-overlay">
-        <div class="mep-thumb-code">${code}</div>
-        <div class="mep-thumb-name">${p.name || code}</div>
-        <div class="mep-thumb-code" style="margin-top:4px;color:inherit;opacity:.7">${statusLabel}</div>
-      </div>
-    </div>`;
-  }).join("");
-
-  document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
-}
-
-function filterMepOverview() { renderMepThumbs(); }
-
-function renderMepCapacityBars() {
-  const products = Object.entries(allProducts)
-    .map(([code, p]) => ({ code, name: p.name || code, max: p.mepMax || (allMepStatus[code] || {}).mepMax || 0, available: (allMepStatus[code] || {}).available || 0 }))
-    .filter(p => p.max > 0).sort((a, b) => b.available - a.available).slice(0, 12);
-  const max = Math.max(...products.map(p => p.max), 1);
-  const html = products.map(p => {
-    const availPct = (p.available / max) * 100;
-    const maxPct   = (p.max / max) * 100;
-    return `<div style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div class="bar-name">${p.name}</div>
-        <div style="font-size:11px;color:var(--muted)">${p.available} / ${p.max}</div>
-      </div>
-      <div class="bar-track" style="height:24px;position:relative">
-        <div style="position:absolute;inset:0;background:var(--green);opacity:0.5;width:${availPct}%"></div>
-        <div style="position:absolute;inset:0;background:var(--amber);opacity:0.3;width:${maxPct}%"></div>
-      </div>
-    </div>`;
-  }).join("");
-  document.getElementById("mep-capacity-bars").innerHTML = html || '<div class="empty-state">No capacity data</div>';
-}
-
-function showMepDetail(code) {
-  const product = allProducts[code];
-  const status  = allMepStatus[code] || {};
-  if (!product) return;
-  document.getElementById("mepDetailName").textContent = product.name || code;
-  document.getElementById("mepDetailCode").textContent = code;
-  if (product.image) {
-    document.getElementById("mepDetailImg").src = product.image;
-    document.getElementById("mepDetailImg").style.display = "block";
-    document.getElementById("mepDetailPh").style.display  = "none";
-  } else {
-    document.getElementById("mepDetailImg").style.display = "none";
-    document.getElementById("mepDetailPh").style.display  = "flex";
-  }
-  document.getElementById("mepDetailAvail").textContent  = status.available  || 0;
-  document.getElementById("mepDetailProg").textContent   = status.inProgress || 0;
-  document.getElementById("mepDetailDone").textContent   = status.doneCount  || 0;
-  document.getElementById("mepDetailWaste").textContent  = status.wasteCount || 0;
-  document.getElementById("mepDetailTarget").textContent = status.tagesziel  || 0;
-  document.getElementById("mepDetailModal").classList.add("active");
-}
-
-// FIX: was missing closing brace
-function closeMepDetail() {
-  document.getElementById("mepDetailModal").classList.remove("active");
 }
 
 // ─────────────────────────────────────────────
