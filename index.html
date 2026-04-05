@@ -1125,6 +1125,12 @@
       </div>
       <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
     </div>
+    <!-- MEP Overview title -->
+    <div style="padding:8px 14px 4px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
+      <div style="font-family:'Instrument Serif',serif;font-size:20px;color:rgba(255,255,255,0.85)">MEP <em style="font-style:italic;color:#e8a020">Overview</em></div>
+      <div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-top:2px">Today's production status</div>
+    </div>
+
     <!-- MEP split -->
     <div class="mep-split" style="flex:1;overflow:hidden">
       <div class="mep-col">
@@ -2271,101 +2277,85 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
 function renderHomeMep() {
-    const today    = new Date();
-    const dayNames = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+  const today    = new Date();
+  const dayNames = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 
-    // Group by kategorie
-    const groups = {};
-    Object.entries(_homeMepData).forEach(([code, d]) => {
-      const cat = d.kategorie || "Other";
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push([code, d]);
-    });
+  const allEntries = Object.entries(_homeMepData);
 
-    const makeRow = ([code, d]) => {
-      const avail  = d.avail     || 0;
-      const target = d.target    || d.mepMax || 1;
-      const toProd = d.toProduce !== undefined ? d.toProduce : Math.max(0, target - avail);
+  // Split: toProduce > 0 goes to Produce column, avail > 0 or target met goes to Available
+  const produceEntries = allEntries.filter(([,d]) => (d.toProduce || 0) > 0);
+  const availEntries   = allEntries.filter(([,d]) => (d.avail     || 0) > 0);
 
-      // Status dot
-      let dotColor = "var(--red)";
-      if (avail >= target && target > 0) dotColor = "var(--green)";
-      else if (avail > 0)                dotColor = "var(--amber)";
+  // Sort helpers
+  const hlRank = ([,d]) => {
+    const avail = d.avail || 0, target = d.target || 1;
+    if (avail >= target) return 3;
+    if (avail >= target * 0.3) return 2;
+    if (avail > 0) return 1;
+    return 0;
+  };
 
-      // Expiry from oldest batch (FIFO)
-      let expiryHtml = "";
-      if (d.batches && d.batches.length > 0) {
-        const oldest   = d.batches.slice().sort((a, b) => a.expiryDate < b.expiryDate ? -1 : 1)[0];
-        const expDate  = new Date(oldest.expiryDate + "T23:59:59");
-        const diffDays = Math.ceil((expDate - today) / 86400000);
-        const dayName  = dayNames[expDate.getDay()];
-        const expStr   = oldest.expiryDate.slice(5).replace("-", "/");
-        if (diffDays <= 0) {
-          expiryHtml = `<div class="mep-home-expiry" style="color:var(--red)">⚠ Expired</div>`;
-        } else if (diffDays <= 1) {
-          expiryHtml = `<div class="mep-home-expiry" style="color:var(--amber)">⚠ Expires today (${dayName})</div>`;
-        } else {
-          expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">Fridge until ${dayName} ${expStr} (+${diffDays}d)</div>`;
-        }
-      } else if (d.shelfLife) {
-        expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">+${d.shelfLife}d shelf life</div>`;
-      }
+  function sortCol(entries, mode) {
+    const copy = [...entries];
+    if (mode === 'az')     return copy.sort((a,b) => a[1].name.localeCompare(b[1].name));
+    if (mode === 'colour') return copy.sort((a,b) => hlRank(a) - hlRank(b));
+    // priority: most urgent first
+    return copy.sort((a,b) => (b[1].toProduce||0) - (a[1].toProduce||0) || (a[1].priority||99) - (b[1].priority||99));
+  }
 
-      // Thumbnail
-      const imgHtml = d.image
-        ? `<img class="mep-home-thumb" src="${d.image}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-           <div class="mep-home-thumb-ph" style="display:none">🍽</div>`
-        : `<div class="mep-home-thumb-ph">🍽</div>`;
+  const makeCard = ([code, d]) => {
+    const avail  = d.avail    || 0;
+    const target = d.target   || d.mepMax || 1;
+    const toProd = d.toProduce !== undefined ? d.toProduce : Math.max(0, target - avail);
+    const pct    = Math.min(100, Math.round(avail / target * 100));
 
-      // Bars
-      const maxBar   = target || 1;
-      const availPct = Math.min(100, Math.round(avail / maxBar * 100));
-      const prodPct  = Math.min(100, Math.round(toProd / maxBar * 100));
-      const availColor = avail >= target && target > 0 ? "var(--green)" : avail > 0 ? "var(--amber)" : "var(--red)";
-      const prodColor  = toProd > 0 ? "var(--amber)" : "var(--surface2)";
+    const barColor = avail >= target ? "var(--green)" : avail > 0 ? "var(--amber)" : "var(--red)";
+    let dotColor   = avail >= target ? "var(--green)" : avail > 0 ? "var(--amber)" : "var(--red)";
 
-      return `
-        <div class="mep-home-row" onclick="openMepPopup('${code}')">
-          <div class="mep-status-dot" style="background:${dotColor}"></div>
+    // Expiry
+    let expiryHtml = "";
+    if (d.batches && d.batches.length > 0) {
+      const oldest   = d.batches.slice().sort((a,b) => a.expiryDate < b.expiryDate ? -1 : 1)[0];
+      const expDate  = new Date(oldest.expiryDate + "T23:59:59");
+      const diffDays = Math.ceil((expDate - today) / 86400000);
+      const dayName  = dayNames[expDate.getDay()];
+      const expStr   = oldest.expiryDate.slice(5).replace("-","/");
+      if (diffDays <= 0)      expiryHtml = `<div style="font-size:9px;color:var(--red)">⚠ Expired</div>`;
+      else if (diffDays <= 1) expiryHtml = `<div style="font-size:9px;color:var(--amber)">⚠ Today</div>`;
+      else                    expiryHtml = `<div style="font-size:9px;color:#555">until ${dayName} ${expStr}</div>`;
+    }
+
+    const imgHtml = d.image
+      ? `<img class="mep-home-thumb" src="${d.image}" loading="lazy" style="width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">`
+      : `<div style="width:40px;height:40px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🍽</div>`;
+
+    return `
+      <div class="mep-card" onclick="openMepPopup('${code}')" style="margin-bottom:6px;border-radius:10px;overflow:hidden;background:#1a1a1a;border:2px solid ${barColor};padding:8px;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           ${imgHtml}
-          <div class="mep-home-info">
-            <div class="mep-home-name">${d.name}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name}</div>
             ${expiryHtml}
           </div>
-          <div class="mep-home-bars">
-            <div class="mep-bar-wrap">
-              <div class="mep-bar-label">Avail</div>
-              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${availPct}%;background:${availColor}"></div></div>
-              <div class="mep-bar-val" style="color:${availColor}">${avail}</div>
-            </div>
-            <div class="mep-bar-wrap">
-              <div class="mep-bar-label">Produce</div>
-              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${prodPct}%;background:${prodColor}"></div></div>
-              <div class="mep-bar-val" style="color:${toProd>0?'var(--amber)':'var(--muted)'}">${toProd}</div>
-            </div>
-          </div>
-        </div>`;
-    };
+          <div style="font-size:18px;font-weight:700;color:${barColor};flex-shrink:0">${avail}<span style="font-size:10px;color:#555">/${target}</span></div>
+        </div>
+        <div style="height:6px;background:#2a2a2a;border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .3s"></div>
+        </div>
+      </div>`;
+  };
 
-    // Render grouped by category into home-produce-list
-    // (keep home-avail-list for backward compat but hide it)
-    const sortedCats = Object.keys(groups).sort();
-    let html = "";
-    sortedCats.forEach(cat => {
-      // Sort urgent (toProduce > 0) first within each category
-      const sorted = groups[cat].sort((a, b) => (b[1].toProduce||0) - (a[1].toProduce||0));
-      html += `<div class="mep-cat-title">${cat}</div>`;
-      html += sorted.map(makeRow).join("");
-    });
+  const sortedProduce = sortCol(produceEntries, _sortMode);
+  const sortedAvail   = sortCol(availEntries,   _sortModeAvail);
 
-    document.getElementById("home-produce-list").innerHTML = html ||
-      `<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">No MEP products</div>`;
+  document.getElementById("home-produce-list").innerHTML = sortedProduce.length
+    ? sortedProduce.map(makeCard).join("")
+    : `<div style="color:#444;font-size:11px;text-align:center;padding:16px">All done ✓</div>`;
 
-    // Hide old avail section — data now merged into grouped list
-    const availEl = document.getElementById("home-avail-list");
-    if (availEl) availEl.closest(".home-section, [class*='section']") &&
-      (availEl.parentElement.style.display = "none");
-  }
+  document.getElementById("home-avail-list").innerHTML = sortedAvail.length
+    ? sortedAvail.map(makeCard).join("")
+    : `<div style="color:#444;font-size:11px;text-align:center;padding:16px">Nothing available yet</div>`;
+}
 
 async function loadHomeMepStatus() {
     try {
