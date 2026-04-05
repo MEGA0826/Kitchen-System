@@ -651,6 +651,12 @@
         <input class="form-input" id="mp-name" placeholder="z.B. Beef & Zen">
       </div>
 
+      <!-- Menu Code -->
+      <div class="form-field">
+        <label class="form-label">Menu Code *</label>
+        <input class="form-input" id="mp-code" placeholder="z.B. M-001" style="font-family:var(--mono);letter-spacing:1px">
+      </div>
+
       <!-- Konzept + Art + Saison -->
       <div class="form-grid">
         <div class="form-field">
@@ -662,8 +668,9 @@
           <label class="form-label">Art</label>
           <select class="form-input" id="mp-art">
             <option value="">Wählen…</option>
-            <option>Hauptgang</option><option>Grundrezeptur</option><option>Vorspeise</option>
-            <option>Dessert</option><option>Snack</option><option>Beilage</option><option>Sauce</option>
+            <option>Hauptgang</option><option>MEP</option><option>Grundrezeptur</option>
+            <option>Vorspeise</option><option>Dessert</option><option>Snack</option>
+            <option>Beilage</option><option>Sauce</option>
           </select>
         </div>
         <div class="form-field">
@@ -689,11 +696,23 @@
         </div>
       </div>
 
-      <!-- WA + VK + Gewicht -->
+      <!-- WA + VK + Gewicht + Garverlust -->
       <div class="form-grid">
         <div class="form-field">
-          <label class="form-label">⚖️ Gewicht</label>
-          <input class="form-input" id="mp-gewicht" placeholder="z.B. 531g">
+          <label class="form-label">⚖️ Rohgewicht (g/kg)</label>
+          <input class="form-input" id="mp-gewicht" placeholder="z.B. 1000g" oninput="calcGarverlust()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">🔥 Garverlust %</label>
+          <input class="form-input" id="mp-garverlust" type="number" min="0" max="99" step="0.1" placeholder="z.B. 30" oninput="calcGarverlust()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">✅ Nettogewicht (nach Gar.)</label>
+          <div id="mp-nettogewicht" style="padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--green)">—</div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">📈 Effektiver CHF/kg</label>
+          <div id="mp-eff-preis" style="padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--amber)">—</div>
         </div>
         <div class="form-field">
           <label class="form-label">💰 Warenaufwand (CHF)</label>
@@ -3586,13 +3605,17 @@ function openMenuPopup(menuId) {
   setVal('mp-category',    existing?.category    || '');
   setVal('mp-art',         existing?.art         || '');
   setVal('mp-saison',      existing?.saison      || 'All Year');
+  setVal('mp-code',        existing?.menuCode    || '');
   setVal('mp-gewicht',     existing?.gewicht     || '');
+  setVal('mp-garverlust',  existing?.garverlust  || '');
   setVal('mp-vk',          existing?.vk          || '');
   setVal('mp-deko',        existing?.deko        || '');
   setVal('mp-zubereitung', existing?.zubereitung || '');
   setVal('mp-wa',          '');
 
   const fcEl = document.getElementById('mp-fc');
+  const nettoEl = document.getElementById('mp-nettogewicht'); if (nettoEl) nettoEl.textContent = '—';
+  const effEl = document.getElementById('mp-eff-preis'); if (effEl) effEl.textContent = '—';
   if (fcEl) { fcEl.textContent = '—'; fcEl.style.color = 'var(--amber)'; }
 
   const msgEl = document.getElementById('mp-msg');
@@ -3678,7 +3701,23 @@ function calcWaFromZutaten() {
   if (totEl) totEl.textContent = 'CHF ' + total.toFixed(2);
   calcFC();
 }
-
+function calcGarverlust() {
+  const rohGewicht = parseFloat((document.getElementById('mp-gewicht')?.value||'').replace(/[^\d.]/g,'')) || 0;
+  const verlustPct = parseFloat(document.getElementById('mp-garverlust')?.value) || 0;
+  const nettoEl    = document.getElementById('mp-nettogewicht');
+  const effEl      = document.getElementById('mp-eff-preis');
+  if (!rohGewicht) { if (nettoEl) nettoEl.textContent = '—'; if (effEl) effEl.textContent = '—'; return; }
+  const netto = rohGewicht * (1 - verlustPct / 100);
+  if (nettoEl) nettoEl.textContent = netto.toFixed(0) + 'g';
+  // Effective price per kg from WA
+  const wa = parseFloat(document.getElementById('mp-wa')?.value) || 0;
+  if (wa > 0 && netto > 0) {
+    const effPricePerKg = (wa / (netto / 1000)).toFixed(2);
+    if (effEl) effEl.textContent = 'CHF ' + effPricePerKg + ' /kg';
+  } else {
+    if (effEl) effEl.textContent = '—';
+  }
+}
 function calcFC() {
   const wa = parseFloat(document.getElementById('mp-wa')?.value) || 0;
   const vk = parseFloat(document.getElementById('mp-vk')?.value) || 0;
@@ -3861,8 +3900,10 @@ function confirmGr() {
 // SAVE MENU
 // ─────────────────────────────────────────────
 async function saveMenuEntry() {
-  const name = document.getElementById('mp-name').value.trim();
-  if (!name) { adminMsg('mp-msg', 'Menu Name ist erforderlich', 'err'); return; }
+  const name     = document.getElementById('mp-name').value.trim();
+  const menuCode = document.getElementById('mp-code').value.trim();
+  if (!name)     { adminMsg('mp-msg', 'Menu Name ist erforderlich', 'err'); return; }
+  if (!menuCode) { adminMsg('mp-msg', 'Menu Code ist erforderlich', 'err'); return; }
   const btn = document.getElementById('mp-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
 
@@ -3877,6 +3918,8 @@ async function saveMenuEntry() {
     art           : document.getElementById('mp-art').value,
     saison        : document.getElementById('mp-saison').value,
     gewicht       : document.getElementById('mp-gewicht').value.trim(),
+    menuCode      : document.getElementById('mp-code').value.trim(),
+    garverlust    : document.getElementById('mp-garverlust').value,
     wa            : document.getElementById('mp-wa').value,
     vk            : document.getElementById('mp-vk').value,
     deko          : document.getElementById('mp-deko').value.trim(),
