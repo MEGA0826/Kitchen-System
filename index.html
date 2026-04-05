@@ -1538,7 +1538,7 @@ function updateMepUI(data) {
     // Always update Used/Waste state - even when mepMax is 0
     const _avail = data.available !== undefined ? data.available : (data.doneCount || 0);
     setUsedWasteState(_avail);
-    if (!data.mepMax || data.mepMax === 0) {
+    if ((!data.mepMax || data.mepMax === 0) && (!data.tagesziel || data.tagesziel === 0)) {
       status.style.display = "none";
       fullMsg.classList.remove("visible");
       return;
