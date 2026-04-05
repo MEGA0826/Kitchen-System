@@ -1507,7 +1507,7 @@ if (_hbBtn) _hbBtn.textContent = "☰";
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
-    if (tabId === "recipes")      { loadRequirements(); loadMenus(); }
+    if (tabId === "recipes")      { loadMenus(); loadRequirements(); }
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
     if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
@@ -3322,7 +3322,7 @@ async function initDashboard() {
     } else if (savedTab === "orders") {
       renderOrders();
     } else if (savedTab === "recipes") {
-      loadRequirements(); loadMenus();
+      loadMenus();
     } else if (savedTab === "deductions") {
       loadDeductions();
     } else if (savedTab === "reports") {
@@ -3619,13 +3619,57 @@ let editingMenuId = null;
 // ─────────────────────────────────────────────
 // LOAD MENUS
 // ─────────────────────────────────────────────
+async function loadRequirements() {
+  const el = document.getElementById("req-content");
+  if (!el) return;
+  try {
+    const data = await get({ action: "getRequirements" });
+    const reqs = Array.isArray(data.requirements) ? data.requirements : [];
+    if (!reqs.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`;
+      return;
+    }
+    const byMep = {};
+    reqs.forEach(r => {
+      if (!byMep[r.mepCode]) byMep[r.mepCode] = { name:r.mepName, stillNeeded:r.stillNeeded, items:[] };
+      byMep[r.mepCode].items.push(r);
+    });
+    el.innerHTML = Object.entries(byMep).map(([code, g]) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">
+          ${g.name}<span style="font-size:11px;color:var(--amber);margin-left:6px">need ${g.stillNeeded} more GN today</span>
+        </div>
+        <div class="inv-table-wrap"><table class="inv-table">
+          <thead><tr><th>Raw material</th><th>Need</th><th>In stock</th><th>Status</th></tr></thead>
+          <tbody>${g.items.map(r => `<tr>
+            <td>${r.rmName}</td>
+            <td style="font-weight:500">${r.required} ${r.unit}</td>
+            <td style="color:${r.sufficient?"var(--green)":"var(--red)"}">${r.inStock} ${r.unit}</td>
+            <td>${r.sufficient
+              ? `<span class="stock-pill stock-ok">OK</span>`
+              : `<span class="stock-pill stock-out">Short ${r.shortage.toFixed(1)} ${r.unit}</span>`
+            }</td>
+          </tr>`).join("")}</tbody>
+        </table></div>
+      </div>`).join("");
+  } catch(e) {
+    el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
+  
 async function loadMenus() {
+  const el = document.getElementById("menu-list-grid");
+  if (el) el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0">Loading…</div>`;
   try {
     const data = await get({ action: "getMenus" });
+    if (data.error) throw new Error(data.error);
     allMenus = Array.isArray(data.menus) ? data.menus : [];
     renderMenuList();
     populateMenuFilters();
-  } catch(e) { console.error("loadMenus:", e); }
+  } catch(e) {
+    console.error("loadMenus:", e);
+    if (el) el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">Keine Menus gefunden. Klick "+ Add Menu" um zu beginnen.</div>`;
+  }
 }
 
 function populateMenuFilters() {
