@@ -29,6 +29,11 @@
     }
     html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
 
+.chart-period-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+.chart-period-btn { padding:5px 12px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); color:var(--muted); font-size:11px; font-family:var(--mono); letter-spacing:.5px; cursor:pointer; transition:all .15s; }
+.chart-period-btn.active { background:var(--amber-dim); color:var(--amber); border-color:var(--amber-brd); }
+.chart-period-btn:hover:not(.active) { color:var(--text); border-color:var(--border); }
+    
     /* HAMBURGER BASE */
 .hamburger-btn { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 36px; height: 36px; padding: 6px; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; flex-shrink: 0; }
 .hamburger-btn span { display: block; width: 100%; height: 2px; background: var(--muted); border-radius: 2px; transition: all .2s; }
@@ -529,6 +534,16 @@
     </div>
 
     <div id="mep-alerts" class="mep-alerts"></div>
+
+    <!-- NEW: -->
+    <!-- ── Period filter pills (shared for both charts) ── -->
+    <div class="chart-period-row">
+      <button class="chart-period-btn active" data-period="today"  onclick="setChartPeriod('today')">Today</button>
+      <button class="chart-period-btn"        data-period="3days"  onclick="setChartPeriod('3days')">3 Days</button>
+      <button class="chart-period-btn"        data-period="week"   onclick="setChartPeriod('week')">Week</button>
+      <button class="chart-period-btn"        data-period="month"  onclick="setChartPeriod('month')">Month</button>
+      <button class="chart-period-btn"        data-period="last30" onclick="setChartPeriod('last30')">Last 30d</button>
+    </div>
 
     <div class="chart-wrap">
       <div class="chart-title">Top products by scan count</div>
@@ -1150,7 +1165,14 @@ function goBack(e) {
   e.preventDefault();
   window.location.href = "https://mega0826.github.io/Kitchen-System/index.html";
 }
-
+  
+function toDirectImg(url) {
+  if (!url) return "";
+  const m = url.match(/\/d\/([\w-]+)/);
+  if (m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
+  return url;
+}
+  
 // ─────────────────────────────────────────────
 // TAB SWITCHING  — FIX: btn is the DOM element
 // ─────────────────────────────────────────────
@@ -1423,17 +1445,15 @@ function _renderKDS() {
 }
 
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
+// NEW:
 function renderStats() {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const todayScans = allScans.filter(s => {
-    if (!s.timestamp) return false;
-    return new Date(s.timestamp).toISOString().slice(0, 10) === todayStr;
-  });
-
+  const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toISOString().slice(0, 10) === todayStr);
   document.getElementById("stat-total").textContent   = todayScans.length;
   document.getElementById("stat-produce").textContent = todayScans.filter(s => s.action === "produce").length;
   document.getElementById("stat-done").textContent    = todayScans.filter(s => s.action === "done").length;
   document.getElementById("stat-waste").textContent   = todayScans.filter(s => s.action === "waste").length;
+}
 
   // Aggregate To Produce and Available across all products with a target
   let totalAvail = 0, totalToProduce = 0;
@@ -1596,24 +1616,59 @@ function bar(label, val, max, color, icon) {
   </div>`;
 }
 
+// NEW:
+// ── Chart period state ──────────────────────
+window.chartPeriod = "today";
+
+function getChartScans() {
+  const now = Date.now();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const p = window.chartPeriod || "today";
+  return allScans.filter(s => {
+    if (!s.timestamp) return false;
+    const ts = new Date(s.timestamp).getTime();
+    if (p === "today")   return new Date(s.timestamp).toISOString().slice(0, 10) === todayStr;
+    if (p === "3days")   return now - ts <= 3  * 86400000;
+    if (p === "week")    return now - ts <= 7  * 86400000;
+    if (p === "month")   return now - ts <= 30 * 86400000;
+    if (p === "last30")  return now - ts <= 30 * 86400000;
+    return true;
+  });
+}
+
+function setChartPeriod(p) {
+  window.chartPeriod = p;
+  document.querySelectorAll(".chart-period-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.period === p);
+  });
+  renderProductBars();
+  renderWorkerBars();
+}
+
 function renderProductBars() {
-  const sorted = Object.entries(scanStats)
-    .map(([code, s]) => ({ label: (allProducts[code] || {}).name || code, val: s.total, code }))
+  const scans = getChartScans();
+  const cm = {};
+  scans.forEach(s => {
+    const c = s.code || ""; cm[c] = (cm[c] || 0) + 1;
+  });
+  const sorted = Object.entries(cm)
+    .map(([code, val]) => ({ label: (allProducts[code] || {}).name || code, val }))
     .sort((a, b) => b.val - a.val).slice(0, 8);
   const max = sorted[0]?.val || 1;
   const colors = ["amber","green","red","blue","amber","green","red","blue"];
   document.getElementById("product-bars").innerHTML = sorted.length
-    ? sorted.map((p, i) => bar(p.label, p.val, max, colors[i], getProductIcon(p.label))).join("")
+    ? sorted.map((p, i) => bar(p.label, p.val, max, colors[i])).join("")
     : `<div class="empty-state"><div class="empty-icon">📊</div>No scan data yet</div>`;
 }
 
 function renderWorkerBars() {
+  const scans = getChartScans();
   const wm = {};
-  allScans.forEach(s => { const w = s.worker || "?"; wm[w] = (wm[w] || 0) + 1; });
+  scans.forEach(s => { const w = s.worker || "?"; wm[w] = (wm[w] || 0) + 1; });
   const sorted = Object.entries(wm).sort((a, b) => b[1] - a[1]);
   const max = sorted[0]?.[1] || 1;
   document.getElementById("worker-bars").innerHTML = sorted.length
-    ? sorted.map(([w, n]) => bar(w, n, max, "blue", "👤")).join("")
+    ? sorted.map(([w, n]) => bar(w, n, max, "blue")).join("")
     : `<div class="empty-state"><div class="empty-icon">👤</div>No worker data yet</div>`;
 }
 function renderFeed() {
@@ -1651,103 +1706,41 @@ async function loadMepOverview() {
   } catch(e) { console.error("Failed to load MEP overview:", e); }
 }
 
+// NEW:
 function renderMepThumbs() {
   const catFilter = document.getElementById("mep-cat-filter")?.value || "";
-  const today     = new Date();
-  const dayNames  = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+  let products = Object.entries(allProducts);
+  if (catFilter) products = products.filter(([, p]) => p.kategorie === catFilter);
+  const html = products.map(([code, p]) => {
+    // Derive status from todayScanStats (in-memory, always current)
+    const st        = (window.todayScanStats || {})[code] || {};
+    const done      = st.done    || 0;
+    const waste     = st.waste   || 0;
+    const produce   = st.produce || 0;
+    const avail     = Math.max(0, done - waste);
+    const inProg    = Math.max(0, produce - done);
+    const target    = p.tagesziel || p.mepMax || 0;
 
-  let entries = Object.entries(allProducts);
-  if (catFilter) entries = entries.filter(([, p]) => p.kategorie === catFilter);
+    let statusClass = "status-red";
+    if (target > 0 && avail >= target)      statusClass = "status-green";
+    else if (avail > 0 || inProg > 0)       statusClass = "status-amber";
 
-  // Group by category
-  const groups = {};
-  entries.forEach(([code, p]) => {
-    const cat = p.kategorie || "Other";
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push([code, p]);
-  });
-
-  const sortedCats = Object.keys(groups).sort();
-  let html = "";
-
-  sortedCats.forEach(cat => {
-    html += `<div class="mep-cat-title">${cat}</div>`;
-    // Sort urgent first
-    groups[cat].sort((a, b) => {
-      const ta = (allMepStatus[a[0]] || {}).toProduce || 0;
-      const tb = (allMepStatus[b[0]] || {}).toProduce || 0;
-      return tb - ta;
-    });
-    groups[cat].forEach(([code, p]) => {
-      const st     = allMepStatus[code] || {};
-      const avail  = st.available  || 0;
-      const target = st.tagesziel  || p.tagesziel || 0;
-      const toProd = st.toProduce !== undefined ? st.toProduce : Math.max(0, target - avail);
-      const maxBar = target || p.mepMax || 1;
-
-      // Status dot
-      let dotColor = "var(--red)";
-      if (avail >= target && target > 0) dotColor = "var(--green)";
-      else if (avail > 0)                dotColor = "var(--amber)";
-
-      // Expiry from oldest batch (FIFO)
-      let expiryHtml = "";
-      const batches = st.batches || [];
-      if (batches.length > 0) {
-        const oldest   = batches.slice().sort((a, b) => a.expiryDate < b.expiryDate ? -1 : 1)[0];
-        const expDate  = new Date(oldest.expiryDate + "T23:59:59");
-        const diffDays = Math.ceil((expDate - today) / 86400000);
-        const dayName  = dayNames[expDate.getDay()];
-        const expStr   = oldest.expiryDate.slice(5).replace("-", "/");
-        if (diffDays <= 0) {
-          expiryHtml = `<div class="mep-home-expiry" style="color:var(--red)">⚠ Expired</div>`;
-        } else if (diffDays <= 1) {
-          expiryHtml = `<div class="mep-home-expiry" style="color:var(--amber)">⚠ Expires today (${dayName})</div>`;
-        } else {
-          expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">Fridge until ${dayName} ${expStr} (+${diffDays}d)</div>`;
-        }
-      } else if (p.shelfLife) {
-        expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">+${p.shelfLife}d shelf life</div>`;
-      }
-
-      // Thumbnail
-      const imgHtml = p.image
-        ? `<img class="mep-home-thumb" src="${p.image}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-           <div class="mep-home-thumb-ph" style="display:none">🍽</div>`
-        : `<div class="mep-home-thumb-ph">📦</div>`;
-
-      // Bars
-      const availPct = Math.min(100, Math.round(avail / maxBar * 100));
-      const prodPct  = Math.min(100, Math.round(toProd / maxBar * 100));
-      const availColor = avail >= target && target > 0 ? "var(--green)" : avail > 0 ? "var(--amber)" : "var(--red)";
-      const prodColor  = toProd > 0 ? "var(--amber)" : "var(--surface2)";
-
-      html += `
-        <div class="mep-home-row" onclick="showMepDetail('${code}')">
-          <div class="mep-status-dot" style="background:${dotColor}"></div>
-          ${imgHtml}
-          <div class="mep-home-info">
-            <div class="mep-home-name">${p.name || code}</div>
-            ${expiryHtml}
-          </div>
-          <div class="mep-home-bars">
-            <div class="mep-bar-wrap">
-              <div class="mep-bar-label">Avail</div>
-              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${availPct}%;background:${availColor}"></div></div>
-              <div class="mep-bar-val" style="color:${availColor}">${avail}</div>
-            </div>
-            <div class="mep-bar-wrap">
-              <div class="mep-bar-label">Produce</div>
-              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${prodPct}%;background:${prodColor}"></div></div>
-              <div class="mep-bar-val" style="color:${toProd>0?'var(--amber)':'var(--muted)'}">${toProd}</div>
-            </div>
-          </div>
-        </div>`;
-    });
-  });
-
-  document.getElementById("mep-thumb-grid").innerHTML = html ||
-    '<div class="empty-state">No products</div>';
+    // Status label shown in overlay
+    const statusLabel = target > 0
+      ? `${avail} / ${target}`
+      : avail > 0 ? `${avail} done` : inProg > 0 ? `${inProg} in prep` : "—";
+    const img = toDirectImg(p.image)
+      ? `<img src="${toDirectImg(p.image)}" class="mep-thumb-img" onerror="this.style.display='none'">` : '<div class="mep-thumb-ph">📦</div>';
+    return `<div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
+      ${img}
+      <div class="mep-thumb-overlay">
+        <div class="mep-thumb-code">${code}</div>
+        <div class="mep-thumb-name">${p.name || code}</div>
+        <div class="mep-thumb-code" style="margin-top:4px;color:inherit;opacity:.7">${statusLabel}</div>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
 }
 
 function filterMepOverview() { renderMepThumbs(); }
@@ -2019,9 +2012,10 @@ function renderProductGrid(entries) {
     const avail = Math.max(0, done - waste);
     const inProg = (produce === 0 && p.mepMax > 0) ? Math.max(0, p.mepMax - done) : Math.max(0, produce - done);
     const gnLabel = p.gnSize ? " " + p.gnSize : "";
-    const img = p.image
-      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" style="height:80px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
-      : `<div class="product-thumb-ph" style="height:80px">🍽</div>`;
+    const imgSrc  = toDirectImg(p.image);
+    const img     = imgSrc
+      ? `<img class="product-thumb" src="${imgSrc}" loading="lazy" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
+      : `<div class="product-thumb-ph">🍽</div>`;
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
         <span class="prod-stat green">OK ${avail}${gnLabel}</span>
@@ -3744,7 +3738,7 @@ function openEditProductModal(code) {
   document.getElementById("epf-gnweight").value = p.gnWeight ?? "";
   document.getElementById("epf-tagesziel").value = p.tagesziel ?? "";
   document.getElementById("epf-shelf").value = p.shelfLife ?? "";
-  document.getElementById("epf-drive").value = "";
+  document.getElementById("epf-drive").value = p.image || "";
   document.getElementById("editProductTitle").textContent = "Edit Product - " + code;
   document.getElementById("epf-msg").textContent = "";
   document.getElementById("editProductModal").classList.add("active");
