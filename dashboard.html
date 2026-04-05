@@ -1260,6 +1260,7 @@
 </div>
 
 <script>
+
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
@@ -1270,6 +1271,14 @@ let allMepStatus = {};
 let allWorkersAdmin = [];
 let allRecipes = [];
 let _msAction = "";
+let allMenus      = [];
+let menuZutaten   = [];
+let grZutaten     = [];
+let ipMode        = 'rm';
+let ipContext     = 'menu';
+let ipSelectedItem = null;
+let editingMenuId = null;
+let _viewingMenu  = null;
 
 // ─────────────────────────────────────────────
 // LIVE CLOCK  (date + time under LIVE badge)
@@ -3445,17 +3454,6 @@ async function saveEditedInventory() {
 }  
 
 // ─────────────────────────────────────────────
-// MENU STATE
-// ─────────────────────────────────────────────
-let allMenus      = [];
-let menuZutaten   = [];   // zutaten for current menu popup
-let grZutaten     = [];   // zutaten for GR sub-popup
-let ipMode        = 'rm'; // 'mep' | 'rm'
-let ipContext     = 'menu'; // 'menu' | 'gr'
-let ipSelectedItem = null;
-let editingMenuId = null;
-
-// ─────────────────────────────────────────────
 // LOAD MENUS
 // ─────────────────────────────────────────────
 async function loadRequirements() {
@@ -3572,32 +3570,51 @@ function renderMenuList() {
 // MENU POPUP — OPEN / CLOSE
 // ─────────────────────────────────────────────
 function openMenuPopup(menuId) {
+  const popup = document.getElementById('menuPopup');
+  if (!popup) { console.error('menuPopup element not found'); return; }
+
   editingMenuId = menuId || null;
   menuZutaten   = [];
   const existing = menuId ? allMenus.find(m => m.id === menuId) : null;
 
-  document.getElementById('mp-popup-title').textContent = existing ? 'Menu bearbeiten' : 'Neues Menu';
-  document.getElementById('mp-name').value        = existing?.name        || '';
-  document.getElementById('mp-category').value    = existing?.category    || '';
-  document.getElementById('mp-art').value         = existing?.art         || '';
-  document.getElementById('mp-saison').value      = existing?.saison      || 'All Year';
-  document.getElementById('mp-gewicht').value     = existing?.gewicht     || '';
-  document.getElementById('mp-vk').value          = existing?.vk         || '';
-  document.getElementById('mp-deko').value        = existing?.deko        || '';
-  document.getElementById('mp-zubereitung').value = existing?.zubereitung || '';
-  document.getElementById('mp-wa').value          = '';
-  document.getElementById('mp-fc').textContent    = '—';
-  document.getElementById('mp-msg').textContent   = '';
-  document.getElementById('mp-img-preview').style.display = 'none';
-  document.getElementById('mp-drive-url').style.display   = 'none';
-  document.getElementById('mp-logo-preview').innerHTML    = '🍽️';
-  document.getElementById('mp-lastupdate').textContent    = existing?.lastUpdate
-    ? new Date(existing.lastUpdate).toLocaleDateString('de-CH') : new Date().toLocaleDateString('de-CH');
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || ''; };
+  const setDisp = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val; };
+
+  setTxt('mp-popup-title', existing ? 'Menu bearbeiten' : 'Neues Menu');
+  setVal('mp-name',        existing?.name        || '');
+  setVal('mp-category',    existing?.category    || '');
+  setVal('mp-art',         existing?.art         || '');
+  setVal('mp-saison',      existing?.saison      || 'All Year');
+  setVal('mp-gewicht',     existing?.gewicht     || '');
+  setVal('mp-vk',          existing?.vk          || '');
+  setVal('mp-deko',        existing?.deko        || '');
+  setVal('mp-zubereitung', existing?.zubereitung || '');
+  setVal('mp-wa',          '');
+
+  const fcEl = document.getElementById('mp-fc');
+  if (fcEl) { fcEl.textContent = '—'; fcEl.style.color = 'var(--amber)'; }
+
+  const msgEl = document.getElementById('mp-msg');
+  if (msgEl) { msgEl.textContent = ''; msgEl.className = 'admin-msg'; }
+
+  setDisp('mp-img-preview', 'none');
+  setDisp('mp-drive-url',   'none');
+
+  const logo = document.getElementById('mp-logo-preview');
+  if (logo) logo.innerHTML = '🍽️';
+
+  const lastUpdate = document.getElementById('mp-lastupdate');
+  if (lastUpdate) lastUpdate.textContent = existing?.lastUpdate
+    ? new Date(existing.lastUpdate).toLocaleDateString('de-CH')
+    : new Date().toLocaleDateString('de-CH');
 
   if (existing?.imageUrl) {
-    document.getElementById('mp-img-el').src = existing.imageUrl;
-    document.getElementById('mp-img-preview').style.display = 'block';
+    const imgEl = document.getElementById('mp-img-el');
+    if (imgEl) imgEl.src = existing.imageUrl;
+    setDisp('mp-img-preview', 'block');
   }
+
   if (existing?.zutaten) {
     try { menuZutaten = JSON.parse(existing.zutaten); } catch(e) { menuZutaten = []; }
   }
@@ -3605,13 +3622,18 @@ function openMenuPopup(menuId) {
   renderMenuZutaten();
   calcWaFromZutaten();
   populateMenuFilters();
-  document.getElementById('menuPopup').style.display = 'block';
-  // Close view popup if open
-  document.getElementById('menuViewPopup').style.display = 'none';
+
+  popup.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+
+  const viewPopup = document.getElementById('menuViewPopup');
+  if (viewPopup) viewPopup.style.display = 'none';
 }
 
 function closeMenuPopup() {
-  document.getElementById('menuPopup').style.display = 'none';
+  const p = document.getElementById('menuPopup');
+  if (p) p.style.display = 'none';
+  document.body.style.overflow = '';
   editingMenuId = null;
 }
 
