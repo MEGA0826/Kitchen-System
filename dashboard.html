@@ -606,6 +606,7 @@
       </div>
       <button onclick="openMenuPopup(null)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
       <button onclick="openAddGRPopup()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
+      <button onclick="openAddMEPPopup()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add MEP</button>
     </div>
 
     <!-- Search bar -->
@@ -3586,7 +3587,13 @@ async function loadRequirements() {
   // ─────────────────────────────────────────────
 // ADD GR POPUP
 // ─────────────────────────────────────────────
-
+function openAddMEPPopup() {
+  // MEP products are managed in Admin → Products tab
+  // Direct user there instead of duplicating the form
+  if (confirm('MEP Produkte werden im Admin-Bereich verwaltet. Zum Admin-Tab wechseln?')) {
+    requestAdminAccess();
+  }
+}
 function openAddGRPopup() {
   agrZutaten = [];
   ['agr-code','agr-name','agr-rohgewicht','agr-garverlust','agr-zubereitung'].forEach(id => {
