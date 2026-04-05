@@ -822,55 +822,38 @@
   </div>
   </div>
 
-  <!-- ═══ GR SUB-RECIPE POPUP ═══ -->
-  <div id="grPopup" style="display:none;position:fixed;inset:0;z-index:1050;background:rgba(0,0,0,0.8);overflow-y:auto;padding:16px">
-  <div style="background:var(--surface);border-radius:14px;max-width:540px;margin:0 auto;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+ <!-- ═══ GR PICKER POPUP ═══ -->
+  <div id="grPopup" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:14px;width:100%;max-width:460px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
     <div style="background:var(--surface2);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
-      <div style="font-size:13px;font-weight:600;color:var(--green)">＋ Grundrezeptur (GR)</div>
+      <div style="font-size:13px;font-weight:600;color:var(--green)">🟢 Grundrezeptur wählen</div>
       <button onclick="closeGrPopup()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
     </div>
-    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
-      <div class="form-grid">
-        <div class="form-field" style="grid-column:1/-1">
-          <label class="form-label">GR Name *</label>
-          <input class="form-input" id="gr-name" placeholder="z.B. GR Rindfleisch mariniert">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Art</label>
-          <select class="form-input" id="gr-art">
-            <option>Grundrezeptur</option><option>Hauptgang</option><option>Sauce</option><option>Beilage</option><option>Marinade</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Gewicht total (kg)</label>
-          <input class="form-input" id="gr-gewicht" type="number" step="0.001" placeholder="0.090">
-        </div>
-      </div>
-
-      <!-- GR Zutaten -->
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <label class="form-label" style="margin:0">Zutaten GR</label>
-          <div style="display:flex;gap:5px">
-            <button onclick="openIngredientPicker('mep','gr')" style="padding:4px 9px;border-radius:6px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:11px;cursor:pointer">＋ MEP</button>
-            <button onclick="openIngredientPicker('rm','gr')"  style="padding:4px 9px;border-radius:6px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);font-size:11px;cursor:pointer">＋ RM</button>
+    <div style="padding:14px">
+      <input class="form-input" id="gr-search" placeholder="GR suchen…" oninput="filterGrPicker()" style="margin-bottom:10px">
+      <div id="gr-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
+      <div id="gr-detail" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px" id="gr-selected-name"></div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label">⚖️ Rohgewicht (kg)</label>
+            <input class="form-input" id="gr-rohgewicht" type="number" step="0.001" placeholder="0.090" oninput="calcGrPickerCost()">
+          </div>
+          <div class="form-field">
+            <label class="form-label">🔥 Garverlust %</label>
+            <input class="form-input" id="gr-garverlust" type="number" min="0" max="99" step="0.1" placeholder="z.B. 30" oninput="calcGrPickerCost()">
+          </div>
+          <div class="form-field">
+            <label class="form-label">✅ Nettogewicht</label>
+            <div id="gr-nettogewicht" style="padding:9px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--green)">—</div>
+          </div>
+          <div class="form-field">
+            <label class="form-label">💰 Kosten (auto CHF)</label>
+            <div id="gr-cost-display" style="padding:9px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--amber)">—</div>
           </div>
         </div>
-        <div id="gr-zutaten-list" style="display:flex;flex-direction:column;gap:5px;min-height:24px">
-          <div style="font-size:11px;color:var(--muted);font-style:italic">Keine Zutaten.</div>
-        </div>
-        <div style="margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:7px;display:flex;justify-content:space-between">
-          <span style="font-size:11px;color:var(--muted)">GR Preis (auto)</span>
-          <span id="gr-preis-total" style="font-size:13px;font-weight:700;color:var(--amber)">CHF 0.00</span>
-        </div>
+        <button onclick="confirmGr()" style="margin-top:8px;width:100%;padding:10px;border-radius:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:13px;font-weight:600;cursor:pointer">✓ Hinzufügen</button>
       </div>
-
-      <div class="form-field">
-        <label class="form-label">Zubereitung GR</label>
-        <textarea class="form-input" id="gr-zubereitung" rows="3" style="resize:vertical" placeholder="Zubereitungsschritte…"></textarea>
-      </div>
-
-      <button onclick="confirmGr()" style="width:100%;padding:10px;border-radius:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:13px;font-weight:600;cursor:pointer">✓ GR zum Menu hinzufügen</button>
     </div>
   </div>
   </div>
@@ -1309,7 +1292,6 @@ let allRecipes = [];
 let _msAction = "";
 let allMenus      = [];
 let menuZutaten   = [];
-let grZutaten     = [];
 let ipMode        = 'rm';
 let ipContext     = 'menu';
 let ipSelectedItem = null;
@@ -3771,18 +3753,6 @@ function removeMenuZutat(i) {
   renderMenuZutaten();
 }
 
-function calcGrPreis() {
-  const total = grZutaten.reduce((s,z) => s+(parseFloat(z.cost)||0), 0);
-  const el = document.getElementById('gr-preis-total');
-  if (el) el.textContent = 'CHF ' + total.toFixed(2);
-  calcGrGarverlust();
-}
-
-function removeGrZutat(i) {
-  grZutaten.splice(i, 1);
-  renderMenuZutaten('gr-zutaten-list', grZutaten);
-}
-
 // ─────────────────────────────────────────────
 // LOGO + IMAGE
 // ─────────────────────────────────────────────
@@ -3896,47 +3866,90 @@ function confirmIngredient() {
 }
 
 // ─────────────────────────────────────────────
-// GR POPUP
+// GR PICKER
 // ─────────────────────────────────────────────
+let _grSelectedItem = null;
+
 function openGrPopup() {
-  grZutaten = [];
-  document.getElementById('gr-name').value        = '';
-  document.getElementById('gr-art').value         = 'Grundrezeptur';
-  document.getElementById('gr-gewicht').value     = '';
-  document.getElementById('gr-garverlust').value  = '';
-  const grNetto = document.getElementById('gr-nettogewicht'); if (grNetto) grNetto.textContent = '—';
-  const grEff   = document.getElementById('gr-eff-preis');    if (grEff)   grEff.textContent   = '—';
-  document.getElementById('gr-zubereitung').value = '';
-  renderMenuZutaten('gr-zutaten-list', grZutaten);
-  document.getElementById('grPopup').style.display = 'block';
+  _grSelectedItem = null;
+  document.getElementById('gr-search').value = '';
+  document.getElementById('gr-detail').style.display = 'none';
+  document.getElementById('gr-rohgewicht').value = '';
+  document.getElementById('gr-garverlust').value = '';
+  document.getElementById('gr-nettogewicht').textContent = '—';
+  document.getElementById('gr-cost-display').textContent = '—';
+  const popup = document.getElementById('grPopup');
+  popup.style.display = 'flex';
+  filterGrPicker();
 }
 
 function closeGrPopup() {
   document.getElementById('grPopup').style.display = 'none';
 }
 
+function filterGrPicker() {
+  const q = (document.getElementById('gr-search').value || '').toLowerCase();
+  // GR items = allMenus filtered by art === 'Grundrezeptur' or 'MEP', plus allProducts with mepMax
+  const grItems = [
+    ...Object.entries(allProducts)
+      .filter(([,p]) => p.name && p.name !== '(deleted)')
+      .map(([code,p]) => ({ code, name: p.name, unitCost: parseFloat(p.kostenUnit||0), source: 'mep' })),
+    ...allMenus
+      .filter(m => m.art === 'Grundrezeptur' || m.art === 'MEP')
+      .map(m => ({ code: m.menuCode||m.id, name: m.name, unitCost: parseFloat(m.wa||0), source: 'gr' }))
+  ];
+  const filtered = q ? grItems.filter(i => i.name.toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q)) : grItems;
+  const el = document.getElementById('gr-list');
+  if (!filtered.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine GR gefunden.</div>`; return; }
+  el.innerHTML = filtered.slice(0,40).map(i => `
+    <div onclick="selectGrItem('${i.code}','${(i.name||'').replace(/'/g,"\\'").replace(/"/g,'\\"')}',${i.unitCost||0},'${i.source}')"
+      style="padding:8px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);border:1px solid transparent"
+      onmouseover="this.style.borderColor='var(--green-brd)'" onmouseout="this.style.borderColor='transparent'">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);margin-right:6px">${i.source.toUpperCase()}</span>
+      <span style="font-weight:500">${i.name}</span>
+      <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
+      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/kg</span>` : ''}
+    </div>`).join('');
+}
+
+function selectGrItem(code, name, unitCost, source) {
+  _grSelectedItem = { code, name, unitCost: parseFloat(unitCost)||0, source };
+  document.getElementById('gr-selected-name').textContent = name + ' (' + code + ')';
+  document.getElementById('gr-detail').style.display = 'block';
+  document.getElementById('gr-rohgewicht').focus();
+}
+
+function calcGrPickerCost() {
+  if (!_grSelectedItem) return;
+  const roh     = parseFloat(document.getElementById('gr-rohgewicht').value) || 0;
+  const verlust = parseFloat(document.getElementById('gr-garverlust').value) || 0;
+  const netto   = roh * (1 - verlust / 100);
+  document.getElementById('gr-nettogewicht').textContent = netto > 0 ? netto.toFixed(3) + ' kg' : '—';
+  const cost = netto * (_grSelectedItem.unitCost || 0);
+  document.getElementById('gr-cost-display').textContent = cost > 0 ? 'CHF ' + cost.toFixed(2) : '—';
+}
+
 function confirmGr() {
-  const name    = document.getElementById('gr-name').value.trim();
-  if (!name) { alert('GR Name erforderlich'); return; }
-  const rohGewicht  = parseFloat(document.getElementById('gr-gewicht').value) || 0;
-  const garverlust  = parseFloat(document.getElementById('gr-garverlust').value) || 0;
-  const gewicht     = rohGewicht * (1 - garverlust / 100);
-  const cost    = grZutaten.reduce((s,z) => s+(parseFloat(z.cost)||0), 0);
+  if (!_grSelectedItem) return;
+  const roh     = parseFloat(document.getElementById('gr-rohgewicht').value) || 0;
+  const verlust = parseFloat(document.getElementById('gr-garverlust').value) || 0;
+  const netto   = roh * (1 - verlust / 100);
+  const cost    = netto * (_grSelectedItem.unitCost || 0);
   menuZutaten.push({
-    type        : 'gr',
-    name        : name,
-    art         : document.getElementById('gr-art').value,
-    gewicht     : gewicht,
-    rohGewicht  : rohGewicht,
-    garverlust  : garverlust,
-    cost        : cost,
-    zutaten     : JSON.parse(JSON.stringify(grZutaten)),
-    zubereitung : document.getElementById('gr-zubereitung').value
+    type       : 'gr',
+    code       : _grSelectedItem.code,
+    name       : _grSelectedItem.name,
+    source     : _grSelectedItem.source,
+    gewicht    : netto,
+    rohGewicht : roh,
+    garverlust : verlust,
+    unitCost   : _grSelectedItem.unitCost,
+    cost       : cost
   });
   renderMenuZutaten();
   closeGrPopup();
 }
-
+  
 // ─────────────────────────────────────────────
 // SAVE MENU
 // ─────────────────────────────────────────────
