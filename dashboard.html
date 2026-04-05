@@ -598,62 +598,209 @@
 </div>
 
 <!-- RECIPES -->
-<div class="panel" id="panel-recipes">
-  <div class="section-title">Recipes <span class="section-title-icon">📋</span></div>
-  <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products · Link MEP products to menus</div>
-  <div style="margin-bottom:24px">
-    <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
-    <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
-  </div>
-  <div class="admin-section-title" style="margin-bottom:10px">Edit recipes</div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <select class="form-input" id="recipe-mep-filter" onchange="renderRecipeList()" style="flex:1">
-      <option value="">All MEP products</option>
-    </select>
-  </div>
-  <div id="recipe-list" style="margin-bottom:16px"></div>
-  <div class="admin-form">
-    <div class="admin-form-title">Add ingredient / menu link</div>
-
-    <!-- Type toggle -->
-    <div style="display:flex;gap:8px;margin-bottom:14px">
-      <button id="rf-type-rm"  class="btn-save"   onclick="setRecipeType('rm')"  style="flex:1;font-size:13px">MEP ← Raw Material</button>
-      <button id="rf-type-mep" class="btn-outline" onclick="setRecipeType('mep')" style="flex:1;font-size:13px">Menu ← MEP Product</button>
+  <div class="panel" id="panel-recipes">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div>
+        <div class="section-title" style="margin-bottom:2px">Recipes</div>
+        <div class="section-sub">Menus & raw material links</div>
+      </div>
+      <!-- ★ NEW: Add Menu button -->
+      <button onclick="openMenuPopup()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">
+        ＋ Add Menu
+      </button>
     </div>
 
-    <div class="form-grid">
-      <!-- Row A: parent selector (label changes by type) -->
-      <div class="form-field" id="rf-parent-wrap">
-        <label class="form-label" id="rf-parent-label">MEP Product *</label>
-        <select class="form-input" id="rf-mep"><option value="">Select…</option></select>
-      </div>
-
-      <!-- Row B: child selector — RM (type=rm) or MEP (type=mep) -->
-      <div class="form-field" id="rf-child-wrap">
-        <label class="form-label" id="rf-child-label">Raw Material *</label>
-        <select class="form-input" id="rf-rm"><option value="">Select raw material…</option></select>
-      </div>
-
-      <!-- Quantity -->
-      <div class="form-field">
-        <label class="form-label" id="rf-menge-label">Quantity per GN</label>
-        <input class="form-input" type="number" id="rf-menge" placeholder="0.00" min="0" step="0.01">
-      </div>
-
-      <!-- Unit — hidden for mep type (always kg) -->
-      <div class="form-field" id="rf-einheit-wrap">
-        <label class="form-label">Unit</label>
-        <input class="form-input" id="rf-einheit" placeholder="kg / l / pcs">
-      </div>
+    <div style="margin-bottom:24px;margin-top:20px">
+      <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
+      <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
     </div>
 
-    <div class="form-actions">
-      <button class="btn-save" onclick="saveRecipe()">Add</button>
+    <div class="admin-section-title" style="margin-bottom:10px">Edit recipes</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <select class="form-input" id="recipe-mep-filter" onchange="renderRecipeList()" style="flex:1">
+        <option value="">All MEP products</option>
+      </select>
     </div>
-    <div class="admin-msg" id="rf-msg"></div>
+    <div id="recipe-list" style="margin-bottom:16px"></div>
   </div>
-</div>
 
+  <!-- ★ NEW: Menu Popup Modal -->
+  <div id="menuPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);overflow-y:auto;padding:20px 0">
+    <div style="background:var(--card);border-radius:18px;max-width:680px;margin:0 auto;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+
+      <!-- Header with logo area -->
+      <div style="background:var(--surface);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div id="mp-logo-preview" style="width:48px;height:48px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;flex-shrink:0">🍽️</div>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--text)">New Menu</div>
+            <div style="font-size:11px;color:var(--muted)">212 Nooch Richti</div>
+          </div>
+        </div>
+        <button onclick="closeMenuPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px">✕</button>
+      </div>
+
+      <div style="padding:24px;display:flex;flex-direction:column;gap:20px">
+
+        <!-- Logo upload -->
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="file" id="mp-logo-file" accept="image/*" style="display:none" onchange="previewMenuLogo(this)">
+          <button onclick="document.getElementById('mp-logo-file').click()" style="padding:7px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:12px;cursor:pointer">📷 Logo Firma</button>
+          <span style="font-size:11px;color:var(--muted)">Optional firm logo</span>
+        </div>
+
+        <!-- Name + Category + Art + Saison -->
+        <div class="form-grid">
+          <div class="form-field" style="grid-column:1/-1">
+            <label class="form-label">Menu Name *</label>
+            <input class="form-input" id="mp-name" placeholder="z.B. Zürcher Geschnetzeltes">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Kategorie</label>
+            <select class="form-input" id="mp-category">
+              <option value="">Wählen…</option>
+              <option>Vorspeise</option><option>Hauptgang</option><option>Dessert</option>
+              <option>Snack</option><option>Getränk</option><option>Buffet</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Art</label>
+            <select class="form-input" id="mp-art">
+              <option value="">Wählen…</option>
+              <option>Vegan</option><option>Vegetarisch</option><option>Fleisch</option>
+              <option>Fisch</option><option>Geflügel</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Saison</label>
+            <select class="form-input" id="mp-saison">
+              <option value="">Ganzjährig</option>
+              <option>Frühling</option><option>Sommer</option><option>Herbst</option><option>Winter</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Menu image -->
+        <div>
+          <label class="form-label" style="margin-bottom:8px;display:block">📸 Menu Bild</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="file" id="mp-img-file" accept="image/*" style="display:none" onchange="previewMenuImg(this)">
+            <button onclick="document.getElementById('mp-img-file').click()" style="padding:7px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:12px;cursor:pointer">💻 Computer</button>
+            <button onclick="openDriveImgPicker()" style="padding:7px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:12px;cursor:pointer">☁️ Drive URL</button>
+          </div>
+          <div id="mp-img-preview" style="margin-top:10px;display:none">
+            <img id="mp-img-el" src="" style="max-width:100%;max-height:180px;border-radius:10px;object-fit:cover">
+          </div>
+          <input id="mp-drive-url" class="form-input" placeholder="Drive image URL (paste link)" style="margin-top:8px;display:none" oninput="loadDriveImg(this.value)">
+        </div>
+
+        <!-- WA + Verkaufpreis + Gewicht -->
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label">💰 Warenaufwand (WA)</label>
+            <input class="form-input" id="mp-wa" type="number" min="0" step="0.05" placeholder="CHF">
+          </div>
+          <div class="form-field">
+            <label class="form-label">🏷️ Verkaufpreis (CHF)</label>
+            <input class="form-input" id="mp-vk" type="number" min="0" step="0.05" placeholder="CHF">
+          </div>
+          <div class="form-field">
+            <label class="form-label">⚖️ Gewicht (g/kg)</label>
+            <input class="form-input" id="mp-gewicht" placeholder="z.B. 250g">
+          </div>
+          <div class="form-field">
+            <label class="form-label">FC %</label>
+            <div id="mp-fc" style="padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--amber)">—</div>
+          </div>
+        </div>
+
+        <!-- Zutaten -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <label class="form-label" style="margin:0">🧂 Zutaten</label>
+            <div style="display:flex;gap:8px">
+              <button onclick="openIngredientPicker('mep')" style="padding:6px 12px;border-radius:8px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:12px;cursor:pointer">＋ MEP</button>
+              <button onclick="openIngredientPicker('rm')" style="padding:6px 12px;border-radius:8px;background:var(--blue-dim,#1a2a3a);color:var(--blue,#60a5fa);border:1px solid rgba(96,165,250,0.3);font-size:12px;cursor:pointer">＋ RM</button>
+            </div>
+          </div>
+          <div id="mp-zutaten-list" style="display:flex;flex-direction:column;gap:6px;min-height:32px">
+            <div style="font-size:12px;color:var(--muted);font-style:italic">Noch keine Zutaten hinzugefügt.</div>
+          </div>
+        </div>
+
+        <!-- Dekoration -->
+        <div class="form-field">
+          <label class="form-label">🌿 Dekoration</label>
+          <input class="form-input" id="mp-deko" placeholder="z.B. Kräuter, Microgreens…">
+        </div>
+
+        <!-- Zubereitung -->
+        <div class="form-field">
+          <label class="form-label">📋 Zubereitung</label>
+          <textarea class="form-input" id="mp-zubereitung" rows="4" placeholder="Zubereitungsschritte…" style="resize:vertical"></textarea>
+        </div>
+
+        <!-- Last update -->
+        <div style="font-size:11px;color:var(--muted)">Letztes Update: <span id="mp-lastupdate">—</span></div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button onclick="closeMenuPopup()" style="padding:10px 20px;border-radius:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;cursor:pointer">Abbrechen</button>
+          <button onclick="saveMenuEntry()" style="padding:10px 24px;border-radius:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:13px;font-weight:600;cursor:pointer">💾 Speichern</button>
+        </div>
+        <div id="mp-msg" class="admin-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★ NEW: Ingredient Picker Sub-Popup -->
+  <div id="ingredientPickerPopup" style="display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border-radius:14px;width:100%;max-width:500px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+      <div style="background:var(--surface);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:600;color:var(--text)" id="ip-title">MEP auswählen</div>
+        <button onclick="closeIngredientPicker()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div style="padding:16px">
+        <input class="form-input" id="ip-search" placeholder="Suchen…" oninput="filterIngredientPicker()" style="margin-bottom:12px">
+        <div id="ip-list" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+        <!-- Detail fields shown after selection -->
+        <div id="ip-detail" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px" id="ip-selected-name"></div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label">Gewicht (kg)</label>
+              <input class="form-input" id="ip-gewicht" type="number" min="0" step="0.001" placeholder="0.250">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Allergie</label>
+              <input class="form-input" id="ip-allergie" placeholder="z.B. Gluten, Milch…">
+            </div>
+            <div class="form-field" style="grid-column:1/-1">
+              <label class="form-label">Zubereitung / Notiz</label>
+              <input class="form-input" id="ip-zubereitung" placeholder="z.B. fein schneiden">
+            </div>
+          </div>
+          <button onclick="confirmIngredient()" style="margin-top:10px;width:100%;padding:10px;border-radius:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:13px;font-weight:600;cursor:pointer">✓ Hinzufügen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- ★ NEW: Menu PDF Viewer Popup -->
+  <div id="menuPdfPopup" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.85);overflow-y:auto;padding:16px">
+    <div style="max-width:760px;margin:0 auto">
+      <!-- Action bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#fff" id="pdf-popup-title">Menu Preview</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="downloadMenuPdf()" style="padding:8px 16px;border-radius:8px;background:#1a1a16;color:#5dca8a;border:1px solid rgba(93,202,138,0.3);font-size:12px;cursor:pointer;font-family:monospace">⬇ Save PDF</button>
+          <button onclick="printMenuPdf()" style="padding:8px 16px;border-radius:8px;background:#1a1a16;color:#60a8e8;border:1px solid rgba(96,168,232,0.3);font-size:12px;cursor:pointer;font-family:monospace">🖨 Print</button>
+          <button onclick="document.getElementById('menuPdfPopup').style.display='none'" style="padding:8px 14px;border-radius:8px;background:#1a1a16;color:#888;border:1px solid rgba(255,255,255,0.1);font-size:12px;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <!-- A4 preview sheet -->
+      <div id="menuPdfSheet" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)"></div>
+    </div>
+  </div>
 <!-- ORDERS Tab-->
   <div class="panel" id="panel-orders">
     <div class="section-title">Orders <span class="section-title-icon">🛒</span></div>
@@ -1319,19 +1466,15 @@ function buildScanStats() {
   window.todayScanStats = {};
   const todayStr = new Date().toLocaleDateString('en-CA');
   allScans.forEach(s => {
+    if (!s.timestamp) return;
+    const d = new Date(s.timestamp).toLocaleDateString('en-CA');
+    if (d !== todayStr) return;
     const c = s.code || "";
     if (!scanStats[c]) scanStats[c] = { produce:0, done:0, waste:0, used:0, total:0 };
     const a = s.action || "";
     if (a in scanStats[c]) scanStats[c][a]++;
     scanStats[c].total++;
-  });
-  allScans.forEach(s => {
-    if (!s.timestamp) return;
-    const d = new Date(s.timestamp).toLocaleDateString('en-CA')
-    if (d !== todayStr) return;
-    const c = s.code || "";
     if (!window.todayScanStats[c]) window.todayScanStats[c] = { produce:0, done:0, waste:0, used:0 };
-    const a = s.action || "";
     if (a in window.todayScanStats[c]) window.todayScanStats[c][a]++;
   });
 }
@@ -1580,7 +1723,9 @@ function renderWorkerBars() {
     : `<div class="empty-state"><div class="empty-icon">👤</div>No worker data yet</div>`;
 }
 function renderFeed() {
-  const rows = [...allScans].reverse().slice(0, 30).map(s => {
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toLocaleDateString('en-CA') === todayStr);
+  const rows = [...todayScans].reverse().slice(0, 30).map(s => {
     const p    = allProducts[s.code] || {};
     const name = p.name || s.code || "-";
     return `<div class="feed-row">
@@ -1592,7 +1737,7 @@ function renderFeed() {
   }).join("");
   document.getElementById("scan-feed").innerHTML =
     `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Action</span><span>Product</span></div>`
-    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans yet</div>`);
+    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans today</div>`);
 }
 
 // ─────────────────────────────────────────────
@@ -3113,7 +3258,10 @@ function renderRecipeList() {
     html += Object.entries(grouped).map(([mepCode, rows]) => {
       const p = allProducts[mepCode] || {};
       return `<div class="admin-form" style="margin-bottom:10px">
-        <div class="admin-form-title">${p.name||mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></div>
+      <div class="admin-form-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>${p.name||mepCode} <span style="font-size:10px;color:var(--muted)">${mepCode}</span></span>
+        <button onclick="openMenuPdfViewer(${JSON.stringify({name:p.name||mepCode, category:p.category||'', art:p.art||'', saison:p.saison||'', gewicht:p.gewicht||'', wa:p.wa||'', vk:p.vk||'', zutaten:'[]', zubereitung:p.zubereitung||'', deko:p.deko||'', lastUpdate:p.lastUpdate||'', imageUrl:p.imageUrl||'', logoUrl:''}).replace(/'/g,'"')})" style="padding:4px 10px;border-radius:6px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:10px;cursor:pointer;letter-spacing:1px">📄 VIEW</button>
+      </div>
         ${rows.map(r => { const inv = allInventory.find(x => x.code===r.rmCode)||{};
           return `<div class="admin-item" style="margin-top:6px">
             <div style="flex:1"><span style="font-size:13px">${inv.name||r.rmCode}</span>
@@ -3700,6 +3848,280 @@ async function saveEditedInventory() {
     btn.disabled = false;
     btn.textContent = "Save";
   }
+}  
+// ─────────────────────────────────────────────
+// MENU POPUP
+// ─────────────────────────────────────────────
+let menuZutaten = [];
+let ipMode = 'rm';
+let ipSelectedItem = null;
+
+function openMenuPopup() {
+  menuZutaten = [];
+  document.getElementById('menuPopup').style.display = 'block';
+  document.getElementById('mp-name').value = '';
+  document.getElementById('mp-category').value = '';
+  document.getElementById('mp-art').value = '';
+  document.getElementById('mp-saison').value = '';
+  document.getElementById('mp-wa').value = '';
+  document.getElementById('mp-vk').value = '';
+  document.getElementById('mp-gewicht').value = '';
+  document.getElementById('mp-deko').value = '';
+  document.getElementById('mp-zubereitung').value = '';
+  document.getElementById('mp-fc').textContent = '—';
+  document.getElementById('mp-lastupdate').textContent = new Date().toLocaleDateString('de-CH');
+  document.getElementById('mp-img-preview').style.display = 'none';
+  document.getElementById('mp-drive-url').style.display = 'none';
+  document.getElementById('mp-msg').textContent = '';
+  renderMenuZutaten();
+  ['mp-wa','mp-vk'].forEach(id => document.getElementById(id).addEventListener('input', calcFC));
+}
+function closeMenuPopup() {
+  document.getElementById('menuPopup').style.display = 'none';
+}
+function calcFC() {
+  const wa = parseFloat(document.getElementById('mp-wa').value) || 0;
+  const vk = parseFloat(document.getElementById('mp-vk').value) || 0;
+  const el = document.getElementById('mp-fc');
+  if (vk > 0) { const fc = (wa / vk * 100).toFixed(1); el.textContent = fc + '%'; el.style.color = fc > 33 ? 'var(--red)' : 'var(--green)'; }
+  else el.textContent = '—';
+}
+function previewMenuLogo(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { const el = document.getElementById('mp-logo-preview'); el.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`; };
+  reader.readAsDataURL(file);
+}
+function previewMenuImg(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('mp-img-el').src = e.target.result;
+    document.getElementById('mp-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function openDriveImgPicker() {
+  const el = document.getElementById('mp-drive-url');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function loadDriveImg(url) {
+  if (!url) return;
+  document.getElementById('mp-img-el').src = url;
+  document.getElementById('mp-img-preview').style.display = 'block';
+}
+function renderMenuZutaten() {
+  const el = document.getElementById('mp-zutaten-list');
+  if (!menuZutaten.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Noch keine Zutaten hinzugefügt.</div>'; return; }
+  el.innerHTML = menuZutaten.map((z, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:8px">
+      <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:${z.type==='mep'?'var(--amber-dim)':'var(--blue-dim,#1a2a3a)'};color:${z.type==='mep'?'var(--amber)':'var(--blue,#60a5fa)'};font-weight:600">${z.type.toUpperCase()}</span>
+      <div style="flex:1">
+        <span style="font-size:13px;color:var(--text)">${z.name}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">${z.gewicht ? z.gewicht+'kg' : ''} ${z.allergie ? '⚠️'+z.allergie : ''}</span>
+      </div>
+      <button onclick="removeMenuZutat(${i})" style="background:none;border:none;color:var(--red,#f87171);cursor:pointer;font-size:16px">✕</button>
+    </div>`).join('');
+}
+function removeMenuZutat(i) { menuZutaten.splice(i, 1); renderMenuZutaten(); }
+
+// ─────────────────────────────────────────────
+// INGREDIENT PICKER SUB-POPUP
+// ─────────────────────────────────────────────
+function openIngredientPicker(mode) {
+  ipMode = mode; ipSelectedItem = null;
+  document.getElementById('ip-title').textContent = mode === 'mep' ? '🟡 MEP auswählen' : '🔵 Rohstoff auswählen';
+  document.getElementById('ip-search').value = '';
+  document.getElementById('ip-detail').style.display = 'none';
+  document.getElementById('ip-gewicht').value = '';
+  document.getElementById('ip-allergie').value = '';
+  document.getElementById('ip-zubereitung').value = '';
+  const popup = document.getElementById('ingredientPickerPopup');
+  popup.style.display = 'flex';
+  filterIngredientPicker();
+}
+function closeIngredientPicker() {
+  document.getElementById('ingredientPickerPopup').style.display = 'none';
+}
+function filterIngredientPicker() {
+  const q = (document.getElementById('ip-search').value || '').toLowerCase();
+  const items = ipMode === 'mep'
+    ? Object.entries(allProducts).filter(([,p])=>p.name&&p.name!=='(deleted)').map(([code,p])=>({code, name:p.name}))
+    : allInventory.filter(r=>r.code).map(r=>({code:r.code, name:r.name||r.code, unit:r.unit}));
+  const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : items;
+  const el = document.getElementById('ip-list');
+  if (!filtered.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Keine Ergebnisse.</div>'; return; }
+  el.innerHTML = filtered.map(i => `
+    <div onclick="selectIngredientItem('${i.code}','${(i.name||'').replace(/'/g,"\\'")}','${i.unit||''}')"
+      style="padding:9px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:13px;color:var(--text);border:1px solid transparent"
+      onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
+      <span style="font-weight:500">${i.name}</span>
+      <span style="font-size:11px;color:var(--muted);margin-left:6px">${i.code}</span>
+    </div>`).join('');
+}
+function selectIngredientItem(code, name, unit) {
+  ipSelectedItem = { code, name, unit };
+  document.getElementById('ip-selected-name').textContent = name + ' (' + code + ')';
+  document.getElementById('ip-detail').style.display = 'block';
+}
+function confirmIngredient() {
+  if (!ipSelectedItem) return;
+  menuZutaten.push({
+    type: ipMode,
+    code: ipSelectedItem.code,
+    name: ipSelectedItem.name,
+    gewicht: document.getElementById('ip-gewicht').value,
+    allergie: document.getElementById('ip-allergie').value,
+    zubereitung: document.getElementById('ip-zubereitung').value
+  });
+  closeIngredientPicker();
+  renderMenuZutaten();
+}
+async function saveMenuEntry() {
+  const name = document.getElementById('mp-name').value.trim();
+  if (!name) { adminMsg('mp-msg','Menu Name ist erforderlich','err'); return; }
+  const payload = {
+    action: 'saveMenu',
+    name,
+    category: document.getElementById('mp-category').value,
+    art: document.getElementById('mp-art').value,
+    saison: document.getElementById('mp-saison').value,
+    wa: document.getElementById('mp-wa').value,
+    vk: document.getElementById('mp-vk').value,
+    gewicht: document.getElementById('mp-gewicht').value,
+    deko: document.getElementById('mp-deko').value,
+    zubereitung: document.getElementById('mp-zubereitung').value,
+    zutaten: JSON.stringify(menuZutaten),
+    lastUpdate: new Date().toISOString()
+  };
+  try {
+    adminMsg('mp-msg','Speichern…','');
+    const data = await adminCall(payload);
+    if (data.error) throw new Error(data.error);
+    adminMsg('mp-msg','Gespeichert ✓','ok');
+    setTimeout(closeMenuPopup, 1200);
+    await loadRecipes(); renderRecipeList();
+  } catch(e) { adminMsg('mp-msg','Fehler: '+e.message,'err'); }
+}  
+
+// ─────────────────────────────────────────────
+// MENU PDF VIEWER
+// ─────────────────────────────────────────────
+let _currentPdfMenu = null;
+
+function openMenuPdfViewer(menuData) {
+  _currentPdfMenu = menuData;
+  document.getElementById('pdf-popup-title').textContent = menuData.name || 'Menu Preview';
+  document.getElementById('menuPdfSheet').innerHTML = buildMenuPdfHtml(menuData);
+  document.getElementById('menuPdfPopup').style.display = 'block';
+}
+
+function buildMenuPdfHtml(m) {
+  const zutaten = (() => { try { return JSON.parse(m.zutaten || '[]'); } catch(e) { return []; } })();
+  const fc = (m.wa && m.vk) ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '—';
+  const imgHtml = m.imageUrl
+    ? `<img src="${m.imageUrl}" style="width:180px;height:140px;object-fit:cover;border-radius:6px;float:right;margin-left:16px">`
+    : `<div style="width:180px;height:140px;background:#f0ede6;border-radius:6px;float:right;margin-left:16px;display:flex;align-items:center;justify-content:center;font-size:40px">🍽️</div>`;
+  const logoHtml = m.logoUrl
+    ? `<img src="${m.logoUrl}" style="height:44px;object-fit:contain">`
+    : `<div style="font-family:serif;font-size:13px;font-weight:700;color:#1a1a16">FAMILIE<br><span style="font-size:18px;letter-spacing:1px">WIESNER</span><br><span style="font-size:8px;letter-spacing:2px;color:#888">GASTRONOMIE</span></div>`;
+
+  const zutatRows = zutaten.length ? zutaten.map(z => `
+    <tr>
+      <td style="padding:3px 6px;font-size:10px;color:#555">${z.type?.toUpperCase()||'RM'}</td>
+      <td style="padding:3px 6px;font-size:10px">${z.gewicht ? z.gewicht+' kg' : '—'}</td>
+      <td style="padding:3px 6px;font-size:11px;font-weight:500">${z.name||''}</td>
+      <td style="padding:3px 6px;font-size:10px;color:#888">${z.allergie||''}</td>
+    </tr>`).join('') : `<tr><td colspan="4" style="padding:6px;font-size:11px;color:#999;font-style:italic">Keine Zutaten erfasst</td></tr>`;
+
+  return `
+  <div style="font-family:'DM Mono',monospace,sans-serif;color:#1a1a16;padding:0;width:100%;min-height:297mm">
+    <!-- Header band -->
+    <div style="background:#1a1a16;padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+      <div style="color:#fff">${logoHtml}</div>
+      <div style="text-align:center;flex:1;padding:0 20px">
+        <div style="font-size:22px;font-weight:700;color:#fff;letter-spacing:0.5px">${m.name||'—'}</div>
+        <div style="font-size:11px;color:#e8a020;letter-spacing:2px;text-transform:uppercase;margin-top:4px">212 Nooch Richti · ${m.saison||'All Year'}</div>
+      </div>
+      <div style="width:180px;height:140px;overflow:hidden;border-radius:6px;flex-shrink:0">
+        ${m.imageUrl ? `<img src="${m.imageUrl}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;background:#2e2e28;display:flex;align-items:center;justify-content:center;font-size:40px">🍽️</div>`}
+      </div>
+    </div>
+
+    <!-- Meta row -->
+    <div style="background:#f7f5f0;border-bottom:2px solid #e8a020;padding:10px 24px;display:flex;gap:32px;flex-wrap:wrap">
+      <div><span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888">Gruppe</span><br><span style="font-size:12px;font-weight:500">${m.category||'—'}</span></div>
+      <div><span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888">Art</span><br><span style="font-size:12px;font-weight:500">${m.art||'—'}</span></div>
+      <div><span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888">Saison</span><br><span style="font-size:12px;font-weight:500">${m.saison||'All Year'}</span></div>
+      <div><span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888">Gewicht</span><br><span style="font-size:12px;font-weight:500">${m.gewicht||'—'}</span></div>
+      <div><span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888">Warenaufwand</span><br><span style="font-size:12px;font-weight:500">${m.wa ? 'CHF '+parseFloat(m.wa).toFixed(2) : '—'}</span></div>
+      <div><span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888">Verkaufspreis</span><br><span style="font-size:12px;font-weight:500">${m.vk ? 'CHF '+parseFloat(m.vk).toFixed(2) : '—'}</span></div>
+      <div><span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888">FC</span><br><span style="font-size:12px;font-weight:500;color:${fc!=='—'&&parseFloat(fc)>33?'#e86050':'#2d8a5e'}">${fc}</span></div>
+    </div>
+
+    <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+      <!-- LEFT: Zutaten -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px">Zutaten</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f0ede6">
+              <th style="padding:4px 6px;font-size:9px;letter-spacing:1px;text-align:left;color:#888">Art</th>
+              <th style="padding:4px 6px;font-size:9px;letter-spacing:1px;text-align:left;color:#888">Menge</th>
+              <th style="padding:4px 6px;font-size:9px;letter-spacing:1px;text-align:left;color:#888">Name</th>
+              <th style="padding:4px 6px;font-size:9px;letter-spacing:1px;text-align:left;color:#888">Allergie</th>
+            </tr>
+          </thead>
+          <tbody>${zutatRows}</tbody>
+        </table>
+
+        ${zutaten.some(z=>z.allergie) ? `
+        <div style="margin-top:12px;padding:8px 10px;background:#fff8ee;border-left:3px solid #e8a020;font-size:10px;color:#555">
+          <strong>Deklaration:</strong> ${[...new Set(zutaten.flatMap(z=>z.allergie?z.allergie.split(/,\s*/):[])) ].join(', ')||'—'}
+        </div>` : ''}
+
+        ${m.deko ? `
+        <div style="margin-top:14px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;border-bottom:1px solid #ddd;padding-bottom:4px;margin-bottom:8px">Dekoration</div>
+          <div style="font-size:12px;color:#444">${m.deko}</div>
+        </div>` : ''}
+      </div>
+
+      <!-- RIGHT: Zubereitung -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px">Zubereitung</div>
+        <div style="font-size:12px;color:#333;line-height:1.8;white-space:pre-wrap">${m.zubereitung||'—'}</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin:0 24px;padding:10px 0;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:9px;color:#aaa;letter-spacing:1px">
+      <span>Mutationsdatum ${m.lastUpdate ? new Date(m.lastUpdate).toLocaleDateString('de-CH') : '—'}</span>
+      <span>212 Nooch Richti · Kitchen MEP</span>
+    </div>
+  </div>`;
+}
+
+function downloadMenuPdf() {
+  if (!_currentPdfMenu) return;
+  const sheet = document.getElementById('menuPdfSheet');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>${_currentPdfMenu.name||'Menu'}</title>
+    <style>
+      @media print { body{margin:0} }
+      body{margin:0;padding:0;font-family:monospace}
+    </style>
+  </head><body>${sheet.innerHTML}
+  <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+function printMenuPdf() {
+  downloadMenuPdf(); // same flow — browser print dialog has Save as PDF
 }  
   
 </script>
