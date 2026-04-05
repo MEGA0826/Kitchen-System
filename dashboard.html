@@ -1208,8 +1208,7 @@ function closeMenuOnTabSelect(btn) {
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
   if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
-  document.getElementById("mobileMenu")?.classList.remove("active");
-  document.getElementById("mobile-nav-overlay")?.classList.remove("active");
+  document.getElementById("main-nav")?.classList.remove("open");
     sessionStorage.setItem("activeTab", tabId);
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
