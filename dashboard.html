@@ -572,11 +572,10 @@
       </select>
     </div>
 
-    <div class="mep-thumb-grid" id="mep-thumb-grid">
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
+    <div class="mep-home-list" id="mep-thumb-grid">
+      <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:64px;border-radius:8px"></div>
     </div>
 
     <div class="chart-wrap">
@@ -1638,10 +1637,15 @@ function renderFeed() {
 // ─────────────────────────────────────────────
 async function loadMepOverview() {
   try {
-    const codes = Object.keys(allProducts);
-    const results = await Promise.all(codes.map(code => get({ action: "mepStatus", code }).catch(() => null)));
+    // ✅ single call instead of N parallel mepStatus calls
+    const data = await get({ action: "getMepOverview" });
+    if (!data || !data.products) return;
     allMepStatus = {};
-    results.forEach((data, i) => { if (data && !data.error) allMepStatus[codes[i]] = data; });
+    Object.entries(data.products).forEach(([code, p]) => {
+      allMepStatus[code] = p;
+      // keep allProducts in sync if already loaded
+      if (allProducts[code]) allProducts[code] = { ...allProducts[code], ...p };
+    });
     renderMepThumbs();
     renderMepCapacityBars();
   } catch(e) { console.error("Failed to load MEP overview:", e); }
@@ -1649,25 +1653,101 @@ async function loadMepOverview() {
 
 function renderMepThumbs() {
   const catFilter = document.getElementById("mep-cat-filter")?.value || "";
-  let products = Object.entries(allProducts);
-  if (catFilter) products = products.filter(([, p]) => p.kategorie === catFilter);
-  const html = products.map(([code, p]) => {
-    const status = allMepStatus[code] || {};
-    const avail  = status.available || 0;
-    const target = status.tagesziel || 0;
-    let statusClass = "status-red";
-    if (avail >= target && target > 0) statusClass = "status-green";
-    else if (avail > 0) statusClass = "status-amber";
-    const img = p.image ? `<img src="${p.image}" class="mep-thumb-img">` : '<div class="mep-thumb-ph">📦</div>';
-    return `<div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
-      ${img}
-      <div class="mep-thumb-overlay">
-        <div class="mep-thumb-code">${code}</div>
-        <div class="mep-thumb-name">${p.name || code}</div>
-      </div>
-    </div>`;
-  }).join("");
-  document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
+  const today     = new Date();
+  const dayNames  = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+
+  let entries = Object.entries(allProducts);
+  if (catFilter) entries = entries.filter(([, p]) => p.kategorie === catFilter);
+
+  // Group by category
+  const groups = {};
+  entries.forEach(([code, p]) => {
+    const cat = p.kategorie || "Other";
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push([code, p]);
+  });
+
+  const sortedCats = Object.keys(groups).sort();
+  let html = "";
+
+  sortedCats.forEach(cat => {
+    html += `<div class="mep-cat-title">${cat}</div>`;
+    // Sort urgent first
+    groups[cat].sort((a, b) => {
+      const ta = (allMepStatus[a[0]] || {}).toProduce || 0;
+      const tb = (allMepStatus[b[0]] || {}).toProduce || 0;
+      return tb - ta;
+    });
+    groups[cat].forEach(([code, p]) => {
+      const st     = allMepStatus[code] || {};
+      const avail  = st.available  || 0;
+      const target = st.tagesziel  || p.tagesziel || 0;
+      const toProd = st.toProduce !== undefined ? st.toProduce : Math.max(0, target - avail);
+      const maxBar = target || p.mepMax || 1;
+
+      // Status dot
+      let dotColor = "var(--red)";
+      if (avail >= target && target > 0) dotColor = "var(--green)";
+      else if (avail > 0)                dotColor = "var(--amber)";
+
+      // Expiry from oldest batch (FIFO)
+      let expiryHtml = "";
+      const batches = st.batches || [];
+      if (batches.length > 0) {
+        const oldest   = batches.slice().sort((a, b) => a.expiryDate < b.expiryDate ? -1 : 1)[0];
+        const expDate  = new Date(oldest.expiryDate + "T23:59:59");
+        const diffDays = Math.ceil((expDate - today) / 86400000);
+        const dayName  = dayNames[expDate.getDay()];
+        const expStr   = oldest.expiryDate.slice(5).replace("-", "/");
+        if (diffDays <= 0) {
+          expiryHtml = `<div class="mep-home-expiry" style="color:var(--red)">⚠ Expired</div>`;
+        } else if (diffDays <= 1) {
+          expiryHtml = `<div class="mep-home-expiry" style="color:var(--amber)">⚠ Expires today (${dayName})</div>`;
+        } else {
+          expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">Fridge until ${dayName} ${expStr} (+${diffDays}d)</div>`;
+        }
+      } else if (p.shelfLife) {
+        expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">+${p.shelfLife}d shelf life</div>`;
+      }
+
+      // Thumbnail
+      const imgHtml = p.image
+        ? `<img class="mep-home-thumb" src="${p.image}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+           <div class="mep-home-thumb-ph" style="display:none">🍽</div>`
+        : `<div class="mep-home-thumb-ph">📦</div>`;
+
+      // Bars
+      const availPct = Math.min(100, Math.round(avail / maxBar * 100));
+      const prodPct  = Math.min(100, Math.round(toProd / maxBar * 100));
+      const availColor = avail >= target && target > 0 ? "var(--green)" : avail > 0 ? "var(--amber)" : "var(--red)";
+      const prodColor  = toProd > 0 ? "var(--amber)" : "var(--surface2)";
+
+      html += `
+        <div class="mep-home-row" onclick="showMepDetail('${code}')">
+          <div class="mep-status-dot" style="background:${dotColor}"></div>
+          ${imgHtml}
+          <div class="mep-home-info">
+            <div class="mep-home-name">${p.name || code}</div>
+            ${expiryHtml}
+          </div>
+          <div class="mep-home-bars">
+            <div class="mep-bar-wrap">
+              <div class="mep-bar-label">Avail</div>
+              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${availPct}%;background:${availColor}"></div></div>
+              <div class="mep-bar-val" style="color:${availColor}">${avail}</div>
+            </div>
+            <div class="mep-bar-wrap">
+              <div class="mep-bar-label">Produce</div>
+              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${prodPct}%;background:${prodColor}"></div></div>
+              <div class="mep-bar-val" style="color:${toProd>0?'var(--amber)':'var(--muted)'}">${toProd}</div>
+            </div>
+          </div>
+        </div>`;
+    });
+  });
+
+  document.getElementById("mep-thumb-grid").innerHTML = html ||
+    '<div class="empty-state">No products</div>';
 }
 
 function filterMepOverview() { renderMepThumbs(); }
