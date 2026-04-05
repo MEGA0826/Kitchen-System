@@ -692,8 +692,9 @@
           <button onclick="document.getElementById('mp-drive-url').style.display=document.getElementById('mp-drive-url').style.display==='none'?'block':'none'" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">☁️ Drive URL</button>
         </div>
         <input id="mp-drive-url" class="form-input" placeholder="Bild-URL einfügen…" style="margin-top:8px;display:none" oninput="loadDriveImg(this.value)">
-        <div id="mp-img-preview" style="margin-top:8px;display:none">
+        <div id="mp-img-preview" style="margin-top:8px;display:none;position:relative">
           <img id="mp-img-el" src="" style="max-width:100%;max-height:160px;border-radius:10px;object-fit:cover">
+          <button onclick="removeMenuImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;line-height:1">✕</button>
         </div>
       </div>
 
@@ -3958,7 +3959,13 @@ function loadDriveImg(url) {
   document.getElementById('mp-img-el').src = url;
   document.getElementById('mp-img-preview').style.display = 'block';
 }
-
+function removeMenuImage() {
+  const imgEl = document.getElementById('mp-img-el');
+  if (imgEl) imgEl.src = '';
+  document.getElementById('mp-img-preview').style.display = 'none';
+  document.getElementById('mp-drive-url').value = '';
+  document.getElementById('mp-img-file').value = '';
+}
 // ─────────────────────────────────────────────
 // INGREDIENT PICKER
 // ─────────────────────────────────────────────
@@ -4155,7 +4162,7 @@ async function saveMenuEntry() {
     deko          : document.getElementById('mp-deko').value.trim(),
     zubereitung   : document.getElementById('mp-zubereitung').value.trim(),
     zutaten       : JSON.stringify(menuZutaten),
-    imageUrl      : imageUrl.startsWith('data:') ? '' : imageUrl,
+    imageUrl      : imageUrl || '',
     logoUrl,
     lastUpdate    : new Date().toISOString()
   };
