@@ -1054,6 +1054,44 @@
     .pin-btn:active { background:var(--surface2); transform:scale(0.94); }
     .pin-clear { color:var(--muted); font-size:13px; }
     .pin-del   { color:var(--amber); font-size:15px; }
+
+    /* ── MEP Homepage List ── */
+    .mep-home-list { display:flex; flex-direction:column; gap:0; }
+    .mep-cat-title {
+      font-size:10px; letter-spacing:2px; text-transform:uppercase;
+      color:var(--muted); padding:16px 0 6px; border-bottom:1px solid var(--border2);
+      margin-bottom:2px;
+    }
+    .mep-home-row {
+      display:flex; align-items:center; gap:12px;
+      padding:10px 0; border-bottom:1px solid var(--border2);
+      cursor:pointer;
+    }
+    .mep-home-thumb {
+      width:52px; height:52px; border-radius:8px; object-fit:cover; flex-shrink:0;
+    }
+    .mep-home-thumb-ph {
+      width:52px; height:52px; border-radius:8px; background:var(--surface2);
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px; flex-shrink:0; color:var(--muted);
+    }
+    .mep-home-info { flex:1; min-width:0; }
+    .mep-home-name {
+      font-size:15px; font-weight:500; color:var(--text);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .mep-home-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+    .mep-home-expiry { font-size:11px; margin-top:2px; }
+    .mep-home-bars { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+    .mep-bar-wrap { display:flex; align-items:center; gap:6px; }
+    .mep-bar-label { font-size:10px; color:var(--muted); width:56px; flex-shrink:0; text-align:right; }
+    .mep-bar-track { flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+    .mep-bar-fill  { height:100%; border-radius:3px; transition:width .3s; }
+    .mep-bar-val   { font-size:11px; font-weight:600; width:22px; text-align:right; flex-shrink:0; }
+    .mep-status-dot {
+      width:10px; height:10px; border-radius:50%; flex-shrink:0;
+      box-shadow:0 0 0 2px var(--surface);
+    }
   </style>
 </head>
 <body>
@@ -1148,7 +1186,21 @@
   </div>
 
   <input type="file" id="galleryInput" accept="image/*" onchange="scanFromGallery(event)" style="display:none">
-</div>
+
+  <!-- ✅ MEP Homepage List — add just before </div> of scanHome -->
+    <div id="mepHomeList" style="padding:0 0 80px;overflow-y:auto;flex:1">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">MEP Status Today</div>
+        <button onclick="loadMepHomeList()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px">↺ Refresh</button>
+      </div>
+      <div id="mepHomeGrid" class="mep-home-list" style="padding:0 16px">
+        <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:64px;border-radius:8px"></div>
+      </div>
+    </div>
+
+  </div>
 
 <!-- Product + Actions screen (shown after scan) -->
   <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:#0d0d0d">
@@ -1281,16 +1333,145 @@ function updateLiveTime() {
     if (el) el.className = "feedback-inner";
   }
 
+  // ── Preload product map (cached) ──────────────────────────
   async function preloadProducts() {
     try {
-      const res  = await fetch(`${API_URL}?action=allProducts`, { cache: "no-store" });
+      const res  = await fetch(`${API_URL}?action=allProducts`, { cache: "force-cache" });
       const data = await res.json();
-      PRODUCT_MAP = (!data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
-      // Cache for instant next load
+      PRODUCT_MAP = (data && typeof data === "object" && !data.error) ? data : {};
       try { sessionStorage.setItem("productMap", JSON.stringify(PRODUCT_MAP)); } catch(e) {}
-    } catch (err) {
-      document.getElementById("product").textContent = "Error loading";
+    } catch(err) {
+      console.error("preloadProducts:", err);
     }
+  }
+
+  // ✅ NEW: single-call MEP homepage list with category groups + shelf life
+  async function loadMepHomeList() {
+    const grid = document.getElementById("mepHomeGrid");
+    if (!grid) return;
+
+    // Show from cache instantly
+    const cachedOv = sessionStorage.getItem("mepOverview");
+    if (cachedOv) {
+      try { renderMepHomeList(JSON.parse(cachedOv)); } catch(e) {}
+    }
+
+    try {
+      // Single batch call — no N parallel requests
+      const res  = await fetch(`${API_URL}?action=getMepOverview`, { cache: "no-store" });
+      const data = await res.json();
+      if (data && data.products) {
+        // Also populate PRODUCT_MAP so product screen works instantly
+        Object.entries(data.products).forEach(([code, p]) => {
+          PRODUCT_MAP[code] = p;
+        });
+        try {
+          sessionStorage.setItem("productMap",  JSON.stringify(PRODUCT_MAP));
+          sessionStorage.setItem("mepOverview", JSON.stringify(data.products));
+        } catch(e) {}
+        renderMepHomeList(data.products);
+      }
+    } catch(err) {
+      console.error("loadMepHomeList:", err);
+    }
+  }
+
+  function renderMepHomeList(products) {
+    const grid = document.getElementById("mepHomeGrid");
+    if (!grid) return;
+
+    const today = new Date();
+    const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+    // Group by kategorie, sort categories alphabetically
+    const groups = {};
+    Object.entries(products).forEach(([code, p]) => {
+      if (!p.mepMax && !p.tagesziel) return; // skip non-MEP products
+      const cat = p.kategorie || "Other";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push({ code, ...p });
+    });
+
+    const sortedCats = Object.keys(groups).sort();
+    if (!sortedCats.length) {
+      grid.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:24px 0;text-align:center">No MEP products configured</div>`;
+      return;
+    }
+
+    let html = "";
+    sortedCats.forEach(cat => {
+      html += `<div class="mep-cat-title">${cat}</div>`;
+      // Sort by toProduce desc (most urgent first)
+      groups[cat].sort((a, b) => (b.toProduce || 0) - (a.toProduce || 0));
+      groups[cat].forEach(p => {
+        const avail    = p.available   || 0;
+        const toProd   = p.toProduce   || 0;
+        const target   = p.tagesziel   || p.mepMax || 0;
+        const maxBar   = target || 1;
+
+        // Status dot color
+        let dotColor = "var(--red)";
+        if (avail >= target && target > 0) dotColor = "var(--green)";
+        else if (avail > 0)                dotColor = "var(--amber)";
+
+        // Shelf life / expiry badge from earliest batch
+        let expiryHtml = "";
+        if (p.batches && p.batches.length > 0) {
+          // FIFO: first batch expires first
+          const oldest    = p.batches.slice().sort((a, b) => a.expiryDate < b.expiryDate ? -1 : 1)[0];
+          const expDate   = new Date(oldest.expiryDate + "T23:59:59");
+          const diffMs    = expDate - today;
+          const diffDays  = Math.ceil(diffMs / 86400000);
+          const dayName   = dayNames[expDate.getDay()];
+          const expStr    = oldest.expiryDate.slice(5).replace("-", "/"); // MM/DD
+          if (diffDays <= 0) {
+            expiryHtml = `<div class="mep-home-expiry" style="color:var(--red)">⚠ Expired — use or discard</div>`;
+          } else if (diffDays <= 1) {
+            expiryHtml = `<div class="mep-home-expiry" style="color:var(--amber)">⚠ Expires today (${dayName})</div>`;
+          } else {
+            expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">Fridge until ${dayName} ${expStr} (+${diffDays}d)</div>`;
+          }
+        } else if (p.shelfLife) {
+          expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">Shelf life: +${p.shelfLife}d</div>`;
+        }
+
+        // Thumbnail
+        const imgHtml = p.image
+          ? `<img class="mep-home-thumb" src="${p.image}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+            + `<div class="mep-home-thumb-ph" style="display:none">🍽</div>`
+          : `<div class="mep-home-thumb-ph">🍽</div>`;
+
+        // Bar: Available
+        const availPct = Math.min(100, Math.round(avail / maxBar * 100));
+        const prodPct  = Math.min(100, Math.round(toProd / maxBar * 100));
+        const availColor = avail >= target && target > 0 ? "var(--green)" : avail > 0 ? "var(--amber)" : "var(--red)";
+        const prodColor  = toProd > 0 ? "var(--amber)" : "var(--surface2)";
+
+        html += `
+          <div class="mep-home-row" onclick="window.location.href='?code=${encodeURIComponent(p.code)}'">
+            <div class="mep-status-dot" style="background:${dotColor}"></div>
+            ${imgHtml}
+            <div class="mep-home-info">
+              <div class="mep-home-name">${p.name}</div>
+              ${expiryHtml}
+            </div>
+            <div class="mep-home-bars">
+              <div class="mep-bar-wrap">
+                <div class="mep-bar-label">Avail</div>
+                <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${availPct}%;background:${availColor}"></div></div>
+                <div class="mep-bar-val" style="color:${availColor}">${avail}</div>
+              </div>
+              <div class="mep-bar-wrap">
+                <div class="mep-bar-label">Produce</div>
+                <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${prodPct}%;background:${prodColor}"></div></div>
+                <div class="mep-bar-val" style="color:${prodPct>0?'var(--amber)':'var(--muted)'}">${toProd}</div>
+              </div>
+            </div>
+          </div>`;
+      });
+    });
+
+    grid.innerHTML = html;
   }
 
 async function preloadWorkers() {
@@ -1858,7 +2039,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("staffHome").style.display    = "flex";
       document.getElementById("scanHome").style.display     = "none";
       document.getElementById("productScreen").style.display = "none";
-      preloadProducts();
       preloadWorkers();
       Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
       setInterval(loadHomeMepStatus, 60000);
@@ -2090,77 +2270,133 @@ window.addEventListener("DOMContentLoaded", async () => {
     return entries.sort((a,b) => (a[1].priority||99)-(b[1].priority||99));
   }
 
-  function renderHomeMep() {
-    const produce = [], avail = [];
+function renderHomeMep() {
+    const today    = new Date();
+    const dayNames = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+
+    // Group by kategorie
+    const groups = {};
     Object.entries(_homeMepData).forEach(([code, d]) => {
-      if (d.avail < d.target) produce.push([code, d]);
-      if (d.avail > 0)        avail.push([code, d]);
+      const cat = d.kategorie || "Other";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push([code, d]);
     });
 
-    const sortedProduce = sortEntries([...produce], _sortMode);
-    const sortedAvail   = sortEntries([...avail],   _sortModeAvail);
+    const makeRow = ([code, d]) => {
+      const avail  = d.avail     || 0;
+      const target = d.target    || d.mepMax || 1;
+      const toProd = d.toProduce !== undefined ? d.toProduce : Math.max(0, target - avail);
 
-    const makeCard = ([code, d]) => {
-      const hl  = hlClass(d.avail, d.target);
-      const pct = d.mepMax > 0 ? Math.min(100, Math.round(d.avail / d.mepMax * 100)) : 0;
-      const img = d.image
-        ? `<img class="mep-card-img" src="${d.image}" loading="lazy" onerror="this.style.display='none'">`
-        : `<div class="mep-card-ph">🍽</div>`;
-      return `<div class="mep-card ${hl}" onclick="openMepPopup('${code}')">
-        ${img}
-        <div class="mep-card-hl"></div>
-        <div class="mep-card-body">
-          <div class="mep-card-name">${d.name}</div>
-          <div class="mep-bar-wrap"><div class="mep-bar-fill" style="width:${pct}%"></div></div>
-          <div class="mep-bar-label">${d.avail}/${d.mepMax} GN</div>
-        </div>
-      </div>`;
+      // Status dot
+      let dotColor = "var(--red)";
+      if (avail >= target && target > 0) dotColor = "var(--green)";
+      else if (avail > 0)                dotColor = "var(--amber)";
+
+      // Expiry from oldest batch (FIFO)
+      let expiryHtml = "";
+      if (d.batches && d.batches.length > 0) {
+        const oldest   = d.batches.slice().sort((a, b) => a.expiryDate < b.expiryDate ? -1 : 1)[0];
+        const expDate  = new Date(oldest.expiryDate + "T23:59:59");
+        const diffDays = Math.ceil((expDate - today) / 86400000);
+        const dayName  = dayNames[expDate.getDay()];
+        const expStr   = oldest.expiryDate.slice(5).replace("-", "/");
+        if (diffDays <= 0) {
+          expiryHtml = `<div class="mep-home-expiry" style="color:var(--red)">⚠ Expired</div>`;
+        } else if (diffDays <= 1) {
+          expiryHtml = `<div class="mep-home-expiry" style="color:var(--amber)">⚠ Expires today (${dayName})</div>`;
+        } else {
+          expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">Fridge until ${dayName} ${expStr} (+${diffDays}d)</div>`;
+        }
+      } else if (d.shelfLife) {
+        expiryHtml = `<div class="mep-home-expiry" style="color:var(--muted)">+${d.shelfLife}d shelf life</div>`;
+      }
+
+      // Thumbnail
+      const imgHtml = d.image
+        ? `<img class="mep-home-thumb" src="${d.image}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+           <div class="mep-home-thumb-ph" style="display:none">🍽</div>`
+        : `<div class="mep-home-thumb-ph">🍽</div>`;
+
+      // Bars
+      const maxBar   = target || 1;
+      const availPct = Math.min(100, Math.round(avail / maxBar * 100));
+      const prodPct  = Math.min(100, Math.round(toProd / maxBar * 100));
+      const availColor = avail >= target && target > 0 ? "var(--green)" : avail > 0 ? "var(--amber)" : "var(--red)";
+      const prodColor  = toProd > 0 ? "var(--amber)" : "var(--surface2)";
+
+      return `
+        <div class="mep-home-row" onclick="openMepPopup('${code}')">
+          <div class="mep-status-dot" style="background:${dotColor}"></div>
+          ${imgHtml}
+          <div class="mep-home-info">
+            <div class="mep-home-name">${d.name}</div>
+            ${expiryHtml}
+          </div>
+          <div class="mep-home-bars">
+            <div class="mep-bar-wrap">
+              <div class="mep-bar-label">Avail</div>
+              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${availPct}%;background:${availColor}"></div></div>
+              <div class="mep-bar-val" style="color:${availColor}">${avail}</div>
+            </div>
+            <div class="mep-bar-wrap">
+              <div class="mep-bar-label">Produce</div>
+              <div class="mep-bar-track"><div class="mep-bar-fill" style="width:${prodPct}%;background:${prodColor}"></div></div>
+              <div class="mep-bar-val" style="color:${toProd>0?'var(--amber)':'var(--muted)'}">${toProd}</div>
+            </div>
+          </div>
+        </div>`;
     };
 
-    document.getElementById("home-produce-list").innerHTML =
-      sortedProduce.length ? sortedProduce.map(makeCard).join("") :
-      `<div style="color:#444;font-size:11px;text-align:center;padding:16px">All done ✓</div>`;
-    document.getElementById("home-avail-list").innerHTML =
-      sortedAvail.length ? sortedAvail.map(makeCard).join("") :
-      `<div style="color:#444;font-size:11px;text-align:center;padding:16px">None yet</div>`;
+    // Render grouped by category into home-produce-list
+    // (keep home-avail-list for backward compat but hide it)
+    const sortedCats = Object.keys(groups).sort();
+    let html = "";
+    sortedCats.forEach(cat => {
+      // Sort urgent (toProduce > 0) first within each category
+      const sorted = groups[cat].sort((a, b) => (b[1].toProduce||0) - (a[1].toProduce||0));
+      html += `<div class="mep-cat-title">${cat}</div>`;
+      html += sorted.map(makeRow).join("");
+    });
+
+    document.getElementById("home-produce-list").innerHTML = html ||
+      `<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">No MEP products</div>`;
+
+    // Hide old avail section — data now merged into grouped list
+    const availEl = document.getElementById("home-avail-list");
+    if (availEl) availEl.closest(".home-section, [class*='section']") &&
+      (availEl.parentElement.style.display = "none");
   }
 
 async function loadHomeMepStatus() {
     try {
-      // Step 1: get all products
-      const prodRes  = await fetch(`${API_URL}?action=allProducts`, { cache: "no-store" });
-      const prodData = await prodRes.json();
-      const productsObj = (!prodData.error && typeof prodData === "object") ? prodData : {};
-      const codes = Object.entries(productsObj).filter(([, p]) => p.mepMax && p.mepMax > 0);
-      if (!codes.length) { renderHomeMep(); return; }
+      // ✅ Single batch call instead of N+1 parallel requests
+      const res  = await fetch(`${API_URL}?action=getMepOverview`, { cache: "no-store" });
+      const data = await res.json();
+      if (!data || !data.products) return;
 
-      // Step 2: fetch mepStatus per product — SAME endpoint as scan page and KDS
-      const results = await Promise.all(
-        codes.map(([code]) =>
-          fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" })
-            .then(r => r.json())
-            .catch(() => null)
-        )
-      );
+      // Populate PRODUCT_MAP for instant product screen load
+      Object.entries(data.products).forEach(([code, p]) => { PRODUCT_MAP[code] = p; });
+      try { sessionStorage.setItem("productMap", JSON.stringify(PRODUCT_MAP)); } catch(e) {}
 
-      // Step 3: build _homeMepData using SAME fields as scan page updateMepUI()
+      // Build _homeMepData using same fields as before — renderHomeMep() unchanged
       _homeMepData = {};
-      codes.forEach(([code, p], i) => {
-        const st      = results[i] || {};
-        const avail   = st.available  !== undefined ? Number(st.available)  : 0;
-        const inProg  = st.inProgress !== undefined ? Number(st.inProgress) : 0;
-        const mepMax  = Number(p.mepMax  || 0);
-        const target  = Number(p.tagesziel || p.mepMax || 0);
+      Object.entries(data.products).forEach(([code, p]) => {
+        if (!p.mepMax || p.mepMax === 0) return;
         _homeMepData[code] = {
-          name    : p.name     || code,
-          image   : p.image    || p.driveLink || "",
-          allergy : p.allergy  || "",
+          name    : p.name      || code,
+          image   : p.image     || "",
+          allergy : p.allergy   || "",
           priority: Number(p.priority || 99),
-          mepMax,
-          target,
-          gnSize  : p.gnSize   || "",
-          avail,
-          inProg,
+          mepMax  : Number(p.mepMax   || 0),
+          target  : Number(p.tagesziel || p.mepMax || 0),
+          gnSize  : p.gnSize    || "",
+          avail   : Number(p.available   || 0),
+          inProg  : Number(p.inProgress  || 0),
+          // ✅ NEW: shelf life / fridge batches for expiry display
+          shelfLife : Number(p.shelfLife || 2),
+          batches   : p.batches || [],
+          toProduce : Number(p.toProduce || 0),
+          kategorie : p.kategorie || "",
         };
       });
       renderHomeMep();
