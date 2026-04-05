@@ -3903,8 +3903,6 @@ async function saveMenuEntry() {
 // ─────────────────────────────────────────────
 // MENU VIEW POPUP
 // ─────────────────────────────────────────────
-let _viewingMenu = null;
-
 function openMenuView(menuId) {
   _viewingMenu = allMenus.find(m => m.id === menuId);
   if (!_viewingMenu) return;
