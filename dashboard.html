@@ -1404,7 +1404,7 @@ function goBack(e) {
 function toDirectImg(url) {
   if (!url) return "";
   const m = url.match(/\/d\/([\w-]+)/);
-  if (m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
   return url;
 }
   
@@ -4258,7 +4258,7 @@ function buildMenuPdfHtml(m) {
         <div style="font-size:20px;font-weight:700;color:#fff">${m.name||'—'}</div>
         <div style="font-size:10px;color:#e8a020;letter-spacing:2px;text-transform:uppercase;margin-top:3px">212 Nooch Richti · ${m.saison||'All Year'}</div>
       </div>
-      ${m.imageUrl?`<img src="${m.imageUrl}" style="width:160px;height:110px;object-fit:cover;border-radius:8px">`:`<div style="width:100px;height:80px;background:#2e2e28;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:32px">🍽️</div>`}
+      ${m.imageUrl?`<img src="${toDirectImg(m.imageUrl)}" style="width:160px;height:110px;object-fit:cover;border-radius:8px">`
     </div>
     <div style="background:#f7f5f0;border-bottom:2px solid #e8a020;padding:8px 24px;display:flex;gap:24px;flex-wrap:wrap">
       ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',m.gewicht],['WA','CHF '+wa.toFixed(2)],['VK','CHF '+vk.toFixed(2)],['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
