@@ -29,6 +29,11 @@
     }
     html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
 
+.chart-period-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+.chart-period-btn { padding:5px 12px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); color:var(--muted); font-size:11px; font-family:var(--mono); letter-spacing:.5px; cursor:pointer; transition:all .15s; }
+.chart-period-btn.active { background:var(--amber-dim); color:var(--amber); border-color:var(--amber-brd); }
+.chart-period-btn:hover:not(.active) { color:var(--text); border-color:var(--border); }
+    
     /* HAMBURGER BASE */
 .hamburger-btn { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 36px; height: 36px; padding: 6px; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; flex-shrink: 0; }
 .hamburger-btn span { display: block; width: 100%; height: 2px; background: var(--muted); border-radius: 2px; transition: all .2s; }
@@ -105,11 +110,21 @@
     .back-btn:hover { color: var(--text); border-color: var(--amber); }
 
     /* NAV */
-.nav { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; overflow-y: visible; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; }
+.nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); overflow-x: auto; overflow-y: visible; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; }
 .nav::-webkit-scrollbar { display: none; }
-.tab { padding: 11px 20px; white-space: nowrap; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
+.tab { padding: 10px 16px; white-space: nowrap; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; display: flex; flex-direction: row; align-items: center; gap: 6px; }
 .tab:hover { color: var(--text); }
 .tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.tab-icon { font-size: 18px; line-height: 1; display: block; }
+.stat-icon { font-size: 28px; line-height: 1; margin-bottom: 8px; display: block; }
+.section-title { font-family: var(--serif); font-size: 26px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+.section-title-icon { font-size: 28px; line-height: 1; }
+.section-header-wrap { position: relative; margin-bottom: 6px; overflow: hidden; border-radius: var(--radius-sm); padding: 18px 20px 12px; background: var(--surface); border: 1px solid var(--border); }
+.section-header-wrap .section-title { margin-bottom: 4px; position: relative; z-index: 1; }
+.section-header-wrap .section-sub { margin-bottom: 0; position: relative; z-index: 1; }
+.section-header-bg { position: absolute; right: -10px; top: 50%; transform: translateY(-50%); opacity: 0.055; pointer-events: none; z-index: 0; }
+/* ▼ NEW: bar row icon */
+.bar-icon { font-size: 15px; margin-right: 4px; flex-shrink: 0; }
 
     /* BODY */
     .body { padding: 24px; max-width: 1100px; margin: 0 auto; }
@@ -411,6 +426,7 @@
 .edit-modal-close:hover {
   color: var(--text);
 }    
+    
  /* ORDER CALENDAR */
     .order-cal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:20px; }
     .order-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
@@ -462,44 +478,47 @@
   </div>
 </div>
 
-<div class="tabs nav" id="main-nav">
-  <span id="roleBadge" style="display:none;font-size:10px;letter-spacing:1px;padding:3px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-family:var(--mono);text-transform:uppercase;align-self:center;margin-right:2px"></span>
-  <button class="tab active"  data-tab="kds"          onclick="closeMenuOnTabSelect(this)">KDS</button>
-  <button class="tab"        data-tab="mep-overview" onclick="closeMenuOnTabSelect(this)">MEP Overview</button>
-  <button class="tab"        data-tab="inventory"    onclick="closeMenuOnTabSelect(this)">Inventory</button>
-  <button class="tab"        data-tab="products"     onclick="closeMenuOnTabSelect(this)">Products</button>
-  <button class="tab"        data-tab="recipes"      onclick="closeMenuOnTabSelect(this)">Recipes</button>
-  <button class="tab"        data-tab="orders"       onclick="closeMenuOnTabSelect(this)">Orders</button>
-  <button class="tab"        data-tab="reports"      onclick="closeMenuOnTabSelect(this)">Reports</button>
-  <button class="tab"        data-tab="deductions"   onclick="closeMenuOnTabSelect(this)">Deductions</button>
-  <button class="tab"                                onclick="requestAdminAccess()">Admin</button>
+<div class="nav" id="main-nav">
+  <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
+  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)"><span class="tab-icon">🗂️</span>MEP</button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
+  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
+  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
+  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
+  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
+  <button class="tab"                                onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
 </div>
 
 <div class="body">
 
-  <!-- KDS Tab-->
+ <!-- KDS -->
   <div class="panel active" id="panel-kds">
-    <div class="section-title">Kitchen Display</div>
+    <div class="section-title">Kitchen Display <span class="section-title-icon">📺</span></div>
     <div class="section-sub">Real-time MEP production tracking</div>
 
-    <!-- FIX: IDs now match renderStats() — stat-total, stat-produce, stat-done, stat-waste -->
     <div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-label">Total scans today</div>
-    <div class="stat-value blue" id="stat-total">—</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Produced</div>
-    <div class="stat-value amber" id="stat-produce">—</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Finished</div>
-    <div class="stat-value green" id="stat-done">—</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Waste</div>
-    <div class="stat-value red" id="stat-waste">—</div>
-  </div>
+      <div class="stat-card">
+        <span class="stat-icon">🔢</span>
+        <div class="stat-label">Total scans today</div>
+        <div class="stat-value blue" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">⚙️</span>
+        <div class="stat-label">Produced</div>
+        <div class="stat-value amber" id="stat-produce">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">✅</span>
+        <div class="stat-label">Finished</div>
+        <div class="stat-value green" id="stat-done">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🗑️</span>
+        <div class="stat-label">Waste</div>
+        <div class="stat-value red" id="stat-waste">—</div>
+      </div>
+ 
   <div class="stat-card">
     <div class="stat-label">Available (total)</div>
     <div class="stat-value green" id="stat-available">—</div>
@@ -516,6 +535,16 @@
     </div>
 
     <div id="mep-alerts" class="mep-alerts"></div>
+
+    <!-- NEW: -->
+    <!-- ── Period filter pills (shared for both charts) ── -->
+    <div class="chart-period-row">
+      <button class="chart-period-btn active" data-period="today"  onclick="setChartPeriod('today')">Today</button>
+      <button class="chart-period-btn"        data-period="3days"  onclick="setChartPeriod('3days')">3 Days</button>
+      <button class="chart-period-btn"        data-period="week"   onclick="setChartPeriod('week')">Week</button>
+      <button class="chart-period-btn"        data-period="month"  onclick="setChartPeriod('month')">Month</button>
+      <button class="chart-period-btn"        data-period="last30" onclick="setChartPeriod('last30')">Last 30d</button>
+    </div>
 
     <div class="chart-wrap">
       <div class="chart-title">Top products by scan count</div>
@@ -537,12 +566,21 @@
         <div class="empty-state"><div class="skeleton" style="width:55%;margin:0 auto 8px;"></div><div class="skeleton" style="width:35%;margin:0 auto;"></div></div>
       </div>
     </div>
+  
   </div>
 
   <!-- MEP OVERVIEW Tab -->
-  <div class="panel" id="panel-mep-overview">
-    <div class="section-title">MEP Overview Today</div>
-    <div class="section-sub">Status of all products</div>
+<div class="panel" id="panel-mep-overview">
+  <div class="section-title">MEP Overview Today <span class="section-title-icon">🗂️</span></div>
+  <div class="section-sub">Status of all products</div>
+    <svg class="section-header-bg" width="160" height="120" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="8" width="52" height="52" rx="8" stroke="currentColor" stroke-width="6"/>
+    <rect x="100" y="8" width="52" height="52" rx="8" stroke="currentColor" stroke-width="6"/>
+    <rect x="8" y="78" width="52" height="34" rx="8" fill="currentColor" opacity="0.4"/>
+    <rect x="100" y="78" width="52" height="34" rx="8" fill="currentColor" opacity="0.4"/>
+    <rect x="16" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
+    <rect x="108" y="24" width="36" height="6" rx="3" fill="currentColor" opacity="0.5"/>
+  </svg>
 
     <div class="inv-controls">
       <select class="search-input" id="mep-cat-filter" onchange="filterMepOverview()" style="flex:0 1 200px">
@@ -550,11 +588,10 @@
       </select>
     </div>
 
-    <div class="mep-thumb-grid" id="mep-thumb-grid">
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
-      <div class="skeleton" style="aspect-ratio:1;border-radius:14px"></div>
+    <div class="mep-home-list" id="mep-thumb-grid">
+      <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:64px;border-radius:8px"></div>
     </div>
 
     <div class="chart-wrap">
@@ -565,7 +602,7 @@
 
 <!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
-    <div class="section-title">Inventory</div>
+    <div class="section-title">Inventory <span class="section-title-icon">📦</span></div>
     <div class="section-sub">Select a category or supplier to load items</div>
     <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
       <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" style="flex:1;min-width:160px">
@@ -583,7 +620,7 @@
 
 <!-- PRODUCTS Tab -->
 <div class="panel" id="panel-products">
-  <div class="section-title">MEP Produkte</div>
+  <div class="section-title">Products <span class="section-title-icon">🥗</span></div>
   <div class="section-sub">Select a category to view production items</div>
   
   <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
@@ -623,7 +660,7 @@
 
 <!-- RECIPES -->
 <div class="panel" id="panel-recipes">
-  <div class="section-title">Recipes</div>
+  <div class="section-title">Recipes <span class="section-title-icon">📋</span></div>
   <div class="section-sub" style="margin-bottom:20px">Link raw materials to MEP products · Link MEP products to menus</div>
   <div style="margin-bottom:24px">
     <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
@@ -680,7 +717,7 @@
 
 <!-- ORDERS Tab-->
   <div class="panel" id="panel-orders">
-    <div class="section-title">Orders</div>
+    <div class="section-title">Orders <span class="section-title-icon">🛒</span></div>
     <div class="section-sub" style="margin-bottom:16px">Order plan by supplier — based on MEP daily max + safety buffer</div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
       <label style="font-size:12px;color:var(--muted);white-space:nowrap">Coverage:</label>
@@ -721,7 +758,7 @@
 
   <!-- DEDUCTIONS Tab-->
   <div class="panel" id="panel-deductions">
-    <div class="section-title">Lager deductions — auto-logged when MEP is finished</div>
+    <div class="section-title">Lager deductions — auto-logged when MEP is finished <span class="section-title-icon">✂️</span></div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <input type="text" id="ded-search" placeholder="Search product or ingredient..."
         oninput="filterDeductions()"
@@ -748,7 +785,7 @@
 
   <!-- REPORTS Tab-->
   <div class="panel" id="panel-reports">
-    <div class="section-title">Weekly kitchen performance report</div>
+    <div class="section-title">Reports <span class="section-title-icon">📊</span></div>
     <div class="section-sub">Send weekly summaries via email</div>
     <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
       <button onclick="previewReport()"
@@ -933,43 +970,6 @@
         </div>
       </div>
     </div>
-<!-- Edit Worker Modal -->
-      <div class="edit-modal" id="editWorkerModal">
-        <div class="edit-modal-content">
-          <div class="edit-modal-header">
-            <h3 id="editWorkerTitle">Edit Worker</h3>
-            <button class="edit-modal-close" onclick="closeWorkerEditModal()">×</button>
-          </div>
-          <input type="hidden" id="editWorkerOriginalName">
-          <div class="form-grid">
-            <div class="form-field">
-              <label class="form-label">Name *</label>
-              <input class="form-input" id="editWorkerName">
-            </div>
-            <div class="form-field">
-              <label class="form-label">Rolle</label>
-              <select class="form-input" id="editWorkerRole">
-                <option value="">-- Rolle wählen --</option>
-                <option value="Küchenchef">Küchenchef</option>
-                <option value="Teamleader">Teamleader</option>
-                <option value="Sushikoch">Sushikoch</option>
-                <option value="Wokkoch">Wokkoch</option>
-                <option value="Küchehilfe">Küchehilfe</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label class="form-label">PIN (4 digits)</label>
-              <input class="form-input" id="editWorkerPin" type="text" inputmode="numeric" maxlength="4" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
-            </div>
-          </div>
-          <div class="admin-msg" id="editWorkerMsg"></div>
-          <div class="form-actions">
-            <button class="btn-save" onclick="saveWorkerEditModal()">Save</button>
-            <button class="btn-edit" onclick="closeWorkerEditModal()">Cancel</button>
-          </div>
-        </div>
-      </div>
-      <div id="workerEditOverlay" onclick="closeWorkerEditPopup()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9998"></div>
 
     <div class="admin-section">
       <div class="admin-section-title">Inventory</div>
@@ -1166,7 +1166,14 @@ function goBack(e) {
   e.preventDefault();
   window.location.href = "https://mega0826.github.io/Kitchen-System/index.html";
 }
-
+  
+function toDirectImg(url) {
+  if (!url) return "";
+  const m = url.match(/\/d\/([\w-]+)/);
+  if (m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
+  return url;
+}
+  
 // ─────────────────────────────────────────────
 // TAB SWITCHING  — FIX: btn is the DOM element
 // ─────────────────────────────────────────────
@@ -1201,7 +1208,9 @@ function closeMenuOnTabSelect(btn) {
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
   if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
-  sessionStorage.setItem("activeTab", tabId);
+  document.getElementById("mobileMenu")?.classList.remove("active");
+  document.getElementById("mobile-nav-overlay")?.classList.remove("active");
+    sessionStorage.setItem("activeTab", tabId);
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
@@ -1437,13 +1446,10 @@ function _renderKDS() {
 }
 
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
+
 function renderStats() {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const todayScans = allScans.filter(s => {
-    if (!s.timestamp) return false;
-    return new Date(s.timestamp).toISOString().slice(0, 10) === todayStr;
-  });
-
+  const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toISOString().slice(0, 10) === todayStr);
   document.getElementById("stat-total").textContent   = todayScans.length;
   document.getElementById("stat-produce").textContent = todayScans.filter(s => s.action === "produce").length;
   document.getElementById("stat-done").textContent    = todayScans.filter(s => s.action === "done").length;
@@ -1452,23 +1458,17 @@ function renderStats() {
   // Aggregate To Produce and Available across all products with a target
   let totalAvail = 0, totalToProduce = 0;
   Object.entries(allProducts).forEach(([code, p]) => {
-    const st         = (window.todayScanStats || {})[code] || {};
-    const produce    = st.produce || 0;
-    const done       = st.done    || 0;
-    const waste      = st.waste   || 0;
-    const mepMax     = p.mepMax   || 0;
-    const tagesziel  = p.tagesziel || 0;
+    const st        = (window.todayScanStats || {})[code] || {};
+    const done      = st.done    || 0;
+    const waste     = st.waste   || 0;
+    const mepMax    = p.mepMax   || 0;
+    const tagesziel = p.tagesziel || 0;
     if (!mepMax && !tagesziel) return;
-    const available  = Math.max(0, done - waste);
-    const inProgress = (produce === 0 && mepMax > 0)
-      ? Math.max(0, mepMax - done)
-      : Math.max(0, produce - done);
-    const targetQty  = tagesziel > 0 ? tagesziel : mepMax;
-    const toProduce  = targetQty > 0
-      ? Math.max(0, targetQty - available)
-      : inProgress;
-    totalAvail      += available;
-    totalToProduce  += toProduce;
+    const available = Math.max(0, done - waste);
+    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+    const toProduce = Math.max(0, targetQty - available);
+    totalAvail     += available;
+    totalToProduce += toProduce;
   });
   document.getElementById("stat-available").textContent  = totalAvail;
   document.getElementById("stat-toproduce").textContent  = totalToProduce;
@@ -1564,18 +1564,89 @@ function buildMepAlerts(products, stats) {
   initSwipe();
 }
 
-function bar(label, val, max, color) {
+// ▼ NEW: food keyword → emoji icon map
+function getProductIcon(name) {
+  const n = (name || "").toLowerCase();
+  if (n.includes("papaya"))     return "🍈";
+  if (n.includes("limetten") || n.includes("lime")) return "🍋‍🟩";
+  if (n.includes("mango"))      return "🥭";
+  if (n.includes("ananas") || n.includes("pineapple")) return "🍍";
+  if (n.includes("avocado"))    return "🥑";
+  if (n.includes("tomate") || n.includes("tomato"))    return "🍅";
+  if (n.includes("gurke") || n.includes("cucumber"))   return "🥒";
+  if (n.includes("zwiebel") || n.includes("onion"))    return "🧅";
+  if (n.includes("knoblauch") || n.includes("garlic")) return "🧄";
+  if (n.includes("ingwer") || n.includes("ginger"))    return "🫚";
+  if (n.includes("chili") || n.includes("pepper"))     return "🌶️";
+  if (n.includes("karotte") || n.includes("carrot"))   return "🥕";
+  if (n.includes("salat") || n.includes("lettuce"))    return "🥬";
+  if (n.includes("kräuter") || n.includes("herb") || n.includes("basilikum")) return "🌿";
+  if (n.includes("zitrone") || n.includes("lemon"))    return "🍋";
+  if (n.includes("orange"))     return "🍊";
+  if (n.includes("erdbeere") || n.includes("strawberry")) return "🍓";
+  if (n.includes("kokos") || n.includes("coconut"))    return "🥥";
+  if (n.includes("sauce") || n.includes("dressing"))   return "🫙";
+  if (n.includes("reis") || n.includes("rice"))        return "🍚";
+  if (n.includes("nudel") || n.includes("pasta") || n.includes("noodle")) return "🍜";
+  if (n.includes("suppe") || n.includes("soup"))       return "🍲";
+  if (n.includes("fleisch") || n.includes("meat") || n.includes("chicken") || n.includes("huhn")) return "🍗";
+  if (n.includes("tofu"))       return "🫘";
+  if (n.includes("ei") || n.includes("egg"))           return "🥚";
+  if (n.includes("käse") || n.includes("cheese"))      return "🧀";
+  if (n.includes("butter"))     return "🧈";
+  if (n.includes("öl") || n.includes("oil"))           return "🫒";
+  if (n.includes("nuss") || n.includes("nut"))         return "🥜";
+  if (n.includes("pilz") || n.includes("mushroom"))    return "🍄";
+  return "🍽️"; // default
+}
+
+function bar(label, val, max, color, icon) {
   const pct = max > 0 ? Math.round(val / max * 100) : 0;
+  const ic  = icon || "▪️";
   return `<div class="bar-row">
-    <div class="bar-name" title="${label}">${label}</div>
+    <div class="bar-name" title="${label}" style="display:flex;align-items:center;gap:5px"><span style="font-size:15px;flex-shrink:0">${ic}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span></div>
     <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--${color})"></div></div>
     <div class="bar-count">${val}</div>
   </div>`;
 }
 
+// NEW:
+// ── Chart period state ──────────────────────
+window.chartPeriod = "today";
+
+function getChartScans() {
+  const now = Date.now();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const p = window.chartPeriod || "today";
+  return allScans.filter(s => {
+    if (!s.timestamp) return false;
+    const ts = new Date(s.timestamp).getTime();
+    if (p === "today")   return new Date(s.timestamp).toISOString().slice(0, 10) === todayStr;
+    if (p === "3days")   return now - ts <= 3  * 86400000;
+    if (p === "week")    return now - ts <= 7  * 86400000;
+    if (p === "month")   return now - ts <= 30 * 86400000;
+    if (p === "last30")  return now - ts <= 30 * 86400000;
+    return true;
+  });
+}
+
+function setChartPeriod(p) {
+  window.chartPeriod = p;
+  document.querySelectorAll(".chart-period-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.period === p);
+  });
+  renderProductBars();
+  renderWorkerBars();
+}
+
 function renderProductBars() {
-  const sorted = Object.entries(scanStats)
-    .map(([code, s]) => ({ label: (allProducts[code] || {}).name || code, val: s.total }))
+  const scans = getChartScans();
+  const cm = {};
+  scans.forEach(s => {
+    const c = s.code || ""; cm[c] = (cm[c] || 0) + 1;
+  });
+  const sorted = Object.entries(cm)
+    .map(([code, val]) => ({ label: (allProducts[code] || {}).name || code, val }))
     .sort((a, b) => b.val - a.val).slice(0, 8);
   const max = sorted[0]?.val || 1;
   const colors = ["amber","green","red","blue","amber","green","red","blue"];
@@ -1585,15 +1656,15 @@ function renderProductBars() {
 }
 
 function renderWorkerBars() {
+  const scans = getChartScans();
   const wm = {};
-  allScans.forEach(s => { const w = s.worker || "?"; wm[w] = (wm[w] || 0) + 1; });
+  scans.forEach(s => { const w = s.worker || "?"; wm[w] = (wm[w] || 0) + 1; });
   const sorted = Object.entries(wm).sort((a, b) => b[1] - a[1]);
   const max = sorted[0]?.[1] || 1;
   document.getElementById("worker-bars").innerHTML = sorted.length
     ? sorted.map(([w, n]) => bar(w, n, max, "blue")).join("")
     : `<div class="empty-state"><div class="empty-icon">👤</div>No worker data yet</div>`;
 }
-
 function renderFeed() {
   const rows = [...allScans].reverse().slice(0, 30).map(s => {
     const p    = allProducts[s.code] || {};
@@ -1615,10 +1686,15 @@ function renderFeed() {
 // ─────────────────────────────────────────────
 async function loadMepOverview() {
   try {
-    const codes = Object.keys(allProducts);
-    const results = await Promise.all(codes.map(code => get({ action: "mepStatus", code }).catch(() => null)));
+    // ✅ single call instead of N parallel mepStatus calls
+    const data = await get({ action: "getMepOverview" });
+    if (!data || !data.products) return;
     allMepStatus = {};
-    results.forEach((data, i) => { if (data && !data.error) allMepStatus[codes[i]] = data; });
+    Object.entries(data.products).forEach(([code, p]) => {
+      allMepStatus[code] = p;
+      // keep allProducts in sync if already loaded
+      if (allProducts[code]) allProducts[code] = { ...allProducts[code], ...p };
+    });
     renderMepThumbs();
     renderMepCapacityBars();
   } catch(e) { console.error("Failed to load MEP overview:", e); }
@@ -1626,24 +1702,54 @@ async function loadMepOverview() {
 
 function renderMepThumbs() {
   const catFilter = document.getElementById("mep-cat-filter")?.value || "";
+
+  // Populate category filter if empty
+  const catSel = document.getElementById("mep-cat-filter");
+  if (catSel && catSel.options.length <= 1) {
+    const cats = [...new Set(Object.values(allProducts).map(p => p.kategorie).filter(Boolean))].sort();
+    cats.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      catSel.appendChild(o);
+    });
+  }
+
   let products = Object.entries(allProducts);
   if (catFilter) products = products.filter(([, p]) => p.kategorie === catFilter);
+
   const html = products.map(([code, p]) => {
-    const status = allMepStatus[code] || {};
-    const avail  = status.available || 0;
-    const target = status.tagesziel || 0;
+    const st      = (window.todayScanStats || {})[code] || {};
+    const done    = st.done    || 0;
+    const waste   = st.waste   || 0;
+    const produce = st.produce || 0;
+    const avail   = Math.max(0, done - waste);
+    const inProg  = Math.max(0, produce - done);
+    const target  = p.tagesziel || p.mepMax || 0;
+
     let statusClass = "status-red";
-    if (avail >= target && target > 0) statusClass = "status-green";
-    else if (avail > 0) statusClass = "status-amber";
-    const img = p.image ? `<img src="${p.image}" class="mep-thumb-img">` : '<div class="mep-thumb-ph">📦</div>';
+    if (target > 0 && avail >= target) statusClass = "status-green";
+    else if (avail > 0 || inProg > 0)  statusClass = "status-amber";
+
+    const statusLabel = target > 0
+      ? `${avail} / ${target}`
+      : avail > 0 ? `${avail} done` : inProg > 0 ? `${inProg} in prep` : "—";
+
+    // ✅ Use toDirectImg() to convert Google Drive links
+    const imgSrc = toDirectImg(p.image);
+    const img = imgSrc
+      ? `<img src="${imgSrc}" class="mep-thumb-img" onerror="this.style.display='none'">`
+      : `<div class="mep-thumb-ph">📦</div>`;
+
     return `<div class="mep-thumb ${statusClass}" onclick="showMepDetail('${code}')">
       ${img}
       <div class="mep-thumb-overlay">
         <div class="mep-thumb-code">${code}</div>
         <div class="mep-thumb-name">${p.name || code}</div>
+        <div class="mep-thumb-code" style="margin-top:4px;color:inherit;opacity:.7">${statusLabel}</div>
       </div>
     </div>`;
   }).join("");
+
   document.getElementById("mep-thumb-grid").innerHTML = html || '<div class="empty-state">No products</div>';
 }
 
@@ -1902,34 +2008,42 @@ function filterProducts() {
 function renderProductGrid(entries) {
   const grid = document.getElementById("product-grid");
   if (!grid) return;
-  
+
   if (!entries || !entries.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
     return;
   }
-  
+
   grid.innerHTML = entries.map(([code, p]) => {
-    const st = (window.todayScanStats || {})[code] || {};
-    const done = st.done || 0;
-    const waste = st.waste || 0;
+    const st      = (window.todayScanStats || {})[code] || {};
+    const done    = st.done    || 0;
+    const waste   = st.waste   || 0;
     const produce = st.produce || 0;
-    const avail = Math.max(0, done - waste);
-    const inProg = (produce === 0 && p.mepMax > 0) ? Math.max(0, p.mepMax - done) : Math.max(0, produce - done);
+    const avail   = Math.max(0, done - waste);
+    const inProg  = (produce === 0 && p.mepMax > 0)
+      ? Math.max(0, p.mepMax - done)
+      : Math.max(0, produce - done);
     const gnLabel = p.gnSize ? " " + p.gnSize : "";
-    const img = p.image
-      ? `<img class="product-thumb" src="${p.image}" loading="lazy" alt="" style="height:80px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
-      : `<div class="product-thumb-ph" style="height:80px">🍽</div>`;
+
+    // ✅ Use toDirectImg() to convert Google Drive links
+    const imgSrc = toDirectImg(p.image);
+    const img = imgSrc
+      ? `<img class="product-thumb" src="${imgSrc}" loading="lazy" alt=""
+            onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
+      : `<div class="product-thumb-ph">🍽</div>`;
+
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
-        <span class="prod-stat green">OK ${avail}${gnLabel}</span>
+        <span class="prod-stat green">✅ ${avail}${gnLabel}</span>
         <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
         <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
       </div>` : "";
+
     return `<div class="product-card" onclick="openProductModal('${code}')">
       ${img}
       <div class="product-body">
-        <div class="product-name-card">${p.name||code}</div>
-        <div class="product-code-card">CODE . ${code}</div>
+        <div class="product-name-card">${p.name || code}</div>
+        <div class="product-code-card">CODE · ${code}</div>
         ${statsHtml}
       </div>
     </div>`;
@@ -3641,7 +3755,7 @@ function openEditProductModal(code) {
   document.getElementById("epf-gnweight").value = p.gnWeight ?? "";
   document.getElementById("epf-tagesziel").value = p.tagesziel ?? "";
   document.getElementById("epf-shelf").value = p.shelfLife ?? "";
-  document.getElementById("epf-drive").value = "";
+  document.getElementById("epf-drive").value = p.image || "";
   document.getElementById("editProductTitle").textContent = "Edit Product - " + code;
   document.getElementById("epf-msg").textContent = "";
   document.getElementById("editProductModal").classList.add("active");
