@@ -1280,6 +1280,16 @@ let ipSelectedItem = null;
 let editingMenuId = null;
 let _viewingMenu  = null;
 
+const ROLE_TABS = {
+  Teamleader : ['kds','mep-overview','inventory','deductions'],
+  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
+  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
+};
+const ROLE_READONLY = {
+  Teamleader : ['inventory','deductions','mep-overview'],
+  Küchenchef : ['reports'],
+};
+
 // ─────────────────────────────────────────────
 // LIVE CLOCK  (date + time under LIVE badge)
 // ─────────────────────────────────────────────
@@ -3189,16 +3199,6 @@ async function initDashboard() {
 // ─────────────────────────────────────────────
 // ROLE ACCESS CONTROL
 // ─────────────────────────────────────────────
-const ROLE_TABS = {
-  Teamleader : ['kds','mep-overview','inventory','deductions'],
-  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
-  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
-};
-const ROLE_READONLY = {
-  Teamleader : ['inventory','deductions','mep-overview'],
-  Küchenchef : ['reports'],
-};
-
 function applyRoleAccess() {
   const role    = sessionStorage.getItem("dashRole") || "Manager";
   const allowed = ROLE_TABS[role] || Object.values(ROLE_TABS).pop();
