@@ -1102,12 +1102,8 @@
   </div>
 
   <!-- Scanner home state - inline camera, no overlay needed -->
- <style>
-  html, body {
-    height: 100%;
-    margin: 0;
-    font-family: Arial;
-  }
+<style>
+  html, body { height: 100%; margin: 0; overflow: hidden; }
 </style>
  
   <!-- Staff Home: default landing page -->
@@ -1192,20 +1188,6 @@
   </div>
 
   <input type="file" id="galleryInput" accept="image/*" onchange="scanFromGallery(event)" style="display:none">
-
-  <!-- ✅ MEP Homepage List — add just before </div> of scanHome -->
-    <div id="mepHomeList" style="padding:0 0 80px;overflow-y:auto;flex:1">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px">
-        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">MEP Status Today</div>
-        <button onclick="loadMepHomeList()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px">↺ Refresh</button>
-      </div>
-      <div id="mepHomeGrid" class="mep-home-list" style="padding:0 16px">
-        <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
-        <div class="skeleton" style="height:64px;border-radius:8px;margin-bottom:8px"></div>
-        <div class="skeleton" style="height:64px;border-radius:8px"></div>
-      </div>
-    </div>
-
   </div>
 
 <!-- Product + Actions screen (shown after scan) -->
@@ -1651,72 +1633,49 @@ async function send(action) {
     if (action === "done") newAvail += 1;
     if (action === "used" || action === "waste") newAvail = Math.max(0, newAvail - 1);
     const newToProduce = targetQty > 0 ? Math.max(0, targetQty - newAvail) : (window._lastInProg || 0);
-    
     const labelDone = document.getElementById("mepLabelDone");
     const labelList = document.getElementById("mepLabelList");
-    const dotList = document.getElementById("mepDotList");
-    const fullMsg = document.getElementById("mepFullMsg");
-    
+    const dotList   = document.getElementById("mepDotList");
+    const fullMsg   = document.getElementById("mepFullMsg");
     if (labelDone) {
-      let doneText = `<strong>Available: ${newAvail}`;
-      if (p.gnSize) doneText += ` ${p.gnSize}`;
-      if (p.gnWeight) doneText += ` = ${(newAvail * p.gnWeight).toFixed(1)} kg`;
-      doneText += `</strong>`;
-      labelDone.innerHTML = doneText;
+      let t = `<strong>Available: ${newAvail}`;
+      if (p.gnSize)   t += ` ${p.gnSize}`;
+      if (p.gnWeight) t += ` = ${(newAvail * p.gnWeight).toFixed(1)} kg`;
+      labelDone.innerHTML = t + `</strong>`;
     }
-    
     if (labelList) {
-      let listText = `<strong>To produce: ${newToProduce}`;
-      if (p.gnSize) listText += ` ${p.gnSize}`;
-      if (p.gnWeight && newToProduce > 0) listText += ` = ${(newToProduce * p.gnWeight).toFixed(1)} kg`;
-      listText += `</strong>`;
-      labelList.innerHTML = listText;
+      let t = `<strong>To produce: ${newToProduce}`;
+      if (p.gnSize)                t += ` ${p.gnSize}`;
+      if (p.gnWeight && newToProduce > 0) t += ` = ${(newToProduce * p.gnWeight).toFixed(1)} kg`;
+      labelList.innerHTML = t + `</strong>`;
     }
-    
     const covered = targetQty > 0 && newAvail >= targetQty;
     if (covered) {
-      if (dotList) dotList.className = "mep-dot green";
+      if (dotList)  dotList.className = "mep-dot green";
       if (labelList) labelList.classList.add("full");
-      if (fullMsg) {
-        fullMsg.textContent = "Daily target covered OK";
-        fullMsg.classList.add("visible");
-      }
+      if (fullMsg)  { fullMsg.textContent = "Daily target covered ✓"; fullMsg.style.display = "block"; }
     } else {
-      if (dotList) dotList.className = newToProduce > 0 ? "mep-dot amber" : "mep-dot green";
+      if (dotList)  dotList.className = newToProduce > 0 ? "mep-dot amber" : "mep-dot green";
       if (labelList) labelList.classList.remove("full");
-      if (fullMsg) fullMsg.classList.remove("visible");
+      if (fullMsg)  fullMsg.style.display = "none";
     }
     window._lastAvail = newAvail;
   }
 
-  const labels = { produce: "Producing...", done: "Finishing...", waste: "Recording waste...", used: "Recording use..." };
-  showMsg(labels[action] || "Saving...", "info");
+  showMsg("Saving...", "info");
+  const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
 
   try {
-    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
-    const res = await fetch(url);
-    
-    if (!navigator.onLine) {
-      await queueScan(CURRENT_CODE, worker, action);
-      showMsg("Offline - queued for sync", "info");
-      await updateBadge();
-      startUndo(action);
-      return;
-    }
-
+    if (!navigator.onLine) throw new Error("offline");
+    const res  = await fetch(url);
     const data = await res.json();
-    if (data.error) {
-      showMsg("Error: " + data.error, "error");
-      await loadMepStatus(CURRENT_CODE);
-      return;
-    }
-
-    const successLabels = { produce: "Production started", done: "Batch finished", waste: "Waste recorded", used: "Use recorded" };
+    if (data.error) { showMsg("Error: " + data.error, "error"); await loadMepStatus(CURRENT_CODE); return; }
+    if (data.mepMax !== undefined) updateMepUI(data);
+    const successLabels = { produce:"Production started", done:"Batch finished", waste:"Waste recorded", used:"Use recorded" };
     showMsg(successLabels[action] || "OK", "success");
-    await loadMepStatus(CURRENT_CODE);
     startUndo(action);
-  } catch (err) {
-    await queueScan(CURRENT_CODE, worker, action);
+  } catch(err) {
+    await queueScan({ code: CURRENT_CODE, worker, action });
     showMsg("Offline - queued for sync", "info");
     await updateBadge();
     startUndo(action);
