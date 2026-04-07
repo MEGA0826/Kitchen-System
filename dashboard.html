@@ -460,7 +460,8 @@
   <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
   <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
   <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
-  <button class="tab" id="adminTabBtn"               onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
+ <button class="tab" id="adminTabBtn"               onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
+</div>
 
 <div class="body">
 
@@ -1458,7 +1459,10 @@ function closeMenuOnTabSelect(btn) {
     console.error("switchTab error [" + tabId + "]:", e);
   }
 }
-
+// Clear admin unlock on fresh page load (not a tab restore)
+if (!sessionStorage.getItem("activeTab")) {
+  sessionStorage.removeItem("isAdminUnlocked");
+}
 function applyRoleAccess() {
   const role    = sessionStorage.getItem("dashRole") || "Manager";
   const allowed = ROLE_TABS[role] || ROLE_TABS["Manager"];
