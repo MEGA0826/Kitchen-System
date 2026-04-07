@@ -622,6 +622,17 @@
         <option value="">Alle Arten</option>
       </select>
     </div>
+    <!-- GR + MEP search -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <input class="search-input" id="gr-filter-search" type="text"
+        placeholder="🔍 GR suchen…" oninput="filterGrDisplay()"
+        style="flex:1;min-width:140px">
+      <input class="search-input" id="mep-filter-search" type="text"
+        placeholder="🔍 MEP Product suchen…" oninput="filterMepDisplay()"
+        style="flex:1;min-width:140px">
+    </div>
+    <div id="gr-search-results" style="margin-bottom:12px"></div>
+    <div id="mep-search-results" style="margin-bottom:12px"></div>
 
     <div id="menu-list-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:32px"></div>
 
@@ -1088,42 +1099,6 @@
     <div class="section-title">Admin</div>
     <div class="section-sub" style="margin-bottom:24px">Manage without opening Google Sheets</div>
 
-    <div class="admin-section">
-      <div class="admin-section-title">Products</div>
-      <div class="admin-section-sub">Produkt sheet</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <input class="form-input" id="admin-prod-search" placeholder="Search product…" oninput="renderAdminProducts()" style="flex:1;min-width:160px">
-        <select class="form-input" id="admin-prod-cat" onchange="renderAdminProducts()" style="flex:1;min-width:140px">
-          <option value="">All categories</option>
-        </select>
-      </div>
-      <div class="admin-list" id="admin-product-list"></div>
-      <div class="admin-form" id="product-form">
-        <div class="admin-form-title" id="product-form-title">Add new product</div>
-        <div class="form-grid">
-          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pf-code" placeholder="e.g. P-001"></div>
-          <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pf-name" placeholder="e.g. Karotten gewürfelt"></div>
-          <datalist id="dl-prod-cat">
-            <option value="Gemüse"><option value="Trockenwaren"><option value="TK Produkte">
-            <option value="Fleisch"><option value="Fisch"><option value="Milchprodukte">
-            <option value="Früchte"><option value="Gewürze"><option value="Saucen &amp; Öle">
-          </datalist>
-          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="pf-kategorie" placeholder="e.g. Gemüse" list="dl-prod-cat"></div>
-          <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="pf-mepmax" placeholder="2" min="0"></div>
-          <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="pf-gnsize" placeholder="GN1/1"></div>
-          <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="pf-gnweight" placeholder="4" min="0" step="0.1"></div>
-          <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="pf-tagesziel" placeholder="3" min="0"></div>
-          <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="pf-shelf" placeholder="2" min="1"></div>
-          <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="pf-drive" placeholder="paste Google Drive link"></div>
-        </div>
-        <div class="form-actions">
-          <button class="btn-save" onclick="saveProduct()">Save product</button>
-          <button class="btn-edit" onclick="clearProductForm()" style="display:none" id="pf-cancel">Cancel edit</button>
-        </div>
-        <div class="admin-msg" id="pf-msg"></div>
-      </div>
-    </div>
-
 <div class="admin-section">
       <div class="admin-section-title">Workers</div>
       <div class="admin-section-sub">Settings sheet</div>
@@ -1486,57 +1461,47 @@ function closeMenuOnTabSelect(btn) {
 }
 
 function applyRoleAccess() {
-  const role = sessionStorage.getItem("dashRole") || "Manager";
+  const role    = sessionStorage.getItem("dashRole") || "Manager";
   const allowed = ROLE_TABS[role] || ROLE_TABS["Manager"];
   const readonly = ROLE_READONLY[role] || [];
 
-  // Show/hide tab buttons
   document.querySelectorAll(".tab[data-tab]").forEach(btn => {
-    const tab = btn.dataset.tab;
-    btn.style.display = allowed.includes(tab) ? "" : "none";
+    btn.style.display = allowed.includes(btn.dataset.tab) ? "" : "none";
   });
 
-  // Hide Admin button entirely unless Manager
+  // Admin tab: hidden until PIN unlocked this session
   const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
-  if (adminBtn) adminBtn.style.display = (role === "Manager") ? "" : "none";
+  if (adminBtn) {
+    const isUnlocked = sessionStorage.getItem("isAdminUnlocked") === "true";
+    adminBtn.style.display = isUnlocked ? "" : "none";
+  }
 
-  // Show role badge in header
   const badge = document.getElementById("roleBadge");
   if (badge) {
     const colors = { Teamleader:"#facc15", Küchenchef:"#fb923c", Manager:"#a78bfa" };
     badge.textContent = role;
     badge.style.color = colors[role] || "#888";
-    badge.style.display = "inline";
+    badge.style.display = "inline-block";
   }
 
-  // Inventory readonly for Teamleader — hide all edit/save/delete buttons
-  if (readonly.includes("inventory")) {
-    document.querySelectorAll(
-      "#inv-form, #worker-form, .btn-save, .btn-del, .btn-edit, #pf-cancel, #wf-cancel"
-    ).forEach(el => el.style.display = "none");
-  }
+  if (readonly.includes("inventory")) window._inventoryReadonly = true;
+  else window._inventoryReadonly = false;
 
-  // Reports readonly for Küchenchef — hide send button
   if (readonly.includes("reports")) {
     const sendBtn = document.querySelector("[onclick='sendReportNow()']");
     if (sendBtn) sendBtn.style.display = "none";
   }
 
-  // Alerts: hide mep-alerts for Teamleader (limited view = they still see it)
-  // Per matrix: Teamleader ✓ Alerts — so no restriction needed
-
-  // MEP Overview limited for Staff — not applicable (Staff don't reach dashboard)
-
-  // Switch to first allowed tab
   const firstTab = document.querySelector(`.tab[data-tab="${allowed[0]}"]`);
   if (firstTab) switchTab(firstTab);
 }
-function requestAdminAccess() {
-  // If already unlocked this session, go straight to admin panel
-  if (sessionStorage.getItem("isAdminUnlocked") === "true") {
+  
+if (sessionStorage.getItem("isAdminUnlocked") === "true") {
+    // Show admin tab now that it's unlocked
+    const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
+    if (adminBtn) adminBtn.style.display = "";
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-    const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
     if (adminBtn) adminBtn.classList.add("active");
     const adminPanel = document.getElementById("panel-admin");
     if (adminPanel) adminPanel.classList.add("active");
@@ -1609,6 +1574,9 @@ async function submitPin() {
   if (matched) {
     cancelPin();
     sessionStorage.setItem("isAdminUnlocked", "true"); 
+    // Make admin tab visible in nav
+    const adminNavBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
+    if (adminNavBtn) adminNavBtn.style.display = "";
     updateRecipeAddButtons();                          
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
@@ -2347,42 +2315,45 @@ function clearProductForm() {
   document.getElementById("pf-cancel").style.display = "none";
 }
 async function saveProduct() {
+async function saveProduct() {
   const code = document.getElementById("pf-code").value.trim();
   const name = document.getElementById("pf-name").value.trim();
   if (!code || !name) { adminMsg("pf-msg", "Code and Name are required", "err"); return; }
-  const btn = document.querySelector("#product-form .btn-save");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
+  // Find save button in either the admin form OR the MEP popup
+  const btn = document.querySelector("#product-form .btn-save")
+            || document.querySelector("#addMEPPopup .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
     const mepMax    = document.getElementById("pf-mepmax").value.trim();
     const gnWeight  = document.getElementById("pf-gnweight").value.trim();
     const tagesziel = document.getElementById("pf-tagesziel").value.trim();
     const shelf     = document.getElementById("pf-shelf").value.trim();
-
     const payload = {
-      action     : "saveProduct",
-      code, name,
-      kategorie  : document.getElementById("pf-kategorie").value.trim(),
-      mepMax     : mepMax === "" ? "" : Number(mepMax),
-      gnSize     : document.getElementById("pf-gnsize").value.trim(),
-      gnWeight   : gnWeight === "" ? "" : Number(gnWeight),
-      tagesziel  : tagesziel === "" ? "" : Number(tagesziel),
-      shelfLife  : shelf === "" ? "" : Number(shelf),
-      driveLink  : document.getElementById("pf-drive").value.trim(),
+      action    : "saveProduct", code, name,
+      kategorie : document.getElementById("pf-kategorie").value.trim(),
+      mepMax    : mepMax    === "" ? "" : Number(mepMax),
+      gnSize    : document.getElementById("pf-gnsize").value.trim(),
+      gnWeight  : gnWeight  === "" ? "" : Number(gnWeight),
+      tagesziel : tagesziel === "" ? "" : Number(tagesziel),
+      shelfLife : shelf     === "" ? "" : Number(shelf),
+      driveLink : document.getElementById("pf-drive").value.trim(),
     };
-
     const data = await adminCall(payload);
     if (!data) throw new Error("No response from server");
     if (data.error) throw new Error(data.error);
-    adminMsg("pf-msg", "Saved OK", "ok");
+    adminMsg("pf-msg", "✓ Saved", "ok");
     clearProductForm();
     await loadProducts();
     renderAdminProducts();
+    // Close MEP popup if it was open
+    const mepPopup = document.getElementById("addMEPPopup");
+    if (mepPopup && mepPopup.style.display !== "none") {
+      setTimeout(() => closeAddMEPPopup(), 800);
+    }
   } catch(e) {
     adminMsg("pf-msg", "Error: " + e.message, "err");
   } finally {
-    btn.disabled = false;
-    btn.textContent = "Save product";
+    if (btn) { btn.disabled = false; btn.textContent = "Save product"; }
   }
 }
 
@@ -3822,7 +3793,38 @@ function renderMenuList() {
     </div>`;
   }).join("");
 }
+function filterGrDisplay() {
+  const q = (document.getElementById("gr-filter-search")?.value || "").toLowerCase();
+  const el = document.getElementById("gr-search-results");
+  if (!el) return;
+  if (!q) { el.innerHTML = ""; return; }
+  const results = allGRs.filter(g => (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q));
+  if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
+  el.innerHTML = results.slice(0,10).map(g => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode}</span>
+      <span style="font-size:11px;color:var(--muted)">${g.grCode||""}</span>
+      <span style="font-size:11px;color:var(--amber)">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
+    </div>`).join("");
+}
 
+function filterMepDisplay() {
+  const q = (document.getElementById("mep-filter-search")?.value || "").toLowerCase();
+  const el = document.getElementById("mep-search-results");
+  if (!el) return;
+  if (!q) { el.innerHTML = ""; return; }
+  const results = Object.entries(allProducts).filter(([code, p]) =>
+    (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q));
+  if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Kein MEP Produkt gefunden.</div>`; return; }
+  el.innerHTML = results.slice(0,10).map(([code, p]) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
+      <span style="font-size:11px;color:var(--muted)">${code}</span>
+      <span style="font-size:11px;color:var(--muted)">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+    </div>`).join("");
+}
 // ─────────────────────────────────────────────
 // MENU POPUP — OPEN / CLOSE
 // ─────────────────────────────────────────────
