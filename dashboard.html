@@ -3217,72 +3217,63 @@ async function submitManualScan() {
 document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") closeManualScan(); });
 
 // ─────────────────────────────────────────────
-// INIT
+// INIT — cache first, then parallel fetch
 // ─────────────────────────────────────────────
 (function initFromCache() {
   try {
     const cp = sessionStorage.getItem("dash_products");
     const ci = sessionStorage.getItem("dash_inventory");
     const cs = sessionStorage.getItem("dash_scans");
-    if (cp) { allProducts = JSON.parse(cp); renderProductGrid(Object.entries(allProducts)); }
-    if (ci) { allInventory = JSON.parse(ci); renderInventory(allInventory); renderOrders(); }
-    if (cs && cp) { allScans = JSON.parse(cs); _renderKDS(); }
-  } catch(e) { console.error("cache error:", e); }
+    if (cp) { allProducts  = JSON.parse(cp); }
+    if (ci) { allInventory = JSON.parse(ci); }
+    if (cs) { allScans     = JSON.parse(cs); }
+  } catch(e) { console.error("cache restore error:", e); }
 })();
 
-// Prevent KDS flash — restore panel visually before any fetch
+// Restore active tab immediately from sessionStorage (no flicker)
 (function immediateTabRestore() {
   const saved = sessionStorage.getItem("activeTab");
   if (!saved) return;
-  
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  
   const btn = document.querySelector(`.tab[data-tab="${saved}"]`);
   if (btn) btn.classList.add("active");
-  
   const panel = document.getElementById("panel-" + saved);
   if (panel) panel.classList.add("active");
 })();
 
-async function initDashboard() {
-  try {
-    applyRoleAccess();   // apply tab visibility before data loads
+// Apply role first so tabs are visible before any fetch
+applyRoleAccess();
 
-    // Load workers for PIN check
-    get({ action: "allWorkers" }).then(d => {
-      allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
-    }).catch(() => {});
+// Fire all fetches in parallel — none blocks the others
+Promise.allSettled([
+  loadProducts(),
+  loadInventory(),
+  loadKDS(),
+  get({ action: "allWorkers" }).then(d => {
+    allWorkersAdmin = Array.isArray(d.workers) ? d.workers : [];
+  }).catch(() => {})
+]).then(() => {
+  // Re-render active tab content after data arrives
+  const saved = sessionStorage.getItem("activeTab") || "kds";
+  if (saved === "kds")          { /* already loaded above */ }
+  if (saved === "inventory")    filterInventory && filterInventory();
+  if (saved === "orders")       renderOrders();
+  if (saved === "recipes")      { loadMenus(); loadGRs(); loadRequirements(); }
+  if (saved === "deductions")   loadDeductions();
+  if (saved === "reports")      loadReportsTab();
+  if (saved === "mep-overview") loadMepOverview && loadMepOverview();
+}).catch(e => console.error("Init error:", e));
 
-    // Load core data
-    await Promise.allSettled([loadProducts(), loadInventory()]);
+setTimeout(() => loadRecipes(), 600);
 
-    const savedTab = sessionStorage.getItem("activeTab") || "kds";
-    
-    // Load tab-specific content based on what's already shown
-    if (savedTab === "kds") {
-      loadKDS();
-    } else if (savedTab === "inventory") {
-      filterInventory && filterInventory();
-    } else if (savedTab === "orders") {
-      renderOrders();
-    } else if (savedTab === "recipes") {
-      loadMenus();
-    } else if (savedTab === "deductions") {
-      loadDeductions();
-    } else if (savedTab === "reports") {
-      loadReportsTab();
-    } else if (savedTab === "mep-overview") {
-      loadMepOverview();
-    } else if (savedTab === "admin") {
-      loadAdminTab();
-      loadArchiveStats();
-    }
-    
-  } catch(e) {
-    console.error("Init error:", e);
-  }
-}
+// Auto-refresh KDS every 60s
+setInterval(() => loadKDS(), 60_000);
+
+// Keep Apps Script warm — ping every 4 min
+setInterval(() => {
+  fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
+}, 4 * 60 * 1000);
 // ─────────────────────────────────────────────
 // ROLE ACCESS CONTROL
 // ─────────────────────────────────────────────
