@@ -1411,6 +1411,14 @@ function toDirectImg(url) {
 // ─────────────────────────────────────────────
 // TAB SWITCHING  — FIX: btn is the DOM element
 // ─────────────────────────────────────────────
+function closeMenu() {
+  const nav = document.getElementById("main-nav");
+  const btn = document.getElementById("hamburgerBtn");
+  if (!nav || !btn) return;
+  nav.classList.remove("open");
+  btn.classList.remove("open");          // ← resets icon ✕ → ☰
+}
+
 function toggleMenu() {
   const nav = document.getElementById("main-nav");
   const btn = document.getElementById("hamburgerBtn");
@@ -1424,8 +1432,7 @@ document.addEventListener("click", e => {
   const btn = document.getElementById("hamburgerBtn");
   if (!nav || !btn) return;
   if (!nav.contains(e.target) && !btn.contains(e.target)) {
-    nav.classList.remove("open");
-    btn.classList.remove("open");
+    closeMenu();
   }
 });
 
@@ -1437,6 +1444,7 @@ function closeMenuOnTabSelect(btn) {
   hbtn.classList.remove("open");
 }
   function switchTab(btn) {
+  closeMenu();
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
