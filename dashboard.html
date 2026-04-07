@@ -37,15 +37,17 @@
 /* HAMBURGER BASE */
 .hamburger-btn { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 36px; height: 36px; padding: 6px; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; flex-shrink: 0; transition: border-color .2s; }
 .hamburger-btn span { display: block; width: 100%; height: 2px; border-radius: 2px; transition: all .2s; }
-/* 3-colour bars: green top / amber middle / red bottom */
-.hamburger-btn span:nth-child(1) { background: var(--green); }
+/* 3-colour bars: red / yellow / green like homepage */
+.hamburger-btn span:nth-child(1) { background: var(--red); }
 .hamburger-btn span:nth-child(2) { background: var(--amber); }
-.hamburger-btn span:nth-child(3) { background: var(--red); }
-/* open state → ✕, all amber */
+.hamburger-btn span:nth-child(3) { background: var(--green); }
+/* open state → X, all bars turn amber */
 .hamburger-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); background: var(--amber); }
 .hamburger-btn.open span:nth-child(2) { opacity: 0; }
 .hamburger-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); background: var(--amber); }
 .hamburger-btn.open { border-color: var(--amber-brd); }
+/* always show on mobile, hide on desktop */
+@media (max-width: 768px) { .hamburger-btn { display: flex; } }
 
 @media (max-width: 700px) {
   .body { padding-left: 16px; padding-right: 16px; }
