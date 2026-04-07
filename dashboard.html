@@ -450,6 +450,7 @@
 
 <div class="nav" id="main-nav">
   <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
+  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)"><span class="tab-icon">📋</span>MEP Overview</button>
   <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
   <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
   <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
@@ -536,6 +537,20 @@
       </div>
     </div>
   
+  </div>
+
+<!-- MEP OVERVIEW Tab -->
+  <div class="panel" id="panel-mep-overview">
+    <div class="section-title">MEP Overview <span class="section-title-icon">📋</span></div>
+    <div class="section-sub">Current MEP production status for all products</div>
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <button class="refresh-btn" onclick="loadMepOverview()" style="padding:8px 16px">↺ Refresh</button>
+    </div>
+    <div class="mep-grid" id="mep-overview-grid">
+      <div class="skeleton" style="height:120px;border-radius:14px"></div>
+      <div class="skeleton" style="height:120px;border-radius:14px"></div>
+      <div class="skeleton" style="height:120px;border-radius:14px"></div>
+    </div>
   </div>
 
 <!-- INVENTORY Tab-->
@@ -1453,13 +1468,14 @@ function closeMenuOnTabSelect(btn) {
 if (_hbBtn) _hbBtn.textContent = "☰";
     sessionStorage.setItem("activeTab", tabId);
   try {
+    if (tabId === "kds")          loadKDS();
+    if (tabId === "mep-overview") loadMepOverview();
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
     if (tabId === "recipes")      { loadMenus(); loadGRs(); loadRequirements(); }
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
     if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
-    if (tabId === "kds")          loadKDS();
     // Re-apply readonly after dynamic render
     if (window._inventoryReadonly && tabId === "inventory") {
       setTimeout(() => {
@@ -1679,6 +1695,86 @@ function _renderKDS() {
   renderProductBars();
   renderWorkerBars();
   renderFeed();
+}
+
+// ─────────────────────────────────────────────
+// MEP OVERVIEW
+// ─────────────────────────────────────────────
+async function loadMepOverview() {
+  try {
+    if (!Object.keys(allProducts).length) await loadProducts();
+    if (!allScans.length) {
+      const data = await get({ action: "scans" });
+      allScans = Array.isArray(data.scans) ? data.scans : [];
+      buildScanStats();
+    }
+    renderMepOverview();
+  } catch(e) {
+    console.error("loadMepOverview error:", e);
+    const grid = document.getElementById("mep-overview-grid");
+    if (grid) grid.innerHTML = `<div style="color:var(--red);font-size:13px">Error loading MEP data: ${e.message}</div>`;
+  }
+}
+
+function renderMepOverview() {
+  const grid = document.getElementById("mep-overview-grid");
+  if (!grid) return;
+  const stats = window.todayScanStats || {};
+  const entries = Object.entries(allProducts).filter(([, p]) => p.mepMax || p.tagesziel);
+  if (!entries.length) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:13px">No MEP products configured.</div>`;
+    return;
+  }
+  grid.innerHTML = entries.map(([code, p]) => {
+    const st         = stats[code] || {};
+    const done       = st.done    || 0;
+    const waste      = st.waste   || 0;
+    const used       = st.used    || 0;
+    const available  = Math.max(0, done - waste - used);
+    const mepMax     = p.mepMax     || 0;
+    const tagesziel  = p.tagesziel  || 0;
+    const targetQty  = tagesziel > 0 ? tagesziel : mepMax;
+    const gnSize     = p.gnSize     || "";
+    const gnWeight   = p.gnWeight   || 0;
+    const goalMet    = targetQty > 0 && available >= targetQty;
+    const overDone   = tagesziel > 0 && available > tagesziel;
+    const cardClass  = overDone ? "over" : goalMet ? "goal" : "";
+    const pct        = targetQty > 0 ? Math.min(100, Math.round(available / targetQty * 100)) : 0;
+    const statusTag  = overDone
+      ? `<span class="mep-tag over">Over target</span>`
+      : goalMet
+        ? `<span class="mep-tag goal">Goal met</span>`
+        : available > 0
+          ? `<span class="mep-tag prog">In progress</span>`
+          : `<span class="mep-tag idle">Not started</span>`;
+    const weightRow  = gnWeight > 0
+      ? `<div class="mep-stat-row"><span class="mep-stat-label">Available kg</span><span class="mep-stat-val">${(available * gnWeight).toFixed(1)} kg</span></div>`
+      : "";
+    return `
+    <div class="mep-card ${cardClass}" id="mep-card-${code}">
+      <div class="mep-card-name">${getProductIcon(p.name)} ${p.name || code}</div>
+      <div class="mep-divider"></div>
+      <div class="mep-card-rows">
+        <div class="mep-stat-row">
+          <span class="mep-stat-label">Available</span>
+          <span class="mep-stat-val ${goalMet ? 'green' : available > 0 ? 'amber' : 'muted'}">${available}${gnSize ? " " + gnSize : ""}</span>
+        </div>
+        <div class="mep-stat-row">
+          <span class="mep-stat-label">Target</span>
+          <span class="mep-stat-val">${targetQty}${gnSize ? " " + gnSize : ""}</span>
+        </div>
+        ${weightRow}
+        <div class="mep-stat-row">
+          <span class="mep-stat-label">Progress</span>
+          <span class="mep-stat-val">${pct}%</span>
+        </div>
+      </div>
+      <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${overDone ? 'var(--red)' : goalMet ? 'var(--green)' : 'var(--amber)'};border-radius:2px;transition:width .3s"></div>
+      </div>
+      ${statusTag}
+    </div>`;
+  }).join("");
 }
 
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
