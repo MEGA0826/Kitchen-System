@@ -1371,6 +1371,8 @@ const ROLE_TABS = {
   Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
   Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
 };
+// Roles that can VIEW recipes but not add/edit
+const RECIPE_VIEW_ONLY = ['Küchenchef'];
 const ROLE_READONLY = {
   Teamleader : ['inventory','deductions','mep-overview'],
   Küchenchef : ['reports'],
@@ -1457,7 +1459,17 @@ function closeMenuOnTabSelect(btn) {
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
-    if (tabId === "recipes")      { loadMenus(); loadGRs(); loadRequirements(); updateRecipeAddButtons(); }
+    if (tabId === "recipes") {
+      loadMenus(); loadGRs(); loadRequirements();
+      // Add buttons: only admin-unlocked sessions, AND not view-only role
+      const role = sessionStorage.getItem("dashRole") || "Manager";
+      const isAdmin = sessionStorage.getItem("isAdminUnlocked") === "true";
+      const canAdd = isAdmin && !RECIPE_VIEW_ONLY.includes(role);
+      ["btn-add-menu","btn-add-gr","btn-add-mep"].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.display = canAdd ? "flex" : "none";
+      });
+    }
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
     if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
@@ -3563,8 +3575,9 @@ async function saveEditedInventory() {
 async function loadRequirements() {
   const el = document.getElementById("req-content");
   if (!el) return;
+  el.innerHTML = `<div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div>`;
   try {
-    const data = await get({ action: "getRequirements" });
+    const data = await get({ action: "getRequirements" }); // ← was adminCall
     const reqs = Array.isArray(data.requirements) ? data.requirements : [];
     if (!reqs.length) {
       el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div>All daily targets met or no recipes configured</div>`;
@@ -3763,13 +3776,22 @@ function renderMenuList() {
   const cat = document.getElementById("menu-cat-filter")?.value || "";
   const art = document.getElementById("menu-art-filter")?.value || "";
 
+  // ── Show prompt until user searches or filters ──
+  if (!q && !cat && !art) {
+    el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:10px;opacity:.3">🍽️</div>
+      <div style="font-size:13px">Search by name or choose Konzept / Art to show menus</div>
+    </div>`;
+    return;
+  }
+
   let list = allMenus;
   if (q)   list = list.filter(m => (m.name||"").toLowerCase().includes(q) || (m.category||"").toLowerCase().includes(q));
   if (cat) list = list.filter(m => m.category === cat);
   if (art) list = list.filter(m => m.art === art);
 
   if (!list.length) {
-    el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">Keine Menus gefunden. Klick "+ Add Menu" um zu beginnen.</div>`;
+    el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">Keine Menus gefunden.</div>`;
     return;
   }
 
