@@ -607,9 +607,9 @@
         <div class="section-title" style="margin-bottom:2px">Recipes</div>
         <div class="section-sub">Menus & Zutaten</div>
       </div>
-      <button onclick="openMenuPopup(null)" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
-      <button onclick="openAddGRPopup()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
-      <button onclick="openAddMEPPopup()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add MEP</button>
+      <button id="btn-add-menu" onclick="guardedAddMenu()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
+      <button id="btn-add-gr" onclick="guardedAddGR()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
+      <button id="btn-add-mep" onclick="guardedAddMEP()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add MEP</button>
     </div>
 
     <!-- Search bar -->
@@ -1457,7 +1457,7 @@ function closeMenuOnTabSelect(btn) {
   try {
     if (tabId === "inventory")    { filterInventory && filterInventory(); }
     if (tabId === "orders")       renderOrders();
-    if (tabId === "recipes")      { loadMenus(); loadGRs(); loadRequirements(); }
+    if (tabId === "recipes")      { loadMenus(); loadGRs(); loadRequirements(); updateRecipeAddButtons(); }
     if (tabId === "deductions")   loadDeductions();
     if (tabId === "reports")      loadReportsTab();
     if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
@@ -1520,14 +1520,24 @@ function applyRoleAccess() {
   if (firstTab) switchTab(firstTab);
 }
 function requestAdminAccess() {
+  // If already unlocked this session, go straight to admin panel
+  if (sessionStorage.getItem("isAdminUnlocked") === "true") {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
+    if (adminBtn) adminBtn.classList.add("active");
+    const adminPanel = document.getElementById("panel-admin");
+    if (adminPanel) adminPanel.classList.add("active");
+    sessionStorage.setItem("activeTab", "admin");
+    loadAdminTab(); loadArchiveStats();
+    closeMenu();
+    return;
+  }
   const modal = document.getElementById("pinModal");
   const msg = document.getElementById("pinMsg");
-  
   modal.classList.add("active");
   document.getElementById("pinInput").value = "";
   msg.textContent = "";
-  
-  // Load workers immediately if not already loaded
   if (!allWorkersAdmin.length) {
     msg.style.color = "var(--muted)";
     msg.textContent = "Loading...";
@@ -1586,7 +1596,8 @@ async function submitPin() {
 
   if (matched) {
     cancelPin();
-
+    sessionStorage.setItem("isAdminUnlocked", "true"); 
+    updateRecipeAddButtons();                          
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
 
@@ -3599,11 +3610,29 @@ async function loadRequirements() {
 // ADD GR POPUP
 // ─────────────────────────────────────────────
 function openAddMEPPopup() {
-  // MEP products are managed in Admin → Products tab
-  // Direct user there instead of duplicating the form
-  if (confirm('MEP Produkte werden im Admin-Bereich verwaltet. Zum Admin-Tab wechseln?')) {
-    requestAdminAccess();
-  }
+  // Reuse the product form from Admin panel as a popup
+  clearProductForm();
+  document.getElementById("product-form-title").textContent = "Add new MEP product";
+  document.getElementById("pf-msg").textContent = "";
+  document.getElementById("addMEPPopup").style.display = "flex";
+}
+
+function closeAddMEPPopup() {
+  document.getElementById("addMEPPopup").style.display = "none";
+}
+
+// Admin-guarded wrappers for the 3 add buttons
+function guardedAddMenu() { openMenuPopup(null); }
+function guardedAddGR()   { openAddGRPopup(); }
+function guardedAddMEP()  { openAddMEPPopup(); }
+
+// Show/hide add buttons based on admin session
+function updateRecipeAddButtons() {
+  const isAdmin = sessionStorage.getItem("isAdminUnlocked") === "true";
+  ["btn-add-menu","btn-add-gr","btn-add-mep"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.style.display = isAdmin ? "flex" : "none";
+  });
 }
 function openAddGRPopup() {
   agrZutaten = [];
@@ -4372,6 +4401,33 @@ function buildMenuPdfHtml(m) {
     <div class="form-actions">
       <button class="btn-save" onclick="saveEditedInventory()">Save</button>
       <button class="btn-edit" onclick="closeEditInventoryModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+  <!-- Add MEP Popup (reuses product form fields) -->
+<div id="addMEPPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:18px;max-width:560px;width:100%;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+    <div style="background:var(--surface2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+      <div style="font-size:15px;font-weight:700;color:var(--amber)">＋ Add MEP Product</div>
+      <button onclick="closeAddMEPPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pf-code" placeholder="e.g. P-001"></div>
+        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pf-name" placeholder="e.g. Karotten gewürfelt"></div>
+        <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="pf-kategorie" placeholder="e.g. Gemüse" list="dl-prod-cat"></div>
+        <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="pf-mepmax" placeholder="2" min="0"></div>
+        <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="pf-gnsize" placeholder="GN1/1"></div>
+        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="pf-gnweight" placeholder="4" min="0" step="0.1"></div>
+        <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="pf-tagesziel" placeholder="3" min="0"></div>
+        <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="pf-shelf" placeholder="2" min="1"></div>
+        <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="pf-drive" placeholder="paste Google Drive link"></div>
+      </div>
+      <div class="admin-msg" id="pf-msg"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="closeAddMEPPopup()" style="padding:10px 18px;border-radius:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;cursor:pointer">Cancel</button>
+        <button onclick="saveProduct();closeAddMEPPopup();" style="padding:10px 24px;border-radius:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:13px;font-weight:600;cursor:pointer">💾 Save MEP</button>
+      </div>
     </div>
   </div>
 </div>
