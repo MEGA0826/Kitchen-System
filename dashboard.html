@@ -1464,8 +1464,6 @@ function closeMenuOnTabSelect(btn) {
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
   if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
-  const _hbBtn = document.querySelector("[onclick*='toggleNav'], [onclick*='toggleMobile'], [onclick*='hamburger'], .hamburger-btn, #hamburger-btn");
-if (_hbBtn) _hbBtn.textContent = "☰";
     sessionStorage.setItem("activeTab", tabId);
   try {
     if (tabId === "kds")          loadKDS();
