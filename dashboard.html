@@ -35,14 +35,21 @@
 .chart-period-btn:hover:not(.active) { color:var(--text); border-color:var(--border); }
     
     /* HAMBURGER BASE */
-.hamburger-btn { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; flex-shrink: 0; color: var(--text); transition: color .15s, border-color .15s; }
-.hamburger-btn svg { display: block; width: 20px; height: 20px; }
-.hamburger-btn.open { color: var(--amber); border-color: var(--amber-brd); }
+.hamburger-btn { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 36px; height: 36px; padding: 6px; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; flex-shrink: 0; transition: border-color .2s; }
+.hamburger-btn span { display: block; width: 100%; height: 2px; border-radius: 2px; transition: all .2s; }
+/* 3-colour bars: red / yellow / green like homepage */
+.hamburger-btn span:nth-child(1) { background: var(--red); }
+.hamburger-btn span:nth-child(2) { background: var(--amber); }
+.hamburger-btn span:nth-child(3) { background: var(--green); }
+/* open state → X, all bars turn amber */
+.hamburger-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); background: var(--amber); }
+.hamburger-btn.open span:nth-child(2) { opacity: 0; }
+.hamburger-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); background: var(--amber); }
+.hamburger-btn.open { border-color: var(--amber-brd); }
+/* always show on mobile, hide on desktop */
+@media (max-width: 768px) { .hamburger-btn { display: flex; } }
 
-/* Hamburger always hidden on desktop */
-.hamburger-btn { display: none; }
-
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .body { padding-left: 16px; padding-right: 16px; }
   .header { padding-left: 16px; padding-right: 16px; }
   .feed-row { grid-template-columns: 90px 1fr 70px; }
@@ -51,9 +58,6 @@
   .bar-row { grid-template-columns: 90px 1fr 36px; }
   .mep-alerts { display: flex !important; }
   .mep-alert { display: flex !important; }
-
-  /* Show hamburger on mobile */
-  .hamburger-btn { display: flex; }
 
   /* Hide tab bar entirely on mobile — shown only when open */
 .nav {
@@ -425,15 +429,7 @@
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px">
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
-      <svg id="hb-icon-open" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="3" y1="5"  x2="17" y2="5"/>
-        <line x1="3" y1="10" x2="17" y2="10"/>
-        <line x1="3" y1="15" x2="17" y2="15"/>
-      </svg>
-      <svg id="hb-icon-close" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none">
-        <line x1="4" y1="4" x2="16" y2="16"/>
-        <line x1="16" y1="4" x2="4"  y2="16"/>
-      </svg>
+      <span></span><span></span><span></span>
     </button>
     <div>
       <div class="logo">Kitchen <em>MEP</em></div>
@@ -1428,23 +1424,14 @@ function toDirectImg(url) {
 }
   
 // ─────────────────────────────────────────────
-// TAB SWITCHING  — FIX: btn is the DOM element
+// MENU HELPERS
 // ─────────────────────────────────────────────
-function _setHamburgerIcon(open) {
-  const iconOpen  = document.getElementById("hb-icon-open");
-  const iconClose = document.getElementById("hb-icon-close");
-  if (!iconOpen || !iconClose) return;
-  iconOpen.style.display  = open ? "none"  : "block";
-  iconClose.style.display = open ? "block" : "none";
-}
-
 function closeMenu() {
   const nav = document.getElementById("main-nav");
   const btn = document.getElementById("hamburgerBtn");
   if (!nav || !btn) return;
   nav.classList.remove("open");
   btn.classList.remove("open");
-  _setHamburgerIcon(false);
 }
 
 function toggleMenu() {
@@ -1452,10 +1439,9 @@ function toggleMenu() {
   const btn = document.getElementById("hamburgerBtn");
   const isOpen = nav.classList.toggle("open");
   btn.classList.toggle("open", isOpen);
-  _setHamburgerIcon(isOpen);
 }
 
-// Close menu when clicking outside
+// Close menu when clicking outside — use capture so it fires before tab click
 document.addEventListener("click", e => {
   const nav = document.getElementById("main-nav");
   const btn = document.getElementById("hamburgerBtn");
@@ -1463,41 +1449,25 @@ document.addEventListener("click", e => {
   if (!nav.contains(e.target) && !btn.contains(e.target)) {
     closeMenu();
   }
-});
+}, true);
 
-function closeMenuOnTabSelect(btn) {
-  switchTab(btn);
-  const nav = document.getElementById("main-nav");
-  const hbtn = document.getElementById("hamburgerBtn");
-  nav.classList.remove("open");
-  hbtn.classList.remove("open");
-}
-  function switchTab(btn) {
-  closeMenu();
+// ─────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────
+function switchTab(btn) {
+  closeMenu();   // ← close + reset icon on every tab click
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
   if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
-    sessionStorage.setItem("activeTab", tabId);
-  try {
-    if (tabId === "kds")          loadKDS();
-    if (tabId === "mep-overview") loadMepOverview();
-    if (tabId === "inventory")    { filterInventory && filterInventory(); }
-    if (tabId === "orders")       renderOrders();
-    if (tabId === "recipes")      { loadMenus(); loadGRs(); loadRequirements(); }
-    if (tabId === "deductions")   loadDeductions();
-    if (tabId === "reports")      loadReportsTab();
-    if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
-    // Re-apply readonly after dynamic render
-    if (window._inventoryReadonly && tabId === "inventory") {
-      setTimeout(() => {
-        document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #inv-form").forEach(el => el.style.display = "none");
-      }, 300);
-    }
-  } catch(e) {
-    console.error("switchTab error [" + tabId + "]:", e);
-  }
+
+  if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
+  if (tabId === "orders")       renderOrders();
+  if (tabId === "recipes")      { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+  if (tabId === "deductions")   loadDeductions();
+  if (tabId === "reports")      loadReportsTab();
+  if (tabId === "mep-overview") loadMepOverview();
 }
 
 function applyRoleAccess() {
