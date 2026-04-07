@@ -1496,8 +1496,8 @@ function applyRoleAccess() {
   if (firstTab) switchTab(firstTab);
 }
   
-if (sessionStorage.getItem("isAdminUnlocked") === "true") {
-    // Show admin tab now that it's unlocked
+function requestAdminAccess() {
+  if (sessionStorage.getItem("isAdminUnlocked") === "true") {
     const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
     if (adminBtn) adminBtn.style.display = "";
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -2314,7 +2314,6 @@ function clearProductForm() {
   document.getElementById("product-form-title").textContent = "Add new product";
   document.getElementById("pf-cancel").style.display = "none";
 }
-async function saveProduct() {
 async function saveProduct() {
   const code = document.getElementById("pf-code").value.trim();
   const name = document.getElementById("pf-name").value.trim();
@@ -3334,19 +3333,6 @@ window.openEditInventoryModal = function(code) {
   if (window._inventoryReadonly) return;
   _origOpenEditInv && _origOpenEditInv(code);
 };
-
-initDashboard();
-setTimeout(loadRecipes, 800);
-
-setInterval(async () => {
-  const prevLen = allScans.length;
-  await loadKDS();
-  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
-}, 60_000);
-
-setInterval(() => {
-  fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
-}, 4 * 60 * 1000);
   
 // Mobile dropdown tab switching
 function switchTabMobile(select) {
