@@ -2417,25 +2417,14 @@ function checkRolePin() {
     if (_rolePinEntry.length < 4) return;
     const workers = window._homeWorkerList || [];
 
-    // ── NEW: match PIN AND role ──
-    const roleMap = {
-      'Admin':       ['Admin','Manager'],
-      'Manager':     ['Manager'],
-      'Küchenchef':  ['Küchenchef'],
-      'Teamleader':  ['Teamleader'],
-    };
-    const allowedRoles = roleMap[_pendingRole] || [_pendingRole];
-
+    // Any active worker PIN is valid — PIN is the identity proof, role is the access level chosen
     const matched = workers.find(w =>
       typeof w === 'object' &&
       String(w.pin) === String(_rolePinEntry) &&
-      w.active !== false &&
-      allowedRoles.includes(w.role)
+      w.active !== false
     );
-    // ── END NEW ──
 
     if (matched) {
-      // Admin role → set isAdminUnlocked so dashboard shows Admin tab
       if (_pendingRole === 'Admin') {
         sessionStorage.setItem('isAdminUnlocked', 'true');
         sessionStorage.setItem('dashRole', 'Manager');
