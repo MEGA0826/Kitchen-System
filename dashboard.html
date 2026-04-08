@@ -1494,8 +1494,7 @@ function applyRoleAccess() {
     if (sendBtn) sendBtn.style.display = "none";
   }
 
-  const firstTab = document.querySelector(`.tab[data-tab="${allowed[0]}"]`);
-  if (firstTab) switchTab(firstTab);
+// Do NOT auto-switch tab here — immediateTabRestore handles active tab);
 }
   
 function requestAdminAccess() {
