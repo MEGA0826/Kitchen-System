@@ -2461,12 +2461,16 @@ function goToScanHome() {
   }
 
 function openRoleDashboard(role) {
-    closeRolePinModal();
-    sessionStorage.setItem("dashRole", role === "Admin" ? "Manager" : role);
-    if (role === "Admin") sessionStorage.setItem("isAdminUnlocked", "true");
-    else sessionStorage.removeItem("isAdminUnlocked");
-    window.location.href = "dashboard.html";
+  closeRolePinModal();
+  if (role === "Admin") {
+    sessionStorage.setItem("dashRole", "Manager");
+    sessionStorage.setItem("isAdminUnlocked", "true");
+  } else {
+    sessionStorage.setItem("dashRole", role);
+    sessionStorage.removeItem("isAdminUnlocked");
   }
+  window.location.href = "dashboard.html";
+}
 
   // ── MEP POPUP ──────────────────────────────────────────────────────────────
   function openMepPopup(code) {
