@@ -15,8 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <style>
-    .admin-hidden { display: none !important; }
-    #adminTabBtn.admin-hidden { display: none !important; }
+  
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #0f0f0d; --surface: #1a1a16; --surface2: #242420; --surface3: #2e2e28;
@@ -462,7 +461,7 @@
   <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
   <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
   <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
- <button class="tab admin-hidden" id="adminTabBtn" data-tab="admin" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
+ <button class="tab" id="adminTabBtn" data-tab="admin" onclick="requestAdminAccess()">
 </div>
 
 <div class="body">
@@ -1502,8 +1501,7 @@ function applyRoleAccess() {
 function requestAdminAccess() {
   if (sessionStorage.getItem("isAdminUnlocked") === "true") {
     // Admin tab: hidden until PIN unlocked this session
- const adminBtn = document.getElementById("adminTabBtn");
-if (adminBtn) adminBtn.classList.remove("admin-hidden");
+
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     if (adminBtn) adminBtn.classList.add("active");
@@ -1579,8 +1577,6 @@ async function submitPin() {
     cancelPin();
     sessionStorage.setItem("isAdminUnlocked", "true"); 
     // Make admin tab visible in nav
-   const adminNavBtn = document.getElementById("adminTabBtn");
-if (adminNavBtn) adminNavBtn.classList.remove("admin-hidden");
     updateRecipeAddButtons();                          
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
@@ -3247,15 +3243,6 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 
 // Apply role first so tabs are visible before any fetch
 applyRoleAccess();
-// Admin tab: hide on fresh load unless already unlocked this session
-const _adminBtn = document.getElementById("adminTabBtn");
-if (_adminBtn) {
-  if (sessionStorage.getItem("isAdminUnlocked") === "true") {
-    _adminBtn.classList.remove("admin-hidden");
-  } else {
-    _adminBtn.classList.add("admin-hidden");
-  }
-}
 
 // Fire all fetches in parallel — none blocks the others
 Promise.allSettled([
