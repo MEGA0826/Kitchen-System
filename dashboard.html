@@ -1463,12 +1463,7 @@ function closeMenuOnTabSelect(btn) {
 if (performance.navigation?.type === 1 || !sessionStorage.getItem("activeTab")) {
   // Only clear if this is a hard refresh (type=1), not a soft navigation
 }
-// Always hide admin tab on load — only show after PIN unlock
-const _adminTabOnLoad = document.getElementById("adminTabBtn");
-if (_adminTabOnLoad) {
-  _adminTabOnLoad.style.display =
-    sessionStorage.getItem("isAdminUnlocked") === "true" ? "" : "none";
-}
+  
 function applyRoleAccess() {
   const role    = sessionStorage.getItem("dashRole") || "Manager";
   const allowed = ROLE_TABS[role] || ROLE_TABS["Manager"];
@@ -1478,8 +1473,8 @@ function applyRoleAccess() {
     btn.style.display = allowed.includes(btn.dataset.tab) ? "" : "none";
   });
 
-  // Admin tab: hidden until PIN unlocked this session
-  const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
+  // Admin tab: always hidden — shown only after PIN unlock via submitPin()
+  const adminBtn = document.getElementById("adminTabBtn");
   if (adminBtn) {
     const isUnlocked = sessionStorage.getItem("isAdminUnlocked") === "true";
     adminBtn.style.display = isUnlocked ? "" : "none";
