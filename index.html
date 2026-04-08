@@ -2413,25 +2413,12 @@ async function loadHomeMepStatus() {
     }
   }
 
-function checkRolePin() {
+  function checkRolePin() {
     if (_rolePinEntry.length < 4) return;
-    const workers = window._homeWorkerList || [];
-
-    // Any active worker PIN is valid — PIN is the identity proof, role is the access level chosen
-    const matched = workers.find(w =>
-      typeof w === 'object' &&
-      String(w.pin) === String(_rolePinEntry) &&
-      w.active !== false
+    const matched = (window._homeWorkerList || []).find(w =>
+      typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false
     );
-
     if (matched) {
-      if (_pendingRole === 'Admin') {
-        sessionStorage.setItem('isAdminUnlocked', 'true');
-        sessionStorage.setItem('dashRole', 'Manager');
-      } else {
-        sessionStorage.removeItem('isAdminUnlocked');
-        sessionStorage.setItem('dashRole', _pendingRole);
-      }
       openRoleDashboard(_pendingRole);
     } else {
       document.getElementById("rolePinMsg").textContent = "Wrong PIN";
@@ -2470,7 +2457,9 @@ function goToScanHome() {
 
 function openRoleDashboard(role) {
     closeRolePinModal();
-    // dashRole already set in checkRolePin — don't overwrite
+    sessionStorage.setItem("dashRole", role === "Admin" ? "Manager" : role);
+    if (role === "Admin") sessionStorage.setItem("isAdminUnlocked", "true");
+    else sessionStorage.removeItem("isAdminUnlocked");
     window.location.href = "dashboard.html";
   }
 
