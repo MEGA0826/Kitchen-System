@@ -2413,11 +2413,16 @@ async function loadHomeMepStatus() {
     }
   }
 
-  function checkRolePin() {
+function checkRolePin() {
     if (_rolePinEntry.length < 4) return;
-    const matched = (window._homeWorkerList || []).find(w =>
-      typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false
-    );
+    const workers = window._homeWorkerList || [];
+
+    // For Admin: any active worker PIN works
+    // For other roles: PIN must belong to a worker whose role matches
+    const matched = _pendingRole === 'Admin'
+      ? workers.find(w => typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false && (w.role === 'Admin' || w.role === 'Manager'))
+      : workers.find(w => typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false);
+
     if (matched) {
       openRoleDashboard(_pendingRole);
     } else {
