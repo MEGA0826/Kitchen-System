@@ -1499,13 +1499,12 @@ function applyRoleAccess() {
   
 function requestAdminAccess() {
   if (sessionStorage.getItem("isAdminUnlocked") === "true") {
-    // Admin tab: hidden until PIN unlocked this session
-
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-    if (adminBtn) adminBtn.classList.add("active");
-    const adminPanel = document.getElementById("panel-admin");
-    if (adminPanel) adminPanel.classList.add("active");
+    document.querySelectorAll(".tab").forEach(t => {
+      if (t.getAttribute("onclick") === "requestAdminAccess()") t.classList.add("active");
+    });
+    document.getElementById("panel-admin").classList.add("active");
     sessionStorage.setItem("activeTab", "admin");
     loadAdminTab(); loadArchiveStats();
     closeMenu();
@@ -1580,8 +1579,9 @@ async function submitPin() {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
 
-    const adminBtn = document.querySelector(".tab[onclick='requestAdminAccess()']");
-    if (adminBtn) adminBtn.classList.add("active");
+  document.querySelectorAll(".tab").forEach(t => {
+      if (t.getAttribute("onclick") === "requestAdminAccess()") t.classList.add("active");
+    });
 
     const adminPanel = document.getElementById("panel-admin");
     if (adminPanel) adminPanel.classList.add("active");
