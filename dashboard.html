@@ -1473,12 +1473,8 @@ function applyRoleAccess() {
     btn.style.display = allowed.includes(btn.dataset.tab) ? "" : "none";
   });
 
-  // Admin tab: always hidden — shown only after PIN unlock via submitPin()
-  const adminBtn = document.getElementById("adminTabBtn");
-  if (adminBtn) {
-    const isUnlocked = sessionStorage.getItem("isAdminUnlocked") === "true";
-    adminBtn.style.display = isUnlocked ? "" : "none";
-  }
+  // Admin tab visibility is managed exclusively by submitPin() and page load
+  // Do NOT touch it here — applyRoleAccess() must not override PIN unlock state
 
   const badge = document.getElementById("roleBadge");
   if (badge) {
@@ -3248,6 +3244,10 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 
 // Apply role first so tabs are visible before any fetch
 applyRoleAccess();
+// Admin tab: hide on fresh load unless already unlocked this session
+const _adminBtn = document.getElementById("adminTabBtn");
+if (_adminBtn) _adminBtn.style.display =
+  sessionStorage.getItem("isAdminUnlocked") === "true" ? "" : "none";
 
 // Fire all fetches in parallel — none blocks the others
 Promise.allSettled([
