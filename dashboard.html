@@ -1344,10 +1344,11 @@ let agrZutaten = [];
 let allGRs = [];
   
 const ROLE_TABS = {
-  Teamleader : ['kds','mep-overview','inventory','deductions'],
-  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
+  Teamleader : ['kds','mep-overview','inventory','deductions','admin'],
+  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports','admin'],
   Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
 };
+  
 // Roles that can VIEW recipes but not add/edit
 const RECIPE_VIEW_ONLY = ['Küchenchef'];
 const ROLE_READONLY = {
