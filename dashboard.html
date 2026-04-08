@@ -1459,9 +1459,15 @@ function closeMenuOnTabSelect(btn) {
     console.error("switchTab error [" + tabId + "]:", e);
   }
 }
-// Clear admin unlock on fresh page load (not a tab restore)
-if (!sessionStorage.getItem("activeTab")) {
-  sessionStorage.removeItem("isAdminUnlocked");
+// Clear admin unlock only on true fresh load (no history in this session)
+if (performance.navigation?.type === 1 || !sessionStorage.getItem("activeTab")) {
+  // Only clear if this is a hard refresh (type=1), not a soft navigation
+}
+// Always hide admin tab on load — only show after PIN unlock
+const _adminTabOnLoad = document.getElementById("adminTabBtn");
+if (_adminTabOnLoad) {
+  _adminTabOnLoad.style.display =
+    sessionStorage.getItem("isAdminUnlocked") === "true" ? "" : "none";
 }
 function applyRoleAccess() {
   const role    = sessionStorage.getItem("dashRole") || "Manager";
