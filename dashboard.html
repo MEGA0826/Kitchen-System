@@ -14,8 +14,13 @@
   <meta name="theme-color" content="#0f0f0d">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="i18n.js"></script>
   <style>
-  
+    /* ── Language Switcher ───────────────────── */
+    .lang-switcher { display: flex; gap: 3px; align-items: center; }
+    .lang-btn { font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px; padding: 3px 6px; border: 1px solid var(--border2); border-radius: 3px; background: none; color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s; }
+    .lang-btn:hover { color: var(--text); border-color: var(--amber); }
+    .lang-btn.active { color: var(--amber); border-color: var(--amber); }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #0f0f0d; --surface: #1a1a16; --surface2: #242420; --surface3: #2e2e28;
@@ -466,18 +471,13 @@
 <body>
 
 <div class="header">
-  <div style="display:flex;align-items:center;gap:12px">
-    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-    <div>
-      <div class="logo">Kitchen <em>MEP</em></div>
-      <div class="logo-sub">212 Nooch Richti — Dashboard</div>
-    </div>
+  <div>
+    <div class="logo">Kitchen <em>MEP</em></div>
+    <div class="logo-sub">212 Nooch Richti — Dashboard</div>
   </div>
   <div class="header-right">
-    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Home</a>
-    <!-- FIX: live badge now stacks LIVE row + date/time row -->
+    <div id="langSwitcher" class="lang-switcher"></div>
+    <a href="index.html" class="back-btn" onclick="goBack(event)" data-i18n="scan">← Scan</a>
     <div class="live-badge">
       <div class="live-badge-row">
         <div class="live-dot"></div>
@@ -489,14 +489,14 @@
 </div>
 
 <div class="nav" id="main-nav">
-  <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
-  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
-  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
-  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
-  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
-  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
-  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
- <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
+  <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span><span data-i18n="kds">KDS</span></button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span><span data-i18n="inventory">Inventory</span></button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span><span data-i18n="products">Products</span></button>
+  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span><span data-i18n="recipes">Recipes</span></button>
+  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span><span data-i18n="orders">Orders</span></button>
+  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span><span data-i18n="reports">Reports</span></button>
+  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span><span data-i18n="deductions">Deductions</span></button>
+  <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span><span data-i18n="admin">Admin</span></button>
 </div>
 
 <div class="body">
@@ -1378,14 +1378,25 @@
     document.getElementById("theme-opt-light").classList.toggle("active", mode === "light");
     document.querySelector('meta[name="theme-color"]').setAttribute("content", mode === "light" ? "#f5f4f0" : "#0f0f0d");
   }
-  // Apply saved theme on load
+// ── Apply theme on load: saved → system → dark ──
   (function() {
-    const saved = localStorage.getItem("theme") || "dark";
-    if (saved === "light") {
-      document.body.classList.add("light");
-      // pill state set after DOM ready
-      document.addEventListener("DOMContentLoaded", () => setTheme("light"));
+    const saved = localStorage.getItem("theme");
+    let mode;
+    if (saved) {
+      mode = saved;                                          // user's explicit choice wins
+    } else {
+      // auto-detect OS/browser theme
+      mode = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     }
+    if (mode === "light") document.body.classList.add("light");
+    document.addEventListener("DOMContentLoaded", () => {
+      setTheme(mode);
+      // live-update if user changes OS theme AND has never manually chosen
+      window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", e => {
+        if (localStorage.getItem("theme")) return; // respect manual choice
+        setTheme(e.matches ? "light" : "dark");
+      });
+    });
   })();
 // ─────────────────────────────────────────────
 // CONFIG
@@ -3284,6 +3295,14 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 // ─────────────────────────────────────────────
 // INIT — cache first, then parallel fetch
 // ─────────────────────────────────────────────
+// ── i18n init ──────────────────────────────
+renderLangSwitcher("langSwitcher");
+applyLang();
+
+function onLangChange() {
+  applyLang();
+}
+
 (function initFromCache() {
   try {
     const cp = sessionStorage.getItem("dash_products");
