@@ -2418,21 +2418,13 @@ function checkRolePin() {
   if (_rolePinEntry.length < 4) return;
   const workers = window._homeWorkerList || [];
 
-  // Match PIN AND role must match the selected dashboard role
-  // Admin drawer role → accept Manager or Küchenchef with their PIN
-  const roleMatch = {
-    'Admin'      : ['Admin', 'Manager'],
-    'Manager'    : ['Manager'],
-    'Küchenchef' : ['Küchenchef'],
-    'Teamleader' : ['Teamleader'],
-  };
-  const allowed = roleMatch[_pendingRole] || [_pendingRole];
-
+  // Simply verify the PIN exists and belongs to an active worker
+  // The role selected in the drawer determines dashboard access level
   const matched = workers.find(w =>
     typeof w === 'object' &&
     String(w.pin) === String(_rolePinEntry) &&
     w.active !== false &&
-    allowed.includes(w.role)
+    w.pin !== ""
   );
 
   if (matched) {
