@@ -29,7 +29,25 @@
       --mono: 'DM Mono', monospace; --serif: 'Instrument Serif', serif;
     }
     html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
-
+/* ── LIGHT THEME ── */
+    body.light {
+      --bg: #f5f4f0; --surface: #ffffff; --surface2: #f0efe9; --surface3: #e8e7e0;
+      --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+      --text: #1a1a16; --muted: #888880; --faint: #bbbbb5;
+      --amber: #c87800; --amber-dim: rgba(200,120,0,0.10); --amber-brd: rgba(200,120,0,0.28);
+      --green: #1e9e5a; --green-dim: rgba(30,158,90,0.10); --green-brd: rgba(30,158,90,0.22);
+      --red: #d43020; --red-dim: rgba(212,48,32,0.10); --red-brd: rgba(212,48,32,0.20);
+      --blue: #2272c8; --blue-dim: rgba(34,114,200,0.10); --blue-brd: rgba(34,114,200,0.20);
+    }
+    body.light .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+    }
+    /* theme toggle pill */
+    .theme-toggle { display:flex; align-items:center; gap:0; background:var(--surface2); border:1px solid var(--border2); border-radius:100px; padding:3px; width:fit-content; }
+    .theme-opt { padding:7px 18px; border-radius:100px; font-family:var(--mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; cursor:pointer; border:none; background:none; color:var(--muted); transition:all .2s; }
+    .theme-opt.active { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.12); }
+    body.light .theme-opt.active { box-shadow:0 1px 6px rgba(0,0,0,0.18); }
 .chart-period-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
 .chart-period-btn { padding:5px 12px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); color:var(--muted); font-size:11px; font-family:var(--mono); letter-spacing:.5px; cursor:pointer; transition:all .15s; }
 .chart-period-btn.active { background:var(--amber-dim); color:var(--amber); border-color:var(--amber-brd); }
@@ -1320,7 +1338,23 @@
 </div>
 
 <script>
-
+// ── THEME ──
+  function setTheme(mode) {
+    document.body.classList.toggle("light", mode === "light");
+    localStorage.setItem("theme", mode);
+    document.getElementById("theme-opt-dark").classList.toggle("active", mode === "dark");
+    document.getElementById("theme-opt-light").classList.toggle("active", mode === "light");
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", mode === "light" ? "#f5f4f0" : "#0f0f0d");
+  }
+  // Apply saved theme on load
+  (function() {
+    const saved = localStorage.getItem("theme") || "dark";
+    if (saved === "light") {
+      document.body.classList.add("light");
+      // pill state set after DOM ready
+      document.addEventListener("DOMContentLoaded", () => setTheme("light"));
+    }
+  })();
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
@@ -3026,7 +3060,22 @@ function filterDeductions() {
     (d.mepCode||"").toLowerCase().includes(q) ||
     (d.worker||"").toLowerCase().includes(q)));
 }
-
+<!-- SETTINGS -->
+    <div class="admin-section" style="margin-bottom:24px">
+      <div class="admin-section-title">Appearance</div>
+      <div class="admin-section-sub">Display & theme</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
+        <div>
+          <div style="font-size:13px;font-weight:500;margin-bottom:2px">Colour theme</div>
+          <div style="font-size:11px;color:var(--muted)">Applies instantly and persists across sessions</div>
+        </div>
+        <div class="theme-toggle" id="themeToggle">
+          <button class="theme-opt active" id="theme-opt-dark"  onclick="setTheme('dark')">🌙 Dark</button>
+          <button class="theme-opt"        id="theme-opt-light" onclick="setTheme('light')">☀️ Light</button>
+        </div>
+      </div>
+    </div>
+  
 // ─────────────────────────────────────────────
 // ARCHIVE
 // ─────────────────────────────────────────────
