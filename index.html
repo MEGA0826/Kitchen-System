@@ -2415,23 +2415,34 @@ async function loadHomeMepStatus() {
   }
 
 function checkRolePin() {
-    if (_rolePinEntry.length < 4) return;
-    const workers = window._homeWorkerList || [];
+  if (_rolePinEntry.length < 4) return;
+  const workers = window._homeWorkerList || [];
 
-    // For Admin: any active worker PIN works
-    // For other roles: PIN must belong to a worker whose role matches
-    const matched = _pendingRole === 'Admin'
-      ? workers.find(w => typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false && (w.role === 'Admin' || w.role === 'Manager'))
-      : workers.find(w => typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false);
+  // Match PIN AND role must match the selected dashboard role
+  // Admin drawer role → accept Manager or Küchenchef with their PIN
+  const roleMatch = {
+    'Admin'      : ['Admin', 'Manager'],
+    'Manager'    : ['Manager'],
+    'Küchenchef' : ['Küchenchef'],
+    'Teamleader' : ['Teamleader'],
+  };
+  const allowed = roleMatch[_pendingRole] || [_pendingRole];
 
-    if (matched) {
-      openRoleDashboard(_pendingRole);
-    } else {
-      document.getElementById("rolePinMsg").textContent = "Wrong PIN";
-      _rolePinEntry = "";
-      updateRolePinDots();
-    }
+  const matched = workers.find(w =>
+    typeof w === 'object' &&
+    String(w.pin) === String(_rolePinEntry) &&
+    w.active !== false &&
+    allowed.includes(w.role)
+  );
+
+  if (matched) {
+    openRoleDashboard(_pendingRole);
+  } else {
+    document.getElementById("rolePinMsg").textContent = "Wrong PIN";
+    _rolePinEntry = "";
+    updateRolePinDots();
   }
+}
 
   // ← Scan button: show scanner, start camera, hide staffHome
   function openScanPage() {
