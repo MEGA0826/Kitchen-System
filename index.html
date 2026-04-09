@@ -1139,7 +1139,10 @@
         <div style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
         <div id="homeLiveTime" style="font-size:13px;color:#888;font-family:var(--mono);letter-spacing:1px;margin-top:4px"></div>
       </div>
-      <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
+        <div id="langSwitcher" class="lang-switcher" style="justify-content:flex-end"></div>
+      </div>
     </div>
     <!-- MEP Overview title -->
     <div style="padding:8px 14px 4px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
@@ -2016,7 +2019,12 @@ async function send(action) {
 
 window.addEventListener("DOMContentLoaded", async () => {
   closeRoleDrawer();
-    const code = new URLSearchParams(window.location.search).get("code") || "";
+
+  // ── i18n init ──────────────────────────────
+  renderLangSwitcher("langSwitcher");
+  applyLang();
+
+  const code = new URLSearchParams(window.location.search).get("code") || "";
     setUsedWasteState(0);
 
     if (!code) {
@@ -2169,11 +2177,20 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Check queue on page load and show badge if pending
-  window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", () => {
     updateBadge();
-    // Also retry immediately if online
     if (navigator.onLine) retryQueue();
   });
+
+  // Re-apply translations + rebuild sort labels when language changes
+  function onLangChange() {
+    applyLang();
+    const lbl = buildSortLabels();
+    const prodTitle = document.querySelector('.mep-col-title.produce');
+    const availTitle = document.querySelector('.mep-col-title.avail');
+    if (prodTitle)  prodTitle.textContent  = lbl.produce[_sortMode];
+    if (availTitle) availTitle.textContent = lbl.avail[_sortModeAvail];
+  }
 
   // Register background sync with service worker (retry even when page closed)
   async function registerBackgroundSync() {
@@ -2205,8 +2222,15 @@ window.addEventListener("DOMContentLoaded", async () => {
  let _sortMode      = 'priority';
   let _sortModeAvail = 'priority';
   const _sortModes   = ['priority','az','colour'];
-  const _sortLabels        = { priority:'⚠ To Produce', az:'⚠ To Produce  A→Z', colour:'⚠ To Produce  🎨' };
-  const _sortLabelsAvail   = { priority:'✓ Available',  az:'✓ Available  A→Z',  colour:'✓ Available  🎨' };
+  // ── i18n-aware sort labels (rebuilt on lang change) ──
+  function buildSortLabels() {
+    return {
+      produce: { priority:`⚠ ${t('to-produce')}`, az:`⚠ ${t('to-produce')}  A→Z`, colour:`⚠ ${t('to-produce')}  🎨` },
+      avail:   { priority:`✓ ${t('available')}`,  az:`✓ ${t('available')}  A→Z`,  colour:`✓ ${t('available')}  🎨` },
+    };
+  }
+  let _sortLabels      = buildSortLabels().produce;
+  let _sortLabelsAvail = buildSortLabels().avail;
   let _pendingRole   = "";
   let _rolePinEntry  = "";
   let _popupCode     = "";
@@ -2233,16 +2257,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     return "hl-red";
   }
 
-  function cycleSortMode() {
+function cycleSortMode() {
     const idx = _sortModes.indexOf(_sortMode);
     _sortMode = _sortModes[(idx + 1) % _sortModes.length];
-    document.querySelector('.mep-col-title.produce').textContent = _sortLabels[_sortMode];
+    const lbl = buildSortLabels();
+    document.querySelector('.mep-col-title.produce').textContent = lbl.produce[_sortMode];
     renderHomeMep();
   }
   function cycleSortModeAvail() {
     const idx = _sortModes.indexOf(_sortModeAvail);
     _sortModeAvail = _sortModes[(idx + 1) % _sortModes.length];
-    document.querySelector('.mep-col-title.avail').textContent = _sortLabelsAvail[_sortModeAvail];
+    const lbl = buildSortLabels();
+    document.querySelector('.mep-col-title.avail').textContent = lbl.avail[_sortModeAvail];
     renderHomeMep();
   }
 
