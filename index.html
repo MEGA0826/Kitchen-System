@@ -2418,13 +2418,12 @@ function checkRolePin() {
   if (_rolePinEntry.length < 4) return;
   const workers = window._homeWorkerList || [];
 
-  // Simply verify the PIN exists and belongs to an active worker
-  // The role selected in the drawer determines dashboard access level
   const matched = workers.find(w =>
     typeof w === 'object' &&
     String(w.pin) === String(_rolePinEntry) &&
     w.active !== false &&
-    w.pin !== ""
+    w.pin !== "" &&
+    w.role === _pendingRole
   );
 
   if (matched) {
