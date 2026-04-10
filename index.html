@@ -1126,21 +1126,10 @@
   <!-- Scanner home state - inline camera, no overlay needed -->
 <style>
   html, body { height: 100%; margin: 0; overflow: hidden; background: #0d0d0d; }
-  #staffHome { display: flex !important; }
-  #scanHome, #productScreen { display: none !important; }
 </style>
-<script>
-  // Hide staffHome immediately if a ?code= is present — prevents wrong screen flash
-  (function() {
-    const hasCode = new URLSearchParams(window.location.search).get("code");
-    if (hasCode) {
-      document.getElementById("staffHome") && (document.getElementById("staffHome").style.display = "none");
-    }
-  })();
-</script>
  
   <!-- Staff Home: default landing page -->
-  <div id="staffHome" style="display:none;flex-direction:column;overflow:hidden;background:#0d0d0d;height:100dvh;position:fixed;inset:0">
+  <div id="staffHome" style="flex-direction:column;overflow:hidden;background:#0d0d0d;height:100dvh;position:fixed;inset:0;display:flex">
   
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid #1e1e1e">
@@ -1181,7 +1170,7 @@
     </div>
   </div>  
     
-<div id="scanHome" style="display:none;flex-direction:column;position:relative;overflow:hidden;height:100vh;height:100dvh">
+<div id="scanHome" style="display:none;flex-direction:column;position:relative;overflow:hidden;height:100vh;height:100dvh;z-index:10">
 
   <!-- Camera area fills remaining space -->
   <div class="scan-home-video-wrap" style="flex:1;min-height:180px;position:relative">
@@ -1227,7 +1216,7 @@
   </div>
 
 <!-- Product + Actions screen (shown after scan) -->
-  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:#0d0d0d">
+  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:#0d0d0d;z-index:10">
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
@@ -2038,19 +2027,17 @@ async function send(action) {
 window.addEventListener("DOMContentLoaded", async () => {
   closeRoleDrawer();
 
-  // ── Show correct screen immediately — prevents black flash ──
-  const code = new URLSearchParams(window.location.search).get("code") || "";
-  if (!code) {
-    document.getElementById("staffHome").style.display     = "flex";
-    document.getElementById("scanHome").style.display      = "none";
-    document.getElementById("productScreen").style.display = "none";
-  } else {
+const code = new URLSearchParams(window.location.search).get("code") || "";
+
+  if (code) {
+    // Has product code — hide home, show product screen
     document.getElementById("staffHome").style.display      = "none";
     document.getElementById("scanHome").style.display       = "none";
     document.getElementById("productScreen").style.display  = "flex";
     document.getElementById("productScreen").style.flexDirection = "column";
     document.getElementById("productScreen").style.height   = "100dvh";
   }
+  // No code — staffHome already visible via HTML default (display:flex above)
 
   // ── i18n init ──────────────────────────────
   const savedWorker = localStorage.getItem('worker') || localStorage.getItem('mep_worker');
