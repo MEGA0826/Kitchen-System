@@ -1125,8 +1125,19 @@
 
   <!-- Scanner home state - inline camera, no overlay needed -->
 <style>
-  html, body { height: 100%; margin: 0; overflow: hidden; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: #0d0d0d; }
+  #staffHome { display: flex !important; }
+  #scanHome, #productScreen { display: none !important; }
 </style>
+<script>
+  // Hide staffHome immediately if a ?code= is present — prevents wrong screen flash
+  (function() {
+    const hasCode = new URLSearchParams(window.location.search).get("code");
+    if (hasCode) {
+      document.getElementById("staffHome") && (document.getElementById("staffHome").style.display = "none");
+    }
+  })();
+</script>
  
   <!-- Staff Home: default landing page -->
   <div id="staffHome" style="display:none;flex-direction:column;overflow:hidden;background:#0d0d0d;height:100dvh;position:fixed;inset:0">
@@ -2027,41 +2038,25 @@ async function send(action) {
 window.addEventListener("DOMContentLoaded", async () => {
   closeRoleDrawer();
 
+  // ── Show correct screen immediately — prevents black flash ──
+  const code = new URLSearchParams(window.location.search).get("code") || "";
+  if (!code) {
+    document.getElementById("staffHome").style.display     = "flex";
+    document.getElementById("scanHome").style.display      = "none";
+    document.getElementById("productScreen").style.display = "none";
+  } else {
+    document.getElementById("staffHome").style.display      = "none";
+    document.getElementById("scanHome").style.display       = "none";
+    document.getElementById("productScreen").style.display  = "flex";
+    document.getElementById("productScreen").style.flexDirection = "column";
+    document.getElementById("productScreen").style.height   = "100dvh";
+  }
+
   // ── i18n init ──────────────────────────────
-  // Restore per-worker language if a worker was previously selected
   const savedWorker = localStorage.getItem('worker') || localStorage.getItem('mep_worker');
   if (savedWorker) {
     const wLang = localStorage.getItem('kmep_lang_' + savedWorker);
-    if (wLang && typeof LANGS !== 'undefined' && LANGS.includes(wLang)) {
-      currentLang = wLang;
-      localStorage.setItem('kmep_lang', wLang);
-    }
-  }
-  renderLangSwitcher("langSwitcher");
-  renderLangSwitcher("homeLangSwitcher");
-  applyLang();
-
-  const code = new URLSearchParams(window.location.search).get("code") || "";
-    setUsedWasteState(0);
-
-    if (!code) {
-      // ── Show Staff Home (MEP list), NOT scanner ──
-      document.getElementById("staffHome").style.display    = "flex";
-      document.getElementById("scanHome").style.display     = "none";
-      document.getElementById("productScreen").style.display = "none";
-      preloadWorkers();
-      Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
-      setInterval(loadHomeMepStatus, 60000);
-      return;
-    }
-
-    // -- Has code - show product screen --
-    sessionStorage.setItem("lastScanUrl", window.location.href);
-    document.getElementById("staffHome").style.display      = "none";
-    document.getElementById("scanHome").style.display       = "none";
-    document.getElementById("productScreen").style.display = "flex";
-    document.getElementById("productScreen").style.flexDirection = "column";
-    document.getElementById("productScreen").style.height = "100dvh";
+    if (wLang && typeof LANGS !== 'undefined' && LANGS.includes(wL
 
     CURRENT_CODE = code;
     const cached = sessionStorage.getItem("productMap");
