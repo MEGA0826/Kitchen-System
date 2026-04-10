@@ -111,18 +111,28 @@
     position: fixed;
     top: 70px; left: 0;
     width: fit-content;
-    min-width: 200px;
+    min-width: 220px;
     z-index: 500;
-    background: var(--surface);
-    box-shadow: 4px 8px 32px rgba(0,0,0,0.8);
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    border-radius: 0 0 12px 0;
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    box-shadow: 4px 8px 32px rgba(0,0,0,0.85);
+    border-right: 1px solid var(--border2);
+    border-bottom: 1px solid var(--border2);
+    border-radius: 0 0 14px 0;
     overflow-y: auto;
     max-height: calc(100vh - 70px);
   }
   .nav.open {
     display: flex !important;
+  }
+  .nav.open .tab {
+    color: var(--muted) !important;
+    background: transparent !important;
+  }
+  .nav.open .tab.active,
+  .nav.open .tab:hover {
+    color: var(--amber) !important;
+    background: var(--surface2) !important;
   }
   .tab {
     border-bottom: 1px solid var(--border);
@@ -471,9 +481,14 @@
 <body>
 
 <div class="header">
-  <div>
-    <div class="logo">Kitchen <em>MEP</em></div>
-    <div class="logo-sub">212 Nooch Richti — Dashboard</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div>
+      <div class="logo">Kitchen <em>MEP</em></div>
+      <div class="logo-sub">212 Nooch Richti — Dashboard</div>
+    </div>
   </div>
   <div class="header-right">
     <div id="langSwitcher" class="lang-switcher"></div>
@@ -3299,8 +3314,56 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 renderLangSwitcher("langSwitcher");
 applyLang();
 
+/** Translate JS-generated dashboard strings that can't use data-i18n */
+function applyDashboardStrings() {
+  // Stat card labels
+  const sl = [
+    ['stat-total',     'total-scans'],
+    ['stat-produce',   'produced'],
+    ['stat-done',      'finished'],
+    ['stat-waste',     'waste'],
+    ['stat-available', 'total-available'],
+    ['stat-toproduce', 'total-toproduce'],
+  ];
+  sl.forEach(([id, key]) => {
+    const card = document.getElementById(id)?.closest('.stat-card');
+    if (!card) return;
+    const lbl = card.querySelector('.stat-label');
+    if (lbl) lbl.textContent = t(key);
+  });
+
+  // Chart titles
+  const ct = document.querySelector('#product-bars')?.closest('.chart-wrap')?.querySelector('.chart-title');
+  if (ct) ct.textContent = t('top-products');
+  const wt = document.querySelector('#worker-bars')?.closest('.chart-wrap')?.querySelector('.chart-title');
+  if (wt) wt.textContent = t('activity-worker');
+
+  // Feed header title
+  const fh = document.querySelector('.feed-title-txt');
+  if (fh) fh.textContent = t('recent-scans');
+
+  // Feed column headers (re-rendered on loadKDS, so patch renderFeed instead — see below)
+  // Refresh buttons
+  document.querySelectorAll('.refresh-btn').forEach((btn, i) => {
+    if (i === 0 && btn.getAttribute('onclick')?.includes('loadKDS')) btn.textContent = t('refresh-all');
+    if (btn.getAttribute('onclick')?.includes('openManualScan'))     btn.textContent = t('manual-entry');
+  });
+
+  // Section subtitles
+  const kSub = document.querySelector('#panel-kds .section-sub');
+  if (kSub) kSub.textContent = t('kds-sub');
+  const iSub = document.querySelector('#panel-inventory .section-sub');
+  if (iSub) iSub.textContent = t('inv-sub');
+  const pSub = document.querySelector('#panel-products .section-sub');
+  if (pSub) pSub.textContent = t('prod-sub');
+
+  // KDS section title
+  const kdsTit = document.querySelector('#panel-kds .section-title');
+  if (kdsTit) kdsTit.childNodes[0].textContent = 'Kitchen Display ';
+}
+
 function onLangChange() {
-  applyLang();
+  applyLang(); // already calls applyDashboardStrings via i18n.js hook
 }
 
 (function initFromCache() {
