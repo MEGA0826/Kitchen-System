@@ -2176,10 +2176,16 @@ const code = new URLSearchParams(window.location.search).get("code") || "";
   });
 
   // Check queue on page load and show badge if pending
-window.addEventListener("DOMContentLoaded", () => {
+  // NOTE: no second DOMContentLoaded — merged into the main one above
+if (!code) {
+    // ── Staff Home data load ──
     updateBadge();
     if (navigator.onLine) retryQueue();
-  });
+    preloadWorkers();
+    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
+    setInterval(loadHomeMepStatus, 60000);
+    return;
+  }
 
   // Re-apply translations + rebuild sort labels when language changes
   function onLangChange() {
