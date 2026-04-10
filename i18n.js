@@ -133,7 +133,6 @@ const TRANSLATIONS = {
   'add-worker':     { en:'Add worker',      de:'Mitarbeiter hinzufügen', th:'เพิ่มพนักงาน', it:'Aggiungi lavoratore', fr:'Ajouter un employé', es:'Agregar trabajador' },
   archive:          { en:'Archive',         de:'Archiv',           th:'เก็บถาวร',          it:'Archivio',       fr:'Archive',         es:'Archivo' },
   'scan-archive':   { en:'Scan archive',    de:'Scan-Archiv',      th:'ไฟล์สแกน',          it:'Archivio scansioni', fr:'Archive des scans', es:'Archivo de escaneos' },
-
 };
 
 // ─────────────────────────────────────────────
