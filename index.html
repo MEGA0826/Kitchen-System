@@ -1139,10 +1139,11 @@
         <div style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
         <div id="homeLiveTime" style="font-size:13px;color:#888;font-family:var(--mono);letter-spacing:1px;margin-top:4px"></div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
-        <div id="langSwitcher" class="lang-switcher" style="justify-content:flex-end"></div>
+        <div id="homeLangSwitcher" class="lang-switcher" style="justify-content:flex-end"></div>
       </div>
+    </div>
     </div>
     <!-- MEP Overview title -->
     <div style="padding:8px 14px 4px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
@@ -2014,14 +2015,29 @@ async function send(action) {
   }
 
   document.addEventListener("change", e => {
-    if (e.target.id === "worker") localStorage.setItem("worker", e.target.value);
+    if (e.target.id === "worker") {
+      const name = e.target.value;
+      localStorage.setItem("worker", name);
+      // Restore this worker's saved language preference
+      if (typeof loadLangForWorker === 'function') loadLangForWorker(name);
+    }
   });
 
 window.addEventListener("DOMContentLoaded", async () => {
   closeRoleDrawer();
 
   // ── i18n init ──────────────────────────────
+  // Restore per-worker language if a worker was previously selected
+  const savedWorker = localStorage.getItem('worker') || localStorage.getItem('mep_worker');
+  if (savedWorker) {
+    const wLang = localStorage.getItem('kmep_lang_' + savedWorker);
+    if (wLang && typeof LANGS !== 'undefined' && LANGS.includes(wLang)) {
+      currentLang = wLang;
+      localStorage.setItem('kmep_lang', wLang);
+    }
+  }
   renderLangSwitcher("langSwitcher");
+  renderLangSwitcher("homeLangSwitcher");
   applyLang();
 
   const code = new URLSearchParams(window.location.search).get("code") || "";
@@ -2184,12 +2200,62 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Re-apply translations + rebuild sort labels when language changes
   function onLangChange() {
-    applyLang();
+    applyLang(); // triggers applyIndexStrings via i18n.js hook
     const lbl = buildSortLabels();
     const prodTitle = document.querySelector('.mep-col-title.produce');
     const availTitle = document.querySelector('.mep-col-title.avail');
     if (prodTitle)  prodTitle.textContent  = lbl.produce[_sortMode];
     if (availTitle) availTitle.textContent = lbl.avail[_sortModeAvail];
+    // Re-render MEP list so expiry labels, bar labels update
+    if (Object.keys(_homeMepData).length) renderHomeMep();
+  }
+
+  /** Translate JS-generated strings on index.html */
+  function applyIndexStrings() {
+    // Column titles (only if not mid-cycle override)
+    const prodTitle = document.querySelector('.mep-col-title.produce');
+    const availTitle = document.querySelector('.mep-col-title.avail');
+    if (prodTitle)  prodTitle.textContent = buildSortLabels().produce[_sortMode];
+    if (availTitle) availTitle.textContent = buildSortLabels().avail[_sortModeAvail];
+
+    // MEP overview subtitle
+    const sub = document.querySelector('#staffHome [style*="Today\'s production status"]') ||
+                document.querySelector('#staffHome div[style*="production status"]');
+    if (sub) sub.textContent = t('mep-overview-sub');
+
+    // Role drawer title
+    const drawerTitle = document.querySelector('.role-drawer-title');
+    if (drawerTitle) drawerTitle.textContent = t('switch-role');
+
+    // Role PIN modal subtitle
+    const pinSub = document.querySelector('.role-pin-sub');
+    if (pinSub) pinSub.textContent = t('enter-pin-cont');
+
+    // Popup close buttons
+    document.querySelectorAll('.mep-popup-close').forEach(btn => { btn.textContent = t('close'); });
+    document.querySelectorAll('.role-pin-cancel').forEach(btn => { btn.textContent = t('cancel'); });
+
+    // MEP popup action buttons
+    const popupBtns = document.querySelectorAll('.mep-popup-btn');
+    popupBtns.forEach(btn => {
+      if (btn.classList.contains('done'))  btn.textContent = `✓ ${t('finish-mep')}`;
+      if (btn.classList.contains('used'))  btn.textContent = `↺ ${t('used')}`;
+      if (btn.classList.contains('waste')) btn.textContent = `✕ ${t('waste')}`;
+    });
+
+    // Worker select placeholder
+    const workerSel = document.getElementById('worker');
+    if (workerSel?.options[0]?.value === '') workerSel.options[0].text = t('select-staff');
+    const popupWorker = document.getElementById('popupWorker');
+    if (popupWorker?.options[0]?.value === '') popupWorker.options[0].text = t('select-staff');
+
+    // Product screen action buttons
+    const btnDoneLabel = document.querySelector('.btn-done .btn-label');
+    if (btnDoneLabel) btnDoneLabel.textContent = t('finish-mep');
+    const btnUsedLabel = document.querySelector('.btn-used .btn-label');
+    if (btnUsedLabel) btnUsedLabel.textContent = t('used');
+    const btnWasteLabel = document.querySelector('.btn-waste .btn-label');
+    if (btnWasteLabel) btnWasteLabel.textContent = t('waste');
   }
 
   // Register background sync with service worker (retry even when page closed)
