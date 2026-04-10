@@ -2027,39 +2027,62 @@ async function send(action) {
 window.addEventListener("DOMContentLoaded", async () => {
   closeRoleDrawer();
 
-const code = new URLSearchParams(window.location.search).get("code") || "";
-
-  if (code) {
-    // Has product code — hide home, show product screen
-    document.getElementById("staffHome").style.display      = "none";
-    document.getElementById("scanHome").style.display       = "none";
-    document.getElementById("productScreen").style.display  = "flex";
-    document.getElementById("productScreen").style.flexDirection = "column";
-    document.getElementById("productScreen").style.height   = "100dvh";
-  }
-  // No code — staffHome already visible via HTML default (display:flex above)
+  const code = new URLSearchParams(window.location.search).get("code") || "";
 
   // ── i18n init ──────────────────────────────
   const savedWorker = localStorage.getItem('worker') || localStorage.getItem('mep_worker');
   if (savedWorker) {
     const wLang = localStorage.getItem('kmep_lang_' + savedWorker);
-    if (wLang && typeof LANGS !== 'undefined' && LANGS.includes(wL
-
-    CURRENT_CODE = code;
-    const cached = sessionStorage.getItem("productMap");
-    if (cached) {
-      try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
+    if (wLang && typeof LANGS !== 'undefined' && LANGS.includes(wLang)) {
+      currentLang = wLang;
+      localStorage.setItem('kmep_lang', wLang);
     }
-    const [, , mepData] = await Promise.allSettled([
-      preloadProducts().then(() => showProduct()),
-      preloadWorkers(),
-      fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
-    ]);
+  }
+  renderLangSwitcher("langSwitcher");
+  renderLangSwitcher("homeLangSwitcher");
+  applyLang();
 
-    if (mepData?.status === "fulfilled" && mepData.value) {
-      updateMepUI(mepData.value);
-    }
-  });
+  // ── Show correct screen ──────────────────────
+  if (code) {
+    document.getElementById("staffHome").style.display     = "none";
+    document.getElementById("scanHome").style.display      = "none";
+    document.getElementById("productScreen").style.display = "flex";
+    document.getElementById("productScreen").style.flexDirection = "column";
+    document.getElementById("productScreen").style.height  = "100dvh";
+  }
+  // No code — staffHome already display:flex from HTML
+
+  setUsedWasteState(0);
+  updateBadge();
+  if (navigator.onLine) retryQueue();
+
+  if (!code) {
+    // ── Staff Home ──────────────────────────────
+    preloadWorkers();
+    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
+    setInterval(loadHomeMepStatus, 60000);
+    return;
+  }
+
+  // ── Product screen (has ?code=) ─────────────
+  sessionStorage.setItem("lastScanUrl", window.location.href);
+  CURRENT_CODE = code;
+
+  const cached = sessionStorage.getItem("productMap");
+  if (cached) {
+    try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
+  }
+
+  const [, , mepData] = await Promise.allSettled([
+    preloadProducts().then(() => showProduct()),
+    preloadWorkers(),
+    fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
+  ]);
+
+  if (mepData?.status === "fulfilled" && mepData.value) {
+    updateMepUI(mepData.value);
+  }
+});
 
   // -- OFFLINE SCAN QUEUE - IndexedDB + auto-retry --
   const DB_NAME    = "mep-offline";
@@ -2174,18 +2197,6 @@ const code = new URLSearchParams(window.location.search).get("code") || "";
   window.addEventListener("online", () => {
     retryQueue();
   });
-
-  // Check queue on page load and show badge if pending
-  // NOTE: no second DOMContentLoaded — merged into the main one above
-if (!code) {
-    // ── Staff Home data load ──
-    updateBadge();
-    if (navigator.onLine) retryQueue();
-    preloadWorkers();
-    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
-    setInterval(loadHomeMepStatus, 60000);
-    return;
-  }
 
   // Re-apply translations + rebuild sort labels when language changes
   function onLangChange() {
