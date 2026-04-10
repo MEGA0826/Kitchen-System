@@ -7,7 +7,25 @@ const LANGS = ['en', 'de', 'th', 'it', 'fr', 'es'];
 const LANG_LABELS = { en: 'EN', de: 'DE', th: 'TH', it: 'IT', fr: 'FR', es: 'ES' };
 
 const TRANSLATIONS = {
-
+  // ── Staff Home strings ────────────────────
+  'all-done':         { en:'All done ✓',          de:'Alles fertig ✓',     th:'เสร็จทั้งหมด ✓',       it:'Tutto fatto ✓',         fr:'Tout terminé ✓',              es:'Todo listo ✓' },
+  'nothing-avail':    { en:'Nothing available yet', de:'Noch nichts fertig', th:'ยังไม่มีพร้อม',         it:'Niente disponibile',    fr:'Rien de disponible',          es:'Nada disponible aún' },
+  'loading':          { en:'Loading…',             de:'Laden…',             th:'กำลังโหลด…',            it:'Caricamento…',          fr:'Chargement…',                 es:'Cargando…' },
+  'daily-target-ok':  { en:'Daily target covered ✓', de:'Tagesziel erreicht ✓', th:'ครบเป้าหมายวันนี้ ✓', it:'Obiettivo giornaliero ✓', fr:'Objectif quotidien atteint ✓', es:'Meta diaria cubierta ✓' },
+  'finish-mep':       { en:'Finish MEP',           de:'MEP abschliessen',   th:'เสร็จ MEP',             it:'Finisci MEP',           fr:'Terminer MEP',                es:'Finalizar MEP' },
+  'select-staff':     { en:'-- Select staff member --', de:'-- Mitarbeiter wählen --', th:'-- เลือกพนักงาน --', it:'-- Seleziona membro --', fr:'-- Choisir un employé --', es:'-- Seleccionar personal --' },
+  'fridge-until':     { en:'Fridge until',         de:'Kühlschrank bis',    th:'แช่เย็นถึง',            it:'Frigo fino al',         fr:'Frigo jusqu\'au',             es:'Nevera hasta el' },
+  'shelf-days':       { en:'Shelf life',            de:'Haltbarkeit',        th:'อายุการเก็บ',            it:'Durata',                fr:'Durée de vie',                es:'Vida útil' },
+  'exp-warning':      { en:'⚠ Expired — use or discard', de:'⚠ Abgelaufen', th:'⚠ หมดอายุ — ใช้หรือทิ้ง', it:'⚠ Scaduto',          fr:'⚠ Périmé — utiliser ou jeter', es:'⚠ Vencido — usar o desechar' },
+  'exp-today-warn':   { en:'⚠ Expires today',      de:'⚠ Läuft heute ab',   th:'⚠ หมดอายุวันนี้',       it:'⚠ Scade oggi',          fr:'⚠ Expire aujourd\'hui',       es:'⚠ Vence hoy' },
+  'available-label':  { en:'Avail',                de:'Verfügb.',           th:'มีพร้อม',               it:'Dispon.',               fr:'Dispon.',                     es:'Dispon.' },
+  'produce-label':    { en:'Produce',              de:'Prod.',              th:'ผลิต',                  it:'Prod.',                 fr:'Prod.',                       es:'Prod.' },
+  'mep-overview-sub': { en:'Today\'s production status', de:'Heutige Produktionsstatus', th:'สถานะการผลิตวันนี้', it:'Stato produzione di oggi', fr:'Statut de production du jour', es:'Estado de producción de hoy' },
+  'switch-role':      { en:'Switch Role',          de:'Rolle wechseln',     th:'เปลี่ยนบทบาท',          it:'Cambia ruolo',          fr:'Changer de rôle',             es:'Cambiar rol' },
+  'enter-pin-cont':   { en:'Enter PIN to continue', de:'PIN eingeben',      th:'ใส่ PIN เพื่อดำเนินการ', it:'Inserisci PIN per continuare', fr:'Entrer le PIN pour continuer', es:'Ingresar PIN para continuar' },
+  'available-str':    { en:'Available',            de:'Verfügbar',          th:'มีพร้อม',               it:'Disponibile',           fr:'Disponible',                  es:'Disponible' },
+  'to-produce-str':   { en:'To produce',           de:'Zu produzieren',     th:'ต้องผลิต',              it:'Da produrre',           fr:'À produire',                  es:'A producir' },
+  
   // ── General ──────────────────────────────────
   dashboard:        { en:'Dashboard',       de:'Dashboard',        th:'แดชบอร์ด',         it:'Dashboard',      fr:'Tableau de bord', es:'Panel' },
   back:             { en:'Back',            de:'Zurück',           th:'กลับ',             it:'Indietro',       fr:'Retour',          es:'Volver' },
@@ -156,6 +174,15 @@ function applyLang() {
   // Re-render any page-level dynamic strings
   if (typeof applyDashboardStrings === 'function') applyDashboardStrings();
   if (typeof applyIndexStrings === 'function') applyIndexStrings();
+}
+
+/** Render the language switcher HTML — call once in each page's init */
+function renderLangSwitcher(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = LANGS.map(l =>
+    `<button class="lang-btn${l === currentLang ? ' active' : ''}" data-lang="${l}" onclick="setLang('${l}')">${LANG_LABELS[l]}</button>`
+  ).join('');
 }
 
 /** Render the language switcher HTML — call once in each page's init */
