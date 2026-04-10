@@ -145,16 +145,17 @@ function setLang(lang) {
 /** Apply translations to all elements with data-i18n attribute */
 function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.dataset.i18n;
-    el.textContent = t(key);
+    el.textContent = t(el.dataset.i18n);
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
-  // Update active state on lang switcher buttons
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === currentLang);
   });
+  // Re-render any page-level dynamic strings
+  if (typeof applyDashboardStrings === 'function') applyDashboardStrings();
+  if (typeof applyIndexStrings === 'function') applyIndexStrings();
 }
 
 /** Render the language switcher HTML — call once in each page's init */
@@ -165,3 +166,23 @@ function renderLangSwitcher(containerId) {
     `<button class="lang-btn${l === currentLang ? ' active' : ''}" data-lang="${l}" onclick="setLang('${l}')">${LANG_LABELS[l]}</button>`
   ).join('');
 }
+// ── KDS panel strings ─────────────────────
+  'total-scans':      { en:'Total scans today',   de:'Scans heute gesamt', th:'สแกนทั้งหมดวันนี้',   it:'Scansioni totali oggi', fr:'Scans totaux aujourd\'hui', es:'Escaneos totales hoy' },
+  finished:           { en:'Finished',             de:'Fertiggestellt',     th:'เสร็จสิ้น',            it:'Finito',                fr:'Terminé',                    es:'Terminado' },
+  'total-available':  { en:'Available (total)',    de:'Verfügbar (gesamt)', th:'มีพร้อม (รวม)',        it:'Disponibile (totale)',  fr:'Disponible (total)',          es:'Disponible (total)' },
+  'total-toproduce':  { en:'To Produce (total)',   de:'Zu prod. (gesamt)',  th:'ต้องผลิต (รวม)',        it:'Da prod. (totale)',     fr:'À prod. (total)',             es:'A prod. (total)' },
+  'top-products':     { en:'Top products by scan count', de:'Top Produkte nach Scans', th:'สินค้ายอดนิยม', it:'Prodotti principali', fr:'Principaux produits',      es:'Principales productos' },
+  'activity-worker':  { en:'Activity by worker',  de:'Aktivität nach MA',  th:'กิจกรรมตามพนักงาน',   it:'Attività per lavoratore', fr:'Activité par employé',      es:'Actividad por trabajador' },
+  'recent-scans':     { en:'Recent scans',         de:'Letzte Scans',       th:'สแกนล่าสุด',           it:'Scansioni recenti',     fr:'Scans récents',               es:'Escaneos recientes' },
+  'refresh-all':      { en:'↺ Refresh all data',  de:'↺ Alles aktualisieren', th:'↺ รีเฟรชข้อมูล',    it:'↺ Aggiorna tutto',      fr:'↺ Actualiser tout',           es:'↺ Actualizar todo' },
+  'manual-entry':     { en:'+ Manual entry',      de:'+ Manuell erfassen', th:'+ บันทึกด้วยตนเอง',    it:'+ Voce manuale',        fr:'+ Saisie manuelle',           es:'+ Entrada manual' },
+  'no-scans-today':   { en:'No scans today',      de:'Keine Scans heute',  th:'ไม่มีสแกนวันนี้',      it:'Nessuna scansione oggi',fr:'Aucun scan aujourd\'hui',     es:'Sin escaneos hoy' },
+  'date-time':        { en:'Date / Time',          de:'Datum / Zeit',       th:'วันที่ / เวลา',         it:'Data / Ora',            fr:'Date / Heure',                es:'Fecha / Hora' },
+  worker:             { en:'Worker',               de:'Mitarbeiter',        th:'พนักงาน',               it:'Lavoratore',            fr:'Employé',                     es:'Trabajador' },
+  action:             { en:'Action',               de:'Aktion',             th:'การดำเนินการ',           it:'Azione',                fr:'Action',                      es:'Acción' },
+  product:            { en:'Product',              de:'Produkt',            th:'สินค้า',                it:'Prodotto',              fr:'Produit',                     es:'Producto' },
+  // ── Section subtitles ────────────────────
+  'kds-sub':          { en:'Real-time MEP production tracking', de:'Echtzeit MEP Überwachung', th:'ติดตาม MEP แบบเรียลไทม์', it:'Monitoraggio MEP in tempo reale', fr:'Suivi MEP en temps réel', es:'Seguimiento MEP en tiempo real' },
+  'inv-sub':          { en:'Select a category or supplier to load items', de:'Kategorie oder Lieferant wählen', th:'เลือกหมวดหมู่หรือผู้จัดจำหน่าย', it:'Seleziona categoria o fornitore', fr:'Choisir catégorie ou fournisseur', es:'Seleccionar categoría o proveedor' },
+  'prod-sub':         { en:'Select a category to view production items', de:'Kategorie wählen', th:'เลือกหมวดหมู่', it:'Seleziona una categoria', fr:'Choisir une catégorie', es:'Seleccionar una categoría' },
+  'refresh':          { en:'↺ Refresh',            de:'↺ Aktualisieren',    th:'↺ รีเฟรช',              it:'↺ Aggiorna',            fr:'↺ Actualiser',                es:'↺ Actualizar' },
