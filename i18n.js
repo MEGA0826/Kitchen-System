@@ -9,7 +9,7 @@ const LANG_LABELS = { en: 'EN', de: 'DE', th: 'TH', it: 'IT', fr: 'FR', es: 'ES'
 const TRANSLATIONS = {
   // ── Staff Home strings ────────────────────
   'all-done':         { en:'All done ✓',          de:'Alles fertig ✓',     th:'เสร็จทั้งหมด ✓',       it:'Tutto fatto ✓',         fr:'Tout terminé ✓',              es:'Todo listo ✓' },
-  'nothing-avail':    { en:'Nothing available yet', de:'Noch nichts fertig', th:'ยังไม่มีพร้อม',         it:'Niente disponibile',    fr:'Rien de disponible',          es:'Nada disponible aún' },
+  'nothing-avail':    { en:'Nothing available yet', de:'Noch nichts fertig', th:'หมดแล้ว',         it:'Niente disponibile',    fr:'Rien de disponible',          es:'Nada disponible aún' },
   'loading':          { en:'Loading…',             de:'Laden…',             th:'กำลังโหลด…',            it:'Caricamento…',          fr:'Chargement…',                 es:'Cargando…' },
   'daily-target-ok':  { en:'Daily target covered ✓', de:'Tagesziel erreicht ✓', th:'ครบเป้าหมายวันนี้ ✓', it:'Obiettivo giornaliero ✓', fr:'Objectif quotidien atteint ✓', es:'Meta diaria cubierta ✓' },
   'finish-mep':       { en:'Finish MEP',           de:'MEP abschliessen',   th:'เสร็จ MEP',             it:'Finisci MEP',           fr:'Terminer MEP',                es:'Finalizar MEP' },
@@ -21,13 +21,13 @@ const TRANSLATIONS = {
   'available-label':  { en:'Avail',                de:'Verfügb.',           th:'มีพร้อม',               it:'Dispon.',               fr:'Dispon.',                     es:'Dispon.' },
   'produce-label':    { en:'Produce',              de:'Prod.',              th:'ผลิต',                  it:'Prod.',                 fr:'Prod.',                       es:'Prod.' },
   'mep-overview-sub': { en:'Today\'s production status', de:'Heutige Produktionsstatus', th:'สถานะการผลิตวันนี้', it:'Stato produzione di oggi', fr:'Statut de production du jour', es:'Estado de producción de hoy' },
-  'switch-role':      { en:'Switch Role',          de:'Rolle wechseln',     th:'เปลี่ยนบทบาท',          it:'Cambia ruolo',          fr:'Changer de rôle',             es:'Cambiar rol' },
+  'switch-role':      { en:'Switch Role',          de:'Rolle wechseln',     th:'เปลี่ยนตำแหน่ง',          it:'Cambia ruolo',          fr:'Changer de rôle',             es:'Cambiar rol' },
   'enter-pin-cont':   { en:'Enter PIN to continue', de:'PIN eingeben',      th:'ใส่ PIN เพื่อดำเนินการ', it:'Inserisci PIN per continuare', fr:'Entrer le PIN pour continuer', es:'Ingresar PIN para continuar' },
-  'available-str':    { en:'Available',            de:'Verfügbar',          th:'มีพร้อม',               it:'Disponibile',           fr:'Disponible',                  es:'Disponible' },
+  'available-str':    { en:'Available',            de:'Verfügbar',          th:'ที่เหลือใช้ได้',               it:'Disponibile',           fr:'Disponible',                  es:'Disponible' },
   'to-produce-str':   { en:'To produce',           de:'Zu produzieren',     th:'ต้องผลิต',              it:'Da produrre',           fr:'À produire',                  es:'A producir' },
   
   // ── General ──────────────────────────────────
-  dashboard:        { en:'Dashboard',       de:'Dashboard',        th:'แดชบอร์ด',         it:'Dashboard',      fr:'Tableau de bord', es:'Panel' },
+  dashboard:        { en:'Dashboard',       de:'Dashboard',        th:'หน้ารวมสรุป',         it:'Dashboard',      fr:'Tableau de bord', es:'Panel' },
   back:             { en:'Back',            de:'Zurück',           th:'กลับ',             it:'Indietro',       fr:'Retour',          es:'Volver' },
   save:             { en:'Save',            de:'Speichern',        th:'บันทึก',           it:'Salva',          fr:'Enregistrer',     es:'Guardar' },
   cancel:           { en:'Cancel',          de:'Abbrechen',        th:'ยกเลิก',           it:'Annulla',        fr:'Annuler',         es:'Cancelar' },
@@ -57,7 +57,7 @@ const TRANSLATIONS = {
 
   // ── Staff Home ────────────────────────────────
   'to-produce':     { en:'To Produce',      de:'Zu produzieren',   th:'ต้องผลิต',          it:'Da produrre',    fr:'À produire',      es:'A producir' },
-  available:        { en:'Available',       de:'Verfügbar',        th:'มีพร้อม',           it:'Disponibile',    fr:'Disponible',      es:'Disponible' },
+  available:        { en:'Available',       de:'Verfügbar',        th:'ที่เหลือใช้ได้',           it:'Disponibile',    fr:'Disponible',      es:'Disponible' },
   priority:         { en:'Priority',        de:'Priorität',        th:'ลำดับความสำคัญ',    it:'Priorità',       fr:'Priorité',        es:'Prioridad' },
   'sort-az':        { en:'A–Z',             de:'A–Z',              th:'A–Z',              it:'A–Z',            fr:'A–Z',             es:'A–Z' },
   colour:           { en:'Colour',          de:'Farbe',            th:'สี',               it:'Colore',         fr:'Couleur',         es:'Color' },
@@ -85,7 +85,7 @@ const TRANSLATIONS = {
   'mep-overview':   { en:'MEP Overview',    de:'MEP Übersicht',    th:'ภาพรวม MEP',        it:'Panoramica MEP', fr:'Vue MEP',         es:'Vista MEP' },
   inventory:        { en:'Inventory',       de:'Inventar',         th:'คลังสินค้า',        it:'Inventario',     fr:'Inventaire',      es:'Inventario' },
   products:         { en:'Products',        de:'Produkte',         th:'สินค้า',            it:'Prodotti',       fr:'Produits',        es:'Productos' },
-  recipes:          { en:'Recipes',         de:'Rezepte',          th:'สูตร',             it:'Ricette',        fr:'Recettes',        es:'Recetas' },
+  recipes:          { en:'Recipes',         de:'Rezepte',          th:'สูตรอาหาร',             it:'Ricette',        fr:'Recettes',        es:'Recetas' },
   orders:           { en:'Orders',          de:'Bestellungen',     th:'คำสั่ง',            it:'Ordini',         fr:'Commandes',       es:'Pedidos' },
   reports:          { en:'Reports',         de:'Berichte',         th:'รายงาน',           it:'Rapporti',       fr:'Rapports',        es:'Informes' },
   deductions:       { en:'Deductions',      de:'Abzüge',           th:'การหักออก',         it:'Deduzioni',      fr:'Déductions',      es:'Deducciones' },
@@ -95,7 +95,7 @@ const TRANSLATIONS = {
   'scans-today':    { en:'Scans today',     de:'Scans heute',      th:'สแกนวันนี้',        it:'Scansioni oggi', fr:'Scans aujourd\'hui', es:'Escaneos hoy' },
   produced:         { en:'Produced',        de:'Produziert',       th:'ผลิตแล้ว',         it:'Prodotto',       fr:'Produit',         es:'Producido' },
   workers:          { en:'Workers',         de:'Mitarbeiter',      th:'พนักงาน',          it:'Lavoratori',     fr:'Employés',        es:'Trabajadores' },
-  'live-feed':      { en:'Live feed',       de:'Live-Feed',        th:'ฟีดสด',            it:'Feed live',      fr:'Flux en direct',  es:'Feed en vivo' },
+  'live-feed':      { en:'Live feed',       de:'Live-Feed',        th:'ออนไลน์',            it:'Feed live',      fr:'Flux en direct',  es:'Feed en vivo' },
   'no-scans':       { en:'No scans today',  de:'Keine Scans heute', th:'ไม่มีสแกนวันนี้',  it:'Nessuna scansione oggi', fr:'Aucun scan aujourd\'hui', es:'Sin escaneos hoy' },
 
   // ── MEP Overview ──────────────────────────────
@@ -133,6 +133,26 @@ const TRANSLATIONS = {
   'add-worker':     { en:'Add worker',      de:'Mitarbeiter hinzufügen', th:'เพิ่มพนักงาน', it:'Aggiungi lavoratore', fr:'Ajouter un employé', es:'Agregar trabajador' },
   archive:          { en:'Archive',         de:'Archiv',           th:'เก็บถาวร',          it:'Archivio',       fr:'Archive',         es:'Archivo' },
   'scan-archive':   { en:'Scan archive',    de:'Scan-Archiv',      th:'ไฟล์สแกน',          it:'Archivio scansioni', fr:'Archive des scans', es:'Archivo de escaneos' },
+
+  // ── KDS panel strings ─────────────────────
+  'total-scans':    { en:'Total scans today',    de:'Scans heute gesamt',     th:'สแกนทั้งหมดวันนี้',   it:'Scansioni totali oggi',      fr:'Scans totaux aujourd\'hui', es:'Escaneos totales hoy' },
+  finished:         { en:'Finished',             de:'Fertiggestellt',          th:'เสร็จสิ้น',            it:'Finito',                     fr:'Terminé',                   es:'Terminado' },
+  'total-available':{ en:'Available (total)',    de:'Verfügbar (gesamt)',      th:'ที่เหลือใช้ได้ (รวม)',        it:'Disponibile (totale)',       fr:'Disponible (total)',        es:'Disponible (total)' },
+  'total-toproduce':{ en:'To Produce (total)',   de:'Zu prod. (gesamt)',       th:'ต้องผลิต (รวม)',        it:'Da prod. (totale)',          fr:'À prod. (total)',           es:'A prod. (total)' },
+  'top-products':   { en:'Top products by scan count', de:'Top Produkte',     th:'สินค้ายอดนิยม',        it:'Prodotti principali',        fr:'Principaux produits',       es:'Principales productos' },
+  'activity-worker':{ en:'Activity by worker',  de:'Aktivität nach MA',       th:'กิจกรรมตามพนักงาน',   it:'Attività per lavoratore',   fr:'Activité par employé',      es:'Actividad por trabajador' },
+  'recent-scans':   { en:'Recent scans',         de:'Letzte Scans',            th:'สแกนล่าสุด',           it:'Scansioni recenti',          fr:'Scans récents',             es:'Escaneos recientes' },
+  'refresh-all':    { en:'↺ Refresh all data',  de:'↺ Alles aktualisieren',   th:'↺ รีเฟรชข้อมูล',    it:'↺ Aggiorna tutto',           fr:'↺ Actualiser tout',         es:'↺ Actualizar todo' },
+  'manual-entry':   { en:'+ Manual entry',      de:'+ Manuell erfassen',      th:'+ บันทึกด้วยตนเอง',    it:'+ Voce manuale',             fr:'+ Saisie manuelle',         es:'+ Entrada manual' },
+  'no-scans-today': { en:'No scans today',      de:'Keine Scans heute',       th:'ไม่มีสแกนวันนี้',      it:'Nessuna scansione oggi',     fr:'Aucun scan aujourd\'hui',   es:'Sin escaneos hoy' },
+  'date-time':      { en:'Date / Time',          de:'Datum / Zeit',            th:'วันที่ / เวลา',         it:'Data / Ora',                 fr:'Date / Heure',              es:'Fecha / Hora' },
+  worker:           { en:'Worker',               de:'Mitarbeiter',             th:'พนักงาน',               it:'Lavoratore',                 fr:'Employé',                   es:'Trabajador' },
+  action:           { en:'Action',               de:'Aktion',                  th:'การดำเนินการ',           it:'Azione',                     fr:'Action',                    es:'Acción' },
+  product:          { en:'Product',              de:'Produkt',                 th:'สินค้า',                it:'Prodotto',                   fr:'Produit',                   es:'Producto' },
+  'kds-sub':        { en:'Real-time MEP production tracking', de:'Echtzeit MEP Überwachung', th:'ติดตาม MEP แบบเรียลไทม์', it:'Monitoraggio MEP in tempo reale', fr:'Suivi MEP en temps réel', es:'Seguimiento MEP en tiempo real' },
+  'inv-sub':        { en:'Select a category or supplier to load items', de:'Kategorie oder Lieferant wählen', th:'เลือกหมวดหมู่หรือผู้จัดจำหน่าย', it:'Seleziona categoria o fornitore', fr:'Choisir catégorie ou fournisseur', es:'Seleccionar categoría o proveedor' },
+  'prod-sub':       { en:'Select a category to view production items', de:'Kategorie wählen', th:'เลือกหมวดหมู่', it:'Seleziona una categoria', fr:'Choisir une catégorie', es:'Seleccionar una categoría' },
+  'refresh':        { en:'↺ Refresh',            de:'↺ Aktualisieren',         th:'↺ รีเฟรช',              it:'↺ Aggiorna',                 fr:'↺ Actualiser',              es:'↺ Actualizar' },
 };
 
 // ─────────────────────────────────────────────
@@ -191,6 +211,18 @@ function renderLangSwitcher(containerId) {
   el.innerHTML = LANGS.map(l =>
     `<button class="lang-btn${l === currentLang ? ' active' : ''}" data-lang="${l}" onclick="setLang('${l}')">${LANG_LABELS[l]}</button>`
   ).join('');
+}
+
+/** Load language — check worker-specific first, then global */
+function loadLangForWorker(workerName) {
+  if (!workerName) return;
+  const workerLang = localStorage.getItem('kmep_lang_' + workerName);
+  if (workerLang && LANGS.includes(workerLang)) {
+    currentLang = workerLang;
+    localStorage.setItem('kmep_lang', workerLang);
+    applyLang();
+    if (typeof onLangChange === 'function') onLangChange(workerLang);
+  }
 }
 // ── KDS panel strings ─────────────────────
   'total-scans':      { en:'Total scans today',   de:'Scans heute gesamt', th:'สแกนทั้งหมดวันนี้',   it:'Scansioni totali oggi', fr:'Scans totaux aujourd\'hui', es:'Escaneos totales hoy' },
