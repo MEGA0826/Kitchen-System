@@ -204,15 +204,6 @@ function renderLangSwitcher(containerId) {
   ).join('');
 }
 
-/** Render the language switcher HTML — call once in each page's init */
-function renderLangSwitcher(containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = LANGS.map(l =>
-    `<button class="lang-btn${l === currentLang ? ' active' : ''}" data-lang="${l}" onclick="setLang('${l}')">${LANG_LABELS[l]}</button>`
-  ).join('');
-}
-
 /** Load language — check worker-specific first, then global */
 function loadLangForWorker(workerName) {
   if (!workerName) return;
