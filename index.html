@@ -68,7 +68,7 @@
       --radius:    14px;
       --radius-sm: 8px;
     }
-    [data-theme="light"] {
+[data-theme="light"] {
       --bg:        #f5f4ef;
       --surface:   #ffffff;
       --surface2:  #eeecea;
@@ -77,6 +77,61 @@
       --text:      #1a1a14;
       --muted:     #77776e;
     }
+
+    /* Light theme overrides for hardcoded inline colors */
+    [data-theme="light"] #staffHome { background: #f5f4ef !important; color: #1a1a14; }
+    [data-theme="light"] #staffHome div { color: inherit; }
+    [data-theme="light"] #staffHome .mep-col-scroll { scrollbar-color: rgba(180,120,0,0.3) transparent; }
+    [data-theme="light"] #productScreen { background: #f5f4ef !important; color: #1a1a14; }
+
+    /* Header bars */
+    [data-theme="light"] #staffHome > div:first-child { border-bottom-color: #ddd; background: #fff; }
+    [data-theme="light"] #staffHome > div:nth-child(2) { border-bottom-color: #ddd; background: #f5f4ef; }
+
+    /* Column titles */
+    [data-theme="light"] .mep-col-title.produce { color: #b45309; }
+    [data-theme="light"] .mep-col-title.avail   { color: #166534; }
+
+    /* Divider between columns */
+    [data-theme="light"] .mep-split > div[style*="background:#222"] { background: #ddd !important; }
+
+    /* Cards in columns */
+    [data-theme="light"] #home-produce-list > div,
+    [data-theme="light"] #home-avail-list  > div { border-bottom-color: #e0ddd8 !important; }
+    [data-theme="light"] #home-produce-list div[style*="color:#fff"],
+    [data-theme="light"] #home-avail-list  div[style*="color:#fff"] { color: #1a1a14 !important; }
+    [data-theme="light"] #home-produce-list div[style*="background:#2a2a2a"],
+    [data-theme="light"] #home-avail-list  div[style*="background:#2a2a2a"] { background: #e0ddd8 !important; }
+    [data-theme="light"] #home-produce-list div[style*="background:#222"],
+    [data-theme="light"] #home-avail-list  div[style*="background:#222"] { background: #eeecea !important; }
+    [data-theme="light"] #home-produce-list img + div,
+    [data-theme="light"] #home-avail-list  img + div { background: #eeecea !important; }
+
+    /* Category headers in columns */
+    [data-theme="light"] #home-produce-list > div[style*="color:#555"],
+    [data-theme="light"] #home-avail-list  > div[style*="color:#555"] { color: #999 !important; }
+
+    /* Product screen */
+    [data-theme="light"] #productScreen > div { border-color: #ddd; background: #fff; }
+    [data-theme="light"] #product { color: #1a1a14 !important; }
+    [data-theme="light"] #productCode { color: #999 !important; }
+    [data-theme="light"] #mepStatus { background: #fff !important; border-color: #ddd !important; }
+    [data-theme="light"] #mepLabelDone,
+    [data-theme="light"] #mepLabelList { color: #555 !important; }
+    [data-theme="light"] #worker { background: #fff !important; color: #1a1a14 !important; border-color: #ddd !important; }
+
+    /* Home header text */
+    [data-theme="light"] #homeLiveTime { color: #999 !important; }
+    [data-theme="light"] #staffHome div[style*="color:rgba(255,255,255,0.85)"] { color: #1a1a14 !important; }
+    [data-theme="light"] #staffHome div[style*="color:#555"] { color: #aaa !important; }
+    [data-theme="light"] #staffHome em { color: #b45309 !important; }
+
+    /* Scan btn */
+    [data-theme="light"] .home-scan-btn { background: rgba(180,100,0,0.12); color: #b45309; border-color: rgba(180,100,0,0.3); }
+
+    /* Drawer + PIN modal always dark — intentional */
+    .role-drawer { background: #111 !important; color: #ccc !important; }
+    .role-pin-modal { background: rgba(0,0,0,0.88) !important; }
 /* 
     ── STAFF HOME MEP LIST ── */
     .home-header {
@@ -1142,20 +1197,20 @@
     <!-- MEP Overview title -->
     <div style="padding:8px 14px 4px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
       <div style="font-family:'Instrument Serif',serif;font-size:20px;color:rgba(255,255,255,0.85)">MEP <em style="font-style:italic;color:#e8a020">Overview</em></div>
-      <div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-top:2px">Today's production status</div>
+      <div data-i18n="mep-overview-sub" style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-top:2px">Today's production status</div>
     </div>
 
     <!-- MEP split -->
     <div class="mep-split" style="flex:1;min-height:0;overflow:hidden">
       <div class="mep-col" style="min-height:0">
-        <div class="mep-col-title produce" onclick="cycleSortMode()" style="cursor:pointer;user-select:none">⚠ To Produce</div>
+        <div class="mep-col-title produce" data-i18n="to-produce" onclick="cycleSortMode()" style="cursor:pointer;user-select:none">⚠ To Produce</div>
         <div class="mep-col-scroll" id="home-produce-list" style="-webkit-overflow-scrolling:touch">
           <div style="color:#444;font-size:11px;text-align:center;padding:16px">Loading…</div>
         </div>
       </div>
       <div style="width:1px;background:#222;flex-shrink:0;margin:24px 0 4px"></div>
       <div class="mep-col" style="min-height:0">
-        <div class="mep-col-title avail" onclick="cycleSortModeAvail()" style="cursor:pointer;user-select:none">✓ Available</div>
+        <div class="mep-col-title avail" data-i18n="available" onclick="cycleSortModeAvail()" style="cursor:pointer;user-select:none">✓ Available</div>
         <div class="mep-col-scroll" id="home-avail-list" style="-webkit-overflow-scrolling:touch">
           <div style="color:#444;font-size:11px;text-align:center;padding:16px">Loading…</div>
         </div>
@@ -1257,7 +1312,7 @@
      <!-- Worker select -->
       <select id="worker" class="worker-select" onchange="localStorage.setItem('worker',this.value)"
         style="width:100%;padding:14px 16px;background:#141414;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-family:var(--mono);font-size:16px;letter-spacing:0.5px;cursor:pointer">
-        <option value="">-- Select staff member --</option>
+        <option value="" data-i18n="select-staff">-- Select staff member --</option>
       </select>
 
       <!-- Finish MEP -->
@@ -2423,13 +2478,13 @@ function setLangAndWorker(lang) {
     if (workerName) localStorage.setItem('kmep_lang_' + workerName, lang);
     const sel = document.getElementById('langDropdown');
     if (sel) sel.value = lang;
-    // i18n.js may or may not be loaded — try both ways
     if (typeof setLang === 'function') {
       setLang(lang);
-    } else {
-      // Fallback: reload page so i18n.js picks up new lang on next load
-      window.location.reload();
     }
+    // Also directly update data-i18n elements in case applyLang not wired
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      if (typeof t === 'function') el.textContent = t(el.dataset.i18n, lang);
+    });
   }
 
   // ── ROLE DRAWER ────────────────────────────────────────────────────────────
