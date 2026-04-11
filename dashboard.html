@@ -14,14 +14,8 @@
   <meta name="theme-color" content="#0f0f0d">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<script src="i18n.js"></script>
   <style>
-    
-    /* ── Language Switcher ───────────────────── */
-    .lang-switcher { display: flex; gap: 3px; align-items: center; }
-    .lang-btn { font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px; padding: 3px 6px; border: 1px solid var(--border2); border-radius: 3px; background: none; color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s; }
-    .lang-btn:hover { color: var(--text); border-color: var(--amber); }
-    .lang-btn.active { color: var(--amber); border-color: var(--amber); }
+  
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #0f0f0d; --surface: #1a1a16; --surface2: #242420; --surface3: #2e2e28;
@@ -112,28 +106,18 @@
     position: fixed;
     top: 70px; left: 0;
     width: fit-content;
-    min-width: 220px;
+    min-width: 200px;
     z-index: 500;
-    background: var(--surface) !important;
-    color: var(--text) !important;
-    box-shadow: 4px 8px 32px rgba(0,0,0,0.85);
-    border-right: 1px solid var(--border2);
-    border-bottom: 1px solid var(--border2);
-    border-radius: 0 0 14px 0;
+    background: var(--surface);
+    box-shadow: 4px 8px 32px rgba(0,0,0,0.8);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0 0 12px 0;
     overflow-y: auto;
     max-height: calc(100vh - 70px);
   }
   .nav.open {
     display: flex !important;
-  }
-  .nav.open .tab {
-    color: var(--muted) !important;
-    background: transparent !important;
-  }
-  .nav.open .tab.active,
-  .nav.open .tab:hover {
-    color: var(--amber) !important;
-    background: var(--surface2) !important;
   }
   .tab {
     border-bottom: 1px solid var(--border);
@@ -492,8 +476,8 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="langSwitcher" class="lang-switcher"></div>
-    <a href="index.html" class="back-btn" onclick="goBack(event)" data-i18n="scan">← Scan</a>
+    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Home</a>
+    <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge">
       <div class="live-badge-row">
         <div class="live-dot"></div>
@@ -505,14 +489,14 @@
 </div>
 
 <div class="nav" id="main-nav">
-  <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span><span data-i18n="kds">KDS</span></button>
-  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span><span data-i18n="inventory">Inventory</span></button>
-  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span><span data-i18n="products">Products</span></button>
-  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span><span data-i18n="recipes">Recipes</span></button>
-  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span><span data-i18n="orders">Orders</span></button>
-  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span><span data-i18n="reports">Reports</span></button>
-  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span><span data-i18n="deductions">Deductions</span></button>
-  <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span><span data-i18n="admin">Admin</span></button>
+  <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
+  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
+  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
+  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
+  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
+ <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
 </div>
 
 <div class="body">
@@ -1394,25 +1378,14 @@
     document.getElementById("theme-opt-light").classList.toggle("active", mode === "light");
     document.querySelector('meta[name="theme-color"]').setAttribute("content", mode === "light" ? "#f5f4f0" : "#0f0f0d");
   }
-// ── Apply theme on load: saved → system → dark ──
+  // Apply saved theme on load
   (function() {
-    const saved = localStorage.getItem("theme");
-    let mode;
-    if (saved) {
-      mode = saved;                                          // user's explicit choice wins
-    } else {
-      // auto-detect OS/browser theme
-      mode = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    const saved = localStorage.getItem("theme") || "dark";
+    if (saved === "light") {
+      document.body.classList.add("light");
+      // pill state set after DOM ready
+      document.addEventListener("DOMContentLoaded", () => setTheme("light"));
     }
-    if (mode === "light") document.body.classList.add("light");
-    document.addEventListener("DOMContentLoaded", () => {
-      setTheme(mode);
-      // live-update if user changes OS theme AND has never manually chosen
-      window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", e => {
-        if (localStorage.getItem("theme")) return; // respect manual choice
-        setTheme(e.matches ? "light" : "dark");
-      });
-    });
   })();
 // ─────────────────────────────────────────────
 // CONFIG
@@ -3311,62 +3284,6 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 // ─────────────────────────────────────────────
 // INIT — cache first, then parallel fetch
 // ─────────────────────────────────────────────
-// ── i18n init ──────────────────────────────
-renderLangSwitcher("langSwitcher");
-applyLang();
-
-/** Translate JS-generated dashboard strings that can't use data-i18n */
-function applyDashboardStrings() {
-  // Stat card labels
-  const sl = [
-    ['stat-total',     'total-scans'],
-    ['stat-produce',   'produced'],
-    ['stat-done',      'finished'],
-    ['stat-waste',     'waste'],
-    ['stat-available', 'total-available'],
-    ['stat-toproduce', 'total-toproduce'],
-  ];
-  sl.forEach(([id, key]) => {
-    const card = document.getElementById(id)?.closest('.stat-card');
-    if (!card) return;
-    const lbl = card.querySelector('.stat-label');
-    if (lbl) lbl.textContent = t(key);
-  });
-
-  // Chart titles
-  const ct = document.querySelector('#product-bars')?.closest('.chart-wrap')?.querySelector('.chart-title');
-  if (ct) ct.textContent = t('top-products');
-  const wt = document.querySelector('#worker-bars')?.closest('.chart-wrap')?.querySelector('.chart-title');
-  if (wt) wt.textContent = t('activity-worker');
-
-  // Feed header title
-  const fh = document.querySelector('.feed-title-txt');
-  if (fh) fh.textContent = t('recent-scans');
-
-  // Feed column headers (re-rendered on loadKDS, so patch renderFeed instead — see below)
-  // Refresh buttons
-  document.querySelectorAll('.refresh-btn').forEach((btn, i) => {
-    if (i === 0 && btn.getAttribute('onclick')?.includes('loadKDS')) btn.textContent = t('refresh-all');
-    if (btn.getAttribute('onclick')?.includes('openManualScan'))     btn.textContent = t('manual-entry');
-  });
-
-  // Section subtitles
-  const kSub = document.querySelector('#panel-kds .section-sub');
-  if (kSub) kSub.textContent = t('kds-sub');
-  const iSub = document.querySelector('#panel-inventory .section-sub');
-  if (iSub) iSub.textContent = t('inv-sub');
-  const pSub = document.querySelector('#panel-products .section-sub');
-  if (pSub) pSub.textContent = t('prod-sub');
-
-  // KDS section title
-  const kdsTit = document.querySelector('#panel-kds .section-title');
-  if (kdsTit) kdsTit.childNodes[0].textContent = 'Kitchen Display ';
-}
-
-function onLangChange() {
-  applyLang(); // already calls applyDashboardStrings via i18n.js hook
-}
-
 (function initFromCache() {
   try {
     const cp = sessionStorage.getItem("dash_products");
