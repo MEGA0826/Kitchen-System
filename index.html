@@ -2029,7 +2029,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   const code = new URLSearchParams(window.location.search).get("code") || "";
 
-  // ── i18n ───────────────────────────────────────
+  // ── i18n ───────────────────────────────────────────────
   const savedWorker = localStorage.getItem('worker') || localStorage.getItem('mep_worker');
   if (savedWorker) {
     const wLang = localStorage.getItem('kmep_lang_' + savedWorker);
@@ -2042,7 +2042,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderLangSwitcher("homeLangSwitcher");
   applyLang();
 
-  // ── Show correct screen ─────────────────────────
+  // ── Screen routing ──────────────────────────────────────
   if (code) {
     document.getElementById("staffHome").style.display     = "none";
     document.getElementById("scanHome").style.display      = "none";
@@ -2050,12 +2050,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("productScreen").style.flexDirection = "column";
     document.getElementById("productScreen").style.height  = "100dvh";
   }
-  // No code — staffHome already display:flex from HTML
 
   updateBadge();
   if (navigator.onLine) retryQueue();
 
-  // ── Staff Home path ─────────────────────────────
+  // ── STAFF HOME ──────────────────────────────────────────
   if (!code) {
     preloadWorkers();
     Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
@@ -2063,18 +2062,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-updateBadge();
-  if (navigator.onLine) retryQueue();
-
-  // ── Staff Home path (no ?code=) ────────────
-  if (!code) {
-    preloadWorkers();
-    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
-    setInterval(loadHomeMepStatus, 60000);
-    return;
-  }
-
-  // ── Product screen path (has ?code=) ───────
+  // ── PRODUCT SCREEN ──────────────────────────────────────
   setUsedWasteState(0);
   sessionStorage.setItem("lastScanUrl", window.location.href);
   CURRENT_CODE = code;
