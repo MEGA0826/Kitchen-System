@@ -2413,12 +2413,25 @@ async function loadHomeMepStatus() {
     }
   }
 
-  function checkRolePin() {
+async function checkRolePin() {
     if (_rolePinEntry.length < 4) return;
-    const matched = (window._homeWorkerList || []).find(w =>
-      typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false
-    );
+
+    // Load workers on demand if not yet available
+    if (!window._homeWorkerList || window._homeWorkerList.length === 0) {
+      document.getElementById("rolePinMsg").textContent = "Checking…";
+      await loadHomeWorkers();
+    }
+
+    const workers = window._homeWorkerList || [];
+    const pin = _rolePinEntry;
+
+    const matched = _pendingRole === 'Admin'
+      ? workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "")
+      : workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "" &&
+          (w.role === _pendingRole || w.role?.toLowerCase() === _pendingRole?.toLowerCase()));
+
     if (matched) {
+      document.getElementById("rolePinMsg").textContent = "";
       openRoleDashboard(_pendingRole);
     } else {
       document.getElementById("rolePinMsg").textContent = "Wrong PIN";
