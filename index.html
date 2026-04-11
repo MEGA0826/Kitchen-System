@@ -2029,7 +2029,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   const code = new URLSearchParams(window.location.search).get("code") || "";
 
-  // ── i18n init ──────────────────────────────
+  // ── i18n ───────────────────────────────────────
   const savedWorker = localStorage.getItem('worker') || localStorage.getItem('mep_worker');
   if (savedWorker) {
     const wLang = localStorage.getItem('kmep_lang_' + savedWorker);
@@ -2042,7 +2042,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderLangSwitcher("homeLangSwitcher");
   applyLang();
 
-  // ── Show correct screen ──────────────────────
+  // ── Show correct screen ─────────────────────────
   if (code) {
     document.getElementById("staffHome").style.display     = "none";
     document.getElementById("scanHome").style.display      = "none";
@@ -2052,7 +2052,19 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   // No code — staffHome already display:flex from HTML
 
-   // ── Product screen (has ?code=) ─────────────
+  updateBadge();
+  if (navigator.onLine) retryQueue();
+
+  // ── Staff Home path ─────────────────────────────
+  if (!code) {
+    preloadWorkers();
+    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
+    setInterval(loadHomeMepStatus, 60000);
+    return;
+  }
+
+  // ── Product screen path ─────────────────────────
+  setUsedWasteState(0);
   sessionStorage.setItem("lastScanUrl", window.location.href);
   CURRENT_CODE = code;
 
