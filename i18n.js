@@ -169,13 +169,22 @@ function t(key, lang) {
   return entry[l] || entry['en'] || key;
 }
 
-/** Set language, persist, re-render all data-i18n elements */
+/** Set language, persist globally + per-worker, re-render */
 function setLang(lang) {
   if (!LANGS.includes(lang)) return;
   currentLang = lang;
   localStorage.setItem('kmep_lang', lang);
+
+  // ── Save per-worker so next login restores their language ──
+  const workerName =
+    (document.getElementById('worker') && document.getElementById('worker').value) ||
+    localStorage.getItem('mep_worker') ||
+    localStorage.getItem('worker') || '';
+  if (workerName) {
+    localStorage.setItem('kmep_lang_' + workerName, lang);
+  }
+
   applyLang();
-  // Notify page-level refresh if needed
   if (typeof onLangChange === 'function') onLangChange(lang);
 }
 
@@ -187,24 +196,38 @@ function applyLang() {
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.lang === currentLang);
-  });
-  // Re-render any page-level dynamic strings
+  // Update dropdown value if rendered
+  const sel = document.getElementById('langDropdown');
+  if (sel) sel.value = currentLang;
+
   if (typeof applyDashboardStrings === 'function') applyDashboardStrings();
   if (typeof applyIndexStrings === 'function') applyIndexStrings();
 }
 
-/** Render the language switcher HTML — call once in each page's init */
+/** Render language dropdown — call once in each page's init */
 function renderLangSwitcher(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = LANGS.map(l =>
-    `<button class="lang-btn${l === currentLang ? ' active' : ''}" data-lang="${l}" onclick="setLang('${l}')">${LANG_LABELS[l]}</button>`
-  ).join('');
+  el.innerHTML = `
+    <select id="langDropdown" onchange="setLang(this.value)" style="
+      background:var(--surface2,#1a1a1a);
+      color:var(--amber,#e6a817);
+      border:1px solid var(--amber-brd,#5a3e00);
+      border-radius:6px;
+      padding:5px 10px;
+      font-family:var(--mono,monospace);
+      font-size:11px;
+      letter-spacing:1px;
+      cursor:pointer;
+      outline:none;
+    ">
+      ${LANGS.map(l =>
+        `<option value="${l}"${l === currentLang ? ' selected' : ''}>${LANG_LABELS[l]}</option>`
+      ).join('')}
+    </select>`;
 }
 
-/** Load language — check worker-specific first, then global */
+/** Load worker's saved language — call when worker is selected */
 function loadLangForWorker(workerName) {
   if (!workerName) return;
   const workerLang = localStorage.getItem('kmep_lang_' + workerName);
