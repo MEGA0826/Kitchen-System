@@ -2704,75 +2704,95 @@ const saved = localStorage.getItem("worker");
     </div>
   </div>
 
-<script>
-  <div class="role-drawer-overlay" id="roleDrawerOverlay" onclick="closeRoleDrawer()"></div>
+<!-- Role drawer overlay -->
+<div class="role-drawer-overlay" id="roleDrawerOverlay" onclick="closeRoleDrawer()"></div>
 
-  <!-- Role drawer -->
-  <div class="role-drawer" id="roleDrawer">
-    <div class="role-drawer-title">Switch Role</div>
-    <button class="role-btn" onclick="selectRole('Teamleader')">
-      <div class="role-dot" style="background:#facc15"></div> Teamleader
-    </button>
-    <button class="role-btn" onclick="selectRole('Küchenchef')">
-      <div class="role-dot" style="background:#fb923c"></div> Küchenchef
-    </button>
-   <button class="role-btn" onclick="selectRole('Manager')">
-      <div class="role-dot" style="background:#a78bfa"></div> Manager
-    </button>
-     <button class="role-btn
+<!-- Role drawer -->
+<div class="role-drawer" id="roleDrawer">
+  <div class="role-drawer-title">Switch Role</div>
+  <button class="role-btn" onclick="selectRole('Teamleader')">
+    <div class="role-dot" style="background:#facc15"></div> Teamleader
+  </button>
+  <button class="role-btn" onclick="selectRole('Küchenchef')">
+    <div class="role-dot" style="background:#fb923c"></div> Küchenchef
+  </button>
+  <button class="role-btn" onclick="selectRole('Manager')">
+    <div class="role-dot" style="background:#a78bfa"></div> Manager
+  </button>
+  <button class="role-btn" onclick="selectRole('Admin')" style="color:var(--amber);border-top:1px solid #2a2a2a;margin-top:8px">
+    <div class="role-dot" style="background:var(--amber)"></div> ⚙ Admin
+  </button>
 
-  <!-- Role PIN modal -->
-  <div class="role-pin-modal" id="rolePinModal">
-    <div class="role-pin-box">
-      <div class="role-pin-title" id="rolePinTitle">Teamleader</div>
-      <div class="role-pin-sub">Enter PIN to continue</div>
-      <div class="role-pin-dots">
-        <div class="role-pin-dot" id="rpd0"></div>
-        <div class="role-pin-dot" id="rpd1"></div>
-        <div class="role-pin-dot" id="rpd2"></div>
-        <div class="role-pin-dot" id="rpd3"></div>
-      </div>
-      <div class="role-pin-keypad">
-        <button class="role-pin-key" onclick="rolePinKey('1')">1</button>
-        <button class="role-pin-key" onclick="rolePinKey('2')">2</button>
-        <button class="role-pin-key" onclick="rolePinKey('3')">3</button>
-        <button class="role-pin-key" onclick="rolePinKey('4')">4</button>
-        <button class="role-pin-key" onclick="rolePinKey('5')">5</button>
-        <button class="role-pin-key" onclick="rolePinKey('6')">6</button>
-        <button class="role-pin-key" onclick="rolePinKey('7')">7</button>
-        <button class="role-pin-key" onclick="rolePinKey('8')">8</button>
-        <button class="role-pin-key" onclick="rolePinKey('9')">9</button>
-        <button class="role-pin-key" onclick="rolePinKey('back')" style="color:#f87171">⌫</button>
-        <button class="role-pin-key" onclick="rolePinKey('0')">0</button>
-        <button class="role-pin-key" onclick="closeRolePinModal()" style="font-size:11px;color:#555">✕</button>
-      </div>
-      <div class="role-pin-msg" id="rolePinMsg"></div>
-      <button class="role-pin-cancel" onclick="closeRolePinModal()">Cancel</button>
+  <!-- Settings section -->
+  <div style="margin-top:auto;padding:16px 20px 20px;border-top:1px solid #1e1e1e">
+    <div style="font-size:10px;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:14px">Settings</div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:6px">🌐 Language</div>
+      <select id="langDropdown" onchange="setLang(this.value)"
+        style="width:100%;padding:8px 10px;background:#1a1a1a;color:#e8a020;border:1px solid #333;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;cursor:pointer;outline:none">
+      </select>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:6px">🎨 Theme</div>
+      <button id="themeToggle" onclick="toggleTheme()"
+        style="width:100%;padding:9px 12px;background:#1a1a1a;color:#ccc;border:1px solid #333;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;cursor:pointer;text-align:left">
+        🌙 Dark
+      </button>
     </div>
   </div>
+</div>
 
-  <!-- MEP card popup -->
-  <div class="mep-popup" id="mepPopup">
-    <div class="mep-popup-box">
-      <img id="mepPopupImg" class="mep-popup-img" alt="" style="display:none">
-      <div id="mepPopupPh" class="mep-popup-ph">🍽</div>
-      <div class="mep-popup-name" id="mepPopupName"></div>
-      <div class="mep-popup-stats" id="mepPopupStats"></div>
-      <div class="mep-popup-allergy" id="mepPopupAllergy"></div>
-      <!-- Worker select inside popup -->
-      <div style="margin-bottom:12px">
-        <select class="worker-select" id="popupWorker" style="width:100%;padding:10px;background:#1e1e1e;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-size:14px">
-          <option value="">-- Select worker --</option>
-        </select>
-      </div>
-      <div class="mep-popup-btns">
-        <button class="mep-popup-btn done"  onclick="popupSend('done')">✓ Finish MEP</button>
-        <button class="mep-popup-btn used"  onclick="popupSend('used')">↺ Used</button>
-        <button class="mep-popup-btn waste" onclick="popupSend('waste')">✕ Waste</button>
-      </div>
-      <button class="mep-popup-close" onclick="closeMepPopup()">Close</button>
+<!-- Role PIN modal -->
+<div class="role-pin-modal" id="rolePinModal">
+  <div class="role-pin-box">
+    <div class="role-pin-title" id="rolePinTitle">Teamleader</div>
+    <div class="role-pin-sub">Enter PIN to continue</div>
+    <div class="role-pin-dots">
+      <div class="role-pin-dot" id="rpd0"></div>
+      <div class="role-pin-dot" id="rpd1"></div>
+      <div class="role-pin-dot" id="rpd2"></div>
+      <div class="role-pin-dot" id="rpd3"></div>
     </div>
-  </div> 
-</script>
+    <div class="role-pin-keypad">
+      <button class="role-pin-key" onclick="rolePinKey('1')">1</button>
+      <button class="role-pin-key" onclick="rolePinKey('2')">2</button>
+      <button class="role-pin-key" onclick="rolePinKey('3')">3</button>
+      <button class="role-pin-key" onclick="rolePinKey('4')">4</button>
+      <button class="role-pin-key" onclick="rolePinKey('5')">5</button>
+      <button class="role-pin-key" onclick="rolePinKey('6')">6</button>
+      <button class="role-pin-key" onclick="rolePinKey('7')">7</button>
+      <button class="role-pin-key" onclick="rolePinKey('8')">8</button>
+      <button class="role-pin-key" onclick="rolePinKey('9')">9</button>
+      <button class="role-pin-key" onclick="rolePinKey('back')" style="color:#f87171">⌫</button>
+      <button class="role-pin-key" onclick="rolePinKey('0')">0</button>
+      <button class="role-pin-key" onclick="closeRolePinModal()" style="font-size:11px;color:#555">✕</button>
+    </div>
+    <div class="role-pin-msg" id="rolePinMsg"></div>
+    <button class="role-pin-cancel" onclick="closeRolePinModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- MEP card popup -->
+<div class="mep-popup" id="mepPopup">
+  <div class="mep-popup-box">
+    <img id="mepPopupImg" class="mep-popup-img" alt="" style="display:none">
+    <div id="mepPopupPh" class="mep-popup-ph">🍽</div>
+    <div class="mep-popup-name" id="mepPopupName"></div>
+    <div class="mep-popup-stats" id="mepPopupStats"></div>
+    <div class="mep-popup-allergy" id="mepPopupAllergy"></div>
+    <div style="margin-bottom:12px">
+      <select class="worker-select" id="popupWorker" style="width:100%;padding:10px;background:#1e1e1e;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-size:14px">
+        <option value="">-- Select worker --</option>
+      </select>
+    </div>
+    <div class="mep-popup-btns">
+      <button class="mep-popup-btn done"  onclick="popupSend('done')">✓ Finish MEP</button>
+      <button class="mep-popup-btn used"  onclick="popupSend('used')">↺ Used</button>
+      <button class="mep-popup-btn waste" onclick="popupSend('waste')">✕ Waste</button>
+    </div>
+    <button class="mep-popup-close" onclick="closeMepPopup()">Close</button>
+  </div>
+</div>
+
 </body>
 </html>
