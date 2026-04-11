@@ -2063,7 +2063,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // ── Product screen path ─────────────────────────
+updateBadge();
+  if (navigator.onLine) retryQueue();
+
+  // ── Staff Home path (no ?code=) ────────────
+  if (!code) {
+    preloadWorkers();
+    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
+    setInterval(loadHomeMepStatus, 60000);
+    return;
+  }
+
+  // ── Product screen path (has ?code=) ───────
   setUsedWasteState(0);
   sessionStorage.setItem("lastScanUrl", window.location.href);
   CURRENT_CODE = code;
