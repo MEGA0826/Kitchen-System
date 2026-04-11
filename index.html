@@ -1125,7 +1125,7 @@
 </style>
  
   <!-- Staff Home: default landing page -->
-  <div id="staffHome" style="display:none;flex-direction:column;overflow:hidden;background:#0d0d0d;height:100dvh;position:fixed;inset:0">
+  <div id="staffHome" style="display:none;flex-direction:column;overflow:hidden;background:var(--bg);height:100dvh;position:fixed;inset:0">
   
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid #1e1e1e">
@@ -1209,7 +1209,7 @@
   </div>
 
 <!-- Product + Actions screen (shown after scan) -->
-  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:#0d0d0d">
+  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:var(--bg)">
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
@@ -2394,10 +2394,16 @@ async function loadHomeMepStatus() {
     updateThemeBtns(saved);
   }
 
-  function setTheme(theme) {
+function setTheme(theme) {
     localStorage.setItem('kmep_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
     updateThemeBtns(theme);
+    // Force bg update on visible screen
+    const bg = theme === 'light' ? '#f5f4ef' : '#0d0d0d';
+    ['staffHome','scanHome','productScreen'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.background = bg;
+    });
   }
 
   function updateThemeBtns(theme) {
@@ -2411,17 +2417,19 @@ async function loadHomeMepStatus() {
   }
 
   // ── LANGUAGE ───────────────────────────────────────────────────────────
-  function setLangAndWorker(lang) {
-    // Save globally
+function setLangAndWorker(lang) {
     localStorage.setItem('kmep_lang', lang);
-    // Save per current worker if selected
     const workerName = localStorage.getItem('worker') || '';
     if (workerName) localStorage.setItem('kmep_lang_' + workerName, lang);
-    // Apply if i18n.js loaded
-    if (typeof setLang === 'function') setLang(lang);
-    // Update dropdown in case applyLang didn't reach it
     const sel = document.getElementById('langDropdown');
     if (sel) sel.value = lang;
+    // i18n.js may or may not be loaded — try both ways
+    if (typeof setLang === 'function') {
+      setLang(lang);
+    } else {
+      // Fallback: reload page so i18n.js picks up new lang on next load
+      window.location.reload();
+    }
   }
 
   // ── ROLE DRAWER ────────────────────────────────────────────────────────────
