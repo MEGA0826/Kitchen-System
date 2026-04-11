@@ -18,7 +18,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <script src="i18n.js" defer></script>
+  
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js").then(reg => {
@@ -2478,13 +2478,7 @@ function setLangAndWorker(lang) {
     if (workerName) localStorage.setItem('kmep_lang_' + workerName, lang);
     const sel = document.getElementById('langDropdown');
     if (sel) sel.value = lang;
-    if (typeof setLang === 'function') {
-      setLang(lang);
-    }
-    // Also directly update data-i18n elements in case applyLang not wired
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      if (typeof t === 'function') el.textContent = t(el.dataset.i18n, lang);
-    });
+    setLang(lang);
   }
 
   // ── ROLE DRAWER ────────────────────────────────────────────────────────────
@@ -2799,5 +2793,18 @@ async function popupSend(action) {
   </div>
 </div>
 
+<script src="i18n.js"></script>
+<script>
+  // Init lang after i18n.js is guaranteed loaded
+  (function() {
+    const lang = localStorage.getItem('kmep_lang') || 'en';
+    if (typeof applyLang === 'function') {
+      currentLang = lang;
+      applyLang();
+    }
+    const sel = document.getElementById('langDropdown');
+    if (sel) sel.value = lang;
+  })();
+</script>
 </body>
 </html>
