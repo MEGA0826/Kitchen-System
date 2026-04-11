@@ -2052,19 +2052,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   // No code — staffHome already display:flex from HTML
 
-  setUsedWasteState(0);
-  updateBadge();
-  if (navigator.onLine) retryQueue();
-
-  if (!code) {
-    // ── Staff Home ──────────────────────────────
-    preloadWorkers();
-    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
-    setInterval(loadHomeMepStatus, 60000);
-    return;
-  }
-
-  // ── Product screen (has ?code=) ─────────────
+   // ── Product screen (has ?code=) ─────────────
   sessionStorage.setItem("lastScanUrl", window.location.href);
   CURRENT_CODE = code;
 
@@ -2517,22 +2505,39 @@ async function loadHomeMepStatus() {
     }
   }
 
-function checkRolePin() {
+async function checkRolePin() {
   if (_rolePinEntry.length < 4) return;
-  const workers = window._homeWorkerList || [];
 
-  const matched = workers.find(w =>
-    typeof w === 'object' &&
-    String(w.pin) === String(_rolePinEntry) &&
-    w.active !== false &&
-    w.pin !== "" &&
-    w.role === _pendingRole
-  );
+  // Load workers if not yet available (race condition on first open)
+  if (!window._homeWorkerList || window._homeWorkerList.length === 0) {
+    document.getElementById("rolePinMsg").textContent = "Checking…";
+    await loadHomeWorkers();
+  }
+
+  const workers = window._homeWorkerList || [];
+  const pin = _rolePinEntry;
+
+  // For Admin: match any worker with this PIN regardless of role
+  // For other roles: match PIN + exact role
+  const matched = _pendingRole === 'Admin'
+    ? workers.find(w =>
+        typeof w === 'object' &&
+        String(w.pin) === String(pin) &&
+        w.active !== false &&
+        w.pin !== "")
+    : workers.find(w =>
+        typeof w === 'object' &&
+        String(w.pin) === String(pin) &&
+        w.active !== false &&
+        w.pin !== "" &&
+        (w.role === _pendingRole ||
+         w.role?.toLowerCase() === _pendingRole?.toLowerCase()));
 
   if (matched) {
+    document.getElementById("rolePinMsg").textContent = "";
     openRoleDashboard(_pendingRole);
   } else {
-    document.getElementById("rolePinMsg").textContent = "Wrong PIN";
+    document.getElementById("rolePinMsg").textContent = t('pin-wrong') || "Wrong PIN";
     _rolePinEntry = "";
     updateRolePinDots();
   }
