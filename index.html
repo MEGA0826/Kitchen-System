@@ -18,6 +18,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <script src="i18n.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js").then(reg => {
@@ -66,6 +67,15 @@
       --gray-dim:  rgba(255,255,255,0.06);
       --radius:    14px;
       --radius-sm: 8px;
+    }
+    [data-theme="light"] {
+      --bg:        #f5f4ef;
+      --surface:   #ffffff;
+      --surface2:  #eeecea;
+      --border:    rgba(0,0,0,0.08);
+      --border2:   rgba(0,0,0,0.15);
+      --text:      #1a1a14;
+      --muted:     #77776e;
     }
 /* 
     ── STAFF HOME MEP LIST ── */
@@ -2004,6 +2014,7 @@ async function send(action) {
 
 window.addEventListener("DOMContentLoaded", async () => {
   closeRoleDrawer();
+  initTheme();
     const code = new URLSearchParams(window.location.search).get("code") || "";
     setUsedWasteState(0);
 
@@ -2370,14 +2381,38 @@ async function loadHomeMepStatus() {
     } catch(e) { console.error("loadHomeMepStatus", e); }
   }
 
+// ── THEME ────────────────────────────────────────────────────────────────
+  function initTheme() {
+    const saved = localStorage.getItem('kmep_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = saved === 'light' ? '☀ Light' : '🌙 Dark';
+  }
+
+  function toggleTheme() {
+    const cur  = localStorage.getItem('kmep_theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('kmep_theme', next);
+    document.documentElement.setAttribute('data-theme', next);
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = next === 'light' ? '☀ Light' : '🌙 Dark';
+  }
+
   // ── ROLE DRAWER ────────────────────────────────────────────────────────────
-  function openRoleDrawer() {
+function openRoleDrawer() {
+    // Populate lang dropdown with current value
+    const sel = document.getElementById('langDropdown');
+    if (sel && typeof LANGS !== 'undefined') {
+      if (!sel.options.length) {
+        sel.innerHTML = LANGS.map(l =>
+          `<option value="${l}">${LANG_LABELS[l]}</option>`
+        ).join('');
+      }
+      sel.value = currentLang;
+    }
+    initTheme();
     document.getElementById("roleDrawer").classList.add("open");
     document.getElementById("roleDrawerOverlay").classList.add("open");
-  }
-  function closeRoleDrawer() {
-    document.getElementById("roleDrawer").classList.remove("open");
-    document.getElementById("roleDrawerOverlay").classList.remove("open");
   }
 
   async function loadRolePins() {
@@ -2590,10 +2625,7 @@ async function popupSend(action) {
    <button class="role-btn" onclick="selectRole('Manager')">
       <div class="role-dot" style="background:#a78bfa"></div> Manager
     </button>
-    <button class="role-btn" onclick="selectRole('Admin')" style="color:var(--amber);border-top:1px solid #2a2a2a;margin-top:8px">
-      <div class="role-dot" style="background:var(--amber)"></div> ⚙ Admin
-    </button>
-  </div>
+     <button class="role-btn
 
   <!-- Role PIN modal -->
   <div class="role-pin-modal" id="rolePinModal">
