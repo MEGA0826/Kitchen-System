@@ -2387,34 +2387,49 @@ async function loadHomeMepStatus() {
   }
 
 // ── THEME ────────────────────────────────────────────────────────────────
+// ── THEME ──────────────────────────────────────────────────────────────
   function initTheme() {
     const saved = localStorage.getItem('kmep_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
-    const btn = document.getElementById('themeToggle');
-    if (btn) btn.textContent = saved === 'light' ? '☀ Light' : '🌙 Dark';
+    updateThemeBtns(saved);
   }
 
-  function toggleTheme() {
-    const cur  = localStorage.getItem('kmep_theme') || 'dark';
-    const next = cur === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('kmep_theme', next);
-    document.documentElement.setAttribute('data-theme', next);
-    const btn = document.getElementById('themeToggle');
-    if (btn) btn.textContent = next === 'light' ? '☀ Light' : '🌙 Dark';
+  function setTheme(theme) {
+    localStorage.setItem('kmep_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    updateThemeBtns(theme);
+  }
+
+  function updateThemeBtns(theme) {
+    const dark  = document.getElementById('themeBtnDark');
+    const light = document.getElementById('themeBtnLight');
+    if (!dark || !light) return;
+    const activeStyle  = 'flex:1;padding:10px;border-radius:8px;border:1px solid #e8a020;background:rgba(232,160,32,0.15);color:#e8a020;font-size:20px;cursor:pointer;transition:all .15s';
+    const inactiveStyle = 'flex:1;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#555;font-size:20px;cursor:pointer;transition:all .15s';
+    dark.style.cssText  = theme === 'dark'  ? activeStyle : inactiveStyle;
+    light.style.cssText = theme === 'light' ? activeStyle : inactiveStyle;
+  }
+
+  // ── LANGUAGE ───────────────────────────────────────────────────────────
+  function setLangAndWorker(lang) {
+    // Save globally
+    localStorage.setItem('kmep_lang', lang);
+    // Save per current worker if selected
+    const workerName = localStorage.getItem('worker') || '';
+    if (workerName) localStorage.setItem('kmep_lang_' + workerName, lang);
+    // Apply if i18n.js loaded
+    if (typeof setLang === 'function') setLang(lang);
+    // Update dropdown in case applyLang didn't reach it
+    const sel = document.getElementById('langDropdown');
+    if (sel) sel.value = lang;
   }
 
   // ── ROLE DRAWER ────────────────────────────────────────────────────────────
-function openRoleDrawer() {
-    // Populate lang dropdown with current value
+
+   function openRoleDrawer() {
+    // Sync dropdown to current saved lang (no dependency on i18n.js timing)
     const sel = document.getElementById('langDropdown');
-    if (sel && typeof LANGS !== 'undefined') {
-      if (!sel.options.length) {
-        sel.innerHTML = LANGS.map(l =>
-          `<option value="${l}">${LANG_LABELS[l]}</option>`
-        ).join('');
-      }
-      sel.value = currentLang;
-    }
+    if (sel) sel.value = localStorage.getItem('kmep_lang') || 'en';
     initTheme();
     document.getElementById("roleDrawer").classList.add("open");
     document.getElementById("roleDrawerOverlay").classList.add("open");
@@ -2639,20 +2654,32 @@ async function popupSend(action) {
   <button class="role-btn" onclick="selectRole('Admin')" style="color:var(--amber);border-top:1px solid #2a2a2a;margin-top:8px">
     <div class="role-dot" style="background:var(--amber)"></div> ⚙ Admin
   </button>
-  <div style="margin-top:auto;padding:16px 20px 20px;border-top:1px solid #1e1e1e">
+ <div style="margin-top:auto;padding:16px 20px 20px;border-top:1px solid #1e1e1e">
     <div style="font-size:10px;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:14px">Settings</div>
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:6px">🌐 Language</div>
-      <select id="langDropdown" onchange="setLang(this.value)"
+      <select id="langDropdown" onchange="setLangAndWorker(this.value)"
         style="width:100%;padding:8px 10px;background:#1a1a1a;color:#e8a020;border:1px solid #333;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;cursor:pointer;outline:none">
+        <option value="en">EN — English</option>
+        <option value="de">DE — Deutsch</option>
+        <option value="th">TH — ภาษาไทย</option>
+        <option value="it">IT — Italiano</option>
+        <option value="fr">FR — Français</option>
+        <option value="es">ES — Español</option>
       </select>
     </div>
     <div>
-      <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:6px">🎨 Theme</div>
-      <button id="themeToggle" onclick="toggleTheme()"
-        style="width:100%;padding:9px 12px;background:#1a1a1a;color:#ccc;border:1px solid #333;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;cursor:pointer;text-align:left">
-        🌙 Dark
-      </button>
+      <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:8px">🎨 Theme</div>
+      <div style="display:flex;gap:8px">
+        <button id="themeBtnDark" onclick="setTheme('dark')"
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#ccc;font-size:20px;cursor:pointer;transition:all .15s">
+          🌙
+        </button>
+        <button id="themeBtnLight" onclick="setTheme('light')"
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#ccc;font-size:20px;cursor:pointer;transition:all .15s">
+          ☀️
+        </button>
+      </div>
     </div>
   </div>
 </div>
