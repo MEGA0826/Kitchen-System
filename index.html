@@ -40,19 +40,7 @@
       });
     }
   </script>
-  
   <style>
-    
-    /* ── Language Switcher ───────────────────── */
-.lang-switcher { display: flex; gap: 3px; align-items: center; }
-.lang-btn {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px;
-  padding: 3px 6px; border: 1px solid var(--border2); border-radius: 3px;
-  background: none; color: var(--muted); cursor: pointer;
-  transition: color .15s, border-color .15s;
-}
-.lang-btn:hover { color: var(--text); border-color: var(--amber); }
-.lang-btn.active { color: var(--amber); border-color: var(--amber); }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -80,7 +68,6 @@
       --radius-sm: 8px;
     }
 /* 
-    
     ── STAFF HOME MEP LIST ── */
     .home-header {
       position: absolute;
@@ -1114,7 +1101,6 @@
       box-shadow:0 0 0 2px var(--surface);
     }
   </style>
-  <script src="i18n.js"></script>
 </head>
 <body>
 
@@ -1125,11 +1111,11 @@
 
   <!-- Scanner home state - inline camera, no overlay needed -->
 <style>
-  html, body { height: 100%; margin: 0; overflow: hidden; background: #0d0d0d; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
 </style>
  
   <!-- Staff Home: default landing page -->
-  <div id="staffHome" style="flex-direction:column;overflow:hidden;background:#0d0d0d;height:100dvh;position:fixed;inset:0;display:flex">
+  <div id="staffHome" style="display:none;flex-direction:column;overflow:hidden;background:#0d0d0d;height:100dvh;position:fixed;inset:0">
   
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid #1e1e1e">
@@ -1141,10 +1127,7 @@
         <div style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
         <div id="homeLiveTime" style="font-size:13px;color:#888;font-family:var(--mono);letter-spacing:1px;margin-top:4px"></div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
-        <div id="homeLangSwitcher" class="lang-switcher" style="justify-content:flex-end"></div>
-      </div>
+      <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
     </div>
     <!-- MEP Overview title -->
     <div style="padding:8px 14px 4px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
@@ -1170,7 +1153,7 @@
     </div>
   </div>  
     
-<div id="scanHome" style="display:none;flex-direction:column;position:relative;overflow:hidden;height:100vh;height:100dvh;z-index:10">
+<div id="scanHome" style="display:none;flex-direction:column;position:relative;overflow:hidden;height:100vh;height:100dvh">
 
   <!-- Camera area fills remaining space -->
   <div class="scan-home-video-wrap" style="flex:1;min-height:180px;position:relative">
@@ -1216,7 +1199,7 @@
   </div>
 
 <!-- Product + Actions screen (shown after scan) -->
-  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:#0d0d0d;z-index:10">
+  <div id="productScreen" style="display:none;flex-direction:column;overflow:hidden;height:100vh;height:100dvh;background:#0d0d0d">
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
@@ -2016,72 +1999,48 @@ async function send(action) {
   }
 
   document.addEventListener("change", e => {
-    if (e.target.id === "worker") {
-      const name = e.target.value;
-      localStorage.setItem("worker", name);
-      // Restore this worker's saved language preference
-      if (typeof loadLangForWorker === 'function') loadLangForWorker(name);
-    }
+    if (e.target.id === "worker") localStorage.setItem("worker", e.target.value);
   });
 
 window.addEventListener("DOMContentLoaded", async () => {
   closeRoleDrawer();
+    const code = new URLSearchParams(window.location.search).get("code") || "";
+    setUsedWasteState(0);
 
-  const code = new URLSearchParams(window.location.search).get("code") || "";
-
-  // ── i18n ───────────────────────────────────────────────
-  const savedWorker = localStorage.getItem('worker') || localStorage.getItem('mep_worker');
-  if (savedWorker) {
-    const wLang = localStorage.getItem('kmep_lang_' + savedWorker);
-    if (wLang && typeof LANGS !== 'undefined' && LANGS.includes(wLang)) {
-      currentLang = wLang;
-      localStorage.setItem('kmep_lang', wLang);
+    if (!code) {
+      // ── Show Staff Home (MEP list), NOT scanner ──
+      document.getElementById("staffHome").style.display    = "flex";
+      document.getElementById("scanHome").style.display     = "none";
+      document.getElementById("productScreen").style.display = "none";
+      preloadWorkers();
+      Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
+      setInterval(loadHomeMepStatus, 60000);
+      return;
     }
-  }
-  renderLangSwitcher("langSwitcher");
-  renderLangSwitcher("homeLangSwitcher");
-  applyLang();
 
-  // ── Screen routing ──────────────────────────────────────
-  if (code) {
-    document.getElementById("staffHome").style.display     = "none";
-    document.getElementById("scanHome").style.display      = "none";
+    // -- Has code - show product screen --
+    sessionStorage.setItem("lastScanUrl", window.location.href);
+    document.getElementById("staffHome").style.display      = "none";
+    document.getElementById("scanHome").style.display       = "none";
     document.getElementById("productScreen").style.display = "flex";
     document.getElementById("productScreen").style.flexDirection = "column";
-    document.getElementById("productScreen").style.height  = "100dvh";
-  }
+    document.getElementById("productScreen").style.height = "100dvh";
 
-  updateBadge();
-  if (navigator.onLine) retryQueue();
+    CURRENT_CODE = code;
+    const cached = sessionStorage.getItem("productMap");
+    if (cached) {
+      try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
+    }
+    const [, , mepData] = await Promise.allSettled([
+      preloadProducts().then(() => showProduct()),
+      preloadWorkers(),
+      fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
+    ]);
 
-  // ── STAFF HOME ──────────────────────────────────────────
-  if (!code) {
-    preloadWorkers();
-    Promise.allSettled([loadHomeMepStatus(), loadRolePins(), loadHomeWorkers()]);
-    setInterval(loadHomeMepStatus, 60000);
-    return;
-  }
-
-  // ── PRODUCT SCREEN ──────────────────────────────────────
-  setUsedWasteState(0);
-  sessionStorage.setItem("lastScanUrl", window.location.href);
-  CURRENT_CODE = code;
-
-  const cached = sessionStorage.getItem("productMap");
-  if (cached) {
-    try { PRODUCT_MAP = JSON.parse(cached); showProduct(); } catch(e) {}
-  }
-
-  const [, , mepData] = await Promise.allSettled([
-    preloadProducts().then(() => showProduct()),
-    preloadWorkers(),
-    fetch(`${API_URL}?action=mepStatus&code=${encodeURIComponent(code)}`, { cache: "no-store" }).then(r => r.json()),
-  ]);
-
-  if (mepData?.status === "fulfilled" && mepData.value) {
-    updateMepUI(mepData.value);
-  }
-});
+    if (mepData?.status === "fulfilled" && mepData.value) {
+      updateMepUI(mepData.value);
+    }
+  });
 
   // -- OFFLINE SCAN QUEUE - IndexedDB + auto-retry --
   const DB_NAME    = "mep-offline";
@@ -2197,65 +2156,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     retryQueue();
   });
 
-  // Re-apply translations + rebuild sort labels when language changes
-  function onLangChange() {
-    applyLang(); // triggers applyIndexStrings via i18n.js hook
-    const lbl = buildSortLabels();
-    const prodTitle = document.querySelector('.mep-col-title.produce');
-    const availTitle = document.querySelector('.mep-col-title.avail');
-    if (prodTitle)  prodTitle.textContent  = lbl.produce[_sortMode];
-    if (availTitle) availTitle.textContent = lbl.avail[_sortModeAvail];
-    // Re-render MEP list so expiry labels, bar labels update
-    if (Object.keys(_homeMepData).length) renderHomeMep();
-  }
-
-  /** Translate JS-generated strings on index.html */
-  function applyIndexStrings() {
-    // Column titles (only if not mid-cycle override)
-    const prodTitle = document.querySelector('.mep-col-title.produce');
-    const availTitle = document.querySelector('.mep-col-title.avail');
-    if (prodTitle)  prodTitle.textContent = buildSortLabels().produce[_sortMode];
-    if (availTitle) availTitle.textContent = buildSortLabels().avail[_sortModeAvail];
-
-    // MEP overview subtitle
-    const sub = document.querySelector('#staffHome [style*="Today\'s production status"]') ||
-                document.querySelector('#staffHome div[style*="production status"]');
-    if (sub) sub.textContent = t('mep-overview-sub');
-
-    // Role drawer title
-    const drawerTitle = document.querySelector('.role-drawer-title');
-    if (drawerTitle) drawerTitle.textContent = t('switch-role');
-
-    // Role PIN modal subtitle
-    const pinSub = document.querySelector('.role-pin-sub');
-    if (pinSub) pinSub.textContent = t('enter-pin-cont');
-
-    // Popup close buttons
-    document.querySelectorAll('.mep-popup-close').forEach(btn => { btn.textContent = t('close'); });
-    document.querySelectorAll('.role-pin-cancel').forEach(btn => { btn.textContent = t('cancel'); });
-
-    // MEP popup action buttons
-    const popupBtns = document.querySelectorAll('.mep-popup-btn');
-    popupBtns.forEach(btn => {
-      if (btn.classList.contains('done'))  btn.textContent = `✓ ${t('finish-mep')}`;
-      if (btn.classList.contains('used'))  btn.textContent = `↺ ${t('used')}`;
-      if (btn.classList.contains('waste')) btn.textContent = `✕ ${t('waste')}`;
-    });
-
-    // Worker select placeholder
-    const workerSel = document.getElementById('worker');
-    if (workerSel?.options[0]?.value === '') workerSel.options[0].text = t('select-staff');
-    const popupWorker = document.getElementById('popupWorker');
-    if (popupWorker?.options[0]?.value === '') popupWorker.options[0].text = t('select-staff');
-
-    // Product screen action buttons
-    const btnDoneLabel = document.querySelector('.btn-done .btn-label');
-    if (btnDoneLabel) btnDoneLabel.textContent = t('finish-mep');
-    const btnUsedLabel = document.querySelector('.btn-used .btn-label');
-    if (btnUsedLabel) btnUsedLabel.textContent = t('used');
-    const btnWasteLabel = document.querySelector('.btn-waste .btn-label');
-    if (btnWasteLabel) btnWasteLabel.textContent = t('waste');
-  }
+  // Check queue on page load and show badge if pending
+  window.addEventListener("DOMContentLoaded", () => {
+    updateBadge();
+    // Also retry immediately if online
+    if (navigator.onLine) retryQueue();
+  });
 
   // Register background sync with service worker (retry even when page closed)
   async function registerBackgroundSync() {
@@ -2287,15 +2193,8 @@ window.addEventListener("DOMContentLoaded", async () => {
  let _sortMode      = 'priority';
   let _sortModeAvail = 'priority';
   const _sortModes   = ['priority','az','colour'];
-  // ── i18n-aware sort labels (rebuilt on lang change) ──
-  function buildSortLabels() {
-    return {
-      produce: { priority:`⚠ ${t('to-produce')}`, az:`⚠ ${t('to-produce')}  A→Z`, colour:`⚠ ${t('to-produce')}  🎨` },
-      avail:   { priority:`✓ ${t('available')}`,  az:`✓ ${t('available')}  A→Z`,  colour:`✓ ${t('available')}  🎨` },
-    };
-  }
-  let _sortLabels      = buildSortLabels().produce;
-  let _sortLabelsAvail = buildSortLabels().avail;
+  const _sortLabels        = { priority:'⚠ To Produce', az:'⚠ To Produce  A→Z', colour:'⚠ To Produce  🎨' };
+  const _sortLabelsAvail   = { priority:'✓ Available',  az:'✓ Available  A→Z',  colour:'✓ Available  🎨' };
   let _pendingRole   = "";
   let _rolePinEntry  = "";
   let _popupCode     = "";
@@ -2322,18 +2221,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     return "hl-red";
   }
 
-function cycleSortMode() {
+  function cycleSortMode() {
     const idx = _sortModes.indexOf(_sortMode);
     _sortMode = _sortModes[(idx + 1) % _sortModes.length];
-    const lbl = buildSortLabels();
-    document.querySelector('.mep-col-title.produce').textContent = lbl.produce[_sortMode];
+    document.querySelector('.mep-col-title.produce').textContent = _sortLabels[_sortMode];
     renderHomeMep();
   }
   function cycleSortModeAvail() {
     const idx = _sortModes.indexOf(_sortModeAvail);
     _sortModeAvail = _sortModes[(idx + 1) % _sortModes.length];
-    const lbl = buildSortLabels();
-    document.querySelector('.mep-col-title.avail').textContent = lbl.avail[_sortModeAvail];
+    document.querySelector('.mep-col-title.avail').textContent = _sortLabelsAvail[_sortModeAvail];
     renderHomeMep();
   }
 
@@ -2516,43 +2413,19 @@ async function loadHomeMepStatus() {
     }
   }
 
-async function checkRolePin() {
-  if (_rolePinEntry.length < 4) return;
-
-  // Load workers if not yet available (race condition on first open)
-  if (!window._homeWorkerList || window._homeWorkerList.length === 0) {
-    document.getElementById("rolePinMsg").textContent = "Checking…";
-    await loadHomeWorkers();
+  function checkRolePin() {
+    if (_rolePinEntry.length < 4) return;
+    const matched = (window._homeWorkerList || []).find(w =>
+      typeof w === 'object' && String(w.pin) === String(_rolePinEntry) && w.active !== false
+    );
+    if (matched) {
+      openRoleDashboard(_pendingRole);
+    } else {
+      document.getElementById("rolePinMsg").textContent = "Wrong PIN";
+      _rolePinEntry = "";
+      updateRolePinDots();
+    }
   }
-
-  const workers = window._homeWorkerList || [];
-  const pin = _rolePinEntry;
-
-  // For Admin: match any worker with this PIN regardless of role
-  // For other roles: match PIN + exact role
-  const matched = _pendingRole === 'Admin'
-    ? workers.find(w =>
-        typeof w === 'object' &&
-        String(w.pin) === String(pin) &&
-        w.active !== false &&
-        w.pin !== "")
-    : workers.find(w =>
-        typeof w === 'object' &&
-        String(w.pin) === String(pin) &&
-        w.active !== false &&
-        w.pin !== "" &&
-        (w.role === _pendingRole ||
-         w.role?.toLowerCase() === _pendingRole?.toLowerCase()));
-
-  if (matched) {
-    document.getElementById("rolePinMsg").textContent = "";
-    openRoleDashboard(_pendingRole);
-  } else {
-    document.getElementById("rolePinMsg").textContent = t('pin-wrong') || "Wrong PIN";
-    _rolePinEntry = "";
-    updateRolePinDots();
-  }
-}
 
   // ← Scan button: show scanner, start camera, hide staffHome
   function openScanPage() {
@@ -2583,16 +2456,12 @@ function goToScanHome() {
   }
 
 function openRoleDashboard(role) {
-  closeRolePinModal();
-  if (role === "Admin") {
-    sessionStorage.setItem("dashRole", "Manager");
-    sessionStorage.setItem("isAdminUnlocked", "true");
-  } else {
-    sessionStorage.setItem("dashRole", role);
-    sessionStorage.removeItem("isAdminUnlocked");
+    closeRolePinModal();
+    sessionStorage.setItem("dashRole", role === "Admin" ? "Manager" : role);
+    if (role === "Admin") sessionStorage.setItem("isAdminUnlocked", "true");
+    else sessionStorage.removeItem("isAdminUnlocked");
+    window.location.href = "dashboard.html";
   }
-  window.location.href = "dashboard.html";
-}
 
   // ── MEP POPUP ──────────────────────────────────────────────────────────────
   function openMepPopup(code) {
