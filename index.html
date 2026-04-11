@@ -2013,7 +2013,12 @@ async function send(action) {
   });
 
 window.addEventListener("DOMContentLoaded", async () => {
-  closeRoleDrawer();
+  // Close drawer safely — function may not be hoisted if defined later
+  const drawerEl = document.getElementById("roleDrawer");
+  const overlayEl = document.getElementById("roleDrawerOverlay");
+  if (drawerEl) drawerEl.classList.remove("open");
+  if (overlayEl) overlayEl.classList.remove("open");
+  
   initTheme();
     const code = new URLSearchParams(window.location.search).get("code") || "";
     setUsedWasteState(0);
