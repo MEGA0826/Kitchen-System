@@ -2607,13 +2607,16 @@ async function popupSend(action) {
            <span class="mep-popup-stat">Target: ${d2.target}</span>
            <span class="mep-popup-stat">Max: ${d2.mepMax} ${d2.gnSize}</span>`;
         // Update worker select in case list reloaded
-        const saved = localStorage.getItem("worker");
+const saved = localStorage.getItem("worker");
         if (saved) document.getElementById("popupWorker").value = saved;
       }
     }, 2000);
   }
-</script>
 </div>
+<script>
+  // stub — functions now in global scope below
+</script>
+
   
  <!-- Role drawer overlay -->
   <div class="role-drawer-overlay" id="roleDrawerOverlay" onclick="closeRoleDrawer()"></div>
