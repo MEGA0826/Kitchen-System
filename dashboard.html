@@ -208,7 +208,7 @@
     .feed-row { display: grid; grid-template-columns: 100px 100px 80px 1fr; gap: 10px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
     .feed-row:last-child { border-bottom: none; }
     .feed-row.hdr { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); background: var(--surface2); padding: 8px 18px; }
-    .feed-time { color: var(--muted); }
+    .feed-time { color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
     .action-badge { display: inline-flex; align-self: center; align-items: center; justify-content: center; padding: 3px 10px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; }
     .action-badge.produce { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-brd); }
     .action-badge.done    { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
@@ -2059,7 +2059,7 @@ function renderFeed() {
     const dateStr = isNaN(d) ? "-" : d.toLocaleDateString('de-CH', { day:'2-digit', month:'2-digit', year:'2-digit' });
     const timeStr = isNaN(d) ? "-" : d.toLocaleTimeString('de-CH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
     return `<div class="feed-row">
-      <span class="feed-time" style="font-size:11px;display:flex;flex-direction:column;gap:1px">
+      <span class="feed-time" style="font-size:11px">
         <span>${dateStr}</span>
         <span style="color:var(--amber);font-size:10px;letter-spacing:0.5px">⏱ ${timeStr}</span>
       </span>
