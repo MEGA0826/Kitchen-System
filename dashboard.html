@@ -2054,8 +2054,15 @@ function renderFeed() {
   const rows = [...todayScans].reverse().slice(0, 30).map(s => {
     const p    = allProducts[s.code] || {};
     const name = p.name || s.code || "-";
+    // Split timestamp into date + time on two lines
+    const d = new Date(s.timestamp);
+    const dateStr = isNaN(d) ? "-" : d.toLocaleDateString('de-CH', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    const timeStr = isNaN(d) ? "-" : d.toLocaleTimeString('de-CH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
     return `<div class="feed-row">
-      <span class="feed-time" style="font-size:11px">${fmt(s.timestamp)}</span>
+      <span class="feed-time" style="font-size:11px;display:flex;flex-direction:column;gap:1px">
+        <span>${dateStr}</span>
+        <span style="color:var(--amber);font-size:10px;letter-spacing:0.5px">⏱ ${timeStr}</span>
+      </span>
       <span style="font-size:12px">${s.worker || "-"}</span>
       <span class="action-badge ${s.action || ""}" style="justify-self:start">${s.action || "-"}</span>
       <span style="font-size:12px">${name}</span>
