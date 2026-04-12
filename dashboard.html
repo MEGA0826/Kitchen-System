@@ -538,40 +538,40 @@
     <div class="section-sub" data-i18n="kds-sub">Real-time MEP production tracking</div>
 
     <div class="stats-grid">
-      <div class="stat-card">
+    <div class="stat-card">
         <span class="stat-icon">🔢</span>
-        <div class="stat-label">Total scans today</div>
+        <div class="stat-label" data-i18n="total-scans">Total scans today</div>
         <div class="stat-value blue" id="stat-total">—</div>
       </div>
       <div class="stat-card">
         <span class="stat-icon">⚙️</span>
-        <div class="stat-label">Produced</div>
+        <div class="stat-label" data-i18n="produced">Produced</div>
         <div class="stat-value amber" id="stat-produce">—</div>
       </div>
       <div class="stat-card">
         <span class="stat-icon">✅</span>
-        <div class="stat-label">Finished</div>
+        <div class="stat-label" data-i18n="finished">Finished</div>
         <div class="stat-value green" id="stat-done">—</div>
       </div>
       <div class="stat-card">
         <span class="stat-icon">🗑️</span>
-        <div class="stat-label">Waste</div>
+        <div class="stat-label" data-i18n="waste">Waste</div>
         <div class="stat-value red" id="stat-waste">—</div>
       </div>
- 
+
   <div class="stat-card">
-    <div class="stat-label">Available (total)</div>
+    <div class="stat-label" data-i18n="total-available">Available (total)</div>
     <div class="stat-value green" id="stat-available">—</div>
   </div>
   <div class="stat-card">
-    <div class="stat-label">To Produce (total)</div>
+    <div class="stat-label" data-i18n="total-toproduce">To Produce (total)</div>
     <div class="stat-value amber" id="stat-toproduce">—</div>
   </div>
 </div>
 
     <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
-      <button class="refresh-btn" onclick="loadKDS()" style="padding:8px 16px">↺ Refresh all data</button>
-      <button class="refresh-btn" onclick="openManualScan()" style="padding:8px 16px;background:var(--amber-dim);color:var(--amber);border-color:var(--amber-brd)">+ Manual entry</button>
+      <button class="refresh-btn" onclick="loadKDS()" style="padding:8px 16px"><span data-i18n="refresh-all">↺ Refresh all data</span></button>
+      <button class="refresh-btn" onclick="openManualScan()" style="padding:8px 16px;background:var(--amber-dim);color:var(--amber);border-color:var(--amber-brd)"><span data-i18n="manual-entry">+ Manual entry</span></button>
     </div>
 
     <div id="mep-alerts" class="mep-alerts"></div>
@@ -587,18 +587,18 @@
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-title">Top products by scan count</div>
+      <div class="chart-title" data-i18n="top-products">Top products by scan count</div>
       <div class="bars" id="product-bars"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-title">Activity by worker</div>
+      <div class="chart-title" data-i18n="activity-worker">Activity by worker</div>
       <div class="bars" id="worker-bars"><div class="skeleton"></div><div class="skeleton"></div></div>
     </div>
 
     <div class="feed-wrap">
       <div class="feed-header">
-        <span class="feed-title-txt">Recent scans</span>
+        <span class="feed-title-txt" data-i18n="recent-scans">Recent scans</span>
         <button class="refresh-btn" onclick="loadScans ? loadScans() : loadKDS()">↺ Refresh</button>
       </div>
       <div id="scan-feed">
@@ -2038,7 +2038,7 @@ function renderProductBars() {
   const colors = ["amber","green","red","blue","amber","green","red","blue"];
   document.getElementById("product-bars").innerHTML = sorted.length
     ? sorted.map((p, i) => bar(p.label, p.val, max, colors[i])).join("")
-    : `<div class="empty-state"><div class="empty-icon">📊</div>No scan data yet</div>`;
+    : `<div class="empty-state"><div class="empty-icon">📊</div>${t('no-data')}</div>`;
 }
 
 function renderWorkerBars() {
@@ -2049,7 +2049,7 @@ function renderWorkerBars() {
   const max = sorted[0]?.[1] || 1;
   document.getElementById("worker-bars").innerHTML = sorted.length
     ? sorted.map(([w, n]) => bar(w, n, max, "blue")).join("")
-    : `<div class="empty-state"><div class="empty-icon">👤</div>No worker data yet</div>`;
+    : `<div class="empty-state"><div class="empty-icon">👤</div>${t('no-data')}</div>`;
 }
 function renderFeed() {
   const todayStr = new Date().toLocaleDateString('en-CA');
@@ -2065,8 +2065,8 @@ function renderFeed() {
     </div>`;
   }).join("");
   document.getElementById("scan-feed").innerHTML =
-    `<div class="feed-row hdr"><span>Date / Time</span><span>Worker</span><span>Action</span><span>Product</span></div>`
-    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>No scans today</div>`);
+    `<div class="feed-row hdr"><span>${t('date-time')}</span><span>${t('worker')}</span><span>${t('action')}</span><span>${t('product')}</span></div>`
+    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>${t('no-scans-today')}</div>`);
 }
 
 // ─────────────────────────────────────────────
