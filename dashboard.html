@@ -3902,8 +3902,8 @@ function renderMenuList() {
       ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '—';
     const fcColor = (fc !== '—' && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
     const imgHtml = m.imageUrl
-      ? `<img src="${m.imageUrl}" style="width:100%;height:120px;object-fit:cover;display:block">`
-      : `<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">🍽️</div>`;
+  ? `<img src="${toDirectImg(m.imageUrl)}" style="width:100%;height:120px;object-fit:cover;display:block" onerror="this.style.display='none'">`
+  : `<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">🍽️</div>`;
     return `<div onclick="openMenuView('${m.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
       ${imgHtml}
       <div style="padding:12px">
