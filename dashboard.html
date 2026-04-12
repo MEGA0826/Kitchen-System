@@ -498,6 +498,36 @@
   <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
   <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
  <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
+
+  <!-- Settings section inside hamburger nav -->
+  <div id="nav-settings" style="margin-top:auto;padding:16px 20px 20px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:14px">
+    <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Settings</div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">🌐 Language</div>
+      <select id="langDropdownNav" onchange="setLangDash(this.value)"
+        style="width:100%;padding:8px 10px;background:var(--surface2);color:var(--amber);border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:12px;cursor:pointer;outline:none">
+        <option value="en">EN — English</option>
+        <option value="de">DE — Deutsch</option>
+        <option value="th">TH — ภาษาไทย</option>
+        <option value="it">IT — Italiano</option>
+        <option value="fr">FR — Français</option>
+        <option value="es">ES — Español</option>
+      </select>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">🎨 Theme</div>
+      <div style="display:flex;gap:8px">
+        <button id="navThemeDark" onclick="setTheme('dark')"
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);font-size:20px;cursor:pointer;transition:all .15s">
+          🌙
+        </button>
+        <button id="navThemeLight" onclick="setTheme('light')"
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);font-size:20px;cursor:pointer;transition:all .15s">
+          ☀️
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="body">
@@ -1372,12 +1402,13 @@
 
 <script>
 // ── THEME ──
-  function setTheme(mode) {
+function setTheme(mode) {
     document.body.classList.toggle("light", mode === "light");
     localStorage.setItem("theme", mode);
     document.getElementById("theme-opt-dark").classList.toggle("active", mode === "dark");
     document.getElementById("theme-opt-light").classList.toggle("active", mode === "light");
     document.querySelector('meta[name="theme-color"]').setAttribute("content", mode === "light" ? "#f5f4f0" : "#0f0f0d");
+    _updateNavThemeBtns(mode);
   }
   // Apply saved theme on load
   (function() {
@@ -1473,6 +1504,30 @@ function toggleMenu() {
   const btn = document.getElementById("hamburgerBtn");
   const isOpen = nav.classList.toggle("open");
   btn.classList.toggle("open", isOpen);
+
+  // Show/hide settings + sync values when opening
+  const settings = document.getElementById("nav-settings");
+  if (settings) {
+    settings.style.display = isOpen ? "flex" : "none";
+    if (isOpen) {
+      // Sync lang dropdown
+      const langSel = document.getElementById("langDropdownNav");
+      if (langSel) langSel.value = localStorage.getItem('kmep_lang') || 'en';
+      // Sync theme buttons
+      const saved = localStorage.getItem("theme") || "dark";
+      _updateNavThemeBtns(saved);
+    }
+  }
+}
+
+function _updateNavThemeBtns(theme) {
+  const dark  = document.getElementById("navThemeDark");
+  const light = document.getElementById("navThemeLight");
+  if (!dark || !light) return;
+  const active   = "flex:1;padding:10px;border-radius:8px;border:1px solid #e8a020;background:rgba(232,160,32,0.15);font-size:20px;cursor:pointer;transition:all .15s";
+  const inactive = "flex:1;padding:10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);font-size:20px;cursor:pointer;transition:all .15s";
+  dark.style.cssText  = theme === "dark"  ? active : inactive;
+  light.style.cssText = theme === "light" ? active : inactive;
 }
 
 // Close menu when clicking outside
