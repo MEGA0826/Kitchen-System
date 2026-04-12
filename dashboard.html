@@ -1515,7 +1515,7 @@ function goBack(e) {
 function toDirectImg(url) {
   if (!url) return "";
   const m = url.match(/\/d\/([\w-]+)/);
-  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
   return url;
 }
   
@@ -3429,7 +3429,7 @@ Promise.allSettled([
   if (saved === "mep-overview") loadMepOverview && loadMepOverview();
 }).catch(e => console.error("Init error:", e));
 
-setTimeout(() => loadRecipes(), 600);
+setTimeout(() => { loadMenus(); loadGRs(); }, 600);
 
 // Auto-refresh KDS every 60s
 setInterval(() => loadKDS(), 60_000);
