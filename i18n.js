@@ -132,9 +132,16 @@ const TRANSLATIONS = {
   pin:              { en:'PIN',             de:'PIN',              th:'PIN',              it:'PIN',            fr:'PIN',             es:'PIN' },
   'add-worker':     { en:'Add worker',      de:'Mitarbeiter hinzufügen', th:'เพิ่มพนักงาน', it:'Aggiungi lavoratore', fr:'Ajouter un employé', es:'Agregar trabajador' },
   archive:          { en:'Archive',         de:'Archiv',           th:'เก็บถาวร',          it:'Archivio',       fr:'Archive',         es:'Archivo' },
-  'scan-archive':   { en:'Scan archive',    de:'Scan-Archiv',      th:'ไฟล์สแกน',          it:'Archivio scansioni', fr:'Archive des scans', es:'Archivo de escaneos' },
+'scan-archive':   { en:'Scan archive',    de:'Scan-Archiv',      th:'ไฟล์สแกน',          it:'Archivio scansioni', fr:'Archive des scans', es:'Archivo de escaneos' },
 
-
+  // ── KDS panel strings ─────────────────────
+  'total-scans':    { en:'Total scans today',    de:'Scans heute gesamt',     th:'สแกนทั้งหมดวันนี้',   it:'Scansioni totali oggi',      fr:'Scans totaux aujourd\'hui', es:'Escaneos totales hoy' },
+  finished:         { en:'Finished',             de:'Fertiggestellt',          th:'เสร็จสิ้น',            it:'Finito',                     fr:'Terminé',                   es:'Terminado' },
+  'total-available':{ en:'Available (total)',    de:'Verfügbar (gesamt)',      th:'ที่เหลือใช้ได้ (รวม)',        it:'Disponibile (totale)',       fr:'Disponible (total)',        es:'Disponible (total)' },
+  'total-toproduce':{ en:'To Produce (total)',   de:'Zu prod. (gesamt)',       th:'ต้องผลิต (รวม)',        it:'Da prod. (totale)',          fr:'À prod. (total)',           es:'A prod. (total)' },
+  'refresh':        { en:'↺ Refresh',            de:'↺ Aktualisieren',         th:'↺ รีเฟรช',              it:'↺ Aggiorna',                 fr:'↺ Actualiser',              es:'↺ Actualizar' },
+  'kds-sub':        { en:'Real-time MEP production tracking', de:'Echtzeit MEP Überwachung', th:'ติดตาม MEP แบบเรียลไทม์', it:'Monitoraggio MEP in tempo reale', fr:'Suivi MEP en temps réel', es:'Seguimiento MEP en tiempo real' },
+};
 
 // ─────────────────────────────────────────────
 // Core functions
