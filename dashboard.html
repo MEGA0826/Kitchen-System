@@ -611,10 +611,10 @@
 
 <!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
-    <div class="section-title">Inventory <span class="section-title-icon">📦</span></div>
+    <div class="section-title"><span data-i18n="inventory">Inventory</span> <span class="section-title-icon">📦</span></div>
     <div class="section-sub" data-i18n="inv-sub">Select a category or supplier to load items</div>
     <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
-      <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" style="flex:1;min-width:160px">
+      <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" data-i18n-placeholder="search" oninput="filterInventory()" style="flex:1;min-width:160px">
       <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 160px">
         <option value="">All categories</option>
       </select>
@@ -629,19 +629,19 @@
 
 <!-- PRODUCTS Tab -->
 <div class="panel" id="panel-products">
-  <div class="section-title">Products <span class="section-title-icon">🥗</span></div>
+  <div class="section-title"><span data-i18n="products">Products</span> <span class="section-title-icon">🥗</span></div>
   <div class="section-sub" data-i18n="prod-sub">Select a category to view production items</div>
   
   <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
     <select class="search-input" id="prodCatFilter" onchange="filterProducts()" style="flex:0 1 200px">
       <option value="">-- Kategorie wählen --</option>
     </select>
-    <input class="search-input" id="prod-search" type="text" placeholder="Search..." oninput="filterProducts()" style="flex:1;min-width:160px;display:none;">
+    <input class="search-input" id="prod-search" type="text" placeholder="Search..." data-i18n-placeholder="search" oninput="filterProducts()" style="flex:1;min-width:160px;display:none;">
   </div>
 
   <div id="prodPrompt" class="empty-state" style="margin-top:20px">
     <div class="empty-icon">🍽</div>
-    Bitte wähle eine Kategorie aus
+    <span data-i18n="prod-sub">Select a category to view production items</span>
   </div>
 
   <div id="product-grid" class="product-grid" style="display:none;margin-top:20px;"></div>
@@ -658,9 +658,9 @@
         <img id="pm-img" alt="" style="height:200px;display:none;margin:0 auto 16px;border-radius:8px">
         <p id="pm-code" style="color:var(--muted);margin:4px 0 16px;font-family:var(--mono);font-size:12px"></p>
         <div class="prod-stats" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <span class="prod-stat green">OK <span id="pm-done">0</span></span>
-          <span class="prod-stat amber">↻ <span id="pm-produce">0</span></span>
-          <span class="prod-stat red">✕ <span id="pm-waste">0</span></span>
+          <span class="prod-stat green"><span data-i18n="done">Done</span> <span id="pm-done">0</span></span>
+          <span class="prod-stat amber">↻ <span data-i18n="produce">Produce</span> <span id="pm-produce">0</span></span>
+          <span class="prod-stat red">✕ <span data-i18n="waste">Waste</span> <span id="pm-waste">0</span></span>
         </div>
       </div>
     </div>
@@ -1035,21 +1035,21 @@
   </div>
 <!-- ORDERS Tab-->
   <div class="panel" id="panel-orders">
-    <div class="section-title">Orders <span class="section-title-icon">🛒</span></div>
-    <div class="section-sub" style="margin-bottom:16px">Order plan by supplier — based on MEP daily max + safety buffer</div>
+    <div class="section-title"><span data-i18n="orders">Orders</span> <span class="section-title-icon">🛒</span></div>
+    <div class="section-sub" style="margin-bottom:16px" data-i18n="to-order">Order plan by supplier — based on MEP daily max + safety buffer</div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <label style="font-size:12px;color:var(--muted);white-space:nowrap">Coverage:</label>
+      <<label style="font-size:12px;color:var(--muted);white-space:nowrap"><span data-i18n="required">Coverage</span>:</label>
       <select class="search-input" id="order-days" onchange="renderOrders()" style="flex:0 1 180px">
         <option value="1">1 day + 50% buffer</option>
         <option value="2" selected>2 days + 50% buffer</option>
         <option value="3">3 days + 50% buffer</option>
       </select>
-      <label style="font-size:12px;color:var(--muted);white-space:nowrap">Show:</label>
+      <label style="font-size:12px;color:var(--muted);white-space:nowrap"><span data-i18n="filter">Show</span>:</label>
       <select class="search-input" id="order-show" onchange="renderOrders()" style="flex:0 1 170px">
         <option value="shortage">Shortage only</option>
         <option value="all">All items</option>
       </select>
-      <input class="search-input" id="order-search" type="text" placeholder="Search…" oninput="renderOrders()" style="flex:1;min-width:130px">
+      <input class="search-input" id="order-search" type="text" placeholder="Search…" data-i18n-placeholder="search" oninput="renderOrders()" style="flex:1;min-width:130px">
     </div>
 
     <!-- CALENDAR -->
@@ -1076,9 +1076,9 @@
 
   <!-- DEDUCTIONS Tab-->
   <div class="panel" id="panel-deductions">
-    <div class="section-title">Lager deductions — auto-logged when MEP is finished <span class="section-title-icon">✂️</span></div>
+    <div class="section-title"><span data-i18n="deductions">Deductions</span> <span class="section-title-icon">✂️</span></div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <input type="text" id="ded-search" placeholder="Search product or ingredient..."
+      <input type="text" id="ded-search" placeholder="Search product or ingredient..." data-i18n-placeholder="search"
         oninput="filterDeductions()"
         style="flex:1;min-width:160px;padding:8px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:13px">
       <button onclick="loadDeductions()"
@@ -1090,8 +1090,8 @@
       <table class="inv-table" id="ded-table">
         <thead>
           <tr>
-            <th>Time</th><th>Worker</th><th>MEP Product</th>
-            <th>Ingredient</th><th>Deducted</th><th>Before</th><th>After</th><th>Status</th>
+            <th data-i18n="date-time">Time</th><th data-i18n="worker">Worker</th><th data-i18n="product">MEP Product</th>
+            <th data-i18n="raw-material">Ingredient</th><th data-i18n="deductions">Deducted</th><th>Before</th><th>After</th><th>Status</th>
           </tr>
         </thead>
         <tbody id="ded-body">
@@ -1103,36 +1103,36 @@
 
   <!-- REPORTS Tab-->
   <div class="panel" id="panel-reports">
-    <div class="section-title">Reports <span class="section-title-icon">📊</span></div>
-    <div class="section-sub">Send weekly summaries via email</div>
+    <div class="section-title"><span data-i18n="reports">Reports</span> <span class="section-title-icon">📊</span></div>
+    <div class="section-sub" data-i18n="weekly-waste">Send weekly summaries via email</div>
     <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
       <button onclick="previewReport()"
         style="flex:1;padding:10px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
-        Preview this week
+        <span data-i18n="refresh">↺ Preview</span>
       </button>
       <button onclick="sendReportNow()"
         style="flex:1;padding:10px 16px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">
-        Send email now
+        <span data-i18n="send-report">Send report</span>
       </button>
     </div>
     <div id="report-status" style="font-size:12px;color:var(--muted);margin-bottom:16px;text-align:center"></div>
     <div id="report-preview" style="display:none">
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px" id="report-summary"></div>
-      <div class="section-title" style="margin-bottom:8px">Waste cost</div>
+      <div class="section-title" style="margin-bottom:8px"><span data-i18n="waste">Waste</span> cost</div>
       <div class="inv-table-wrap" style="margin-bottom:20px">
-        <table class="inv-table"><thead><tr><th>Product</th><th>Waste GN</th><th>CHF/unit</th><th>Total CHF</th></tr></thead><tbody id="rpt-waste"></tbody></table>
+        <table class="inv-table"><thead><tr><th data-i18n="product">Product</th><th data-i18n="waste">Waste</th><th>CHF/unit</th><th>Total CHF</th></tr></thead><tbody id="rpt-waste"></tbody></table>
       </div>
       <div class="section-title" style="margin-bottom:8px">Production efficiency</div>
       <div class="inv-table-wrap" style="margin-bottom:20px">
-        <table class="inv-table"><thead><tr><th>Product</th><th>Finished</th><th>Wasted</th><th>Efficiency</th></tr></thead><tbody id="rpt-eff"></tbody></table>
+        <table class="inv-table"><thead><tr><th data-i18n="product">Product</th><th data-i18n="finished">Finished</th><th data-i18n="waste">Wasted</th><th>Efficiency</th></tr></thead><tbody id="rpt-eff"></tbody></table>
       </div>
-      <div class="section-title" style="margin-bottom:8px">Staff activity</div>
+      <div class="section-title" style="margin-bottom:8px"><span data-i18n="workers">Staff activity</span></div>
       <div class="inv-table-wrap" style="margin-bottom:20px">
-        <table class="inv-table"><thead><tr><th>Staff</th><th>Total</th><th>Finished</th><th>Waste rate</th></tr></thead><tbody id="rpt-workers"></tbody></table>
+        <table class="inv-table"><thead><tr><th data-i18n="worker">Staff</th><th>Total</th><th data-i18n="finished">Finished</th><th data-i18n="waste">Waste</th> rate</tr></thead><tbody id="rpt-workers"></tbody></table>
       </div>
-      <div class="section-title" style="margin-bottom:8px">Low stock</div>
+      <div class="section-title" style="margin-bottom:8px"><span data-i18n="stock">Low stock</span></div>
       <div class="inv-table-wrap">
-        <table class="inv-table"><thead><tr><th>Item</th><th>Current</th><th>Minimum</th></tr></thead><tbody id="rpt-stock"></tbody></table>
+        <table class="inv-table"><thead><tr><th data-i18n="name">Item</th><th>Current</th><th>Min</th></tr></thead><tbody id="rpt-stock"></tbody></table>
       </div>
     </div>
   </div>
@@ -1163,12 +1163,12 @@
   <div id="archived-scan-list" style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)"></div>
 </div>
 
-    <div class="section-title">Admin</div>
-    <div class="section-sub" style="margin-bottom:24px">Manage without opening Google Sheets</div>
+    <div class="section-title"><span data-i18n="admin">Admin</span></div>
+    <div class="section-sub" style="margin-bottom:24px" data-i18n="scan-archive">Manage without opening Google Sheets</div>
 
 <div class="admin-section">
-      <div class="admin-section-title">Workers</div>
-      <div class="admin-section-sub">Settings sheet</div>
+      <div class="admin-section-title" data-i18n="workers">Workers</div>
+      <div class="admin-section-sub" data-i18n="role">Settings sheet</div>
       
 <div style="margin-bottom:10px; display:flex; gap:8px;">
         <input class="form-input" id="admin-worker-search" placeholder="Search worker…" oninput="renderAdminWorkers()" style="flex:1">
@@ -1185,14 +1185,14 @@
       <div class="admin-list" id="admin-workers-list"></div>
       
       <div class="admin-form" id="worker-form">
-        <div class="admin-form-title" id="wf-form-title">Add new worker</div>
+        <div class="admin-form-title" id="wf-form-title" data-i18n="add-worker">Add new worker</div>
         <div class="form-grid">
           <div class="form-field">
-            <label class="form-label">Name *</label>
+            <label class="form-label" data-i18n="name">Name *</label>
             <input class="form-input" id="wf-name" placeholder="e.g. Marco">
           </div>
           <div class="form-field">
-            <label class="form-label">Role</label>
+            <label class="form-label" data-i18n="role">Role</label>
             <select class="form-input" id="wf-role">
               <option value="">-- Rolle wählen --</option>
               <option value="Küchenchef">Küchenchef</option>
@@ -1209,9 +1209,9 @@
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-save" onclick="saveWorkerAdmin()">Save worker</button>
-          <button class="btn-edit" onclick="clearWorkerForm()" style="display:none" id="wf-cancel">Cancel edit</button>
-        </div>
+            <button class="btn-save" onclick="saveWorkerAdmin()" data-i18n="save">Save worker</button>
+            <button class="btn-edit" onclick="clearWorkerForm()" style="display:none" id="wf-cancel" data-i18n="cancel">Cancel edit</button>
+          </div>
         <div class="admin-msg" id="wf-msg"></div>
       </div>
       
@@ -1254,8 +1254,8 @@
     </div>
 
     <div class="admin-section">
-      <div class="admin-section-title">Inventory</div>
-      <div class="admin-section-sub">Lager sheet</div>
+      <div class="admin-section-title" data-i18n="inventory">Inventory</div>
+      <div class="admin-section-sub" data-i18n="stock">Lager sheet</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <input class="form-input" id="admin-inv-search" placeholder="Search inventory…" oninput="renderAdminInventory()" style="flex:1;min-width:160px">
         <select class="form-input" id="admin-inv-cat" onchange="renderAdminInventory()" style="flex:0 1 160px">
@@ -1283,18 +1283,18 @@
           <option value="pcs"><option value="btl"><option value="box"><option value="bag">
         </datalist>
         <div class="form-grid">
-          <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
-          <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from Lager"></div>
-          <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse" list="dl-inv-cat"></div>
-          <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l" list="dl-inv-unit"></div>
-          <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
-          <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="if-weight" placeholder="1" min="0" step="0.01"></div>
-          <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
-          <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="if-max" placeholder="50" min="0" step="0.1"></div>
-          <div class="form-field"><label class="form-label">Kosten/Unit (CHF)</label><input class="form-input" type="number" id="if-kosten" placeholder="2.50" min="0" step="0.01"></div>
-          <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Transgourmet" list="dl-inv-lieferant"></div>
+          <div class="form-field"><label class="form-label" data-i18n="code">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
+          <div class="form-field"><label class="form-label" data-i18n="name">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from Lager"></div>
+          <div class="form-field"><label class="form-label" data-i18n="category">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse" list="dl-inv-cat"></div>
+          <div class="form-field"><label class="form-label" data-i18n="unit">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l" list="dl-inv-unit"></div>
+          <div class="form-field"><label class="form-label" data-i18n="qty">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label" data-i18n="kg">Weight/Unit (kg)</label><input class="form-input" type="number" id="if-weight" placeholder="1" min="0" step="0.01"></div>
+          <div class="form-field"><label class="form-label">Min</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label">Max</label><input class="form-input" type="number" id="if-max" placeholder="50" min="0" step="0.1"></div>
+          <div class="form-field"><label class="form-label" data-i18n="price">Kosten/Unit (CHF)</label><input class="form-input" type="number" id="if-kosten" placeholder="2.50" min="0" step="0.01"></div>
+          <div class="form-field"><label class="form-label" data-i18n="supplier">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Transgourmet" list="dl-inv-lieferant"></div>
           <div class="form-field"><label class="form-label">Last ordered</label><input class="form-input" type="date" id="if-lastorder"></div>
-          <div class="form-field"><label class="form-label">Notes</label><input class="form-input" id="if-notizen" placeholder="e.g. Kühl lagern"></div>
+          <div class="form-field"><label class="form-label" data-i18n="notes">Notes</label><input class="form-input" id="if-notizen" placeholder="e.g. Kühl lagern"></div>
         </div>
         <div class="form-actions">
           <button class="btn-save" onclick="saveInvItem()">Save item</button>
@@ -1305,13 +1305,10 @@
     </div>
     <!-- SETTINGS / APPEARANCE -->
     <div class="admin-section" style="margin-bottom:24px">
-      <div class="admin-section-title">Appearance</div>
-      <div class="admin-section-sub">Display & theme</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
-        <div>
-          <div style="font-size:13px;font-weight:500;margin-bottom:2px">Colour theme</div>
-          <div style="font-size:11px;color:var(--muted)">Applies instantly and persists across sessions</div>
-        </div>
+      <div class="admin-section-title" data-i18n="admin">Appearance</div>
+      <div class="admin-section-sub" data-i18n="colour">Display & theme</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:2px" data-i18n="colour">Colour theme</div>
+        <div style="font-size:11px;color:var(--muted)" data-i18n="daily-target-ok">Applies instantly and persists across sessions</div>
         <div class="theme-toggle" id="themeToggle">
           <button class="theme-opt active" id="theme-opt-dark"  onclick="setTheme('dark')">🌙 Dark</button>
           <button class="theme-opt"        id="theme-opt-light" onclick="setTheme('light')">☀️ Light</button>
@@ -1325,8 +1322,8 @@
 <!-- PIN modal -->
 <div class="pin-modal" id="pinModal">
   <div class="pin-content">
-    <div class="pin-title">Admin Access</div>
-    <div class="pin-subtitle">Enter your 4-digit PIN</div>
+    <div class="pin-title" data-i18n="admin">Admin Access</div>
+    <div class="pin-subtitle" data-i18n="enter-pin">Enter your 4-digit PIN</div>
     <input class="pin-input" id="pinInput" type="password" maxlength="4" inputmode="numeric" readonly>
     <div class="pin-keypad">
       <button class="pin-key" onclick="addPinDigit('1')">1</button>
@@ -1343,7 +1340,7 @@
       <button class="pin-key" onclick="submitPin()">✓</button>
     </div>
     <div class="pin-msg" id="pinMsg"></div>
-    <button class="pin-cancel" onclick="cancelPin()">Cancel</button>
+    <button class="pin-cancel" onclick="cancelPin()" data-i18n="cancel">Cancel</button>
   </div>
 </div>
 
@@ -2144,7 +2141,7 @@ function sortInventory(col) {
 function renderInventory(rows) {
   const el = document.getElementById("inv-content");
   if (!rows || !rows.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>No items found.</div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>${t('no-data')}</div>`;
     return;
   }
 
@@ -2161,6 +2158,12 @@ function renderInventory(rows) {
 
   const arrow = (c) => `<span style="font-size:9px;opacity:0.6;margin-left:2px">${_invSortCol===c ? (_invSortAsc?"▲":"▼") : "⇅"}</span>`;
   const th = (label, col) => `<th style="cursor:pointer;white-space:nowrap" onclick="sortInventory('${col}')">${label}${arrow(col)}</th>`;
+
+  const _sc = (qty, min) => {
+    const [cls] = stockClass(qty, min);
+    const labels = { ok: t('in-stock'), low: t('needs-attention'), out: t('no-data') };
+    return `<span class="stock-pill stock-${cls}">${labels[cls] || cls}</span>`;
+  };
 
   const trs = rows.map(r => {
     const qty    = r.quantity !== null && r.quantity !== undefined ? Number(r.quantity) : null;
@@ -2190,7 +2193,7 @@ function renderInventory(rows) {
       <td style="color:var(--muted)">${(r.quantity !== null && r.kostenUnit !== null) ? "CHF "+(r.quantity*r.kostenUnit).toFixed(2) : "-"}</td>
       <td style="font-size:11px;color:var(--muted)">${r.lieferant||"-"}</td>
       <td style="color:var(--green)">${mepStr}</td>
-      <td><span class="stock-pill stock-${cls}">${lbl}</span></td>
+      <td>${_sc(qtyNum, minNum)}</td>
     </tr>`;
   }).join("");
 
@@ -2198,12 +2201,12 @@ function renderInventory(rows) {
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${rows.length} item${rows.length!==1?"s":""} — click column header to sort</div>
     <div class="inv-table-wrap"><table class="inv-table">
       <thead><tr>
-        ${th("Code","code")}${th("Product","name")}${th("Cat.","kategorie")}
-        ${th("Qty","quantity")}${th("Unit","unit")}
-        <th>Total kg</th>
-        ${th("Min","minimum")}${th("Max","maximum")}
-        ${th("CHF/Unit","kostenUnit")}<th>Total CHF</th>
-        ${th("Supplier","lieferant")}<th>MEP avail.</th><th>Status</th>
+        ${th(t('code'),"code")}${th(t('name'),"name")}${th(t('category'),"kategorie")}
+        ${th(t('qty'),"quantity")}${th(t('unit'),"unit")}
+        <th>${t('kg')} total</th>
+        <th>Min</th><th>Max</th>
+        <th>CHF/${t('unit')}</th><th>Total CHF</th>
+        ${th(t('supplier'),"lieferant")}<th>MEP ${t('available')}</th><th>${t('success')}</th>
       </tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
@@ -2275,7 +2278,7 @@ function renderProductGrid(entries) {
   if (!grid) return;
 
   if (!entries || !entries.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>No products found</div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>${t('no-data')}</div>`;
     return;
   }
 
@@ -2299,9 +2302,9 @@ function renderProductGrid(entries) {
 
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
-        <span class="prod-stat green">✅ ${avail}${gnLabel}</span>
-        <span class="prod-stat amber">↻ ${inProg}${gnLabel}</span>
-        <span class="prod-stat red">✕ ${waste}${gnLabel}</span>
+        <span class="prod-stat green">✅ ${t('available')}: ${avail}${gnLabel}</span>
+        <span class="prod-stat amber">↻ ${t('produce')}: ${inProg}${gnLabel}</span>
+        <span class="prod-stat red">✕ ${t('waste')}: ${waste}${gnLabel}</span>
       </div>` : "";
 
     return `<div class="product-card" onclick="openProductModal('${code}')">
@@ -2536,7 +2539,7 @@ function renderAdminWorkers() {
   
   // Show prompt if nothing selected
   if (!search && !roleFilter) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">Select a role or search to view workers.</div>`;
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">${t('select-worker')}</div>`;
     return;
   }
   
@@ -2562,7 +2565,7 @@ function renderAdminWorkers() {
   }
   
   if (!filtered.length) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">No workers found.</div>`;
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">${t('no-data')}</div>`;
     return;
   }
   
@@ -2712,11 +2715,11 @@ function renderAdminInventory() {
   const sup = supSel?.value || "";
 
   // Show prompt if nothing selected
+  // Show prompt if nothing selected
   if (!q && !cat && !sup) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">Select a category or supplier, or search to view items.</div>`;
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">${t('inv-sub')}</div>`;
     return;
   }
-
   let rows = allInventory;
   if (cat) rows = rows.filter(r => (r.kategorie||"") === cat);
   if (sup) rows = rows.filter(r => (r.lieferant||"") === sup);
@@ -2725,8 +2728,7 @@ function renderAdminInventory() {
     (r.code||"").toLowerCase().includes(q) ||
     (r.kategorie||"").toLowerCase().includes(q) ||
     (r.lieferant||"").toLowerCase().includes(q));
-
-  if (!rows.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">No items found.</div>`; return; }
+  if (!rows.length) { list.innerHTML = `<div style="color:var(--muted);font-size:13px">${t('no-data')}</div>`; return; }
 
   list.innerHTML = rows.map(r => {
     const totKg = (r.quantity !== null && r.weightUnit !== null)
@@ -2737,7 +2739,7 @@ function renderAdminInventory() {
         <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.code}</span>
         <span style="font-size:11px;color:var(--muted);margin-left:6px">${r.quantity??"-"} ${r.unit||""} ${totKg?"· "+totKg:""} ${r.lieferant?"· "+r.lieferant:""}</span>
       </div>
-      <button class="btn-edit" onclick="editInvItem('${r.code}')">Edit</button>
+      <button class="btn-edit" onclick="editInvItem('${r.code}')">${t('edit')}</button>
     </div>`;
   }).join("");
 }
@@ -3091,7 +3093,7 @@ function renderOrders() {
   renderOrderCal();
 
   if (!visible.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">${showMode==="shortage"?"✅":"📦"}</div>${showMode==="shortage"?"No shortages":"No items found"}</div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">${showMode==="shortage"?"✅":"📦"}</div>${showMode==="shortage"?t('all-done'):t('no-data')}</div>`;
     if (summary) summary.textContent = "";
     return;
   }
@@ -3124,9 +3126,9 @@ function renderOrders() {
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="inv-table" style="width:max-content;min-width:100%">
         <thead><tr>
-          <th>Code</th><th>Product</th><th>In stock</th>
-          <th>Per day</th><th>Need (${days}d+50%)</th>
-          <th>To order</th><th>Status</th>
+          <th>${t('code')}</th><th>${t('product')}</th><th>${t('in-stock')}</th>
+          <th>${t('qty')}/${t('worker')}</th><th>${t('required')} (${days}d+50%)</th>
+          <th>${t('to-order')}</th><th>${t('success')}</th>
         </tr></thead>
         <tbody>${rows.map(r=>`
           <tr style="${r.shortage?"background:rgba(220,50,50,0.06)":""}">
@@ -3138,7 +3140,7 @@ function renderOrders() {
             <td style="color:var(--muted)">${r.needed1day.toFixed(2)} ${r.unit}</td>
             <td>${r.required.toFixed(2)} ${r.unit}</td>
             <td style="color:${r.shortage?"var(--red)":"var(--green)"};font-weight:600">${r.shortage?"+"+r.toOrder.toFixed(2)+" "+r.unit:"—"}</td>
-            <td><span class="stock-pill stock-${r.shortage?"out":"ok"}">${r.shortage?"⚠ Order":"✓ OK"}</span></td>
+            <td><span class="stock-pill stock-${r.shortage?"out":"ok"}">${r.shortage?"⚠ "+t('to-order'):"✓ "+t('in-stock')}</span></td>
           </tr>`).join("")}
         </tbody>
       </table>
@@ -3273,10 +3275,10 @@ async function sendReportNow() {
 function renderReportPreview(s) {
   const sumEl = document.getElementById("report-summary");
   const cards = [
-    { val:s.totalScans,                      label:"Total scans", color:"var(--text)" },
-    { val:s.overallEfficiency+"%",            label:"Efficiency",  color:s.overallEfficiency>=90?"var(--green)":s.overallEfficiency>=75?"var(--amber)":"var(--red)" },
-    { val:s.totalWaste,                       label:"Waste (GN)",  color:s.totalWaste>0?"var(--red)":"var(--green)" },
-    { val:"CHF "+s.totalWasteCHF.toFixed(0),  label:"Waste cost",  color:s.totalWasteCHF>100?"var(--red)":s.totalWasteCHF>50?"var(--amber)":"var(--green)" },
+    { val:s.totalScans,                      label:t('total-scans'),  color:"var(--text)" },
+    { val:s.overallEfficiency+"%",            label:"Efficiency",      color:s.overallEfficiency>=90?"var(--green)":s.overallEfficiency>=75?"var(--amber)":"var(--red)" },
+    { val:s.totalWaste,                       label:t('waste')+" (GN)",color:s.totalWaste>0?"var(--red)":"var(--green)" },
+    { val:"CHF "+s.totalWasteCHF.toFixed(0),  label:t('waste')+" cost",color:s.totalWasteCHF>100?"var(--red)":s.totalWasteCHF>50?"var(--amber)":"var(--green)" },
   ];
   sumEl.innerHTML = cards.map(c => `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;text-align:center"><div style="font-size:22px;font-weight:500;color:${c.color}">${c.val}</div><div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px">${c.label}</div></div>`).join("");
   document.getElementById("rpt-waste").innerHTML = s.wasteLines.length
