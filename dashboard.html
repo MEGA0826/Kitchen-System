@@ -3683,11 +3683,10 @@ async function loadRequirements() {
 // ADD GR POPUP
 // ─────────────────────────────────────────────
 function openAddMEPPopup() {
-  // Reuse the product form from Admin panel as a popup
   clearProductForm();
-  document.getElementById("product-form-title").textContent = "Add new MEP product";
-  document.getElementById("pf-msg").textContent = "";
-  document.getElementById("addMEPPopup").style.display = "flex";
+  document.getElementById("pf-msg")?.textContent && (document.getElementById("pf-msg").textContent = "");
+  const popup = document.getElementById("addMEPPopup");
+  popup.style.cssText = "display:flex;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:16px";
 }
 
 function closeAddMEPPopup() {
