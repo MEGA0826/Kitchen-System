@@ -3693,7 +3693,43 @@ function openAddMEPPopup() {
 function closeAddMEPPopup() {
   document.getElementById("addMEPPopup").style.display = "none";
 }
-
+async function saveMEPFromPopup() {
+  const code = document.getElementById("mep-code").value.trim();
+  const name = document.getElementById("mep-name").value.trim();
+  if (!code || !name) { adminMsg("mep-msg", "Code and Name are required", "err"); return; }
+  const btn = document.querySelector("#addMEPPopup .btn-save") ||
+              document.querySelector("#addMEPPopup button[onclick='saveMEPFromPopup()']");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const mepMax    = document.getElementById("mep-mepmax").value.trim();
+    const gnWeight  = document.getElementById("mep-gnweight").value.trim();
+    const tagesziel = document.getElementById("mep-tagesziel").value.trim();
+    const shelf     = document.getElementById("mep-shelf").value.trim();
+    const driveRaw  = document.getElementById("mep-drive").value.trim();
+    const driveMatch = driveRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    const photoLink  = driveMatch ? `https://lh3.googleusercontent.com/d/${driveMatch[1]}` : driveRaw;
+    const payload = {
+      action     : "saveProduct",
+      code, name,
+      kategorie  : document.getElementById("mep-kategorie").value.trim(),
+      mepMax     : mepMax    === "" ? "" : Number(mepMax),
+      gnSize     : document.getElementById("mep-gnsize").value.trim(),
+      gnWeight   : gnWeight  === "" ? "" : Number(gnWeight),
+      tagesziel  : tagesziel === "" ? "" : Number(tagesziel),
+      shelfLife  : shelf     === "" ? "" : Number(shelf),
+      photoLink,
+    };
+    const data = await adminCall(payload);
+    if (data.error) throw new Error(data.error);
+    adminMsg("mep-msg", "Saved OK ✓", "ok");
+    await loadProducts();
+    setTimeout(closeAddMEPPopup, 900);
+  } catch(e) {
+    adminMsg("mep-msg", "Error: " + e.message, "err");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "💾 Save MEP"; }
+  }
+}
 // Admin-guarded wrappers for the 3 add buttons
 function guardedAddMenu() { openMenuPopup(null); }
 function guardedAddGR()   { openAddGRPopup(); }
@@ -4526,20 +4562,20 @@ function buildMenuPdfHtml(m) {
     </div>
     <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
       <div class="form-grid">
-        <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pf-code" placeholder="e.g. P-001"></div>
-        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pf-name" placeholder="e.g. Karotten gewürfelt"></div>
-        <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="pf-kategorie" placeholder="e.g. Gemüse" list="dl-prod-cat"></div>
-        <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="pf-mepmax" placeholder="2" min="0"></div>
-        <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="pf-gnsize" placeholder="GN1/1"></div>
-        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="pf-gnweight" placeholder="4" min="0" step="0.1"></div>
-        <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="pf-tagesziel" placeholder="3" min="0"></div>
-        <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="pf-shelf" placeholder="2" min="1"></div>
-        <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="pf-drive" placeholder="paste Google Drive link"></div>
+        <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="mep-code" placeholder="e.g. P-001"></div>
+        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="mep-name" placeholder="e.g. Karotten gewürfelt"></div>
+        <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="mep-kategorie" placeholder="e.g. Gemüse" list="dl-prod-cat"></div>
+        <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="mep-mepmax" placeholder="2" min="0"></div>
+        <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="mep-gnsize" placeholder="GN1/1"></div>
+        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="mep-gnweight" placeholder="4" min="0" step="0.1"></div>
+        <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="mep-tagesziel" placeholder="3" min="0"></div>
+        <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="mep-shelf" placeholder="2" min="1"></div>
+        <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
       </div>
-      <div class="admin-msg" id="pf-msg"></div>
+      <div class="admin-msg" id="mep-msg"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button onclick="closeAddMEPPopup()" style="padding:10px 18px;border-radius:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;cursor:pointer">Cancel</button>
-        <button onclick="saveProduct();closeAddMEPPopup();" style="padding:10px 24px;border-radius:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:13px;font-weight:600;cursor:pointer">💾 Save MEP</button>
+        <button onclick="saveMEPFromPopup()" style="padding:10px 24px;border-radius:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:13px;font-weight:600;cursor:pointer">💾 Save MEP</button>
       </div>
     </div>
   </div>
