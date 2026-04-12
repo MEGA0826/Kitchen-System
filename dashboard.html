@@ -490,14 +490,14 @@
 </div>
 
 <div class="nav" id="main-nav">
-  <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
-  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
-  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
-  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
-  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
-  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
-  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
- <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
+<button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span><span data-i18n="kds">KDS</span></button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span><span data-i18n="inventory">Inventory</span></button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span><span data-i18n="products">Products</span></button>
+  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span><span data-i18n="recipes">Recipes</span></button>
+  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span><span data-i18n="orders">Orders</span></button>
+  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span><span data-i18n="reports">Reports</span></button>
+  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span><span data-i18n="deductions">Deductions</span></button>
+  <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span><span data-i18n="admin">Admin</span></button>
 
   <!-- Settings section inside hamburger nav -->
   <div id="nav-settings" style="margin-top:auto;padding:16px 20px 20px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:14px">
@@ -535,7 +535,7 @@
  <!-- KDS -->
   <div class="panel active" id="panel-kds">
     <div class="section-title">Kitchen Display <span class="section-title-icon">📺</span></div>
-    <div class="section-sub">Real-time MEP production tracking</div>
+    <div class="section-sub" data-i18n="kds-sub">Real-time MEP production tracking</div>
 
     <div class="stats-grid">
       <div class="stat-card">
@@ -612,7 +612,7 @@
 <!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
     <div class="section-title">Inventory <span class="section-title-icon">📦</span></div>
-    <div class="section-sub">Select a category or supplier to load items</div>
+    <div class="section-sub" data-i18n="inv-sub">Select a category or supplier to load items</div>
     <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
       <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" style="flex:1;min-width:160px">
       <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 160px">
@@ -630,7 +630,7 @@
 <!-- PRODUCTS Tab -->
 <div class="panel" id="panel-products">
   <div class="section-title">Products <span class="section-title-icon">🥗</span></div>
-  <div class="section-sub">Select a category to view production items</div>
+  <div class="section-sub" data-i18n="prod-sub">Select a category to view production items</div>
   
   <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
     <select class="search-input" id="prodCatFilter" onchange="filterProducts()" style="flex:0 1 200px">
