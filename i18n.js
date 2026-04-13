@@ -25,6 +25,16 @@ const TRANSLATIONS = {
   'enter-pin-cont':   { en:'Enter PIN to continue', de:'PIN eingeben',      th:'ใส่ PIN เพื่อดำเนินการ', it:'Inserisci PIN per continuare', fr:'Entrer le PIN pour continuer', es:'Ingresar PIN para continuar' },
   'available-str':    { en:'Available',            de:'Verfügbar',          th:'ที่เหลือใช้ได้',               it:'Disponibile',           fr:'Disponible',                  es:'Disponible' },
   'to-produce-str':   { en:'To produce',           de:'Zu produzieren',     th:'ต้องผลิต',              it:'Da produrre',           fr:'À produire',                  es:'A producir' },
+  'recipes-sub':   { en:'Menus & Ingredients',  de:'Menus & Zutaten',     th:'เมนู & ส่วนผสม',        it:'Menu & Ingredienti',    fr:'Menus & Ingrédients',   es:'Menús & Ingredientes' },
+'all-concepts':  { en:'All Concepts',          de:'Alle Konzepte',       th:'ทุกแนวคิด',             it:'Tutti i concetti',      fr:'Tous les concepts',     es:'Todos los conceptos' },
+'all-types':     { en:'All Types',             de:'Alle Arten',          th:'ทุกประเภท',              it:'Tutti i tipi',          fr:'Tous les types',        es:'Todos los tipos' },
+'raw-needs':     { en:"Today's raw material needs", de:'Heutige Rohstoffbedarf', th:'ความต้องการวัตถุดิบวันนี้', it:'Fabbisogno materie prime oggi', fr:"Besoins matières premières aujourd'hui", es:'Necesidades materias primas hoy' },
+'no-recipes':    { en:'No recipes configured', de:'Keine Rezepte',       th:'ไม่มีสูตรอาหาร',         it:'Nessuna ricetta',       fr:'Aucune recette',        es:'Sin recetas' },
+'edit-recipes':  { en:'Edit recipes',          de:'Rezepte bearbeiten',  th:'แก้ไขสูตร',              it:'Modifica ricette',      fr:'Modifier les recettes', es:'Editar recetas' },
+'add-ingredient':{ en:'Add ingredient',        de:'Zutat hinzufügen',    th:'เพิ่มส่วนผสม',           it:'Aggiungi ingrediente',  fr:'Ajouter ingrédient',   es:'Añadir ingrediente' },
+'search-menu':   { en:'Search menu…',          de:'Menu suchen…',        th:'ค้นหาเมนู…',             it:'Cerca menu…',           fr:'Chercher menu…',        es:'Buscar menú…' },
+'search-gr':     { en:'Search GR…',            de:'GR suchen…',          th:'ค้นหา GR…',              it:'Cerca GR…',             fr:'Chercher GR…',          es:'Buscar GR…' },
+'search-mep':    { en:'Search MEP product…',   de:'MEP Product suchen…', th:'ค้นหาสินค้า MEP…',       it:'Cerca prodotto MEP…',   fr:'Chercher produit MEP…', es:'Buscar producto MEP…' },
   
   // ── General ──────────────────────────────────
   dashboard:        { en:'Dashboard',       de:'Dashboard',        th:'หน้ารวมสรุป',         it:'Dashboard',      fr:'Tableau de bord', es:'Panel' },
