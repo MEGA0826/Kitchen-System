@@ -3764,6 +3764,7 @@ function openAddGRPopup() {
 
 function closeAddGRPopup() {
   document.getElementById('addGRPopup').style.display = 'none';
+  document.getElementById('agr-code').readOnly = false;
 }
 
 function calcAgrNetto() {
@@ -3842,7 +3843,34 @@ async function saveGREntry() {
     btn.disabled = false; btn.textContent = '💾 Speichern';
   }
 }
-  
+function openEditGRPopup(grCode) {
+  const g = allGRs.find(x => x.grCode === grCode);
+  if (!g) return;
+  agrZutaten = [];
+  try { agrZutaten = JSON.parse(g.zutaten || '[]'); } catch(e) {}
+  document.getElementById('agr-code').value        = g.grCode || '';
+  document.getElementById('agr-name').value        = g.name || '';
+  document.getElementById('agr-art').value         = g.art || 'Grundrezeptur';
+  document.getElementById('agr-rohgewicht').value  = g.rohgewicht || '';
+  document.getElementById('agr-garverlust').value  = g.garverlust || '';
+  document.getElementById('agr-zubereitung').value = g.zubereitung || '';
+  document.getElementById('agr-wa').value          = g.wa || '';
+  document.getElementById('agr-msg').textContent   = '';
+  document.getElementById('agr-code').readOnly     = true;
+  calcAgrNetto();
+  renderAgrZutaten();
+  document.getElementById('addGRPopup').style.display = 'block';
+}
+
+async function deleteGR(grCode, name) {
+  if (!confirm(`Delete GR "${name}"?`)) return;
+  try {
+    const data = await get({ action: 'deleteGR', grCode });
+    if (data.error) throw new Error(data.error);
+    await loadGRs();
+    filterGrDisplay();
+  } catch(e) { alert('Error: ' + e.message); }
+}  
 async function loadMenus() {
   const el = document.getElementById("menu-list-grid");
   if (el) el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0">Loading…</div>`;
@@ -3934,8 +3962,10 @@ function filterGrDisplay() {
     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
       <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode}</span>
-      <span style="font-size:11px;color:var(--muted)">${g.grCode||""}</span>
-      <span style="font-size:11px;color:var(--amber)">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.grCode||""}</span>
+      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
+      <button onclick="openEditGRPopup('${g.grCode}')" class="btn-edit" style="font-size:11px;padding:3px 8px">Edit</button>
+      <button onclick="deleteGR('${g.grCode}','${(g.name||g.grCode).replace(/'/g,"\\'")}'))" class="btn-del" style="font-size:11px;padding:3px 8px">Del</button>
     </div>`).join("");
 }
 
@@ -3951,8 +3981,10 @@ function filterMepDisplay() {
     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
       <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
-      <span style="font-size:11px;color:var(--muted)">${code}</span>
-      <span style="font-size:11px;color:var(--muted)">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+      <button onclick="openEditProductModal('${code}')" class="btn-edit" style="font-size:11px;padding:3px 8px">Edit</button>
+      <button onclick="delProduct('${code}')" class="btn-del" style="font-size:11px;padding:3px 8px">Del</button>
     </div>`).join("");
 }
 // ─────────────────────────────────────────────
