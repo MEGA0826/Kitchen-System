@@ -672,7 +672,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div>
         <div class="section-title" style="margin-bottom:2px">Recipes</div>
-        <div class="section-sub">Menus & Zutaten</div>
+        <div class="section-sub" data-i18n="recipes-sub">Menus & Zutaten</div>
       </div>
       <button id="btn-add-menu" onclick="guardedAddMenu()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
       <button id="btn-add-gr" onclick="guardedAddGR()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
@@ -681,21 +681,21 @@
 
     <!-- Search bar -->
     <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap">
-      <input class="search-input" id="menu-search" type="text" placeholder="🔍 Menu suchen…" oninput="renderMenuList()" style="flex:1;min-width:140px">
+      <input class="search-input" id="menu-search" type="text" placeholder="🔍 Menu suchen…" data-i18n-placeholder="search-menu" oninput="renderMenuList()" style="flex:1;min-width:140px">
       <select class="search-input" id="menu-cat-filter" onchange="renderMenuList()" style="flex:0 1 160px">
-        <option value="">Alle Konzepte</option>
+        <option value="" data-i18n="all-concepts">Alle Konzepte</option>
       </select>
       <select class="search-input" id="menu-art-filter" onchange="renderMenuList()" style="flex:0 1 160px">
-        <option value="">Alle Arten</option>
+        <option value="" data-i18n="all-types">Alle Arten</option>
       </select>
     </div>
     <!-- GR + MEP search -->
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <input class="search-input" id="gr-filter-search" type="text"
-        placeholder="🔍 GR suchen…" oninput="filterGrDisplay()"
+  placeholder="🔍 GR suchen…" data-i18n-placeholder="search-gr" oninput="filterGrDisplay()"
         style="flex:1;min-width:140px">
       <input class="search-input" id="mep-filter-search" type="text"
-        placeholder="🔍 MEP Product suchen…" oninput="filterMepDisplay()"
+  placeholder="🔍 MEP Product suchen…" data-i18n-placeholder="search-mep" oninput="filterMepDisplay()"
         style="flex:1;min-width:140px">
     </div>
     <div id="gr-search-results" style="margin-bottom:12px"></div>
@@ -704,7 +704,7 @@
     <div id="menu-list-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:32px"></div>
 
     <div style="margin-bottom:24px;margin-top:8px">
-      <div class="admin-section-title" style="margin-bottom:10px">Today's raw material needs</div>
+      <div class="admin-section-title" style="margin-bottom:10px" data-i18n="raw-needs">Today's raw material needs</div>
       <div id="req-content"><div class="empty-state"><div class="empty-icon">🧪</div>Loading…</div></div>
     </div>
   </div>
@@ -1156,10 +1156,11 @@
       <div style="font-size:10px;font-weight:500;color:var(--text)" id="archive-last-run">—</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:16px">
-    <button class="btn-save" onclick="runArchiveNow()" style="flex:1">Archive old scans now</button>
-    <button class="btn-edit" onclick="loadArchivedScans()" style="flex:1">View archived scans</button>
-  </div>
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+  <button class="btn-save" onclick="runArchiveNow()" style="flex:1">Archive old scans now</button>
+  <button class="btn-edit" onclick="loadArchivedScans()" style="flex:1">View archived scans</button>
+</div>
+<div class="admin-msg" id="archive-stat" style="margin-bottom:12px"></div>
   <div id="archived-scan-list" style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)"></div>
 </div>
 
@@ -1303,19 +1304,6 @@
         <div class="admin-msg" id="if-msg"></div>
       </div>
     </div>
-    <!-- SETTINGS / APPEARANCE -->
-    <div class="admin-section" style="margin-bottom:24px">
-      <div class="admin-section-title" data-i18n="admin">Appearance</div>
-      <div class="admin-section-sub" data-i18n="colour">Display & theme</div>
-        <div style="font-size:13px;font-weight:500;margin-bottom:2px" data-i18n="colour">Colour theme</div>
-        <div style="font-size:11px;color:var(--muted)" data-i18n="daily-target-ok">Applies instantly and persists across sessions</div>
-        <div class="theme-toggle" id="themeToggle">
-          <button class="theme-opt active" id="theme-opt-dark"  onclick="setTheme('dark')">🌙 Dark</button>
-          <button class="theme-opt"        id="theme-opt-light" onclick="setTheme('light')">☀️ Light</button>
-        </div>
-      </div>
-    </div>
-
   </div><!-- end panel-admin -->
 </div><!-- end .body -->
 
@@ -3239,15 +3227,21 @@ async function loadArchivedScans() {
   }
 }
 async function runArchiveNow() {
-  const btn = document.getElementById("btnArchiveNow");
-  const msg = document.getElementById("archive-msg");
-  if (btn) { btn.disabled=true; btn.textContent="Archiving..."; }
+  const btn = document.querySelector("#panel-admin .btn-save[onclick='runArchiveNow()']");
+  if (btn) { btn.disabled = true; btn.textContent = "Archiving…"; }
   try {
-    const data = await get({ action:"archiveNow" });
-    if (data.error) { if (msg) { msg.style.color="var(--red)"; msg.textContent="Error: "+data.error; } }
-    else { if (msg) { msg.style.color="var(--green)"; msg.textContent="Done: "+data.archived+" archived, "+data.kept+" kept"; } await loadArchiveStats(); }
-  } catch(e) { if (msg) { msg.style.color="var(--red)"; msg.textContent="Network error"; } }
-  finally { if (btn) { btn.disabled=false; btn.textContent="Archive now"; } }
+    const data = await get({ action: "archiveNow" });
+    if (data.error) {
+      adminMsg("archive-stat", "Error: " + data.error, "err");
+    } else {
+      adminMsg("archive-stat", `✓ Done: ${data.archived} archived, ${data.kept} kept`, "ok");
+      await loadArchiveStats();
+    }
+  } catch(e) {
+    adminMsg("archive-stat", "Network error", "err");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Archive old scans now"; }
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -3702,6 +3696,15 @@ async function saveMEPFromPopup() {
   const code = document.getElementById("mep-code").value.trim();
   const name = document.getElementById("mep-name").value.trim();
   if (!code || !name) { adminMsg("mep-msg", "Code and Name are required", "err"); return; }
+
+  // Duplicate protection
+  if (allProducts[code]) {
+    adminMsg("mep-msg", `⚠ Code "${code}" already exists — use Edit to update it`, "err"); return;
+  }
+  const dupName = Object.values(allProducts).find(p => (p.name||'').toLowerCase() === name.toLowerCase());
+  if (dupName) {
+    adminMsg("mep-msg", `⚠ Name "${name}" already exists (${dupName.name})`, "err"); return;
+  }
   const btn = document.querySelector("#addMEPPopup .btn-save") ||
               document.querySelector("#addMEPPopup button[onclick='saveMEPFromPopup()']");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
@@ -3816,6 +3819,15 @@ async function saveGREntry() {
   const name = document.getElementById('agr-name').value.trim();
   if (!code) { adminMsg('agr-msg','GR Code erforderlich','err'); return; }
   if (!name) { adminMsg('agr-msg','GR Name erforderlich','err'); return; }
+
+  // Duplicate protection — skip check when editing (code field is readOnly)
+  const isEditing = document.getElementById('agr-code').readOnly;
+  if (!isEditing) {
+    const dupCode = allGRs.find(g => (g.grCode||'').toLowerCase() === code.toLowerCase());
+    const dupName = allGRs.find(g => (g.name||'').toLowerCase() === name.toLowerCase());
+    if (dupCode) { adminMsg('agr-msg', `⚠ GR Code "${code}" already exists`, 'err'); return; }
+    if (dupName) { adminMsg('agr-msg', `⚠ GR name "${name}" already exists`, 'err'); return; }
+  }
   const btn = document.getElementById('agr-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
   const roh   = parseFloat(document.getElementById('agr-rohgewicht').value) || 0;
@@ -4367,6 +4379,14 @@ async function saveMenuEntry() {
   const menuCode = document.getElementById('mp-code').value.trim();
   if (!name)     { adminMsg('mp-msg', 'Menu Name ist erforderlich', 'err'); return; }
   if (!menuCode) { adminMsg('mp-msg', 'Menu Code ist erforderlich', 'err'); return; }
+
+  // Duplicate protection — skip check when editing existing menu
+  if (!editingMenuId) {
+    const dupCode = allMenus.find(m => (m.menuCode||'').toLowerCase() === menuCode.toLowerCase());
+    const dupName = allMenus.find(m => (m.name||'').toLowerCase() === name.toLowerCase());
+    if (dupCode) { adminMsg('mp-msg', `⚠ Menu Code "${menuCode}" already exists — use a different code`, 'err'); return; }
+    if (dupName) { adminMsg('mp-msg', `⚠ Menu name "${name}" already exists — use a different name`, 'err'); return; }
+  }
   const btn = document.getElementById('mp-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
 
