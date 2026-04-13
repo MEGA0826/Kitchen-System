@@ -479,13 +479,14 @@
   <div class="header-right">
     <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Home</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
-    <div class="live-badge">
-      <div class="live-badge-row">
-        <div class="live-dot"></div>
-        <span>LIVE</span>
-      </div>
-      <div class="live-time" id="liveTime"></div>
-    </div>
+    <div class="live-badge" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+  <div class="live-badge-row">
+    <div class="live-dot"></div>
+    <span style="font-size:11px;letter-spacing:1px">LIVE</span>
+  </div>
+  <div id="liveDate" style="font-size:10px;color:var(--muted);letter-spacing:0.5px;font-family:var(--mono)"></div>
+  <div id="liveTime" style="font-size:10px;color:var(--muted);letter-spacing:0.5px;font-family:var(--mono)"></div>
+</div>
   </div>
 </div>
 
@@ -1485,8 +1486,10 @@ function updateLiveTime() {
   const hh   = String(now.getHours()).padStart(2,"0");
   const min  = String(now.getMinutes()).padStart(2,"0");
   const ss   = String(now.getSeconds()).padStart(2,"0");
-  const el   = document.getElementById("liveTime");
-  if (el) el.textContent = `${day} ${dd}.${mm}.${yy}  ${hh}:${min}:${ss}`;
+  const dateEl = document.getElementById("liveDate");
+  const timeEl = document.getElementById("liveTime");
+  if (dateEl) dateEl.textContent = `${day} ${dd}.${mm}.${yy}`;
+  if (timeEl) timeEl.textContent = `Time ${hh}:${min}:${ss}`;
 }
   
 updateLiveTime();
