@@ -1463,8 +1463,8 @@
 function setTheme(mode) {
     document.body.classList.toggle("light", mode === "light");
     localStorage.setItem("theme", mode);
-    document.getElementById("theme-opt-dark").classList.toggle("active", mode === "dark");
-    document.getElementById("theme-opt-light").classList.toggle("active", mode === "light");
+    document.getElementById("theme-opt-dark")?.classList.toggle("active", mode === "dark");
+    document.getElementById("theme-opt-light")?.classList.toggle("active", mode === "light");
     document.querySelector('meta[name="theme-color"]').setAttribute("content", mode === "light" ? "#f5f4f0" : "#0f0f0d");
     _updateNavThemeBtns(mode);
   }
