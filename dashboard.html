@@ -1305,6 +1305,44 @@
         <div class="admin-msg" id="if-msg"></div>
       </div>
     </div>
+
+
+    <!-- ── PDF RECIPE IMPORT ── -->
+    <div class="admin-section">
+      <div class="admin-section-title">📄 PDF Recipe Import</div>
+      <div class="admin-section-sub">AI-powered parsing via OpenAI</div>
+      <div class="admin-form">
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label">MEP Product Code *</label>
+            <input class="form-input" id="pdf-mep-code" placeholder="e.g. P-001" list="dl-pdf-mep">
+            <datalist id="dl-pdf-mep"></datalist>
+          </div>
+          <div class="form-field">
+            <label class="form-label">PDF File *</label>
+            <input type="file" accept="application/pdf" id="pdf-file-input"
+              style="font-family:var(--mono);font-size:12px;color:var(--text);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px;width:100%;cursor:pointer">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="startPdfImport()" id="pdf-import-btn">⬆ Parse PDF with AI</button>
+        </div>
+        <div class="admin-msg" id="pdf-msg"></div>
+
+        <!-- Preview area -->
+        <div id="pdf-preview" style="display:none;margin-top:16px">
+          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
+            Parsed Ingredients — review before saving
+          </div>
+          <div id="pdf-ingredient-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-save" onclick="confirmPdfImport()" style="background:var(--green-dim);color:var(--green);border-color:var(--green-brd)">✓ Save all to Recipes</button>
+            <button class="btn-edit" onclick="cancelPdfImport()">✕ Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end panel-admin -->
 </div><!-- end .body -->
 
@@ -2794,6 +2832,7 @@ async function loadAdminTab() {
   renderAdminProducts();
   renderAdminInventory();
   populateInvDataLists();
+  populatePdfMepDatalist();
   try {
     const data = await adminCall({ action:"allWorkers" });
     allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
@@ -3625,7 +3664,148 @@ async function saveEditedInventory() {
     btn.textContent = "Save";
   }
 }  
+    async function deleteRecipeRow(mepCode, rmCode) {
+  if (!confirm("Remove this ingredient from the recipe?")) return;
+  const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
+  if (data.error) { alert("Error: "+data.error); return; }
+  await loadRecipes(); renderRecipeList();
+}
 
+// ─────────────────────────────────────────────
+// PDF RECIPE IMPORT
+// ─────────────────────────────────────────────
+let pdfParsedIngredients = [];
+let pdfTargetMepCode     = "";
+
+function populatePdfMepDatalist() {
+  const dl = document.getElementById("dl-pdf-mep");
+  if (!dl) return;
+  dl.innerHTML = Object.entries(allProducts)
+    .filter(([,p]) => p.name && p.name !== "(deleted)")
+    .sort((a,b) => (a[1].name||"").localeCompare(b[1].name||""))
+    .map(([code,p]) => `<option value="${code}">${p.name}</option>`)
+    .join("");
+}
+
+async function startPdfImport() {
+  const mepCode = document.getElementById("pdf-mep-code").value.trim();
+  const fileEl  = document.getElementById("pdf-file-input");
+  const msgEl   = document.getElementById("pdf-msg");
+  const btn     = document.getElementById("pdf-import-btn");
+
+  if (!mepCode) { adminMsg("pdf-msg","Enter MEP Code","err"); return; }
+  if (!fileEl.files.length) { adminMsg("pdf-msg","Select a PDF file","err"); return; }
+
+  btn.disabled = true; btn.textContent = "⏳ Extracting text…";
+  adminMsg("pdf-msg","Reading PDF…","");
+
+  try {
+    // Extract text client-side with PDF.js CDN
+    const file      = fileEl.files[0];
+    const arrayBuf  = await file.arrayBuffer();
+    const pdfText   = await extractPdfText(arrayBuf);
+
+    if (!pdfText || pdfText.trim().length < 20) {
+      throw new Error("Could not extract text from PDF. Is it a scanned image?");
+    }
+
+    btn.textContent = "⏳ Parsing with AI…";
+    adminMsg("pdf-msg","Sending to AI…","");
+
+    const data = await adminCall({ action:"parseRecipePdf", mepCode, pdfText: pdfText.substring(0,8000) });
+    if (data.error) throw new Error(data.error);
+
+    pdfParsedIngredients = data.ingredients || [];
+    pdfTargetMepCode     = mepCode;
+
+    if (!pdfParsedIngredients.length) throw new Error("AI returned no ingredients");
+
+    renderPdfPreview();
+    adminMsg("pdf-msg", `✓ Found ${pdfParsedIngredients.length} ingredients — review below`, "ok");
+  } catch(err) {
+    adminMsg("pdf-msg","Error: "+err.message,"err");
+  } finally {
+    btn.disabled = false; btn.textContent = "⬆ Parse PDF with AI";
+  }
+}
+
+async function extractPdfText(arrayBuffer) {
+  // Lazy-load PDF.js from CDN
+  if (!window.pdfjsLib) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+  const pdf   = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text    = "";
+  for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+    const page    = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(s => s.str).join(" ") + "\n";
+  }
+  return text;
+}
+
+function renderPdfPreview() {
+  const listEl = document.getElementById("pdf-ingredient-list");
+  const preview = document.getElementById("pdf-preview");
+  if (!pdfParsedIngredients.length) { preview.style.display="none"; return; }
+
+  listEl.innerHTML = pdfParsedIngredients.map((ing, i) => `
+    <div style="display:grid;grid-template-columns:1fr 80px 80px 28px;gap:6px;align-items:center;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+      <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
+        value="${ing.name||""}" oninput="pdfParsedIngredients[${i}].name=this.value" placeholder="Name">
+      <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
+        value="${ing.quantity||""}" oninput="pdfParsedIngredients[${i}].quantity=this.value" placeholder="Qty" type="number">
+      <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
+        value="${ing.unit||""}" oninput="pdfParsedIngredients[${i}].unit=this.value" placeholder="Unit">
+      <button style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;font-size:14px"
+        onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview()">✕</button>
+    </div>`).join("");
+
+  preview.style.display = "block";
+}
+
+async function confirmPdfImport() {
+  if (!pdfParsedIngredients.length || !pdfTargetMepCode) return;
+  const btn = document.querySelector("#pdf-preview .btn-save");
+  if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
+  try {
+    const data = await adminCall({
+      action      : "importParsedRecipe",
+      mepCode     : pdfTargetMepCode,
+      ingredients : JSON.stringify(pdfParsedIngredients)
+    });
+    if (data.error) throw new Error(data.error);
+    adminMsg("pdf-msg", `✓ Saved ${data.saved} ingredients to Recipes`, "ok");
+    cancelPdfImport();
+    await loadRecipes(); renderRecipeList();
+  } catch(err) {
+    adminMsg("pdf-msg","Save error: "+err.message,"err");
+  } finally {
+    if (btn) { btn.disabled=false; btn.textContent="✓ Save all to Recipes"; }
+  }
+}
+
+function cancelPdfImport() {
+  pdfParsedIngredients = [];
+  pdfTargetMepCode     = "";
+  document.getElementById("pdf-preview").style.display = "none";
+  document.getElementById("pdf-file-input").value = "";
+  document.getElementById("pdf-mep-code").value   = "";
+}
+
+// ─────────────────────────────────────────────
+// PDF RECIPE IMPORT
+// ─────────────────────────────────────────────
+let pdfParsedIngredients = [];
+let pdfTargetMepCode     = "";
+// ... rest of PDF block
 // ─────────────────────────────────────────────
 // LOAD MENUS
 // ─────────────────────────────────────────────
