@@ -3689,6 +3689,7 @@ let _nextRM      = "";
 let _nextMEP     = "";
 let _nextGR      = "";
 let _pdfMenuId   = "";
+let _systemItems = []; // all {type, code, name} for fuzzy matching
 
 function populatePdfMepDatalist() {
   const dl = document.getElementById("dl-pdf-mep");
@@ -3715,13 +3716,17 @@ async function startPdfImport(mode) {
   adminMsg("pdf-msg","Reading PDF…","");
 
    // Pre-load all existing codes for duplicate checking + suggestions
-  const codesData = await adminCall({ action: "getAllCodes" }).catch(() => ({}));
+  const [codesData, itemsData] = await Promise.all([
+    adminCall({ action: "getAllCodes" }).catch(() => ({})),
+    adminCall({ action: "getAllItemsForMatching" }).catch(() => ({}))
+  ]);
   _allRmCodes  = codesData.rmCodes  || [];
   _allMepCodes = codesData.mepCodes || [];
   _allGrCodes  = codesData.grCodes  || [];
   _nextRM      = codesData.nextRM   || "RM-001";
   _nextMEP     = codesData.nextMEP  || "P-001";
   _nextGR      = codesData.nextGR   || "GR-001";
+  _systemItems = itemsData.items    || [];
   
   try {
     const file     = fileEl.files[0];
@@ -3759,6 +3764,7 @@ async function startPdfImport(mode) {
       type : ing.type || "RM",
       code : ing.code || ""
     }));
+    _autoMatchIngredients();
 
     renderPdfPreview(mode, data.parsed);
 
@@ -3816,18 +3822,34 @@ function renderPdfPreview(mode, parsedMenu) {
     </div>` : "";
 
   const header = `
-    <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
+    style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:start;padding:6px 8px;background:${isMatched&&!isDup?"rgba(93,202,138,0.05)":"var(--surface2)"};border-radius:var(--radius-sm);border:1px solid ${rowBorder};margin-bottom:4px">
       <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span></span>
     </div>`;
 
   const rows = pdfParsedIngredients.map((ing, i) => {
-    const type     = ing.type || "RM";
-    const code     = ing.code || "";
-    const isDup    = _isPdfCodeDuplicate(type, code);
+    const type      = ing.type || "RM";
+    const code      = ing.code || "";
+    const isDup     = _isPdfCodeDuplicate(type, code);
+    const isMatched = ing._matched === true;
     const suggested = _suggestPdfCode(type, i);
-    const codeColor = isDup ? "var(--red)" : code ? "var(--green)" : "var(--border2)";
-    const dupWarn  = isDup
+
+    // Color logic: red=duplicate, green=matched from system, amber=has code manually, grey=empty
+    const codeColor = isDup      ? "var(--red)"
+                    : isMatched  ? "var(--green)"
+                    : code       ? "var(--amber)"
+                    : "var(--border2)";
+
+    const rowBorder = isDup      ? "var(--red-brd)"
+                    : isMatched  ? "var(--green-brd)"
+                    : "var(--border)";
+
+    const dupWarn = isDup
       ? `<div style="font-size:9px;color:var(--red);margin-top:2px">⚠ duplicate</div>` : "";
+
+    const matchBadge = isMatched && !isDup
+      ? `<div style="font-size:9px;color:var(--green);margin-top:2px">
+           ✓ ${ing._matchType === "exact" ? "exact" : "fuzzy"} match
+         </div>` : "";
 
     return `
     <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:start;padding:6px 8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid ${isDup?"var(--red-brd)":"var(--border)"};margin-bottom:4px">
@@ -3852,7 +3874,8 @@ function renderPdfPreview(mode, parsedMenu) {
           </button>
         </div>
         ${dupWarn}
-        <div style="font-size:9px;color:var(--muted);margin-top:2px">suggest: ${suggested}</div>
+        ${matchBadge}
+        ${!isMatched && !code ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">suggest: ${suggested}</div>` : ""}
       </div>
 
       <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
@@ -3927,6 +3950,50 @@ function _autoSuggestCode(idx) {
     pdfParsedIngredients[idx].code = _suggestPdfCode(pdfParsedIngredients[idx].type || "RM", idx);
   }
 }
+
+function _findSystemMatch(ingredientName) {
+  if (!ingredientName || !_systemItems.length) return null;
+  const search = ingredientName.toLowerCase().trim();
+
+  // 1. Exact match
+  const exact = _systemItems.find(item => item.name === search);
+  if (exact) return { ...exact, matchType: "exact" };
+
+  // 2. Contains match (system name contains search or vice versa)
+  const contains = _systemItems.find(item =>
+    item.name.includes(search) || search.includes(item.name)
+  );
+  if (contains) return { ...contains, matchType: "contains" };
+
+  // 3. Word overlap — at least 2 words match
+  const searchWords = search.split(/\s+/).filter(w => w.length > 2);
+  const wordMatch = _systemItems.find(item => {
+    const itemWords = item.name.split(/\s+/).filter(w => w.length > 2);
+    const overlap = searchWords.filter(w => itemWords.some(iw => iw.includes(w) || w.includes(iw)));
+    return overlap.length >= Math.min(2, searchWords.length);
+  });
+  if (wordMatch) return { ...wordMatch, matchType: "word" };
+
+  return null;
+}
+
+function _autoMatchIngredients() {
+  pdfParsedIngredients = pdfParsedIngredients.map(function(ing, i) {
+    if (ing.code) return ing; // already has a code — don't override
+    const match = _findSystemMatch(ing.name);
+    if (match) {
+      return {
+        ...ing,
+        code      : match.code,
+        type      : match.type,
+        _matched  : true,
+        _matchType: match.matchType
+      };
+    }
+    return { ...ing, _matched: false };
+  });
+}
+  
 
 function _updatePdfRowStyle(sel, i) {
   // Optional: could color-code rows by type
