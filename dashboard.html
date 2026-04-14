@@ -1314,9 +1314,8 @@
       <div class="admin-form">
         <div class="form-grid">
           <div class="form-field">
-            <label class="form-label">MEP Product Code *</label>
-            <input class="form-input" id="pdf-mep-code" placeholder="e.g. P-001" list="dl-pdf-mep">
-            <datalist id="dl-pdf-mep"></datalist>
+            <label class="form-label">Menu Code *</label>
+            <input class="form-input" id="pdf-mep-code" placeholder="e.g. M-001">
           </div>
           <div class="form-field">
             <label class="form-label">PDF File *</label>
@@ -3696,16 +3695,16 @@ function populatePdfMepDatalist() {
 
 async function startPdfImport(mode) {
   mode = mode || 'recipes';
-  const mepCode = document.getElementById("pdf-mep-code").value.trim();
-  const fileEl  = document.getElementById("pdf-file-input");
-  const btnR    = document.getElementById("pdf-import-btn-recipes");
-  const btnM    = document.getElementById("pdf-import-btn-menu");
+  const menuCode = document.getElementById("pdf-mep-code").value.trim();
+  const fileEl   = document.getElementById("pdf-file-input");
+  const btnR     = document.getElementById("pdf-import-btn-recipes");
+  const btnM     = document.getElementById("pdf-import-btn-menu");
 
-  if (!mepCode) { adminMsg("pdf-msg","Enter MEP Code","err"); return; }
+  if (!menuCode) { adminMsg("pdf-msg","Enter Menu Code","err"); return; }
   if (!fileEl.files.length) { adminMsg("pdf-msg","Select a PDF file","err"); return; }
 
-  if (btnR) { btnR.disabled = true; }
-  if (btnM) { btnM.disabled = true; }
+  if (btnR) btnR.disabled = true;
+  if (btnM) btnM.disabled = true;
   adminMsg("pdf-msg","Reading PDF…","");
 
   try {
@@ -3719,97 +3718,44 @@ async function startPdfImport(mode) {
 
     adminMsg("pdf-msg","Sending to AI…","");
 
-    if (mode === 'menu') {
-      // ── Full Menu Card mode ──
-      const data = await adminCall({
-        action  : "parseMenuPdf",
-        mepCode,
-        pdfText : pdfText.substring(0, 8000)
-      });
-      if (data.error) throw new Error(data.error);
+    const action = mode === 'menu' ? "parseMenuPdf" : "parseRecipePdf";
+    const data   = await adminCall({
+      action,
+      menuCode,
+      mepCode  : menuCode,  // kept for parseRecipePdf compatibility
+      pdfText  : pdfText.substring(0, 8000)
+    });
+    if (data.error) throw new Error(data.error);
 
-      pdfParsedIngredients = (data.parsed?.ingredients || []);
-      pdfTargetMepCode     = mepCode;
+    // Store parsed ingredients for review
+    pdfParsedIngredients = mode === 'menu'
+      ? (data.parsed?.ingredients || [])
+      : (data.ingredients || []);
+    pdfTargetMepCode = menuCode;
+    window._pdfMode  = mode;
 
-      // Show preview with menu info banner
-      const preview  = document.getElementById("pdf-preview");
-      const listEl   = document.getElementById("pdf-ingredient-list");
-      const p        = data.parsed || {};
+    if (!pdfParsedIngredients.length) throw new Error("AI returned no ingredients");
 
-      listEl.innerHTML = `
-        <div style="background:var(--green-dim);border:1px solid var(--green-brd);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
-          <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">✓ Menu Card Created</div>
-          <div style="font-size:11px;color:var(--text);display:grid;grid-template-columns:1fr 1fr;gap:4px">
-            <span style="color:var(--muted)">Name:</span><span>${p.name||"—"}</span>
-            <span style="color:var(--muted)">Category:</span><span>${p.category||"—"}</span>
-            <span style="color:var(--muted)">Art:</span><span>${p.art||"—"}</span>
-            <span style="color:var(--muted)">Portion:</span><span>${p.gewicht||"—"}</span>
-            <span style="color:var(--muted)">Price:</span><span>${p.vk?"CHF "+p.vk:"—"}</span>
-            <span style="color:var(--muted)">Cooking loss:</span><span>${p.garverlust?p.garverlust+"%":"—"}</span>
-          </div>
-          <div style="margin-top:8px;font-size:11px;color:var(--muted)">
-            📸 Image: Add manually via Edit menu → Drive URL
-          </div>
-        </div>
-        <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">
-          Ingredients saved to Recipes (${pdfParsedIngredients.length})
-        </div>
-        ${pdfParsedIngredients.map((ing,i) => `
-          <div style="display:grid;grid-template-columns:1fr 80px 80px 28px;gap:6px;align-items:center;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
-            <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
-              value="${ing.name||""}" oninput="pdfParsedIngredients[${i}].name=this.value" placeholder="Name">
-            <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
-              value="${ing.quantity||""}" oninput="pdfParsedIngredients[${i}].quantity=this.value" placeholder="Qty" type="number">
-            <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
-              value="${ing.unit||""}" oninput="pdfParsedIngredients[${i}].unit=this.value" placeholder="Unit">
-            <button style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;font-size:14px"
-              onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview()">✕</button>
-          </div>`).join("")}
-        <div style="margin-top:10px;padding:10px;background:var(--blue-dim);border:1px solid var(--blue-brd);border-radius:var(--radius-sm);font-size:11px;color:var(--blue)">
-          💡 Go to <strong>Recipes tab</strong> → search for "<strong>${p.name||mepCode}</strong>" to view &amp; edit the menu card. Add your photo there.
-        </div>`;
+    // Add default type + empty code to each ingredient
+    pdfParsedIngredients = pdfParsedIngredients.map(ing => ({
+      ...ing,
+      type : ing.type || "RM",
+      code : ing.code || ""
+    }));
 
-      preview.style.display = "block";
+    renderPdfPreview(mode, data.parsed);
 
-      // Hide the "Save all" button — already saved by backend
-      const saveBtn = document.querySelector("#pdf-preview .btn-save");
-      if (saveBtn) saveBtn.style.display = "none";
+    const saveBtn = document.querySelector("#pdf-preview .btn-save");
+    if (saveBtn) saveBtn.style.display = "";
 
-      adminMsg("pdf-msg",
-        `✓ Menu card created + ${data.savedRecipes} ingredients saved to Recipes`, "ok");
-
-      // Reload menus so it appears immediately in Recipes tab
-      await loadMenus();
-
-    } else {
-      // ── Recipes only mode (original flow) ──
-      const data = await adminCall({
-        action  : "parseRecipePdf",
-        mepCode,
-        pdfText : pdfText.substring(0, 8000)
-      });
-      if (data.error) throw new Error(data.error);
-
-      pdfParsedIngredients = data.ingredients || [];
-      pdfTargetMepCode     = mepCode;
-
-      if (!pdfParsedIngredients.length) throw new Error("AI returned no ingredients");
-
-      renderPdfPreview();
-
-      // Re-show save button in case it was hidden
-      const saveBtn = document.querySelector("#pdf-preview .btn-save");
-      if (saveBtn) saveBtn.style.display = "";
-
-      adminMsg("pdf-msg",
-        `✓ Found ${pdfParsedIngredients.length} ingredients — review below`, "ok");
-    }
+    adminMsg("pdf-msg",
+      `✓ Found ${pdfParsedIngredients.length} ingredients — set type & code, then save`, "ok");
 
   } catch(err) {
     adminMsg("pdf-msg","Error: "+err.message,"err");
   } finally {
-    if (btnR) { btnR.disabled = false; }
-    if (btnM) { btnM.disabled = false; }
+    if (btnR) btnR.disabled = false;
+    if (btnM) btnM.disabled = false;
   }
 }
 
@@ -3835,40 +3781,107 @@ async function extractPdfText(arrayBuffer) {
   return text;
 }
 
-function renderPdfPreview() {
-  const listEl = document.getElementById("pdf-ingredient-list");
+function renderPdfPreview(mode, parsedMenu) {
+  const listEl  = document.getElementById("pdf-ingredient-list");
   const preview = document.getElementById("pdf-preview");
   if (!pdfParsedIngredients.length) { preview.style.display="none"; return; }
 
-  listEl.innerHTML = pdfParsedIngredients.map((ing, i) => `
-    <div style="display:grid;grid-template-columns:1fr 80px 80px 28px;gap:6px;align-items:center;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
-      <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
-        value="${ing.name||""}" oninput="pdfParsedIngredients[${i}].name=this.value" placeholder="Name">
-      <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
-        value="${ing.quantity||""}" oninput="pdfParsedIngredients[${i}].quantity=this.value" placeholder="Qty" type="number">
-      <input class="form-input" style="margin:0;padding:6px 8px;font-size:12px"
-        value="${ing.unit||""}" oninput="pdfParsedIngredients[${i}].unit=this.value" placeholder="Unit">
-      <button style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;font-size:14px"
-        onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview()">✕</button>
+  // Menu info banner (Full Menu Card mode only)
+  const menuBanner = (mode === 'menu' && parsedMenu) ? `
+    <div style="background:var(--green-dim);border:1px solid var(--green-brd);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">📋 Menu Card will be created</div>
+      <div style="font-size:11px;color:var(--text);display:grid;grid-template-columns:auto 1fr;gap:4px 12px">
+        <span style="color:var(--muted)">Name:</span><span>${parsedMenu.name||"—"}</span>
+        <span style="color:var(--muted)">Category:</span><span>${parsedMenu.category||"—"}</span>
+        <span style="color:var(--muted)">Art:</span><span>${parsedMenu.art||"—"}</span>
+        <span style="color:var(--muted)">Portion:</span><span>${parsedMenu.gewicht||"—"}</span>
+        <span style="color:var(--muted)">Price:</span><span>${parsedMenu.vk?"CHF "+parsedMenu.vk:"—"}</span>
+      </div>
+    </div>` : "";
+
+  // Header row
+  const header = `
+    <div style="display:grid;grid-template-columns:70px 90px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">
+      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span></span>
+    </div>`;
+
+  const rows = pdfParsedIngredients.map((ing, i) => `
+    <div style="display:grid;grid-template-columns:70px 90px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:6px 8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+
+      <select style="background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;padding:4px 4px;cursor:pointer"
+        onchange="pdfParsedIngredients[${i}].type=this.value;_updatePdfRowStyle(this,${i})">
+        <option value="RM"  ${(ing.type||"RM")==="RM" ?"selected":""}>RM</option>
+        <option value="MEP" ${ing.type==="MEP"?"selected":""}>MEP</option>
+        <option value="GR"  ${ing.type==="GR" ?"selected":""}>GR</option>
+      </select>
+
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px"
+        value="${ing.code||""}"
+        oninput="pdfParsedIngredients[${i}].code=this.value"
+        placeholder="e.g. RM-001">
+
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
+        value="${ing.name||""}"
+        oninput="pdfParsedIngredients[${i}].name=this.value"
+        placeholder="Name">
+
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
+        value="${ing.quantity||""}"
+        oninput="pdfParsedIngredients[${i}].quantity=this.value"
+        placeholder="Qty" type="number">
+
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
+        value="${ing.unit||""}"
+        oninput="pdfParsedIngredients[${i}].unit=this.value"
+        placeholder="Unit">
+
+      <button style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
+        onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview(window._pdfMode)">✕</button>
     </div>`).join("");
 
+  listEl.innerHTML = menuBanner + header + rows;
   preview.style.display = "block";
+}
+
+function _updatePdfRowStyle(sel, i) {
+  // Optional: could color-code rows by type
 }
 
 async function confirmPdfImport() {
   if (!pdfParsedIngredients.length || !pdfTargetMepCode) return;
   const btn = document.querySelector("#pdf-preview .btn-save");
   if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
+
   try {
-    const data = await adminCall({
-      action      : "importParsedRecipe",
-      mepCode     : pdfTargetMepCode,
-      ingredients : JSON.stringify(pdfParsedIngredients)
-    });
-    if (data.error) throw new Error(data.error);
-    adminMsg("pdf-msg", `✓ Saved ${data.saved} ingredients to Recipes`, "ok");
+    const mode = window._pdfMode || 'recipes';
+
+    if (mode === 'menu') {
+      // Send confirmed ingredients back to backend to finalize save
+      const data = await adminCall({
+        action      : "importParsedRecipe",
+        mepCode     : pdfTargetMepCode,
+        ingredients : JSON.stringify(
+          pdfParsedIngredients.filter(i => i.type === "RM" || i.type === "rm")
+        )
+      });
+      if (data.error) throw new Error(data.error);
+      adminMsg("pdf-msg",
+        `✓ Saved — ${data.saved} RM ingredients to Recipes. Go to Recipes tab to view menu card.`, "ok");
+      await loadMenus();
+
+    } else {
+      const data = await adminCall({
+        action      : "importParsedRecipe",
+        mepCode     : pdfTargetMepCode,
+        ingredients : JSON.stringify(pdfParsedIngredients)
+      });
+      if (data.error) throw new Error(data.error);
+      adminMsg("pdf-msg", `✓ Saved ${data.saved} ingredients to Recipes`, "ok");
+    }
+
     cancelPdfImport();
-    await loadRecipes(); renderRecipeList();
+    await loadRecipes();
+
   } catch(err) {
     adminMsg("pdf-msg","Save error: "+err.message,"err");
   } finally {
@@ -3879,9 +3892,12 @@ async function confirmPdfImport() {
 function cancelPdfImport() {
   pdfParsedIngredients = [];
   pdfTargetMepCode     = "";
+  window._pdfMode      = null;
   document.getElementById("pdf-preview").style.display = "none";
-  document.getElementById("pdf-file-input").value = "";
-  document.getElementById("pdf-mep-code").value   = "";
+  document.getElementById("pdf-file-input").value      = "";
+  document.getElementById("pdf-mep-code").value        = "";
+  const saveBtn = document.querySelector("#pdf-preview .btn-save");
+  if (saveBtn) saveBtn.style.display = "";
 }
 
 // ─────────────────────────────────────────────
