@@ -3822,7 +3822,7 @@ function renderPdfPreview(mode, parsedMenu) {
     </div>` : "";
 
   const header = `
-    style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:start;padding:6px 8px;background:${isMatched&&!isDup?"rgba(93,202,138,0.05)":"var(--surface2)"};border-radius:var(--radius-sm);border:1px solid ${rowBorder};margin-bottom:4px">
+    <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
       <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span></span>
     </div>`;
 
