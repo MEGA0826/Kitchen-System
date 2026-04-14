@@ -3682,6 +3682,13 @@ async function saveEditedInventory() {
 // ─────────────────────────────────────────────
 let pdfParsedIngredients = [];
 let pdfTargetMepCode     = "";
+let _allRmCodes  = [];
+let _allMepCodes = [];
+let _allGrCodes  = [];
+let _nextRM      = "";
+let _nextMEP     = "";
+let _nextGR      = "";
+let _pdfMenuId   = "";
 
 function populatePdfMepDatalist() {
   const dl = document.getElementById("dl-pdf-mep");
@@ -3707,6 +3714,15 @@ async function startPdfImport(mode) {
   if (btnM) btnM.disabled = true;
   adminMsg("pdf-msg","Reading PDF…","");
 
+   // Pre-load all existing codes for duplicate checking + suggestions
+  const codesData = await adminCall({ action: "getAllCodes" }).catch(() => ({}));
+  _allRmCodes  = codesData.rmCodes  || [];
+  _allMepCodes = codesData.mepCodes || [];
+  _allGrCodes  = codesData.grCodes  || [];
+  _nextRM      = codesData.nextRM   || "RM-001";
+  _nextMEP     = codesData.nextMEP  || "P-001";
+  _nextGR      = codesData.nextGR   || "GR-001";
+  
   try {
     const file     = fileEl.files[0];
     const arrayBuf = await file.arrayBuffer();
@@ -3726,7 +3742,8 @@ async function startPdfImport(mode) {
       pdfText  : pdfText.substring(0, 8000)
     });
     if (data.error) throw new Error(data.error);
-
+    if (data.menuId) _pdfMenuId = data.menuId;
+    
     // Store parsed ingredients for review
     pdfParsedIngredients = mode === 'menu'
       ? (data.parsed?.ingredients || [])
@@ -3786,7 +3803,6 @@ function renderPdfPreview(mode, parsedMenu) {
   const preview = document.getElementById("pdf-preview");
   if (!pdfParsedIngredients.length) { preview.style.display="none"; return; }
 
-  // Menu info banner (Full Menu Card mode only)
   const menuBanner = (mode === 'menu' && parsedMenu) ? `
     <div style="background:var(--green-dim);border:1px solid var(--green-brd);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">📋 Menu Card will be created</div>
@@ -3799,26 +3815,45 @@ function renderPdfPreview(mode, parsedMenu) {
       </div>
     </div>` : "";
 
-  // Header row
   const header = `
-    <div style="display:grid;grid-template-columns:70px 90px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">
+    <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
       <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span></span>
     </div>`;
 
-  const rows = pdfParsedIngredients.map((ing, i) => `
-    <div style="display:grid;grid-template-columns:70px 90px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:6px 8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+  const rows = pdfParsedIngredients.map((ing, i) => {
+    const type     = ing.type || "RM";
+    const code     = ing.code || "";
+    const isDup    = _isPdfCodeDuplicate(type, code);
+    const suggested = _suggestPdfCode(type, i);
+    const codeColor = isDup ? "var(--red)" : code ? "var(--green)" : "var(--border2)";
+    const dupWarn  = isDup
+      ? `<div style="font-size:9px;color:var(--red);margin-top:2px">⚠ duplicate</div>` : "";
 
-      <select style="background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;padding:4px 4px;cursor:pointer"
-        onchange="pdfParsedIngredients[${i}].type=this.value;_updatePdfRowStyle(this,${i})">
-        <option value="RM"  ${(ing.type||"RM")==="RM" ?"selected":""}>RM</option>
-        <option value="MEP" ${ing.type==="MEP"?"selected":""}>MEP</option>
-        <option value="GR"  ${ing.type==="GR" ?"selected":""}>GR</option>
+    return `
+    <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:start;padding:6px 8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid ${isDup?"var(--red-brd)":"var(--border)"};margin-bottom:4px">
+
+      <select style="background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;padding:5px 4px;cursor:pointer;width:100%"
+        onchange="pdfParsedIngredients[${i}].type=this.value; _autoSuggestCode(${i}); renderPdfPreview(window._pdfMode)">
+        <option value="RM"  ${type==="RM" ?"selected":""}>RM</option>
+        <option value="MEP" ${type==="MEP"?"selected":""}>MEP</option>
+        <option value="GR"  ${type==="GR" ?"selected":""}>GR</option>
       </select>
 
-      <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px"
-        value="${ing.code||""}"
-        oninput="pdfParsedIngredients[${i}].code=this.value"
-        placeholder="e.g. RM-001">
+      <div style="display:flex;flex-direction:column">
+        <div style="display:flex;gap:3px;align-items:center">
+          <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px;border-color:${codeColor};flex:1"
+            value="${code}"
+            oninput="pdfParsedIngredients[${i}].code=this.value.trim(); renderPdfPreview(window._pdfMode)"
+            placeholder="${suggested}">
+          <button title="Use suggested code"
+            onclick="pdfParsedIngredients[${i}].code='${suggested}'; renderPdfPreview(window._pdfMode)"
+            style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:3px 5px;cursor:pointer;font-size:10px;white-space:nowrap">
+            ★
+          </button>
+        </div>
+        ${dupWarn}
+        <div style="font-size:9px;color:var(--muted);margin-top:2px">suggest: ${suggested}</div>
+      </div>
 
       <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
         value="${ing.name||""}"
@@ -3837,10 +3872,60 @@ function renderPdfPreview(mode, parsedMenu) {
 
       <button style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
         onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview(window._pdfMode)">✕</button>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
-  listEl.innerHTML = menuBanner + header + rows;
+  // Duplicate summary warning
+  const dupCount = pdfParsedIngredients.filter(ing => _isPdfCodeDuplicate(ing.type||"RM", ing.code||"")).length;
+  const dupAlert = dupCount > 0
+    ? `<div style="background:var(--red-dim);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:8px 12px;font-size:11px;color:var(--red);margin-bottom:10px">
+        ⚠ ${dupCount} duplicate code${dupCount>1?"s":""} — fix before saving
+       </div>` : "";
+
+  listEl.innerHTML = menuBanner + dupAlert + header + rows;
   preview.style.display = "block";
+}
+
+function _suggestPdfCode(type, idx) {
+  // Generate unique suggestion not already used by other rows
+  const usedInPreview = pdfParsedIngredients
+    .map((ing, i) => i !== idx ? (ing.code||"") : "")
+    .filter(Boolean);
+
+  function nextAvailable(base, existingSystem) {
+    const allUsed = [...existingSystem, ...usedInPreview];
+    const nums = allUsed.map(c => { const m = c.match(/(\d+)$/); return m ? parseInt(m[1]) : 0; }).filter(n=>n>0);
+    let max = nums.length ? Math.max(...nums) : 0;
+    let candidate;
+    do {
+      max++;
+      const prefix = base;
+      candidate = prefix + String(max).padStart(3,"0");
+    } while (allUsed.includes(candidate));
+    return candidate;
+  }
+
+  if (type === "MEP") return nextAvailable("P-",   _allMepCodes);
+  if (type === "GR")  return nextAvailable("GR-",  _allGrCodes);
+  return                     nextAvailable("RM-",  _allRmCodes);
+}
+
+function _isPdfCodeDuplicate(type, code) {
+  if (!code) return false;
+  // Check against system codes
+  if (type === "MEP" && _allMepCodes.includes(code)) return true;
+  if (type === "GR"  && _allGrCodes.includes(code))  return true;
+  if (type === "RM"  && _allRmCodes.includes(code))  return true;
+  // Check for duplicates within the preview list itself
+  const count = pdfParsedIngredients.filter(ing => (ing.code||"") === code).length;
+  return count > 1;
+}
+
+function _autoSuggestCode(idx) {
+  // Auto-fill code when type changes and code is empty
+  if (!pdfParsedIngredients[idx].code) {
+    pdfParsedIngredients[idx].code = _suggestPdfCode(pdfParsedIngredients[idx].type || "RM", idx);
+  }
 }
 
 function _updatePdfRowStyle(sel, i) {
@@ -3849,37 +3934,59 @@ function _updatePdfRowStyle(sel, i) {
 
 async function confirmPdfImport() {
   if (!pdfParsedIngredients.length || !pdfTargetMepCode) return;
+
+  // Block if duplicates exist
+  const dups = pdfParsedIngredients.filter(ing => _isPdfCodeDuplicate(ing.type||"RM", ing.code||""));
+  if (dups.length) {
+    adminMsg("pdf-msg", `⚠ Fix ${dups.length} duplicate code${dups.length>1?"s":""} before saving`, "err");
+    return;
+  }
+
   const btn = document.querySelector("#pdf-preview .btn-save");
   if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
 
   try {
     const mode = window._pdfMode || 'recipes';
 
-    if (mode === 'menu') {
-      // Send confirmed ingredients back to backend to finalize save
-      const data = await adminCall({
-        action      : "importParsedRecipe",
-        mepCode     : pdfTargetMepCode,
-        ingredients : JSON.stringify(
-          pdfParsedIngredients.filter(i => i.type === "RM" || i.type === "rm")
-        )
-      });
-      if (data.error) throw new Error(data.error);
-      adminMsg("pdf-msg",
-        `✓ Saved — ${data.saved} RM ingredients to Recipes. Go to Recipes tab to view menu card.`, "ok");
-      await loadMenus();
+    // Build confirmed zutaten with user types + codes
+    const confirmedZutaten = pdfParsedIngredients.map(ing => ({
+      type    : (ing.type || "rm").toLowerCase(),
+      code    : ing.code  || ing.name.substring(0,20).replace(/\s+/g,"_").toUpperCase(),
+      name    : ing.name  || "",
+      gewicht : ing.quantity || "",
+      unit    : ing.unit  || "",
+      cost    : 0
+    }));
 
-    } else {
+    // Save RM ingredients to Recipes/MEP sheet
+    const rmIngredients = pdfParsedIngredients.filter(i =>
+      (i.type||"RM").toUpperCase() === "RM"
+    );
+    if (rmIngredients.length) {
       const data = await adminCall({
         action      : "importParsedRecipe",
         mepCode     : pdfTargetMepCode,
-        ingredients : JSON.stringify(pdfParsedIngredients)
+        ingredients : JSON.stringify(rmIngredients)
       });
       if (data.error) throw new Error(data.error);
-      adminMsg("pdf-msg", `✓ Saved ${data.saved} ingredients to Recipes`, "ok");
     }
 
+    // If menu mode — update the menu card's zutaten with confirmed codes/types
+    if (mode === 'menu' && _pdfMenuId) {
+      const upd = await adminCall({
+        action  : "updateMenuZutaten",
+        menuId  : _pdfMenuId,
+        zutaten : JSON.stringify(confirmedZutaten)
+      });
+      if (upd.error) throw new Error(upd.error);
+    }
+
+    adminMsg("pdf-msg",
+      `✓ Saved — ${rmIngredients.length} RM ingredients to Recipes${mode==='menu'?" · Menu card updated":""}`,
+      "ok");
+
     cancelPdfImport();
+    await loadMenus();
     await loadRecipes();
 
   } catch(err) {
