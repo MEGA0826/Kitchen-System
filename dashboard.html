@@ -1606,8 +1606,8 @@ let agrZutaten = [];
 let allGRs = [];
   
 const ROLE_TABS = {
-  Teamleader : ['kds','mep-overview','inventory','deductions','sales','admin'],
-  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports','sales','admin'],
+  Teamleader : ['kds','mep-overview','inventory','deductions','admin'],
+  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports','admin'],
   Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','sales','admin'],
 };
   
@@ -4344,9 +4344,18 @@ async function runSalesImport() {
     if (!rows.length) throw new Error("No valid rows found. Check CSV format.");
     if (msg) msg.textContent = `Uploading ${rows.length} rows…`;
 
-    const res = await get({ action: "importSalesCSV", rows: JSON.stringify(rows) });
-    if (res.error) throw new Error(res.error);
-    if (msg) msg.textContent = `✓ Imported ${res.imported} rows · ${res.skipped} duplicates skipped`;
+    // Chunk upload — GAS URL limit ~8KB, send 50 rows at a time
+    const CHUNK = 50;
+    let totalImported = 0, totalSkipped = 0;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      if (msg) msg.textContent = `Uploading… ${Math.min(i + CHUNK, rows.length)} / ${rows.length} rows`;
+      const res = await get({ action: "importSalesCSV", rows: JSON.stringify(chunk) });
+      if (res.error) throw new Error(res.error);
+      totalImported += res.imported || 0;
+      totalSkipped  += res.skipped  || 0;
+    }
+    if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} duplicates skipped`;
     await loadSalesAnalysis();
   } catch(e) {
     if (msg) msg.textContent = "Error: " + e.message;
