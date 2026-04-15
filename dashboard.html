@@ -4320,13 +4320,12 @@ async function runSalesImport() {
   const file = document.getElementById("sales-csv-input")?.files[0];
   const msg  = document.getElementById("sales-import-msg");
   if (!file) { if (msg) msg.textContent = "Please select a CSV file first."; return; }
-  if (msg) msg.textContent = "Parsing…";
+  if (msg) msg.textContent = "Parsing CSV…";
   try {
     const text  = await file.text();
     const lines = text.trim().split("\n");
-    // Cols: Datum(0), Gruppierung(1), Gruppe2(2), PRODUKTNAME(3), Menge(4),
-    //       Umsatz(5), %Umsatz(6), AvgPreis(7), AvgCost(8), %Cost(9),
-    //       AvgMarge(10), Marge(11), %Marge(12)
+
+    // Parse all rows in browser
     const rows = lines.slice(1).map(line => {
       const c = line.split(",");
       return {
@@ -4342,25 +4341,30 @@ async function runSalesImport() {
     }).filter(r => r.date && r.produktname && r.menge > 0);
 
     if (!rows.length) throw new Error("No valid rows found. Check CSV format.");
-    if (msg) msg.textContent = `Uploading ${rows.length} rows…`;
 
-    // Chunk upload — GAS URL limit ~8KB, send 50 rows at a time
-    const CHUNK = 50;
+    // Aggregate by date+product in browser — send compact summary instead of raw rows
+    const map = {};
+    rows.forEach(r => {
+      const key = r.date + "|" + r.produktname;
+      if (!map[key]) map[key] = { date: r.date, produktname: r.produktname,
+        kategorie: r.kategorie, menge: 0, umsatz: 0, margin: 0, avgPrice: r.avgPrice, avgCost: r.avgCost };
+      map[key].menge  += r.menge;
+      map[key].umsatz += r.umsatz;
+      map[key].margin += r.margin;
+    });
+    const summary = Object.values(map);
+    if (msg) msg.textContent = `Uploading ${summary.length} aggregated rows…`;
+
+    // Send in small chunks of 20 (each ~500 bytes — safe for GAS URL)
+    const CHUNK = 20;
     let totalImported = 0, totalSkipped = 0;
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const chunk = rows.slice(i, i + CHUNK);
-      if (msg) msg.textContent = `Uploading… ${Math.min(i + CHUNK, rows.length)} / ${rows.length} rows`;
+    for (let i = 0; i < summary.length; i += CHUNK) {
+      const chunk = summary.slice(i, i + CHUNK);
+      if (msg) msg.textContent = `Uploading… ${Math.min(i + CHUNK, summary.length)} / ${summary.length}`;
       const res = await get({ action: "importSalesCSV", rows: JSON.stringify(chunk) });
       if (res.error) throw new Error(res.error);
       totalImported += res.imported || 0;
-      totalSkipped  += res.skipped  || 0;
-    }
-    if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} duplicates skipped`;
-    await loadSalesAnalysis();
-  } catch(e) {
-    if (msg) msg.textContent = "Error: " + e.message;
-  }
-}
+      totalSkipped  += res.skipped
   
 // ─────────────────────────────────────────────
 // LOAD MENUS
