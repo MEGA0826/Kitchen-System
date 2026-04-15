@@ -4554,11 +4554,14 @@ function renderMenuListByCat(cat) {
     const artColor = { Hauptgang:"var(--amber)", MEP:"var(--blue)", Grundrezeptur:"var(--green)", Vorspeise:"var(--blue)", Dessert:"var(--red)", Snack:"var(--muted)", Beilage:"var(--muted)", Sauce:"var(--green)" };
     const artBg    = { Hauptgang:"var(--amber-dim)", MEP:"var(--blue-dim)", Grundrezeptur:"var(--green-dim)", Vorspeise:"var(--blue-dim)", Dessert:"var(--red-dim)", Snack:"var(--gray-dim)", Beilage:"var(--gray-dim)", Sauce:"var(--green-dim)" };
     const art = m.art || "Menu";
-    return `<div class="recipe-item-row">
-      <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
-      <span class="recipe-item-name" onclick="openMenuView('${m.id}')">${m.name||"—"}</span>
-      <span class="recipe-wa">WA CHF ${wa.toFixed(2)}</span>
-      <button type="button" class="btn-edit" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="openMenuPopup('${m.id}')">✏️</button>
+    return `<div class="recipe-item-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <div style="display:flex;align-items:center;gap:8px;width:100%">
+        <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
+        <span style="font-size:11px;color:var(--muted);flex:1">${m.category||""}</span>
+        <span class="recipe-wa">WA CHF ${wa.toFixed(2)}</span>
+        <button type="button" class="btn-edit" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="openMenuPopup('${m.id}')">✏️</button>
+      </div>
+      <span class="recipe-item-name" style="font-size:15px;font-weight:600;padding:0 2px" onclick="openMenuView('${m.id}')">${m.name||"—"}</span>
     </div>`;
   }).join("");
 }
