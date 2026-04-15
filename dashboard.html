@@ -3862,12 +3862,12 @@ function renderPdfPreview(mode, parsedMenu) {
 
       <div style="display:flex;flex-direction:column">
         <div style="display:flex;gap:3px;align-items:center">
-          <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px;border-color:${codeColor};flex:1"
+          <input class="form-input" id="pdf-code-${i}" style="margin:0;padding:4px 6px;font-size:11px;border-color:${codeColor};flex:1"
             value="${code}"
-            oninput="pdfParsedIngredients[${i}].code=this.value.trim();pdfParsedIngredients[${i}]._matched=false;renderPdfPreview(window._pdfMode)"
+            oninput="pdfParsedIngredients[${i}].code=this.value;pdfParsedIngredients[${i}]._matched=false"
             placeholder="${suggested}">
           <button title="Use suggested code"
-            onclick="pdfParsedIngredients[${i}].code='${suggested}';pdfParsedIngredients[${i}]._matched=false;renderPdfPreview(window._pdfMode)"
+            onclick="pdfParsedIngredients[${i}].code='${suggested}';pdfParsedIngredients[${i}]._matched=false;const el=document.getElementById('pdf-code-${i}');if(el){el.value='${suggested}';el.style.borderColor='var(--amber)'}"
             style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:3px 5px;cursor:pointer;font-size:10px;white-space:nowrap">★</button>
         </div>
         ${dupWarn}
