@@ -459,6 +459,18 @@
     .order-cal-legend { display:flex; gap:14px; margin-top:10px; flex-wrap:wrap; }
     .order-cal-legend span { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; }
     .order-cal-legend i { display:inline-block; width:10px; height:10px; border-radius:3px; }
+    /* Recipe category buttons */
+    .rcat-btn { padding:6px 13px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); color:var(--muted); font-family:var(--mono); font-size:11px; letter-spacing:.5px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .rcat-btn:hover { color:var(--text); border-color:var(--border); }
+    .rcat-btn.active { background:var(--amber-dim); color:var(--amber); border-color:var(--amber-brd); }
+    /* Compact item row in search results */
+    .recipe-item-row { display:flex; align-items:center; gap:8px; padding:7px 12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:5px; }
+    .recipe-item-row:hover { border-color:var(--border2); }
+    .recipe-item-name { flex:1; font-size:13px; font-weight:500; color:var(--text); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+    .recipe-item-name:hover { color:var(--amber); }
+    .recipe-type-badge { font-size:10px; padding:2px 7px; border-radius:4px; font-weight:700; flex-shrink:0; }
+    .recipe-wa { font-size:11px; color:var(--amber); flex-shrink:0; }
+    .order-detail-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:16px; }
     .order-detail-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:16px; }
     .order-detail-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:10px; }   
   </style>
@@ -690,6 +702,19 @@
         <option value="" data-i18n="all-types">Alle Arten</option>
       </select>
     </div>
+    <!-- Category quick-filter buttons -->
+    <div id="recipe-cat-btns" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Starter')">🥗 Starter</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Noodle')">🍜 Noodle</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Fried Rice')">🍳 Fried Rice</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Soup')">🍲 Soup</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Sushi')">🍣 Sushi</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Bowl')">🥣 Bowl</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Dessert')">🍮 Dessert</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Specials')">⭐ Specials</button>
+      <button type="button" class="rcat-btn" id="rcat-clear" onclick="setRecipeCat('')" style="display:none;background:var(--red-dim);color:var(--red);border-color:var(--red-brd)">✕ Clear</button>
+    </div>
+
     <!-- GR + MEP search -->
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <input class="search-input" id="gr-filter-search" type="text"
@@ -4417,7 +4442,8 @@ function renderMenuList() {
   const art = document.getElementById("menu-art-filter")?.value || "";
 
   // ── Show prompt until user searches or filters ──
-  if (!q && !cat && !art) {
+  if (!q && !cat && !art && !_recipeCat) {
+    el.style.gridTemplateColumns = "";
     el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--muted)">
       <div style="font-size:32px;margin-bottom:10px;opacity:.3">🍽️</div>
       <div style="font-size:13px">Search by name or choose Konzept / Art to show menus</div>
@@ -4434,7 +4460,7 @@ function renderMenuList() {
     el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">Keine Menus gefunden.</div>`;
     return;
   }
-
+  el.style.gridTemplateColumns = "";
   el.innerHTML = list.map(m => {
     const zutaten = (() => { try { return JSON.parse(m.zutaten||'[]'); } catch(e) { return []; } })();
     const fc = (m.wa && m.vk && parseFloat(m.vk)>0)
@@ -4462,6 +4488,67 @@ function renderMenuList() {
     </div>`;
   }).join("");
 }
+
+// ─────────────────────────────────────────────
+// RECIPE TAB — CATEGORY BUTTONS
+// ─────────────────────────────────────────────
+let _recipeCat = "";
+
+function setRecipeCat(cat) {
+  _recipeCat = cat;
+  // Update button active states
+  document.querySelectorAll(".rcat-btn").forEach(b => b.classList.remove("active"));
+  if (cat) {
+    document.querySelectorAll(".rcat-btn").forEach(b => {
+      if (b.textContent.toLowerCase().includes(cat.toLowerCase())) b.classList.add("active");
+    });
+  }
+  const clearBtn = document.getElementById("rcat-clear");
+  if (clearBtn) clearBtn.style.display = cat ? "inline-block" : "none";
+  // Clear search fields so category filter takes over
+  const menuSearch = document.getElementById("menu-search");
+  if (menuSearch && !cat) menuSearch.value = "";
+  // Filter menu list by category (uses menu.category field)
+  renderMenuListByCat(cat);
+}
+
+function renderMenuListByCat(cat) {
+  const el = document.getElementById("menu-list-grid");
+  if (!el) return;
+
+  let list = allMenus;
+  if (cat) list = list.filter(m =>
+    (m.category||"").toLowerCase().includes(cat.toLowerCase()) ||
+    (m.art||"").toLowerCase().includes(cat.toLowerCase()) ||
+    (m.name||"").toLowerCase().includes(cat.toLowerCase())
+  );
+
+  if (!list.length) {
+    el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">No menus found for "${cat}".</div>`;
+    return;
+  }
+
+  // Render compact one-line rows instead of cards
+  el.style.gridTemplateColumns = "1fr";
+  el.innerHTML = list.map(m => {
+    const wa  = parseFloat(m.wa||0);
+    const vk  = parseFloat(m.vk||0);
+    const fc  = vk > 0 ? ((wa/vk)*100).toFixed(1)+"%" : "—";
+    const fcColor = (fc !== "—" && parseFloat(fc) > 33) ? "var(--red)" : "var(--green)";
+    const artColor = { Hauptgang:"var(--amber)", MEP:"var(--blue)", Grundrezeptur:"var(--green)", Vorspeise:"var(--blue)", Dessert:"var(--red)", Snack:"var(--muted)", Beilage:"var(--muted)", Sauce:"var(--green)" };
+    const artBg    = { Hauptgang:"var(--amber-dim)", MEP:"var(--blue-dim)", Grundrezeptur:"var(--green-dim)", Vorspeise:"var(--blue-dim)", Dessert:"var(--red-dim)", Snack:"var(--gray-dim)", Beilage:"var(--gray-dim)", Sauce:"var(--green-dim)" };
+    const art = m.art || "Menu";
+    return `<div class="recipe-item-row">
+      <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
+      <span class="recipe-item-name" onclick="openMenuView('${m.id}')">${m.name||"—"}</span>
+      <span style="font-size:11px;color:var(--muted);flex-shrink:0">${m.category||""}</span>
+      <span class="recipe-wa">WA CHF ${wa.toFixed(2)}</span>
+      <span style="font-size:11px;color:${fcColor};flex-shrink:0">FC ${fc}</span>
+      <button type="button" class="btn-edit" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="openMenuPopup('${m.id}')">✏️</button>
+    </div>`;
+  }).join("");
+}
+  
 function filterGrDisplay() {
   const q = (document.getElementById("gr-filter-search")?.value || "").toLowerCase();
   const el = document.getElementById("gr-search-results");
