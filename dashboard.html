@@ -3907,43 +3907,47 @@ function renderPdfPreview(mode, parsedMenu) {
 }
 
 function _suggestPdfCode(type, idx) {
-  // Generate unique suggestion not already used by other rows
   const usedInPreview = pdfParsedIngredients
     .map((ing, i) => i !== idx ? (ing.code||"") : "")
     .filter(Boolean);
 
-  function nextAvailable(base, existingSystem) {
+  function nextAvailable(prefix, existingSystem) {
     const allUsed = [...existingSystem, ...usedInPreview];
-    const nums = allUsed.map(c => { const m = c.match(/(\d+)$/); return m ? parseInt(m[1]) : 0; }).filter(n=>n>0);
-    let max = nums.length ? Math.max(...nums) : 0;
-    let candidate;
-    do {
-      max++;
-      const prefix = base;
-      candidate = prefix + String(max).padStart(3,"0");
-    } while (allUsed.includes(candidate));
-    return candidate;
+    // Find lowest gap starting from 1
+    for (let n = 1; n <= 999; n++) {
+      const candidate = prefix + String(n).padStart(3, "0");
+      if (!allUsed.includes(candidate)) return candidate;
+    }
+    return prefix + "001";
   }
 
-  if (type === "MEP") return nextAvailable("P-",   _allMepCodes);
-  if (type === "GR")  return nextAvailable("GR-",  _allGrCodes);
-  return                     nextAvailable("RM-",  _allRmCodes);
+  if (type === "MEP") return nextAvailable("MEP", _allMepCodes);
+  if (type === "GR")  return nextAvailable("GR",  _allGrCodes);
+  return                     nextAvailable("RM",  _allRmCodes);
 }
 
 function _isPdfCodeDuplicate(type, code) {
   if (!code) return false;
 
-  // Only flag as duplicate if it's a NEW entry (not a system match)
+  // Sync live input values into data before checking
+  pdfParsedIngredients.forEach((ing, idx) => {
+    const el = document.getElementById("pdf-code-" + idx);
+    if (el) ing.code = el.value;
+  });
+
   const idx = pdfParsedIngredients.findIndex(ing => (ing.code||"") === code);
   const ing = pdfParsedIngredients[idx];
-  if (ing && ing._matched) return false; // matched items are expected to have existing codes
+  if (ing && ing._matched) return false;
 
-  // Check against system codes
+  // Only flag system duplicate if this is a truly new code (not editing to match existing)
+  const liveEl = document.getElementById("pdf-code-" + idx);
+  const liveVal = liveEl ? liveEl.value : code;
+  if (liveVal !== code) return false;
+
   if (type === "MEP" && _allMepCodes.includes(code)) return true;
   if (type === "GR"  && _allGrCodes.includes(code))  return true;
   if (type === "RM"  && _allRmCodes.includes(code))  return true;
 
-  // Check for duplicates within preview list itself
   const count = pdfParsedIngredients.filter(ing => (ing.code||"") === code).length;
   return count > 1;
 }
@@ -3953,9 +3957,9 @@ function pdfCodeInput(i, val) {
 }
 
 function pdfTypePrefix(type) {
-  if (type === "MEP") return "P-";
-  if (type === "GR")  return "GR-";
-  return "RM-";
+  if (type === "MEP") return "MEP";
+  if (type === "GR")  return "GR";
+  return "RM";
 }
 
 function applyPdfTypePrefix(i) {
@@ -3963,8 +3967,8 @@ function applyPdfTypePrefix(i) {
   const prefix = pdfTypePrefix(ing.type || "RM");
   const cur    = ing.code || "";
   // Strip any existing prefix then apply new one
-  const stripped = cur.replace(/^(RM-|GR-|P-)/i, "");
-  const newCode  = prefix + stripped;
+  const stripped = cur.replace(/^(MEP|RM|GR)\d*/i, "").replace(/^\D+/, "");
+  const newCode  = stripped ? prefix + stripped : _suggestPdfCode(ing.type || "RM", i);
   ing.code       = newCode;
   ing._matched   = false;
   const el = document.getElementById("pdf-code-" + i);
