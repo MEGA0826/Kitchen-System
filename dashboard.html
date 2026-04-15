@@ -3862,9 +3862,9 @@ function renderPdfPreview(mode, parsedMenu) {
 
       <div style="display:flex;flex-direction:column">
         <div style="display:flex;gap:3px;align-items:center">
-          <input class="form-input" id="pdf-code-${i}" style="margin:0;padding:4px 6px;font-size:11px;border-color:${codeColor};flex:1"
+          <input class="form-input" id="pdf-code-${i}" style="margin:0;padding:4px 6px;font-size:11px;border-color:${codeColor};flex:1;min-width:0"
             value="${code}"
-            oninput="pdfParsedIngredients[${i}].code=this.value;pdfParsedIngredients[${i}]._matched=false"
+            oninput="pdfCodeInput(${i},this.value)"
             placeholder="${suggested}">
           <button type="button" title="Use suggested code"
             onclick="pdfParsedIngredients[${i}].code='${suggested}';pdfParsedIngredients[${i}]._matched=false;var el=document.getElementById('pdf-code-${i}');if(el){el.value='${suggested}';el.style.borderColor='var(--amber)'}"
@@ -3875,17 +3875,17 @@ function renderPdfPreview(mode, parsedMenu) {
         ${showSuggest}
       </div>
 
-      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
         value="${ing.name||""}"
         oninput="pdfParsedIngredients[${i}].name=this.value"
         placeholder="Name">
 
-      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
         value="${ing.quantity||""}"
         oninput="pdfParsedIngredients[${i}].quantity=this.value"
         placeholder="Qty" type="number">
 
-      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px"
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
         value="${ing.unit||""}"
         oninput="pdfParsedIngredients[${i}].unit=this.value"
         placeholder="Unit">
@@ -3947,7 +3947,10 @@ function _isPdfCodeDuplicate(type, code) {
   const count = pdfParsedIngredients.filter(ing => (ing.code||"") === code).length;
   return count > 1;
 }
-
+function pdfCodeInput(i, val) {
+  pdfParsedIngredients[i].code = val;
+  pdfParsedIngredients[i]._matched = false;
+}
 function _autoSuggestCode(idx) {
   // Auto-fill code when type changes and code is empty
   if (!pdfParsedIngredients[idx].code) {
