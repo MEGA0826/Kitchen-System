@@ -489,7 +489,7 @@
     </div>
   </div>
   <div class="header-right">
-    <a href="https://mega0826.github.io/Kitchen-System/index.html" class="back-btn">← Home</a>
+    <a href="#" class="back-btn" onclick="goBack(event)">← Back</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
   <div class="live-badge-row">
@@ -776,9 +776,21 @@
           <label class="form-label">Art</label>
           <select class="form-input" id="mp-art">
             <option value="">Wählen…</option>
-            <option>Hauptgang</option><option>MEP</option><option>Grundrezeptur</option>
-            <option>Vorspeise</option><option>Dessert</option><option>Snack</option>
-            <option>Beilage</option><option>Sauce</option>
+            <option>Starter</option>
+            <option>Noodle</option>
+            <option>Fried Rice</option>
+            <option>Soup</option>
+            <option>Sushi</option>
+            <option>Bowl</option>
+            <option>Dessert</option>
+            <option>Specials</option>
+            <option>Hauptgang</option>
+            <option>Vorspeise</option>
+            <option>Beilage</option>
+            <option>Sauce</option>
+            <option>Snack</option>
+            <option>MEP</option>
+            <option>Grundrezeptur</option>
           </select>
         </div>
         <div class="form-field">
@@ -1571,7 +1583,11 @@ setInterval(updateLiveTime, 1000);
 // ─────────────────────────────────────────────
 function goBack(e) {
   e.preventDefault();
-  window.location.href = "https://mega0826.github.io/Kitchen-System/index.html";
+  if (document.referrer && document.referrer !== window.location.href) {
+    window.history.back();
+  } else {
+    window.location.href = "https://mega0826.github.io/Kitchen-System/index.html";
+  }
 }
   
 function toDirectImg(url) {
