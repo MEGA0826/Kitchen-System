@@ -4557,9 +4557,7 @@ function renderMenuListByCat(cat) {
     return `<div class="recipe-item-row">
       <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
       <span class="recipe-item-name" onclick="openMenuView('${m.id}')">${m.name||"—"}</span>
-      <span style="font-size:11px;color:var(--muted);flex-shrink:0">${m.category||""}</span>
       <span class="recipe-wa">WA CHF ${wa.toFixed(2)}</span>
-      <span style="font-size:11px;color:${fcColor};flex-shrink:0">FC ${fc}</span>
       <button type="button" class="btn-edit" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="openMenuPopup('${m.id}')">✏️</button>
     </div>`;
   }).join("");
@@ -4578,8 +4576,8 @@ function filterGrDisplay() {
       <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.grCode||""}</span>
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
-      <button onclick="openEditGRPopup('${g.grCode}')" class="btn-edit" style="font-size:11px;padding:3px 8px">Edit</button>
-      <button onclick="deleteGR('${g.grCode}','${(g.name||g.grCode).replace(/'/g,"\\'")}'))" class="btn-del" style="font-size:11px;padding:3px 8px">Del</button>
+      <button type="button" onclick="openEditGRPopup('${g.grCode}')" class="btn-edit" style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" onclick="deleteGR('${g.grCode}','${(g.name||g.grCode).replace(/'/g,"\\'")}'))" class="btn-del" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`).join("");
 }
 
@@ -4597,8 +4595,8 @@ function filterMepDisplay() {
       <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
-      <button onclick="openEditProductModal('${code}')" class="btn-edit" style="font-size:11px;padding:3px 8px">Edit</button>
-      <button onclick="delProduct('${code}')" class="btn-del" style="font-size:11px;padding:3px 8px">Del</button>
+      <button type="button" onclick="openEditProductModal('${code}')" class="btn-edit" style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" onclick="delProduct('${code}')" class="btn-del" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`).join("");
 }
 // ─────────────────────────────────────────────
@@ -5111,25 +5109,26 @@ function buildMenuPdfHtml(m) {
     <div style="background:#f7f5f0;border-bottom:2px solid #e8a020;padding:8px 24px;display:flex;gap:24px;flex-wrap:wrap">
       ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',m.gewicht],['WA','CHF '+wa.toFixed(2)],['VK','CHF '+vk.toFixed(2)],['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:0">
-      <div style="padding:16px 20px;border-right:1px solid #eee">
-        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zutaten</div>
-        <table style="width:100%;border-collapse:collapse">
-          <thead><tr style="background:#f0ede6">
-            <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Art</th>
-            <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Menge</th>
-            <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Name</th>
-            <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Kosten / Allergie</th>
-          </tr></thead>
-          <tbody>${zutatRows||`<tr><td colspan="4" style="padding:8px;font-size:11px;color:#999;font-style:italic">Keine Zutaten</td></tr>`}</tbody>
-        </table>
-        ${m.deko?`<div style="margin-top:10px"><div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;margin-bottom:4px">Dekoration</div><div style="font-size:11px;color:#444">${m.deko}</div></div>`:''}
-      </div>
-      <div style="padding:16px 20px">
-        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zubereitung</div>
-        <div style="font-size:11px;color:#333;line-height:1.7;white-space:pre-wrap">${m.zubereitung||'—'}</div>
-      </div>
+    <div style="padding:16px 20px;border-bottom:1px solid #eee">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zutaten</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f0ede6">
+          <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Art</th>
+          <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Menge</th>
+          <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Name</th>
+          <th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Kosten / Allergie</th>
+        </tr></thead>
+        <tbody>${zutatRows||`<tr><td colspan="4" style="padding:8px;font-size:11px;color:#999;font-style:italic">Keine Zutaten</td></tr>`}</tbody>
+      </table>
     </div>
+    ${m.deko?`<div style="padding:12px 20px;border-bottom:1px solid #eee;background:#fafaf8">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;margin-bottom:4px">Dekoration</div>
+      <div style="font-size:11px;color:#444">${m.deko}</div>
+    </div>`:''}
+    ${m.zubereitung?`<div style="padding:16px 20px;border-bottom:1px solid #eee">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zubereitung</div>
+      <div style="font-size:11px;color:#333;line-height:1.8;white-space:pre-wrap">${m.zubereitung}</div>
+    </div>`:''}
     <div style="padding:8px 24px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:9px;color:#aaa">
       <span>Mutationsdatum ${m.lastUpdate?new Date(m.lastUpdate).toLocaleDateString('de-CH'):'—'}</span>
       <span>Kitchen MEP · 212 Nooch Richti</span>
