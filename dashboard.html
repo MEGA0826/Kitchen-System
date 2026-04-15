@@ -3854,7 +3854,7 @@ function renderPdfPreview(mode, parsedMenu) {
     <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:start;padding:6px 8px;background:${rowBg};border-radius:var(--radius-sm);border:1px solid ${rowBorder};margin-bottom:4px">
 
       <select style="background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;padding:5px 4px;cursor:pointer;width:100%"
-        onchange="pdfParsedIngredients[${i}].type=this.value;pdfParsedIngredients[${i}]._matched=false;_autoSuggestCode(${i});renderPdfPreview(window._pdfMode)">
+        onchange="pdfParsedIngredients[${i}].type=this.value;pdfParsedIngredients[${i}]._matched=false;applyPdfTypePrefix(${i});renderPdfPreview(window._pdfMode)">
         <option value="RM"  ${type==="RM" ?"selected":""}>RM</option>
         <option value="MEP" ${type==="MEP"?"selected":""}>MEP</option>
         <option value="GR"  ${type==="GR" ?"selected":""}>GR</option>
@@ -3950,6 +3950,30 @@ function _isPdfCodeDuplicate(type, code) {
 function pdfCodeInput(i, val) {
   pdfParsedIngredients[i].code = val;
   pdfParsedIngredients[i]._matched = false;
+}
+
+function pdfTypePrefix(type) {
+  if (type === "MEP") return "P-";
+  if (type === "GR")  return "GR-";
+  return "RM-";
+}
+
+function applyPdfTypePrefix(i) {
+  const ing    = pdfParsedIngredients[i];
+  const prefix = pdfTypePrefix(ing.type || "RM");
+  const cur    = ing.code || "";
+  // Strip any existing prefix then apply new one
+  const stripped = cur.replace(/^(RM-|GR-|P-)/i, "");
+  const newCode  = prefix + stripped;
+  ing.code       = newCode;
+  ing._matched   = false;
+  const el = document.getElementById("pdf-code-" + i);
+  if (el) {
+    el.value = newCode;
+    el.focus();
+    // Move cursor to end
+    el.setSelectionRange(newCode.length, newCode.length);
+  }
 }
 function _autoSuggestCode(idx) {
   // Auto-fill code when type changes and code is empty
