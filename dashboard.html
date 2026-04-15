@@ -4325,7 +4325,6 @@ async function runSalesImport() {
     const text  = await file.text();
     const lines = text.trim().split("\n");
 
-    // Parse all rows in browser
     const rows = lines.slice(1).map(line => {
       const c = line.split(",");
       return {
@@ -4342,29 +4341,34 @@ async function runSalesImport() {
 
     if (!rows.length) throw new Error("No valid rows found. Check CSV format.");
 
-    // Aggregate by date+product in browser — send compact summary instead of raw rows
+    // Aggregate by date+product in browser
     const map = {};
     rows.forEach(r => {
       const key = r.date + "|" + r.produktname;
       if (!map[key]) map[key] = { date: r.date, produktname: r.produktname,
-        kategorie: r.kategorie, menge: 0, umsatz: 0, margin: 0, avgPrice: r.avgPrice, avgCost: r.avgCost };
+        kategorie: r.kategorie, menge: 0, umsatz: 0, margin: 0,
+        avgPrice: r.avgPrice, avgCost: r.avgCost };
       map[key].menge  += r.menge;
       map[key].umsatz += r.umsatz;
       map[key].margin += r.margin;
     });
     const summary = Object.values(map);
-    if (msg) msg.textContent = `Uploading ${summary.length} aggregated rows…`;
+    if (msg) msg.textContent = `Uploading ${summary.length} rows via POST…`;
 
-    // Send in small chunks of 20 (each ~500 bytes — safe for GAS URL)
-    const CHUNK = 20;
-    let totalImported = 0, totalSkipped = 0;
-    for (let i = 0; i < summary.length; i += CHUNK) {
-      const chunk = summary.slice(i, i + CHUNK);
-      if (msg) msg.textContent = `Uploading… ${Math.min(i + CHUNK, summary.length)} / ${summary.length}`;
-      const res = await get({ action: "importSalesCSV", rows: JSON.stringify(chunk) });
-      if (res.error) throw new Error(res.error);
-      totalImported += res.imported || 0;
-      totalSkipped  += res.skipped
+    // POST entire payload — no URL length limit, no CORS issue
+    const res = await fetch(API, {
+      method:  "POST",
+      headers: { "Content-Type": "text/plain" },
+      body:    JSON.stringify({ action: "importSalesCSV", rows: summary })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (msg) msg.textContent = `✓ Imported ${data.imported} · ${data.skipped} duplicates skipped`;
+    await loadSalesAnalysis();
+  } catch(e) {
+    if (msg) msg.textContent = "Error: " + e.message;
+  }
+}
   
 // ─────────────────────────────────────────────
 // LOAD MENUS
