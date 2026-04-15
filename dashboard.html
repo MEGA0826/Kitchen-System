@@ -4356,12 +4356,17 @@ async function runSalesImport() {
     if (msg) msg.textContent = `Uploading ${summary.length} rows via POST…`;
 
     // POST entire payload — no URL length limit, no CORS issue
-    const res = await fetch(API, {
-      method:  "POST",
-      headers: { "Content-Type": "text/plain" },
-      body:    JSON.stringify({ action: "importSalesCSV", rows: summary })
+    const res  = await fetch(API, {
+      method:      "POST",
+      headers:     { "Content-Type": "text/plain" },
+      body:        JSON.stringify({ action: "importSalesCSV", rows: summary }),
+      redirect:    "follow"
     });
-    const data = await res.json();
+    const raw  = await res.text();
+    // GAS sometimes wraps JSON in HTML on redirect — extract the JSON object
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("No JSON in response. Check GAS deployment.");
+    const data = JSON.parse(match[0]);
     if (data.error) throw new Error(data.error);
     if (msg) msg.textContent = `✓ Imported ${data.imported} · ${data.skipped} duplicates skipped`;
     await loadSalesAnalysis();
