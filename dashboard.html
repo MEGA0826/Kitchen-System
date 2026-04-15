@@ -3866,8 +3866,8 @@ function renderPdfPreview(mode, parsedMenu) {
             value="${code}"
             oninput="pdfParsedIngredients[${i}].code=this.value;pdfParsedIngredients[${i}]._matched=false"
             placeholder="${suggested}">
-          <button title="Use suggested code"
-            onclick="pdfParsedIngredients[${i}].code='${suggested}';pdfParsedIngredients[${i}]._matched=false;const el=document.getElementById('pdf-code-${i}');if(el){el.value='${suggested}';el.style.borderColor='var(--amber)'}"
+          <button type="button" title="Use suggested code"
+            onclick="pdfParsedIngredients[${i}].code='${suggested}';pdfParsedIngredients[${i}]._matched=false;var el=document.getElementById('pdf-code-${i}');if(el){el.value='${suggested}';el.style.borderColor='var(--amber)'}"
             style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:3px 5px;cursor:pointer;font-size:10px;white-space:nowrap">★</button>
         </div>
         ${dupWarn}
@@ -3890,7 +3890,7 @@ function renderPdfPreview(mode, parsedMenu) {
         oninput="pdfParsedIngredients[${i}].unit=this.value"
         placeholder="Unit">
 
-      <button style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
+      <button type="button" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
         onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview(window._pdfMode)">✕</button>
     </div>`;
   }).join("");
