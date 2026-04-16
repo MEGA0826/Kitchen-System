@@ -5573,17 +5573,6 @@ function buildMenuPdfHtml(m) {
   </div>`;
 } 
 
-  // ── Sortable MEP Recommendations table ──
-let _salesSort = { col: null, dir: 1 };
-
-function sortSalesCol(col, th) {
-  if (_salesSort.col === col) { _salesSort.dir *= -1; }
-  else { _salesSort.col = col; _salesSort.dir = 1; }
-  document.querySelectorAll(".sort-th").forEach(el => el.classList.remove("asc","desc"));
-  th.classList.add(_salesSort.dir === 1 ? "asc" : "desc");
-  filterSalesTable();
-}
-  
 </script>
   
 <!-- Edit Modals -->
