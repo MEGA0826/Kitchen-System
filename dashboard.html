@@ -1219,7 +1219,7 @@
     <div class="chart-wrap" style="margin-bottom:20px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div class="chart-title" style="margin:0">📂 Import sales CSV (Vectron)</div>
-        <button class="export-btn" onclick="exportSalesCSV()">↓ Export CSV</button>
+        <button class="export-btn" onclick="exportSalesCSV()">↑ Export CSV</button>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <input type="file" id="sales-csv-input" accept=".csv"
@@ -1228,7 +1228,7 @@
         <button onclick="runSalesImport()"
           style="padding:9px 20px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);
                  border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap">
-          ↑ Import
+          ↓ Import
         </button>
         <button onclick="loadSalesAnalysis()"
           style="padding:9px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);
@@ -1247,6 +1247,21 @@
       <button class="sales-period-btn"        data-sp="28"  onclick="setSalesPeriod(28,this)">28 days</button>
       <button class="sales-period-btn"        data-sp="90"  onclick="setSalesPeriod(90,this)">90 days</button>
       <button class="sales-period-btn"        data-sp="0"   onclick="setSalesPeriod(0,this)">All time</button>
+      <button class="sales-period-btn"        data-sp="custom" onclick="toggleCustomRange(this)">📅 Custom</button>
+    </div>
+    <!-- Custom date range picker (hidden by default) -->
+    <div id="sales-custom-range" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm)">
+      <span style="font-size:11px;color:var(--muted);letter-spacing:1px">FROM</span>
+      <input type="date" id="sales-date-from"
+        style="padding:7px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer">
+      <span style="font-size:11px;color:var(--muted);letter-spacing:1px">TO</span>
+      <input type="date" id="sales-date-to"
+        style="padding:7px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer">
+      <button onclick="applyCustomRange()"
+        style="padding:7px 16px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;letter-spacing:1px;cursor:pointer">
+        Apply ›
+      </button>
+      <span id="sales-custom-label" style="font-size:11px;color:var(--muted)"></span>
     </div>
 
     <!-- KPI cards -->
@@ -4305,12 +4320,66 @@ function initSalesTab() {
   if (!salesData.products.length) loadSalesAnalysis();
 }
 
+// Custom range state
+let _salesCustomFrom = null;
+let _salesCustomTo   = null;
+
 function setSalesPeriod(days, btn) {
-  _salesPeriodDays = days;
+  _salesPeriodDays  = days;
+  _salesCustomFrom  = null;
+  _salesCustomTo    = null;
   document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
+  // Hide custom picker if switching away
+  const picker = document.getElementById("sales-custom-range");
+  if (picker && days !== "custom") picker.style.display = "none";
   const label = document.getElementById("sales-period-label");
   if (label) label.textContent = days === 0 ? "all time" : `last ${days} days`;
+  _applyPeriodFilter();
+}
+
+function toggleCustomRange(btn) {
+  const picker = document.getElementById("sales-custom-range");
+  if (!picker) return;
+  const isOpen = picker.style.display !== "none";
+  if (isOpen) {
+    picker.style.display = "none";
+    // Revert to last non-custom period
+    document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
+    const firstBtn = document.querySelector(".sales-period-btn[data-sp='7']");
+    if (firstBtn) { firstBtn.classList.add("active"); setSalesPeriod(7, null); }
+  } else {
+    picker.style.display = "flex";
+    document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+    // Set default range: last 7 days
+    const today = new Date();
+    const from  = new Date(today); from.setDate(today.getDate() - 7);
+    const toEl   = document.getElementById("sales-date-to");
+    const fromEl = document.getElementById("sales-date-from");
+    if (fromEl) fromEl.value = from.toISOString().slice(0,10);
+    if (toEl)   toEl.value   = today.toISOString().slice(0,10);
+  }
+}
+
+function applyCustomRange() {
+  const fromEl = document.getElementById("sales-date-from");
+  const toEl   = document.getElementById("sales-date-to");
+  const label  = document.getElementById("sales-custom-label");
+  if (!fromEl?.value || !toEl?.value) {
+    if (label) label.textContent = "⚠ Select both dates";
+    return;
+  }
+  if (fromEl.value > toEl.value) {
+    if (label) label.textContent = "⚠ From must be before To";
+    return;
+  }
+  _salesCustomFrom = fromEl.value;
+  _salesCustomTo   = toEl.value;
+  _salesPeriodDays = "custom";
+  if (label) label.textContent = `${fromEl.value} → ${toEl.value}`;
+  const periodLabel = document.getElementById("sales-period-label");
+  if (periodLabel) periodLabel.textContent = `${fromEl.value} → ${toEl.value}`;
   _applyPeriodFilter();
 }
 
@@ -4382,7 +4451,12 @@ function _enrichProducts() {
 function _applyPeriodFilter() {
   if (!salesData.products) return;
   const days = salesData.days || [];
-  const slice = _salesPeriodDays === 0 ? days : days.slice(-_salesPeriodDays);
+  let slice;
+  if (_salesPeriodDays === "custom" && _salesCustomFrom && _salesCustomTo) {
+    slice = days.filter(d => d.date >= _salesCustomFrom && d.date <= _salesCustomTo);
+  } else {
+    slice = _salesPeriodDays === 0 ? days : days.slice(-_salesPeriodDays);
+  }
   renderSalesDayBars(slice);
 
   // For period filter: scale product totals proportionally
@@ -4450,7 +4524,9 @@ function renderSalesKpis(products, days) {
 function renderSalesRanking(products) {
   const el = document.getElementById("sales-ranking");
   if (!el) return;
-  const sorted = [...products].sort((a,b) => b.totalQty - a.totalQty).slice(0, 8);
+  const sorted = [...products]
+    .filter(p => p.totalRev > 0)
+    .sort((a,b) => b.totalQty - a.totalQty).slice(0, 8);
   if (!sorted.length) { el.innerHTML = `<div style="color:var(--muted);font-size:12px">No data.</div>`; return; }
   const max = sorted[0].totalQty || 1;
   const medals = ["🥇","🥈","🥉"];
@@ -4508,7 +4584,7 @@ function renderSalesTable(products) {
 
 function filterSalesTable() {
   const q   = (document.getElementById("sales-search")?.value || "").toLowerCase();
-  let rows  = [..._salesRows];
+  let rows  = [..._salesRows].filter(p => p.totalRev > 0 || p.totalQty > 0);
   if (_salesCatFilter) rows = rows.filter(p => (p.kategorie || "Other") === _salesCatFilter);
   if (q) rows = rows.filter(p => p.name.toLowerCase().includes(q));
   if (_salesSort.col) {
