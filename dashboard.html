@@ -4598,7 +4598,8 @@ async function runSalesImport() {
     });
 
     if (data.error) throw new Error(data.error);
-    if (msg) msg.textContent = `✓ Imported ${data.imported} · ${data.skipped} duplicates skipped`;
+    if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
+    salesData = { products: [], days: [], totalDays: 0 }; // clear cache
     await loadSalesAnalysis();
 
   } catch(e) {
@@ -4641,7 +4642,8 @@ async function runSalesImportFallback(file, msg) {
       totalImported += res.imported || 0;
       totalSkipped  += res.skipped  || 0;
     }
-    if (msg) msg.textContent = `✓ Imported ${totalImported} · ${totalSkipped} duplicates skipped`;
+    if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} skipped — refreshing…`;
+    salesData = { products: [], days: [], totalDays: 0 };
     await loadSalesAnalysis();
   } catch(e) {
     if (msg) msg.textContent = "Error: " + e.message;
