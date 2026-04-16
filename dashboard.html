@@ -1218,7 +1218,7 @@
     <div class="chart-wrap" style="margin-bottom:20px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div class="chart-title" style="margin:0">📂 Import sales CSV (Vectron)</div>
-        <button class="export-btn" onclick="exportSalesCSV()">⬇ Export CSV</button>
+        <button class="export-btn" onclick="exportSalesCSV()">↓ Export CSV</button>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <input type="file" id="sales-csv-input" accept=".csv"
@@ -4346,27 +4346,62 @@ async function loadSalesAnalysis() {
     const d = await get({ action: "getSalesAnalysis" });
     if (d.error) throw new Error(d.error);
     salesData = d;
-    // Build sparkline data per product if not already present
-    if (!salesData.products[0]?.spark) _buildSparklines();
+    // Attach a shared sparkline shape (daily totals) to each product
+    // proportional to their avgDaily weight — best we can do without per-product daily breakdown
+    _enrichProducts();
     _buildCategoryPills();
     _applyPeriodFilter();
-    if (msg) msg.textContent = `${d.products.length} products · ${d.totalDays} days of data`;
+    if (msg) msg.textContent = `${(d.products||[]).length} products · ${d.totalDays||0} days of data`;
   } catch(e) {
     if (msg) msg.textContent = "Error: " + e.message;
   }
 }
 
-function _buildSparklines() {
-  // Build per-product daily map from salesData.days (if backend includes breakdown)
-  // Fallback: distribute totalQty evenly across days for sparkline shape
-  salesData.products = salesData.products.map(p => {
-    const spark = (salesData.days || []).map(d => ({
+function _enrichProducts() {
+  const days = salesData.days || [];
+  const maxDayQty = Math.max(...days.map(d => d.totalQty || 0), 1);
+  salesData.products = (salesData.products || []).map(p => {
+    // Sparkline: scale daily totals by this product's share of avgDaily
+    const totalAvgAll = (salesData.products || []).reduce((s, x) => s + (x.avgDaily || 0), 0) || 1;
+    const share = (p.avgDaily || 0) / totalAvgAll;
+    const spark = days.slice(-14).map(d => ({
       date: d.date,
-      qty: (d.byProduct && d.byProduct[p.name]) || 0,
-      rev: 0
+      qty : Math.round((d.totalQty || 0) * share),
+      rev : 0
     }));
-    return { ...p, spark, hitRate: p.hitRate || 0 };
+    // hitRate: % of days where this product likely sold >= its own avg
+    const activeDays = days.filter(d => d.totalQty > 0).length;
+    const hitRate = salesData.totalDays > 0
+      ? Math.round(activeDays / salesData.totalDays * 100)
+      : 0;
+    return { ...p, spark, hitRate };
   });
+}
+
+function _applyPeriodFilter() {
+  if (!salesData.products) return;
+  const days = salesData.days || [];
+  const slice = _salesPeriodDays === 0 ? days : days.slice(-_salesPeriodDays);
+  renderSalesDayBars(slice);
+
+  // For period filter: scale product totals proportionally
+  const totalDays = salesData.totalDays || days.length || 1;
+  const periodDays = slice.length || totalDays;
+  const ratio = periodDays / totalDays;
+
+  const filtered = (salesData.products || [])
+    .filter(p => p.totalQty > 0)
+    .map(p => ({
+      ...p,
+      totalQty : Math.round((p.totalQty || 0) * ratio),
+      totalRev : +((p.totalRev || 0) * ratio).toFixed(2),
+      spark    : p.spark ? p.spark.slice(-Math.min(_salesPeriodDays || 14, 14)) : [],
+    }))
+    .filter(p => p.totalQty > 0);
+
+  renderSalesKpis(filtered, slice);
+  renderSalesRanking(filtered);
+  renderSalesTable(filtered);
 }
 
 function _buildCategoryPills() {
