@@ -4306,12 +4306,6 @@ function renderSalesTable(products) {
   filterSalesTable();
 }
 
-// FIND:
-function filterSalesTable() {
-  const q = (document.getElementById("sales-search")?.value || "").toLowerCase();
-  const rows = q ? _salesRows.filter(p => p.name.toLowerCase().includes(q)) : _salesRows;
-
-// REPLACE with:
 function filterSalesTable() {
   const q = (document.getElementById("sales-search")?.value || "").toLowerCase();
   let rows = q ? _salesRows.filter(p => p.name.toLowerCase().includes(q)) : [..._salesRows];
@@ -4324,6 +4318,22 @@ function filterSalesTable() {
         : String(va).localeCompare(String(vb)) * dir;
     });
   }
+  const tbody = document.getElementById("sales-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = rows.length ? rows.map((p, i) => `
+    <tr style="border-bottom:1px solid var(--border);${i % 2 !== 0 ? "background:var(--surface2)" : ""}">
+      <td style="padding:8px 10px">${p.name}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--text)">${p.totalQty}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--muted)">${p.avgDaily}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--muted)">${p.peakDay}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--green)">CHF ${p.totalRev.toLocaleString()}</td>
+      <td style="padding:8px 10px;text-align:right">
+        <span style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);
+                     padding:3px 12px;border-radius:20px;font-weight:600;font-size:13px">${p.suggestedMep}</span>
+      </td>
+    </tr>`).join("")
+    : `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted)">No matching products.</td></tr>`;
+}
 
 async function runSalesImport() {
   const file = document.getElementById("sales-csv-input")?.files[0];
