@@ -4576,53 +4576,67 @@ async function runSalesImport() {
   const file = document.getElementById("sales-csv-input")?.files[0];
   const msg  = document.getElementById("sales-import-msg");
   if (!file) { if (msg) msg.textContent = "Please select a CSV file first."; return; }
-  if (msg) msg.textContent = "Parsing CSV…";
+  if (msg) msg.textContent = "Uploading…";
+
+  try {
+    const text = await file.text();
+
+    // Send raw CSV text directly to GAS doPost — one single HTTP call
+    const res = await fetch(API, {
+      method : "POST",
+      headers: { "Content-Type": "text/plain" },
+      body   : text,
+      redirect: "follow",
+    });
+
+    // GAS redirects POST → GET with result — follow and parse
+    const data = await res.json().catch(async () => {
+      // Some GAS deployments wrap in HTML — try text fallback
+      const txt = await res.text();
+      const match = txt.match(/\{.*\}/s);
+      return match ? JSON.parse(match[0]) : { error: "Could not parse response" };
+    });
+
+    if (data.error) throw new Error(data.error);
+    if (msg) msg.textContent = `✓ Imported ${data.imported} · ${data.skipped} duplicates skipped`;
+    await loadSalesAnalysis();
+
+  } catch(e) {
+    // Fallback to chunked GET method if POST fails (e.g. CORS issue)
+    if (msg) msg.textContent = "POST failed, falling back to chunk upload…";
+    await runSalesImportFallback(file, msg);
+  }
+}
+
+async function runSalesImportFallback(file, msg) {
   try {
     const text  = await file.text();
     const lines = text.trim().split("\n");
-
-    const rows = lines.slice(1).map(line => {
+    const rows  = lines.slice(1).map(line => {
       const c = line.split(",");
       return {
-        date:        (c[0] || "").trim().substring(0, 10),
-        kategorie:   (c[2] || "").trim(),
-        produktname: (c[3] || "").replace(/^"|"$/g, "").trim(),
-        menge:       parseFloat((c[4] || "").trim()) || 0,
-        umsatz:      parseFloat((c[5] || "").trim()) || 0,
-        avgPrice:    parseFloat((c[7] || "").trim()) || 0,
-        avgCost:     Math.abs(parseFloat((c[8] || "").trim()) || 0),
-        margin:      parseFloat((c[11] || "").trim()) || 0,
+        date: (c[0]||"").trim().substring(0,10),
+        kategorie: (c[2]||"").trim(),
+        produktname: (c[3]||"").replace(/^"|"$/g,"").trim(),
+        menge: parseFloat(c[4])||0, umsatz: parseFloat(c[5])||0,
+        margin: parseFloat(c[11])||0,
       };
     }).filter(r => r.date && r.produktname && r.menge > 0);
-
-    if (!rows.length) throw new Error("No valid rows found. Check CSV format.");
 
     const map = {};
     rows.forEach(r => {
       const key = r.date + "|" + r.produktname;
-      if (!map[key]) map[key] = { date: r.date, produktname: r.produktname,
-        kategorie: r.kategorie, menge: 0, umsatz: 0, margin: 0,
-        avgPrice: r.avgPrice, avgCost: r.avgCost };
-      map[key].menge  += r.menge;
-      map[key].umsatz += r.umsatz;
-      map[key].margin += r.margin;
+      if (!map[key]) map[key] = { d:r.date, p:r.produktname, k:r.kategorie, m:0, u:0, g:0 };
+      map[key].m += Math.round(r.menge);
+      map[key].u += Math.round(r.umsatz);
+      map[key].g += Math.round(r.margin);
     });
-    const summary = Object.values(map);
-    const compact = summary.map(r => ({
-      d: r.date,
-      p: String(r.produktname || "").substring(0, 40),
-      k: String(r.kategorie   || "").substring(0, 20),
-      m: Math.round(r.menge)  || 0,
-      u: Math.round(r.umsatz) || 0,
-      g: Math.round(r.margin) || 0
-    }));
-
-    const CHUNK = 5;
+    const compact = Object.values(map);
+    const CHUNK = 50;
     let totalImported = 0, totalSkipped = 0;
     for (let i = 0; i < compact.length; i += CHUNK) {
-      const chunk = compact.slice(i, i + CHUNK);
-      if (msg) msg.textContent = `Uploading… ${Math.min(i + CHUNK, compact.length)} / ${compact.length}`;
-      const res = await get({ action: "importSalesCSV", rows: JSON.stringify(chunk) });
+      if (msg) msg.textContent = `Uploading… ${Math.min(i+CHUNK, compact.length)} / ${compact.length}`;
+      const res = await get({ action:"importSalesCSV", rows: JSON.stringify(compact.slice(i, i+CHUNK)) });
       if (res.error) throw new Error(res.error);
       totalImported += res.imported || 0;
       totalSkipped  += res.skipped  || 0;
