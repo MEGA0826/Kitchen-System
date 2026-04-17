@@ -1221,15 +1221,19 @@
         <div class="chart-title" style="margin:0">📂 Import sales CSV (Vectron)</div>
         <button class="export-btn" onclick="exportSalesCSV()">↑ Export CSV</button>
       </div>
+      <!-- Hidden file input — read immediately on change inside same gesture -->
+      <input type="file" id="sales-csv-input" accept=".csv,.txt" style="display:none"
+        onchange="handleSalesCsvPick(this)">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <input type="file" id="sales-csv-input" accept=".csv,.txt"
-          onchange="cacheSalesCsvFile(this)"
-          style="flex:1;min-width:200px;padding:8px;background:var(--surface2);border:1px solid var(--border2);
-                 border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px">
+        <button onclick="document.getElementById('sales-csv-input').value='';document.getElementById('sales-csv-input').click()"
+          style="flex:1;min-width:160px;padding:9px 16px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);
+                 border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;text-align:left">
+          📂 <span id="sales-file-label">Choose CSV file…</span>
+        </button>
         <button onclick="runSalesImport()"
           style="padding:9px 20px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);
                  border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap">
-          ↓ Import
+          ↑ Import
         </button>
         <button onclick="loadSalesAnalysis()"
           style="padding:9px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);
@@ -4650,79 +4654,65 @@ function exportSalesCSV() {
   a.click();
 }
 
-function cacheSalesCsvFile(input) {
-  const msg  = document.getElementById("sales-import-msg");
+// Read file immediately inside onchange — same gesture, before URI is revoked
+function handleSalesCsvPick(input) {
+  const msg   = document.getElementById("sales-import-msg");
+  const label = document.getElementById("sales-file-label");
   _cachedCsvText = null;
 
-  // Keep a reference to the FileList — not just the File object
-  const files = input.files;
-  if (!files || !files.length) {
-    if (msg) msg.textContent = "No file selected";
-    return;
-  }
+  const file = input.files && input.files[0];
+  if (!file) { if (msg) msg.textContent = "No file selected"; return; }
 
-  const file = files[0];
   if (msg) msg.textContent = "⏳ Reading…";
 
-  // Use blob URL as fallback so Android doesn't lose the reference
-  let blobUrl = null;
-  try {
-    blobUrl = URL.createObjectURL(file);
-  } catch(e) {}
-
-  const tryRead = (source, label) => {
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload  = e => resolve(e.target.result);
-      r.onerror = () => reject(new Error("read failed"));
-      if (typeof source === "string") {
-        // blobUrl path — fetch it as blob first
-        fetch(source)
-          .then(res => res.blob())
-          .then(blob => r.readAsText(blob, "UTF-8"))
-          .catch(reject);
-      } else {
-        r.readAsText(source, "UTF-8");
-      }
-    });
+  // Read synchronously inside the onchange event — most reliable on Android
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    _cachedCsvText = ev.target.result || "";
+    const lines = (_cachedCsvText.match(/\n/g)||[]).length;
+    if (label) label.textContent = `${file.name} · ${lines} rows`;
+    if (msg) msg.textContent = `✓ File ready — tap Import ↑`;
   };
-
-  // Try direct File first, then blob URL fallback
-  tryRead(file, "file")
-    .catch(() => blobUrl ? tryRead(blobUrl, "blob") : Promise.reject(new Error("no fallback")))
-    .then(text => {
-      _cachedCsvText = text;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-      const lines = (text.match(/\n/g) || []).length;
-      if (msg) msg.textContent = `✓ Ready: ${file.name} · ${lines} rows · tap Import ↑`;
-    })
-    .catch(() => {
-      _cachedCsvText = null;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-      // Show retry button
-      if (msg) msg.innerHTML = `⚠ Could not read file. 
-        <button onclick="document.getElementById('sales-csv-input').click()" 
-          style="margin-left:8px;padding:4px 12px;background:var(--amber-dim);color:var(--amber);
-                 border:1px solid var(--amber-brd);border-radius:var(--radius-sm);
-                 font-family:var(--mono);font-size:11px;cursor:pointer">
-          Retry ↺
-        </button>`;
-    });
+  reader.onerror = function() {
+    _cachedCsvText = null;
+    if (msg) msg.textContent = "⚠ Read error — try a different file manager app";
+    if (label) label.textContent = "Choose CSV file…";
+  };
+  // Use arrayBuffer then decode — more reliable than readAsText on some Android WebViews
+  reader.onloadend = null;
+  const r2 = new FileReader();
+  r2.onload = function(ev) {
+    try {
+      const bytes = new Uint8Array(ev.target.result);
+      // Detect UTF-8 BOM
+      const start = (bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF) ? 3 : 0;
+      _cachedCsvText = new TextDecoder("utf-8").decode(bytes.slice(start));
+      const lines = (_cachedCsvText.match(/\n/g)||[]).length;
+      if (label) label.textContent = `${file.name} · ${lines} rows`;
+      if (msg) msg.textContent = `✓ File ready — tap Import ↑`;
+    } catch(e) {
+      // fall back to reader result if already set
+      if (!_cachedCsvText) {
+        if (msg) msg.textContent = "⚠ Could not decode file";
+      }
+    }
+  };
+  r2.onerror = function() {
+    if (!_cachedCsvText) {
+      if (msg) msg.textContent = "⚠ Read error — try a different file manager app";
+    }
+  };
+  // Try arrayBuffer first (most reliable), readAsText as parallel backup
+  try { r2.readAsArrayBuffer(file); } catch(e) {}
+  try { reader.readAsText(file, "UTF-8"); } catch(e) {}
 }
 
 async function runSalesImport() {
-  const msg  = document.getElementById("sales-import-msg");
+  const msg = document.getElementById("sales-import-msg");
   if (!_cachedCsvText) {
-    if (msg) msg.innerHTML = `Please select a CSV file first. 
-      <button onclick="document.getElementById('sales-csv-input').click()" 
-        style="margin-left:8px;padding:4px 12px;background:var(--amber-dim);color:var(--amber);
-               border:1px solid var(--amber-brd);border-radius:var(--radius-sm);
-               font-family:var(--mono);font-size:11px;cursor:pointer">
-        Select file ↺
-      </button>`;
+    if (msg) msg.textContent = "Please choose a CSV file first.";
     return;
   }
-  if (msg) msg.textContent = "Uploading…";
   if (msg) msg.textContent = "Uploading…";
 
   try {
@@ -4731,36 +4721,76 @@ async function runSalesImport() {
     // Send raw CSV text directly to GAS doPost — one single HTTP call
     let postOk = false;
     try {
-      const res  = await fetch(API, {
+      const res   = await fetch(API, {
         method  : "POST",
         headers : { "Content-Type": "text/plain" },
         body    : text,
         redirect: "follow",
       });
-      const raw  = await res.text();
+      const raw   = await res.text();
       const match = raw.match(/\{[\s\S]*\}/);
       const data  = match ? JSON.parse(match[0]) : null;
-      if (data && !data.error && (data.imported !== undefined)) {
+      if (data && !data.error && data.imported !== undefined) {
         if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
         postOk = true;
       }
     } catch(postErr) {
-      console.warn("POST upload failed, falling back:", postErr);
+      console.warn("POST failed, falling back:", postErr);
     }
 
     if (!postOk) {
-      if (msg) msg.textContent = "Falling back to chunk upload…";
-      await runSalesImportFallback(file, msg);
+      if (msg) msg.textContent = "Uploading via chunks…";
+      await runSalesImportFallback(msg);
       return;
     }
 
+    _cachedCsvText = null;
     salesData = { products: [], days: [], totalDays: 0 };
     await loadSalesAnalysis();
 
   } catch(e) {
-    // Fallback to chunked GET method if POST fails (e.g. CORS issue)
-    if (msg) msg.textContent = "POST failed, falling back to chunk upload…";
-    await runSalesImportFallback(file, msg);
+    if (msg) msg.textContent = "Error: " + e.message;
+  }
+}
+
+async function runSalesImportFallback(msg) {
+  try {
+    const text  = _cachedCsvText;
+    if (!text)  throw new Error("No file data");
+    const lines = text.trim().split("\n");
+    const map   = {};
+
+    lines.slice(1).forEach(line => {
+      const c    = line.split(",");
+      const date = (c[0]||"").trim().substring(0,10);
+      const name = (c[3]||"").replace(/^"|"$/g,"").trim();
+      const qty  = parseFloat(c[4])||0;
+      if (!date || !name || qty <= 0) return;
+      const key  = date + "|" + name;
+      if (!map[key]) map[key] = { d:date, p:name, k:(c[2]||"").trim(), m:0, u:0, g:0 };
+      map[key].m += Math.round(qty);
+      map[key].u += Math.round(parseFloat(c[5])||0);
+      map[key].g += Math.round(parseFloat(c[11])||0);
+    });
+
+    const compact = Object.values(map);
+    if (!compact.length) throw new Error("No valid rows in CSV");
+
+    const CHUNK = 50;
+    let totalImported = 0, totalSkipped = 0;
+    for (let i = 0; i < compact.length; i += CHUNK) {
+      if (msg) msg.textContent = `Uploading… ${Math.min(i+CHUNK,compact.length)} / ${compact.length}`;
+      const res = await get({ action:"importSalesCSV", rows: JSON.stringify(compact.slice(i,i+CHUNK)) });
+      if (res.error) throw new Error(res.error);
+      totalImported += res.imported || 0;
+      totalSkipped  += res.skipped  || 0;
+    }
+    if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} skipped`;
+    _cachedCsvText = null;
+    salesData = { products: [], days: [], totalDays: 0 };
+    await loadSalesAnalysis();
+  } catch(e) {
+    if (msg) msg.textContent = "Error: " + e.message;
   }
 }
 
