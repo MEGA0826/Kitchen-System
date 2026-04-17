@@ -1618,7 +1618,11 @@
 </div>
 
 <script>
-
+window.onerror = function(msg, src, line, col) {
+  document.body.innerHTML = '<div style="padding:20px;font-size:16px;color:red;background:#fff">'
+    + '<b>JS Error:</b><br>' + msg + '<br><b>Line:</b> ' + line + '</div>';
+  return false;
+};
 // ── LANGUAGE ──
   function setLangDash(lang) {
     localStorage.setItem('kmep_lang', lang);
