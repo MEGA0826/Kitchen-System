@@ -4655,7 +4655,7 @@ function exportSalesCSV() {
 }
 
 // Read file immediately inside onchange — same gesture, before URI is revoked
-function handleSalesCsvPick(input) {
+async function handleSalesCsvPick(input) {
   const msg   = document.getElementById("sales-import-msg");
   const label = document.getElementById("sales-file-label");
   _cachedCsvText = null;
@@ -4665,46 +4665,23 @@ function handleSalesCsvPick(input) {
 
   if (msg) msg.textContent = "⏳ Reading…";
 
-  // Read synchronously inside the onchange event — most reliable on Android
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    _cachedCsvText = ev.target.result || "";
+  try {
+    // arrayBuffer() is Promise-based — works in Android PWA WebView where FileReader is blocked
+    const buffer  = await file.arrayBuffer();
+    const bytes   = new Uint8Array(buffer);
+    // Strip UTF-8 BOM if present
+    const start   = (bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF) ? 3 : 0;
+    _cachedCsvText = new TextDecoder("utf-8").decode(bytes.slice(start));
+
     const lines = (_cachedCsvText.match(/\n/g)||[]).length;
     if (label) label.textContent = `${file.name} · ${lines} rows`;
-    if (msg) msg.textContent = `✓ File ready — tap Import ↑`;
-  };
-  reader.onerror = function() {
+    if (msg)   msg.textContent   = `✓ File ready — tap Import ↑`;
+
+  } catch(e) {
     _cachedCsvText = null;
-    if (msg) msg.textContent = "⚠ Read error — try a different file manager app";
+    if (msg)   msg.textContent   = `⚠ Error: ${e.message}`;
     if (label) label.textContent = "Choose CSV file…";
-  };
-  // Use arrayBuffer then decode — more reliable than readAsText on some Android WebViews
-  reader.onloadend = null;
-  const r2 = new FileReader();
-  r2.onload = function(ev) {
-    try {
-      const bytes = new Uint8Array(ev.target.result);
-      // Detect UTF-8 BOM
-      const start = (bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF) ? 3 : 0;
-      _cachedCsvText = new TextDecoder("utf-8").decode(bytes.slice(start));
-      const lines = (_cachedCsvText.match(/\n/g)||[]).length;
-      if (label) label.textContent = `${file.name} · ${lines} rows`;
-      if (msg) msg.textContent = `✓ File ready — tap Import ↑`;
-    } catch(e) {
-      // fall back to reader result if already set
-      if (!_cachedCsvText) {
-        if (msg) msg.textContent = "⚠ Could not decode file";
-      }
-    }
-  };
-  r2.onerror = function() {
-    if (!_cachedCsvText) {
-      if (msg) msg.textContent = "⚠ Read error — try a different file manager app";
-    }
-  };
-  // Try arrayBuffer first (most reliable), readAsText as parallel backup
-  try { r2.readAsArrayBuffer(file); } catch(e) {}
-  try { reader.readAsText(file, "UTF-8"); } catch(e) {}
+  }
 }
 
 async function runSalesImport() {
