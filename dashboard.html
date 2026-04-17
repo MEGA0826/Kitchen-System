@@ -4651,49 +4651,76 @@ function exportSalesCSV() {
 }
 
 function cacheSalesCsvFile(input) {
-  const file = input.files[0];
   const msg  = document.getElementById("sales-import-msg");
   _cachedCsvText = null;
-  if (!file) {
+
+  // Keep a reference to the FileList — not just the File object
+  const files = input.files;
+  if (!files || !files.length) {
     if (msg) msg.textContent = "No file selected";
     return;
   }
-  if (msg) msg.textContent = "⏳ Reading file…";
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    _cachedCsvText = e.target.result;
-    const lines = (_cachedCsvText.match(/\n/g) || []).length;
-    if (msg) msg.textContent = `✓ Ready: ${file.name} · ${lines} rows · click Import ↑`;
+
+  const file = files[0];
+  if (msg) msg.textContent = "⏳ Reading…";
+
+  // Use blob URL as fallback so Android doesn't lose the reference
+  let blobUrl = null;
+  try {
+    blobUrl = URL.createObjectURL(file);
+  } catch(e) {}
+
+  const tryRead = (source, label) => {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload  = e => resolve(e.target.result);
+      r.onerror = () => reject(new Error("read failed"));
+      if (typeof source === "string") {
+        // blobUrl path — fetch it as blob first
+        fetch(source)
+          .then(res => res.blob())
+          .then(blob => r.readAsText(blob, "UTF-8"))
+          .catch(reject);
+      } else {
+        r.readAsText(source, "UTF-8");
+      }
+    });
   };
-  reader.onerror = function() {
-    _cachedCsvText = null;
-    if (msg) msg.textContent = "⚠ Could not read file — try selecting again";
-  };
-  reader.readAsText(file, "UTF-8");
+
+  // Try direct File first, then blob URL fallback
+  tryRead(file, "file")
+    .catch(() => blobUrl ? tryRead(blobUrl, "blob") : Promise.reject(new Error("no fallback")))
+    .then(text => {
+      _cachedCsvText = text;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      const lines = (text.match(/\n/g) || []).length;
+      if (msg) msg.textContent = `✓ Ready: ${file.name} · ${lines} rows · tap Import ↑`;
+    })
+    .catch(() => {
+      _cachedCsvText = null;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      // Show retry button
+      if (msg) msg.innerHTML = `⚠ Could not read file. 
+        <button onclick="document.getElementById('sales-csv-input').click()" 
+          style="margin-left:8px;padding:4px 12px;background:var(--amber-dim);color:var(--amber);
+                 border:1px solid var(--amber-brd);border-radius:var(--radius-sm);
+                 font-family:var(--mono);font-size:11px;cursor:pointer">
+          Retry ↺
+        </button>`;
+    });
 }
 
 async function runSalesImport() {
   const msg  = document.getElementById("sales-import-msg");
-  // If no cached text, try reading from input as last resort
   if (!_cachedCsvText) {
-    const input = document.getElementById("sales-csv-input");
-    const file  = input?.files?.[0];
-    if (!file) {
-      if (msg) msg.textContent = "Please select a CSV file first.";
-      return;
-    }
-    if (msg) msg.textContent = "Reading file…";
-    try {
-      _cachedCsvText = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload  = e => resolve(e.target.result);
-        r.onerror = () => reject(new Error("File read failed"));
-        r.readAsText(file, "UTF-8");
-      });
-    } catch(e) {
-      if (msg) msg.textContent = "⚠ Could not read file: " + e.message;
-      return;
-    }
+    if (msg) msg.innerHTML = `Please select a CSV file first. 
+      <button onclick="document.getElementById('sales-csv-input').click()" 
+        style="margin-left:8px;padding:4px 12px;background:var(--amber-dim);color:var(--amber);
+               border:1px solid var(--amber-brd);border-radius:var(--radius-sm);
+               font-family:var(--mono);font-size:11px;cursor:pointer">
+        Select file ↺
+      </button>`;
+    return;
   }
   if (msg) msg.textContent = "Uploading…";
   if (msg) msg.textContent = "Uploading…";
