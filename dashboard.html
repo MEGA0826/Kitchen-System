@@ -4321,22 +4321,19 @@ let _salesPeriodDays = 7;
 let _salesCatFilter = "";
 let _salesSort = { col: null, dir: 1 };
 let _cachedCsvText = null;
+let _salesCustomFrom = null;
+let _salesCustomTo   = null;
 
 function initSalesTab() {
   if (!salesData.products.length) loadSalesAnalysis();
 }
 
-// Custom range state
-let _salesCustomFrom = null;
-let _salesCustomTo   = null;
-
 function setSalesPeriod(days, btn) {
-  _salesPeriodDays  = days;
-  _salesCustomFrom  = null;
-  _salesCustomTo    = null;
+  _salesPeriodDays = days;
+  _salesCustomFrom = null;
+  _salesCustomTo   = null;
   document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
-  // Hide custom picker if switching away
   const picker = document.getElementById("sales-custom-range");
   if (picker && days !== "custom") picker.style.display = "none";
   const label = document.getElementById("sales-period-label");
@@ -4350,7 +4347,6 @@ function toggleCustomRange(btn) {
   const isOpen = picker.style.display !== "none";
   if (isOpen) {
     picker.style.display = "none";
-    // Revert to last non-custom period
     document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
     const firstBtn = document.querySelector(".sales-period-btn[data-sp='7']");
     if (firstBtn) { firstBtn.classList.add("active"); setSalesPeriod(7, null); }
@@ -4358,7 +4354,6 @@ function toggleCustomRange(btn) {
     picker.style.display = "flex";
     document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
     if (btn) btn.classList.add("active");
-    // Set default range: last 7 days
     const today = new Date();
     const from  = new Date(today); from.setDate(today.getDate() - 7);
     const toEl   = document.getElementById("sales-date-to");
@@ -4372,14 +4367,8 @@ function applyCustomRange() {
   const fromEl = document.getElementById("sales-date-from");
   const toEl   = document.getElementById("sales-date-to");
   const label  = document.getElementById("sales-custom-label");
-  if (!fromEl?.value || !toEl?.value) {
-    if (label) label.textContent = "⚠ Select both dates";
-    return;
-  }
-  if (fromEl.value > toEl.value) {
-    if (label) label.textContent = "⚠ From must be before To";
-    return;
-  }
+  if (!fromEl?.value || !toEl?.value) { if (label) label.textContent = "⚠ Select both dates"; return; }
+  if (fromEl.value > toEl.value) { if (label) label.textContent = "⚠ From must be before To"; return; }
   _salesCustomFrom = fromEl.value;
   _salesCustomTo   = toEl.value;
   _salesPeriodDays = "custom";
@@ -4387,45 +4376,6 @@ function applyCustomRange() {
   const periodLabel = document.getElementById("sales-period-label");
   if (periodLabel) periodLabel.textContent = `${fromEl.value} → ${toEl.value}`;
   _applyPeriodFilter();
-}
-
-async function loadSalesAnalysis() {
-  const msg = document.getElementById("sales-import-msg");
-  if (msg) msg.textContent = "Loading…";
-  try {
-    const d = await get({ action: "getSalesAnalysis" });
-    if (d.error) throw new Error(d.error);
-    salesData = d;
-    // Attach a shared sparkline shape (daily totals) to each product
-    // proportional to their avgDaily weight — best we can do without per-product daily breakdown
-    _enrichProducts();
-    _buildCategoryPills();
-    _applyPeriodFilter();
-    if (msg) msg.textContent = `${(d.products||[]).length} products · ${d.totalDays||0} days of data`;
-  } catch(e) {
-    if (msg) msg.textContent = "Error: " + e.message;
-  }
-}
-
-function _enrichProducts() {
-  const days = salesData.days || [];
-  const maxDayQty = Math.max(...days.map(d => d.totalQty || 0), 1);
-  salesData.products = (salesData.products || []).map(p => {
-    // Sparkline: scale daily totals by this product's share of avgDaily
-    const totalAvgAll = (salesData.products || []).reduce((s, x) => s + (x.avgDaily || 0), 0) || 1;
-    const share = (p.avgDaily || 0) / totalAvgAll;
-    const spark = days.slice(-14).map(d => ({
-      date: d.date,
-      qty : Math.round((d.totalQty || 0) * share),
-      rev : 0
-    }));
-    // hitRate: % of days where this product likely sold >= its own avg
-    const activeDays = days.filter(d => d.totalQty > 0).length;
-    const hitRate = salesData.totalDays > 0
-      ? Math.round(activeDays / salesData.totalDays * 100)
-      : 0;
-    return { ...p, spark, hitRate };
-  });
 }
 
 function _applyPeriodFilter() {
@@ -4438,25 +4388,54 @@ function _applyPeriodFilter() {
     slice = _salesPeriodDays === 0 ? days : days.slice(-_salesPeriodDays);
   }
   renderSalesDayBars(slice);
-
-  // For period filter: scale product totals proportionally
-  const totalDays = salesData.totalDays || days.length || 1;
+  const totalDays  = salesData.totalDays || days.length || 1;
   const periodDays = slice.length || totalDays;
-  const ratio = periodDays / totalDays;
-
-  const filtered = (salesData.products || [])
+  const ratio      = periodDays / totalDays;
+  const filtered   = (salesData.products || [])
     .filter(p => p.totalQty > 0)
     .map(p => ({
       ...p,
       totalQty : Math.round((p.totalQty || 0) * ratio),
       totalRev : +((p.totalRev || 0) * ratio).toFixed(2),
-      spark    : p.spark ? p.spark.slice(-Math.min(_salesPeriodDays || 14, 14)) : [],
+      spark    : p.spark ? p.spark.slice(-Math.min(_salesPeriodDays === "custom" ? 30 : (_salesPeriodDays || 14), 14)) : [],
     }))
     .filter(p => p.totalQty > 0);
-
   renderSalesKpis(filtered, slice);
   renderSalesRanking(filtered);
   renderSalesTable(filtered);
+}
+
+async function loadSalesAnalysis() {
+  const msg = document.getElementById("sales-import-msg");
+  if (msg) msg.textContent = "Loading…";
+  try {
+    const d = await get({ action: "getSalesAnalysis" });
+    if (d.error) throw new Error(d.error);
+    salesData = d;
+    _enrichProducts();
+    _buildCategoryPills();
+    _applyPeriodFilter();
+    if (msg) msg.textContent = `${(d.products||[]).length} products · ${d.totalDays||0} days of data`;
+  } catch(e) {
+    if (msg) msg.textContent = "Error: " + e.message;
+  }
+}
+
+function _enrichProducts() {
+  const days = salesData.days || [];
+  salesData.products = (salesData.products || []).map(p => {
+    const totalAvgAll = (salesData.products || []).reduce((s, x) => s + (x.avgDaily || 0), 0) || 1;
+    const share = (p.avgDaily || 0) / totalAvgAll;
+    const spark = days.slice(-14).map(d => ({
+      date: d.date,
+      qty : Math.round((d.totalQty || 0) * share),
+      rev : 0
+    }));
+    const activeDays = days.filter(d => d.totalQty > 0).length;
+    const hitRate = salesData.totalDays > 0
+      ? Math.round(activeDays / salesData.totalDays * 100) : 0;
+    return { ...p, spark, hitRate };
+  });
 }
 
 function _buildCategoryPills() {
@@ -4482,20 +4461,18 @@ function renderSalesKpis(products, days) {
   const top        = [...products].sort((a,b) => b.totalQty - a.totalQty)[0] || {};
   const daysCount  = days.length || 1;
   const avgDay     = +(totalUnits / daysCount).toFixed(1);
-  const avgRev     = +(totalRev / daysCount).toFixed(0);
-
   const cards = [
-    { icon:"📦", val: totalUnits.toLocaleString(), label:"Units sold", color:"var(--amber)", bg:"📦" },
+    { icon:"📦", val: totalUnits.toLocaleString(), label:"Units sold",     color:"var(--amber)", bg:"📦" },
     { icon:"💰", val: `CHF ${totalRev.toLocaleString()}`, label:"Total revenue", color:"var(--green)", bg:"💰" },
-    { icon:"📊", val: avgDay, label:"Avg units / day", color:"var(--blue)", bg:"📊" },
-    { icon:"🏆", val: top.name || "—", label:"Top product", color:"var(--text)", sub: top.totalQty ? top.totalQty + " units" : "", bg:"🏆", small:true },
+    { icon:"📊", val: avgDay,                      label:"Avg units / day",color:"var(--blue)",  bg:"📊" },
+    { icon:"🏆", val: top.name || "—",             label:"Top product",    color:"var(--text)",  bg:"🏆", small:true,
+      sub: top.totalQty ? top.totalQty + " units" : "" },
   ];
-
   el.innerHTML = cards.map(c => `
     <div class="sales-kpi">
       <span class="sales-kpi-bg">${c.bg}</span>
       <span class="sales-kpi-icon">${c.icon}</span>
-      <div class="sales-kpi-val ${c.small ? "" : ""}" style="color:${c.color};font-size:${c.small?"18px":"32px"};margin-top:${c.small?"4px":"0"}">${c.val}</div>
+      <div style="color:${c.color};font-size:${c.small?"18px":"32px"};font-family:var(--serif);line-height:1;margin-bottom:4px">${c.val}</div>
       <div class="sales-kpi-label">${c.label}</div>
       ${c.sub ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">${c.sub}</div>` : ""}
     </div>`).join("");
@@ -4504,14 +4481,13 @@ function renderSalesKpis(products, days) {
 function renderSalesRanking(products) {
   const el = document.getElementById("sales-ranking");
   if (!el) return;
-  const sorted = [...products]
-    .filter(p => p.totalRev > 0)
+  const sorted = [...products].filter(p => p.totalRev > 0)
     .sort((a,b) => b.totalQty - a.totalQty).slice(0, 8);
   if (!sorted.length) { el.innerHTML = `<div style="color:var(--muted);font-size:12px">No data.</div>`; return; }
-  const max = sorted[0].totalQty || 1;
+  const max    = sorted[0].totalQty || 1;
   const medals = ["🥇","🥈","🥉"];
   el.innerHTML = sorted.map((p, i) => {
-    const pct = Math.round(p.totalQty / max * 100);
+    const pct   = Math.round(p.totalQty / max * 100);
     const medal = medals[i] || `<span style="font-size:12px;color:var(--muted);font-family:var(--mono)">${i+1}</span>`;
     return `<div class="bar-row" style="margin-bottom:2px">
       <div class="bar-name" style="display:flex;align-items:center;gap:6px">
@@ -4533,10 +4509,10 @@ function renderSalesDayBars(days) {
   }
   const max = Math.max(...days.map(d => d.totalQty)) || 1;
   el.innerHTML = days.map(d => {
-    const pct = Math.round(d.totalQty / max * 100);
-    const _d  = new Date(d.date + "T00:00:00");
-    const _dn = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    const label = `${_dn[_d.getDay()]} ${d.date.slice(5)}`;
+    const pct       = Math.round(d.totalQty / max * 100);
+    const _d        = new Date(d.date + "T00:00:00");
+    const _dn       = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const label     = `${_dn[_d.getDay()]} ${d.date.slice(5)}`;
     const isWeekend = _d.getDay() === 0 || _d.getDay() === 6;
     return `<div class="bar-row">
       <div class="bar-name" style="font-size:11px;color:${isWeekend?"var(--amber)":"var(--text)"}" title="${d.date}">${label}</div>
@@ -4551,7 +4527,7 @@ function _buildSparkHtml(spark) {
   const last7 = spark.slice(-7);
   const max   = Math.max(...last7.map(d => d.qty)) || 1;
   return `<div class="sparkline">${last7.map(d => {
-    const h = Math.max(2, Math.round(d.qty / max * 26));
+    const h     = Math.max(2, Math.round(d.qty / max * 26));
     const color = d.qty >= max * 0.8 ? "var(--green)" : d.qty >= max * 0.4 ? "var(--blue)" : "var(--muted)";
     return `<div class="sparkline-bar" style="height:${h}px;background:${color}" title="${d.date}: ${d.qty}"></div>`;
   }).join("")}</div>`;
@@ -4563,8 +4539,8 @@ function renderSalesTable(products) {
 }
 
 function filterSalesTable() {
-  const q   = (document.getElementById("sales-search")?.value || "").toLowerCase();
-  let rows  = [..._salesRows].filter(p => p.totalRev > 0 || p.totalQty > 0);
+  const q  = (document.getElementById("sales-search")?.value || "").toLowerCase();
+  let rows = [..._salesRows].filter(p => p.totalRev > 0 || p.totalQty > 0);
   if (_salesCatFilter) rows = rows.filter(p => (p.kategorie || "Other") === _salesCatFilter);
   if (q) rows = rows.filter(p => p.name.toLowerCase().includes(q));
   if (_salesSort.col) {
@@ -4579,19 +4555,20 @@ function filterSalesTable() {
   const tbody = document.getElementById("sales-table-body");
   if (!tbody) return;
   tbody.innerHTML = rows.length ? rows.map((p, i) => {
-    const hitRate = p.hitRate || 0;
+    const hitRate  = p.hitRate || 0;
     const hitColor = hitRate >= 80 ? "var(--green)" : hitRate >= 50 ? "var(--amber)" : "var(--red)";
-    const rankMedal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `<span style="color:var(--muted);font-size:11px">${i+1}</span>`;
-    return `<tr style="border-bottom:1px solid var(--border);${i%2!==0?"background:var(--surface2)":""}">
-      <td style="padding:8px 10px;text-align:center">${rankMedal}</td>
+    const medal    = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉"
+                   : `<span style="color:var(--muted);font-size:11px">${i+1}</span>`;
+    return `<tr style="border-bottom:1px solid var(--border);${i%2?"background:var(--surface2)":""}">
+      <td style="padding:8px 10px;text-align:center">${medal}</td>
       <td style="padding:8px 10px;font-weight:500">${p.name}</td>
-      <td style="padding:8px 10px;text-align:right;color:var(--text);font-weight:600">${p.totalQty}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:600">${p.totalQty}</td>
       <td style="padding:8px 10px;text-align:right;color:var(--muted)">${p.avgDaily}</td>
       <td style="padding:8px 10px;text-align:right;color:var(--muted)">${p.peakDay}</td>
       <td style="padding:8px 10px;text-align:center">${_buildSparkHtml(p.spark)}</td>
       <td style="padding:8px 10px;text-align:right">
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
-          <div class="hit-bar" style="width:${hitRate}px;max-width:60px;background:${hitColor}"></div>
+          <div class="hit-bar" style="width:${Math.min(hitRate,60)}px;background:${hitColor}"></div>
           <span style="color:${hitColor};font-weight:500;font-size:12px;min-width:32px">${hitRate}%</span>
         </div>
       </td>
@@ -4616,41 +4593,33 @@ function sortSalesCol(col, th) {
 function exportSalesCSV() {
   if (!_salesRows.length) { alert("No data to export."); return; }
   const headers = ["Rank","Product","Total sold","Avg/day","Peak day","Goal hit %","Revenue CHF","MEP target"];
-  const rows = _salesRows.map((p, i) => [
+  const rows    = _salesRows.map((p, i) => [
     i+1, `"${p.name}"`, p.totalQty, p.avgDaily, p.peakDay,
     (p.hitRate||0)+"%", p.totalRev.toFixed(2), p.suggestedMep
   ]);
-  const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+  const csv  = [headers, ...rows].map(r => r.join(",")).join("\n");
   const blob = new Blob([csv], { type:"text/csv" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = URL.createObjectURL(blob);
   a.download = `sales_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 }
 
-// Read file immediately inside onchange — same gesture, before URI is revoked
 async function handleSalesCsvPick(input) {
   const msg   = document.getElementById("sales-import-msg");
   const label = document.getElementById("sales-file-label");
   _cachedCsvText = null;
-
-  const file = input.files && input.files[0];
+  const file  = input.files && input.files[0];
   if (!file) { if (msg) msg.textContent = "No file selected"; return; }
-
   if (msg) msg.textContent = "⏳ Reading…";
-
   try {
-    // arrayBuffer() is Promise-based — works in Android PWA WebView where FileReader is blocked
-    const buffer  = await file.arrayBuffer();
-    const bytes   = new Uint8Array(buffer);
-    // Strip UTF-8 BOM if present
-    const start   = (bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF) ? 3 : 0;
-    _cachedCsvText = new TextDecoder("utf-8").decode(bytes.slice(start));
-
-    const lines = (_cachedCsvText.match(/\n/g)||[]).length;
+    const buffer       = await file.arrayBuffer();
+    const bytes        = new Uint8Array(buffer);
+    const start        = (bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF) ? 3 : 0;
+    _cachedCsvText     = new TextDecoder("utf-8").decode(bytes.slice(start));
+    const lines        = (_cachedCsvText.match(/\n/g)||[]).length;
     if (label) label.textContent = `${file.name} · ${lines} rows`;
     if (msg)   msg.textContent   = `✓ File ready — tap Import ↑`;
-
   } catch(e) {
     _cachedCsvText = null;
     if (msg)   msg.textContent   = `⚠ Error: ${e.message}`;
@@ -4660,23 +4629,14 @@ async function handleSalesCsvPick(input) {
 
 async function runSalesImport() {
   const msg = document.getElementById("sales-import-msg");
-  if (!_cachedCsvText) {
-    if (msg) msg.textContent = "Please choose a CSV file first.";
-    return;
-  }
+  if (!_cachedCsvText) { if (msg) msg.textContent = "Please choose a CSV file first."; return; }
   if (msg) msg.textContent = "Uploading…";
-
   try {
-    const text = _cachedCsvText;
-
-    // Send raw CSV text directly to GAS doPost — one single HTTP call
-    let postOk = false;
+    const text  = _cachedCsvText;
+    let postOk  = false;
     try {
       const res   = await fetch(API, {
-        method  : "POST",
-        headers : { "Content-Type": "text/plain" },
-        body    : text,
-        redirect: "follow",
+        method:"POST", headers:{"Content-Type":"text/plain"}, body:text, redirect:"follow"
       });
       const raw   = await res.text();
       const match = raw.match(/\{[\s\S]*\}/);
@@ -4685,32 +4645,25 @@ async function runSalesImport() {
         if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
         postOk = true;
       }
-    } catch(postErr) {
-      console.warn("POST failed, falling back:", postErr);
-    }
+    } catch(postErr) { console.warn("POST failed, using chunk fallback:", postErr); }
 
     if (!postOk) {
       if (msg) msg.textContent = "Uploading via chunks…";
-      await runSalesImportFallback(msg);
+      await _salesChunkFallback(msg);
       return;
     }
-
     _cachedCsvText = null;
-    salesData = { products: [], days: [], totalDays: 0 };
+    salesData = { products:[], days:[], totalDays:0 };
     await loadSalesAnalysis();
-
-  } catch(e) {
-    if (msg) msg.textContent = "Error: " + e.message;
-  }
+  } catch(e) { if (msg) msg.textContent = "Error: " + e.message; }
 }
 
-async function runSalesImportFallback(msg) {
+async function _salesChunkFallback(msg) {
   try {
     const text  = _cachedCsvText;
     if (!text)  throw new Error("No file data");
     const lines = text.trim().split("\n");
     const map   = {};
-
     lines.slice(1).forEach(line => {
       const c    = line.split(",");
       const date = (c[0]||"").trim().substring(0,10);
@@ -4723,10 +4676,8 @@ async function runSalesImportFallback(msg) {
       map[key].u += Math.round(parseFloat(c[5])||0);
       map[key].g += Math.round(parseFloat(c[11])||0);
     });
-
     const compact = Object.values(map);
     if (!compact.length) throw new Error("No valid rows in CSV");
-
     const CHUNK = 50;
     let totalImported = 0, totalSkipped = 0;
     for (let i = 0; i < compact.length; i += CHUNK) {
@@ -4738,11 +4689,28 @@ async function runSalesImportFallback(msg) {
     }
     if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} skipped`;
     _cachedCsvText = null;
-    salesData = { products: [], days: [], totalDays: 0 };
+    salesData = { products:[], days:[], totalDays:0 };
     await loadSalesAnalysis();
-  } catch(e) {
-    if (msg) msg.textContent = "Error: " + e.message;
-  }
+  } catch(e) { if (msg) msg.textContent = "Error: " + e.message; }
+}
+
+async function importFromDriveUrl() {
+  const msg      = document.getElementById("sales-import-msg");
+  const urlInput = document.getElementById("sales-drive-url");
+  const raw      = (urlInput?.value || "").trim();
+  if (!raw) { if (msg) msg.textContent = "Paste a Google Drive link or file ID first."; return; }
+  let fileId     = raw;
+  const m1       = raw.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+  const m2       = raw.match(/id=([a-zA-Z0-9_-]{10,})/);
+  if (m1) fileId = m1[1]; else if (m2) fileId = m2[1];
+  if (msg) msg.textContent = "⏳ Fetching from Drive…";
+  try {
+    const data = await get({ action: "importSalesFromDrive", fileId });
+    if (data.error) throw new Error(data.error);
+    if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
+    salesData = { products:[], days:[], totalDays:0 };
+    await loadSalesAnalysis();
+  } catch(e) { if (msg) msg.textContent = "Error: " + e.message; }
 }
   
 // ─────────────────────────────────────────────
