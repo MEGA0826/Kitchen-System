@@ -1222,7 +1222,8 @@
         <button class="export-btn" onclick="exportSalesCSV()">↑ Export CSV</button>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <input type="file" id="sales-csv-input" accept=".csv"
+        <input type="file" id="sales-csv-input" accept=".csv,.txt"
+          onchange="cacheSalesCsvFile(this)"
           style="flex:1;min-width:200px;padding:8px;background:var(--surface2);border:1px solid var(--border2);
                  border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px">
         <button onclick="runSalesImport()"
@@ -4648,14 +4649,36 @@ function exportSalesCSV() {
   a.click();
 }
 
-async function runSalesImport() {
-  const file = document.getElementById("sales-csv-input")?.files[0];
+// Cache CSV text immediately on file select (fixes mobile file-not-found error)
+let _cachedCsvText = null;
+
+function cacheSalesCsvFile(input) {
+  const file = input.files[0];
   const msg  = document.getElementById("sales-import-msg");
-  if (!file) { if (msg) msg.textContent = "Please select a CSV file first."; return; }
+  _cachedCsvText = null;
+  if (!file) return;
+  if (msg) msg.textContent = "Reading file…";
+  const reader = new FileReader();
+  reader.onload  = e => {
+    _cachedCsvText = e.target.result;
+    if (msg) msg.textContent = `✓ File ready: ${file.name} (${(file.size/1024).toFixed(1)} KB) — click Import`;
+  };
+  reader.onerror = () => {
+    if (msg) msg.textContent = "⚠ Could not read file — try again";
+  };
+  reader.readAsText(file);
+}
+
+async function runSalesImport() {
+  const msg  = document.getElementById("sales-import-msg");
+  if (!_cachedCsvText) {
+    if (msg) msg.textContent = "Please select a CSV file first.";
+    return;
+  }
   if (msg) msg.textContent = "Uploading…";
 
   try {
-    const text = await file.text();
+    const text = _cachedCsvText;
 
     // Send raw CSV text directly to GAS doPost — one single HTTP call
     let postOk = false;
@@ -4695,7 +4718,7 @@ async function runSalesImport() {
 
 async function runSalesImportFallback(file, msg) {
   try {
-    const text  = await file.text();
+    const text  = _cachedCsvText || await file?.text() || "";
     const lines = text.trim().split("\n");
     const map   = {};
 
