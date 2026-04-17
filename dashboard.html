@@ -4316,6 +4316,7 @@ let _salesRows = [];
 let _salesPeriodDays = 7;
 let _salesCatFilter = "";
 let _salesSort = { col: null, dir: 1 };
+let _cachedCsvText = null;
 
 function initSalesTab() {
   if (!salesData.products.length) loadSalesAnalysis();
@@ -4649,32 +4650,52 @@ function exportSalesCSV() {
   a.click();
 }
 
-// Cache CSV text immediately on file select (fixes mobile file-not-found error)
-let _cachedCsvText = null;
-
 function cacheSalesCsvFile(input) {
   const file = input.files[0];
   const msg  = document.getElementById("sales-import-msg");
   _cachedCsvText = null;
-  if (!file) return;
-  if (msg) msg.textContent = "Reading file…";
+  if (!file) {
+    if (msg) msg.textContent = "No file selected";
+    return;
+  }
+  if (msg) msg.textContent = "⏳ Reading file…";
   const reader = new FileReader();
-  reader.onload  = e => {
+  reader.onload = function(e) {
     _cachedCsvText = e.target.result;
-    if (msg) msg.textContent = `✓ File ready: ${file.name} (${(file.size/1024).toFixed(1)} KB) — click Import`;
+    const lines = (_cachedCsvText.match(/\n/g) || []).length;
+    if (msg) msg.textContent = `✓ Ready: ${file.name} · ${lines} rows · click Import ↑`;
   };
-  reader.onerror = () => {
-    if (msg) msg.textContent = "⚠ Could not read file — try again";
+  reader.onerror = function() {
+    _cachedCsvText = null;
+    if (msg) msg.textContent = "⚠ Could not read file — try selecting again";
   };
-  reader.readAsText(file);
+  reader.readAsText(file, "UTF-8");
 }
 
 async function runSalesImport() {
   const msg  = document.getElementById("sales-import-msg");
+  // If no cached text, try reading from input as last resort
   if (!_cachedCsvText) {
-    if (msg) msg.textContent = "Please select a CSV file first.";
-    return;
+    const input = document.getElementById("sales-csv-input");
+    const file  = input?.files?.[0];
+    if (!file) {
+      if (msg) msg.textContent = "Please select a CSV file first.";
+      return;
+    }
+    if (msg) msg.textContent = "Reading file…";
+    try {
+      _cachedCsvText = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload  = e => resolve(e.target.result);
+        r.onerror = () => reject(new Error("File read failed"));
+        r.readAsText(file, "UTF-8");
+      });
+    } catch(e) {
+      if (msg) msg.textContent = "⚠ Could not read file: " + e.message;
+      return;
+    }
   }
+  if (msg) msg.textContent = "Uploading…";
   if (msg) msg.textContent = "Uploading…";
 
   try {
