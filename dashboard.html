@@ -4389,32 +4389,6 @@ function applyCustomRange() {
   _applyPeriodFilter();
 }
 
-function _applyPeriodFilter() {
-  if (!salesData.days) return;
-  const slice = _salesPeriodDays === 0
-    ? salesData.days
-    : salesData.days.slice(-_salesPeriodDays);
-  renderSalesDayBars(slice);
-  // Recompute per-product totals for the selected period
-  const dateSet = new Set(slice.map(d => d.date));
-  const filtered = salesData.products.map(p => {
-    const spark = (p.spark || []).filter(s => dateSet.has(s.date));
-    const totalQty = spark.reduce((s, d) => s + d.qty, 0);
-    const totalRev = spark.reduce((s, d) => s + d.rev, 0);
-    const days = spark.filter(d => d.qty > 0).length || 1;
-    const avgDaily = totalQty ? +(totalQty / Math.max(slice.length, 1)).toFixed(1) : 0;
-    const peakDay  = spark.length ? Math.max(...spark.map(d => d.qty)) : p.peakDay;
-    // hit rate: days product sold >= avg
-    const hitRate = spark.length
-      ? Math.round(spark.filter(d => d.qty >= avgDaily).length / Math.max(spark.length,1) * 100)
-      : p.hitRate || 0;
-    return { ...p, totalQty, totalRev, avgDaily, peakDay, hitRate, spark };
-  }).filter(p => p.totalQty > 0);
-  renderSalesKpis(filtered, slice);
-  renderSalesRanking(filtered);
-  renderSalesTable(filtered);
-}
-
 async function loadSalesAnalysis() {
   const msg = document.getElementById("sales-import-msg");
   if (msg) msg.textContent = "Loading…";
@@ -4764,45 +4738,6 @@ async function runSalesImportFallback(msg) {
     }
     if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} skipped`;
     _cachedCsvText = null;
-    salesData = { products: [], days: [], totalDays: 0 };
-    await loadSalesAnalysis();
-  } catch(e) {
-    if (msg) msg.textContent = "Error: " + e.message;
-  }
-}
-
-async function runSalesImportFallback(file, msg) {
-  try {
-    const text  = _cachedCsvText || await file?.text() || "";
-    const lines = text.trim().split("\n");
-    const map   = {};
-
-    lines.slice(1).forEach(line => {
-      const c    = line.split(",");
-      const date = (c[0]||"").trim().substring(0,10);
-      const name = (c[3]||"").replace(/^"|"$/g,"").trim();
-      const qty  = parseFloat(c[4])||0;
-      if (!date || !name || qty <= 0) return;
-      const key  = date + "|" + name;
-      if (!map[key]) map[key] = { d:date, p:name, k:(c[2]||"").trim(), m:0, u:0, g:0 };
-      map[key].m += Math.round(qty);
-      map[key].u += Math.round(parseFloat(c[5])||0);
-      map[key].g += Math.round(parseFloat(c[11])||0);
-    });
-
-    const compact = Object.values(map);
-    if (!compact.length) throw new Error("No valid rows in CSV");
-
-    const CHUNK = 50;
-    let totalImported = 0, totalSkipped = 0;
-    for (let i = 0; i < compact.length; i += CHUNK) {
-      if (msg) msg.textContent = `Uploading… ${Math.min(i+CHUNK, compact.length)} / ${compact.length}`;
-      const res = await get({ action:"importSalesCSV", rows: JSON.stringify(compact.slice(i, i+CHUNK)) });
-      if (res.error) throw new Error(res.error);
-      totalImported += res.imported || 0;
-      totalSkipped  += res.skipped  || 0;
-    }
-    if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} skipped`;
     salesData = { products: [], days: [], totalDays: 0 };
     await loadSalesAnalysis();
   } catch(e) {
