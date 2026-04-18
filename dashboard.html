@@ -5436,6 +5436,7 @@ function calcWaFromZutaten() {
   if (totEl) totEl.textContent = 'CHF ' + total.toFixed(2);
   calcFC();
 }
+  
 function calcGarverlust() {
   const rohGewicht = parseFloat((document.getElementById('mp-gewicht')?.value||'').replace(/[^\d.]/g,'')) || 0;
   const verlustPct = parseFloat(document.getElementById('mp-garverlust')?.value) || 0;
