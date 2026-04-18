@@ -4460,14 +4460,15 @@ function _enrichProducts() {
     const totalAvgAll = (salesData.products || []).reduce((s, x) => s + (x.avgDaily || 0), 0) || 1;
     const share = (p.avgDaily || 0) / totalAvgAll;
     const spark = days.slice(-14).map(d => ({
-      date: d.date,
-      qty : Math.round((d.totalQty || 0) * share),
+      date: typeof d === "object" ? d.date : d,
+      qty : Math.round((typeof d === "object" ? (d.totalQty || 0) : 0) * share),
       rev : 0
     }));
     const activeDays = days.filter(d => d.totalQty > 0).length;
     const hitRate = salesData.totalDays > 0
       ? Math.round(activeDays / salesData.totalDays * 100) : 0;
-    return { ...p, spark, hitRate };
+    const suggestedMep = Math.ceil((p.avgDaily || 0) * 1.2) || 1;
+    return { ...p, spark, hitRate, suggestedMep };
   });
 }
 
