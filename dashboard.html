@@ -4044,12 +4044,28 @@ async function extractPdfText(arrayBuffer) {
   // Render first page to canvas → base64 JPEG
   const pdf      = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const page     = await pdf.getPage(1);
-  const viewport = page.getViewport({ scale: 1.2 });
+  const viewport = page.getViewport({ scale: 1.0 });
   const canvas   = document.createElement("canvas");
-  canvas.width   = viewport.width;
-  canvas.height  = viewport.height;
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-  const base64 = canvas.toDataURL("image/jpeg", 0.5).split(",")[1];
+  // Force max 800px wide to keep base64 small enough for GET
+  const scale    = Math.min(1.0, 800 / viewport.width);
+  const vp2      = page.getViewport({ scale });
+  canvas.width   = vp2.width;
+  canvas.height  = vp2.height;
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp2 }).promise;
+
+  // Compress aggressively — recipe text still readable at 0.3
+  let base64 = canvas.toDataURL("image/jpeg", 0.3).split(",")[1];
+
+  // If still too long, resize canvas further
+  if (base64.length > 80000) {
+    const c2  = document.createElement("canvas");
+    c2.width  = Math.round(canvas.width  * 0.6);
+    c2.height = Math.round(canvas.height * 0.6);
+    c2.getContext("2d").drawImage(canvas, 0, 0, c2.width, c2.height);
+    base64 = c2.toDataURL("image/jpeg", 0.3).split(",")[1];
+  }
+
+  return "__VISION__" + base64;
 
   return "__VISION__" + base64;
 }
