@@ -3988,6 +3988,12 @@ async function startPdfImport(mode) {
       console.log("Vision response:", JSON.stringify(data));
       if (data.error) throw new Error(data.error);
       ingredients = data.ingredients || [];
+      console.log("Ingredients set:", ingredients.length);
+    }
+
+    console.log("Before pdfParsedIngredients assignment:", ingredients.length);
+    pdfParsedIngredients = ingredients;
+    console.log("After assignment:", pdfParsedIngredients.length);
 
     } else {
       // ── Fallback: text path via OpenAI ──
@@ -4021,7 +4027,7 @@ async function startPdfImport(mode) {
     }));
     _autoMatchIngredients();
 
-    renderPdfPreview(mode, data.parsed);
+    renderPdfPreview(mode, null);
 
     const saveBtn = document.querySelector("#pdf-preview .btn-save");
     if (saveBtn) saveBtn.style.display = "";
