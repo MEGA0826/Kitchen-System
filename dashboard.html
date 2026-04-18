@@ -4034,7 +4034,7 @@ async function startPdfImport(mode) {
 }
 
 async function extractPdfText(arrayBuffer) {
-  // ── STEP 1: Load PDF.js to render pages as images ──
+  // Load PDF.js to render page as image
   if (!window.pdfjsLib) {
     await new Promise((resolve, reject) => {
       const s = document.createElement("script");
@@ -4046,69 +4046,17 @@ async function extractPdfText(arrayBuffer) {
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
   }
 
-  // ── STEP 2: Render each page to canvas → base64 image ──
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const pageImages = [];
-  const maxPages = Math.min(pdf.numPages, 4); // max 4 pages
+  // Render first page to canvas → base64 JPEG
+  const pdf      = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const page     = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 2.0 });
+  const canvas   = document.createElement("canvas");
+  canvas.width   = viewport.width;
+  canvas.height  = viewport.height;
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  const base64   = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
 
-  for (let i = 1; i <= maxPages; i++) {
-    const page     = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 1.5 }); // scale for clarity
-    const canvas   = document.createElement("canvas");
-    canvas.width   = viewport.width;
-    canvas.height  = viewport.height;
-    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-    // Convert to base64 JPEG (smaller than PNG)
-    const base64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
-    pageImages.push(base64);
-  }
-
-  // ── STEP 3: Send images to Claude Vision API ──
-  adminMsg("pdf-msg", `Sending ${pageImages.length} page(s) to Claude Vision…`, "");
-
-  const content = [
-    {
-      type: "text",
-      text: `You are a professional recipe parser. Extract ALL ingredients from this recipe PDF.
-Return ONLY a valid JSON array, no markdown, no explanation.
-Format: [{"name":"ingredient name","quantity":"amount","unit":"unit of measure"}]
-Rules:
-- Include every ingredient with quantity and unit
-- Use decimal numbers (e.g. 0.5 not 1/2)
-- Unit should be: kg, g, l, ml, pcs, Stück, EL, TL, or similar
-- If quantity missing use ""
-- Name should be the ingredient name only, not preparation method`
-    },
-    ...pageImages.map(b64 => ({
-      type: "image",
-      source: { type: "base64", media_type: "image/jpeg", data: b64 }
-    }))
-  ];
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-opus-4-5",
-      max_tokens: 2000,
-      messages: [{ role: "user", content }]
-    })
-  });
-
-  const result = await response.json();
-  if (result.error) throw new Error("Claude API: " + result.error.message);
-
-  // ── STEP 4: Return as structured JSON string for GAS parser ──
-  const raw = result.content?.[0]?.text || "[]";
-  // Validate it's parseable JSON
-  try {
-    JSON.parse(raw.replace(/```json|```/g, "").trim());
-  } catch(e) {
-    throw new Error("Claude returned invalid JSON: " + raw.substring(0, 100));
-  }
-
-  // Return a special marker so startPdfImport knows it's pre-parsed JSON
-  return "__CLAUDE_JSON__" + raw.replace(/```json|```/g, "").trim();
+  return "__VISION__" + base64;
 }
 
 function renderPdfPreview(mode, parsedMenu) {
