@@ -511,7 +511,14 @@
 <script src="i18n.js"></script>
 </head>
 <body>
-
+<div id="err-box" style="display:none;position:fixed;inset:0;z-index:99999;background:#fff;color:#c00;padding:20px;font-size:18px;font-family:monospace;overflow:auto;white-space:pre-wrap"></div>
+<script>
+window.onerror = function(msg, src, line, col) {
+  var b = document.getElementById('err-box');
+  b.style.display = 'block';
+  b.textContent = 'ERROR:\n' + msg + '\n\nLINE: ' + line + '\nCOL: ' + col;
+};
+</script>
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px">
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
