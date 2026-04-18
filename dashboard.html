@@ -4667,25 +4667,9 @@ async function runSalesImport() {
   if (msg) msg.textContent = "Uploading…";
   try {
     const text  = _cachedCsvText;
-    let postOk  = false;
-    try {
-      const res   = await fetch(API, {
-        method:"POST", headers:{"Content-Type":"text/plain"}, body:text, redirect:"follow"
-      });
-      const raw   = await res.text();
-      const match = raw.match(/\{[\s\S]*\}/);
-      const data  = match ? JSON.parse(match[0]) : null;
-      if (data && !data.error && data.imported !== undefined) {
-        if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
-        postOk = true;
-      }
-    } catch(postErr) { console.warn("POST failed, using chunk fallback:", postErr); }
-
-    if (!postOk) {
-      if (msg) msg.textContent = "Uploading via chunks…";
-      await _salesChunkFallback(msg);
-      return;
-    }
+    if (msg) msg.textContent = "Uploading via chunks…";
+    await _salesChunkFallback(msg);
+    return;
     _cachedCsvText = null;
     salesData = { products:[], days:[], totalDays:0 };
     await loadSalesAnalysis();
