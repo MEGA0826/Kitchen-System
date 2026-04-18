@@ -3983,9 +3983,9 @@ async function startPdfImport(mode) {
       ad
 
 adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
-      const data = await adminCall({ action: "parsePdfVisionChunked", sessionId });
-      if (data.error) throw new Error(data.error);
-      ingredients = data.ingredients || [];
+      const visionData = await adminCall({ action: "parsePdfVisionChunked", sessionId });
+      if (visionData.error) throw new Error(visionData.error);
+      ingredients = visionData.ingredients || [];
 
     } else {
       if (!pdfText || pdfText.trim().length < 20)
