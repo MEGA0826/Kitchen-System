@@ -4412,18 +4412,9 @@ function _applyPeriodFilter() {
     slice = _salesPeriodDays === 0 ? days : days.slice(-_salesPeriodDays);
   }
   renderSalesDayBars(slice);
-  const totalDays  = salesData.totalDays || days.length || 1;
-  const periodDays = slice.length || totalDays;
-  const ratio      = periodDays / totalDays;
-  const filtered   = (salesData.products || [])
-    .filter(p => p.totalQty > 0)
-    .map(p => ({
-      ...p,
-      totalQty : Math.round((p.totalQty || 0) * ratio),
-      totalRev : +((p.totalRev || 0) * ratio).toFixed(2),
-      spark    : p.spark ? p.spark.slice(-Math.min(_salesPeriodDays === "custom" ? 30 : (_salesPeriodDays || 14), 14)) : [],
-    }))
-    .filter(p => p.totalQty > 0);
+
+  // Use products as-is from backend — no ratio scaling which zeroes out small numbers
+  const filtered = (salesData.products || []).filter(p => p.totalQty > 0);
   renderSalesKpis(filtered, slice);
   renderSalesRanking(filtered);
   renderSalesTable(filtered);
