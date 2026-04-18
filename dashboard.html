@@ -3963,19 +3963,38 @@ async function startPdfImport(mode) {
   try {
     const file     = fileEl.files[0];
     const arrayBuf = await file.arrayBuffer();
-    const pdfText  = await extractPdfText(arrayBuf);
+    const pdfText = await extractPdfText(arrayBuf);
 
+    // ── Claude Vision path: ingredients already parsed ──
+    if (pdfText.startsWith("__CLAUDE_JSON__")) {
+      const parsed = JSON.parse(pdfText.replace("__CLAUDE_JSON__", ""));
+      pdfParsedIngredients = parsed.map(ing => ({
+        name     : ing.name     || "",
+        quantity : ing.quantity || "",
+        unit     : ing.unit     || "",
+        type     : "RM",
+        code     : ""
+      }));
+      if (!pdfParsedIngredients.length) throw new Error("No ingredients found in PDF");
+      pdfTargetMepCode = menuCode;
+      window._pdfMode  = mode;
+      _autoMatchIngredients();
+      renderPdfPreview(mode, null);
+      adminMsg("pdf-msg",
+        `✓ Claude Vision found ${pdfParsedIngredients.length} ingredients — review & save`, "ok");
+      return; // skip GAS call
+    }
+
+    // ── Fallback: text path (legacy) ──
     if (!pdfText || pdfText.trim().length < 20) {
       throw new Error("Could not extract text from PDF. Is it a scanned image?");
     }
-
     adminMsg("pdf-msg","Sending to AI…","");
-
     const action = mode === 'menu' ? "parseMenuPdf" : "parseRecipePdf";
     const data   = await adminCall({
       action,
       menuCode,
-      mepCode  : menuCode,  // kept for parseRecipePdf compatibility
+      mepCode  : menuCode,
       pdfText  : pdfText.substring(0, 8000)
     });
     if (data.error) throw new Error(data.error);
@@ -4015,7 +4034,7 @@ async function startPdfImport(mode) {
 }
 
 async function extractPdfText(arrayBuffer) {
-  // Lazy-load PDF.js from CDN
+  // ── STEP 1: Load PDF.js to render pages as images ──
   if (!window.pdfjsLib) {
     await new Promise((resolve, reject) => {
       const s = document.createElement("script");
@@ -4026,14 +4045,70 @@ async function extractPdfText(arrayBuffer) {
     window.pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
   }
-  const pdf   = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text    = "";
-  for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-    const page    = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(s => s.str).join(" ") + "\n";
+
+  // ── STEP 2: Render each page to canvas → base64 image ──
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pageImages = [];
+  const maxPages = Math.min(pdf.numPages, 4); // max 4 pages
+
+  for (let i = 1; i <= maxPages; i++) {
+    const page     = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 }); // scale for clarity
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+    // Convert to base64 JPEG (smaller than PNG)
+    const base64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+    pageImages.push(base64);
   }
-  return text;
+
+  // ── STEP 3: Send images to Claude Vision API ──
+  adminMsg("pdf-msg", `Sending ${pageImages.length} page(s) to Claude Vision…`, "");
+
+  const content = [
+    {
+      type: "text",
+      text: `You are a professional recipe parser. Extract ALL ingredients from this recipe PDF.
+Return ONLY a valid JSON array, no markdown, no explanation.
+Format: [{"name":"ingredient name","quantity":"amount","unit":"unit of measure"}]
+Rules:
+- Include every ingredient with quantity and unit
+- Use decimal numbers (e.g. 0.5 not 1/2)
+- Unit should be: kg, g, l, ml, pcs, Stück, EL, TL, or similar
+- If quantity missing use ""
+- Name should be the ingredient name only, not preparation method`
+    },
+    ...pageImages.map(b64 => ({
+      type: "image",
+      source: { type: "base64", media_type: "image/jpeg", data: b64 }
+    }))
+  ];
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-opus-4-5",
+      max_tokens: 2000,
+      messages: [{ role: "user", content }]
+    })
+  });
+
+  const result = await response.json();
+  if (result.error) throw new Error("Claude API: " + result.error.message);
+
+  // ── STEP 4: Return as structured JSON string for GAS parser ──
+  const raw = result.content?.[0]?.text || "[]";
+  // Validate it's parseable JSON
+  try {
+    JSON.parse(raw.replace(/```json|```/g, "").trim());
+  } catch(e) {
+    throw new Error("Claude returned invalid JSON: " + raw.substring(0, 100));
+  }
+
+  // Return a special marker so startPdfImport knows it's pre-parsed JSON
+  return "__CLAUDE_JSON__" + raw.replace(/```json|```/g, "").trim();
 }
 
 function renderPdfPreview(mode, parsedMenu) {
