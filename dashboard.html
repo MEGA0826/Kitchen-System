@@ -1248,6 +1248,19 @@ window.onerror = function(msg, src, line, col) {
           ↺ Refresh
         </button>
       </div>
+      <!-- Drive URL import for Android -->
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;white-space:nowrap">☁ Drive:</span>
+        <input id="sales-drive-url" type="url" placeholder="Paste Google Drive share link…"
+          style="flex:1;min-width:180px;padding:7px 10px;background:var(--surface2);color:var(--text);
+                 border:1px solid var(--border2);border-radius:var(--radius-sm);
+                 font-family:var(--mono);font-size:12px">
+        <button onclick="importFromDriveUrl()"
+          style="padding:7px 16px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);
+                 border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;cursor:pointer;white-space:nowrap">
+          ↑ Drive
+        </button>
+      </div>
       <div id="sales-import-msg" style="margin-top:10px;font-size:12px;color:var(--muted);min-height:18px"></div>
     </div>
 
