@@ -4405,16 +4405,42 @@ function applyCustomRange() {
 function _applyPeriodFilter() {
   if (!salesData.products) return;
   const days = salesData.days || [];
+
+  // Get the filtered day slice
   let slice;
   if (_salesPeriodDays === "custom" && _salesCustomFrom && _salesCustomTo) {
     slice = days.filter(d => d.date >= _salesCustomFrom && d.date <= _salesCustomTo);
   } else {
     slice = _salesPeriodDays === 0 ? days : days.slice(-_salesPeriodDays);
   }
-  renderSalesDayBars(slice);
 
-  // Use products as-is from backend — no ratio scaling which zeroes out small numbers
-  const filtered = (salesData.products || []).filter(p => p.totalQty > 0);
+  // Build a Set of dates in this period for fast lookup
+  const periodDates = new Set(slice.map(d => d.date));
+  const numDays     = slice.length || 1;
+
+  // Recompute per-product totals using only days in this period
+  const filtered = (salesData.products || []).map(p => {
+    // p.dates is not sent from backend — reconstruct from spark or use ratio
+    // Use the period ratio: days in period / total days
+    const totalDays  = (salesData.days || []).length || 1;
+    const ratio      = numDays / totalDays;
+    // Estimate period totals proportionally from full totals
+    const periodQty  = Math.round(p.totalQty  * ratio);
+    const periodRev  = Math.round(p.totalRev  * ratio);
+    const periodWa   = Math.round(p.totalWa   * ratio * 100) / 100;
+    const avgDaily   = numDays > 0 ? Math.round((periodQty / numDays) * 10) / 10 : 0;
+    const suggestedMep = Math.ceil(avgDaily * 1.2) || 1;
+    return {
+      ...p,
+      totalQty    : periodQty,
+      totalRev    : periodRev,
+      totalWa     : periodWa,
+      avgDaily,
+      suggestedMep,
+    };
+  }).filter(p => p.totalQty > 0);
+
+  renderSalesDayBars(slice);
   renderSalesKpis(filtered, slice);
   renderSalesRanking(filtered);
   renderSalesTable(filtered);
@@ -4698,14 +4724,14 @@ async function runSalesImport() {
     if (msg) msg.textContent = `⏳ Sending ${rows.length.toLocaleString()} unique rows…`;
 
     // Send in parallel chunks of 500 rows each
-    const CHUNK  = 500;
+    const CHUNK  = 30;
     const chunks = [];
     for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
 
     let totalImported = 0, totalSkipped = 0, errors = 0;
 
     // Run max 4 parallel requests at a time
-    const PARALLEL = 4;
+    const PARALLEL = 6;
     for (let i = 0; i < chunks.length; i += PARALLEL) {
       const batch = chunks.slice(i, i + PARALLEL);
       const pct   = Math.round((i / chunks.length) * 100);
