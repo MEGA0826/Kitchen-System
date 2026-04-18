@@ -3968,15 +3968,23 @@ async function startPdfImport(mode) {
     let ingredients = [];
 
     if (pdfText.startsWith("__VISION__")) {
-      // ── Claude Vision via GAS POST ──
-      adminMsg("pdf-msg", "Sending to Claude Vision…", "");
-      const imageData = pdfText.replace("__VISION__", "");
-      // GAS blocks CORS POST — send via GET with compressed image
-      const compressed = imageData.substring(0, 100000); // ~75KB max for URL
-      const data = await adminCall({
-        action    : "parsePdfVision",
-        imageData : compressed
-      });
+      adminMsg("pdf-msg", "Uploading image to Claude Vision…", "");
+      const imageData  = pdfText.replace("__VISION__", "");
+      const CHUNK_SIZE = 5000; // safe GET param size
+      const sessionId  = "pdf_" + Date.now();
+      const total      = Math.ceil(imageData.length / CHUNK_SIZE);
+
+      // Upload chunks sequentially
+      for (let i = 0; i < total; i++) {
+        const chunk = imageData.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        adminMsg("pdf-msg", `Uploading… ${i + 1}/${total}`, "");
+        const r = await adminCall({ action: "storeChunk", sessionId, chunk, idx: i, total });
+        if (r.error) throw new Error("Chunk upload failed: " + r.error);
+      }
+
+      // Trigger assembly + Claude call
+      adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
+      const data = await adminCall({ action: "parsePdfVisionChunked", sessionId });
       if (data.error) throw new Error(data.error);
       ingredients = data.ingredients || [];
 
