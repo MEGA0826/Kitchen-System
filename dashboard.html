@@ -4444,11 +4444,11 @@ async function loadSalesAnalysis() {
       fc         : Number(p.fc)         || 0,
     }));
     d.days = Array.isArray(d.days) ? d.days : [];
-    salesData = d;
+    salesData = { products: d.products, days: d.days, totalDays: d.totalDays };
     _enrichProducts();
     _buildCategoryPills();
     _applyPeriodFilter();
-    if (msg) msg.textContent = `${d.products.length} products · ${d.totalDays} days · last import OK`;
+    if (msg) msg.textContent = `${salesData.products.length} products · ${salesData.totalDays} days · last import OK`;
   } catch(e) {
     if (msg) msg.textContent = "Error: " + e.message;
   }
