@@ -4432,6 +4432,18 @@ async function loadSalesAnalysis() {
       if (msg) msg.textContent = "No sales data found in sheet.";
       return;
     }
+    // Sanitize: ensure all array fields exist before rendering
+    d.products = d.products.map(p => ({
+      ...p,
+      name       : p.name       || "",
+      kategorie  : p.kategorie  || "",
+      totalQty   : Number(p.totalQty)   || 0,
+      totalRev   : Number(p.totalRev)   || 0,
+      avgDaily   : Number(p.avgDaily)   || 0,
+      peakDay    : Number(p.peakDay)    || 0,
+      fc         : Number(p.fc)         || 0,
+    }));
+    d.days = Array.isArray(d.days) ? d.days : [];
     salesData = d;
     _enrichProducts();
     _buildCategoryPills();
