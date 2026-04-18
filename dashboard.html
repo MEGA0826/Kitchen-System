@@ -3982,6 +3982,55 @@ async function startPdfImport(mode) {
 
       ad
 
+adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
+      const data = await adminCall({ action: "parsePdfVisionChunked", sessionId });
+      if (data.error) throw new Error(data.error);
+      ingredients = data.ingredients || [];
+
+    } else {
+      if (!pdfText || pdfText.trim().length < 20)
+        throw new Error("Could not extract text from PDF.");
+      adminMsg("pdf-msg", "Sending to AI…", "");
+      const action = mode === 'menu' ? "parseMenuPdf" : "parseRecipePdf";
+      const data   = await adminCall({
+        action, menuCode, mepCode: menuCode,
+        pdfText: pdfText.substring(0, 8000)
+      });
+      if (data.error) throw new Error(data.error);
+      if (data.menuId) _pdfMenuId = data.menuId;
+      ingredients = mode === 'menu'
+        ? (data.parsed?.ingredients || [])
+        : (data.ingredients || []);
+    }
+
+    pdfParsedIngredients = ingredients;
+    pdfTargetMepCode = menuCode;
+    window._pdfMode  = mode;
+
+    if (!pdfParsedIngredients.length) throw new Error("AI returned no ingredients");
+
+    pdfParsedIngredients = pdfParsedIngredients.map(ing => ({
+      ...ing,
+      type : ing.type || "RM",
+      code : ing.code || ""
+    }));
+    _autoMatchIngredients();
+    renderPdfPreview(mode, null);
+
+    const saveBtn = document.querySelector("#pdf-preview .btn-save");
+    if (saveBtn) saveBtn.style.display = "";
+
+    adminMsg("pdf-msg",
+      `✓ Found ${pdfParsedIngredients.length} ingredients — set type & code, then save`, "ok");
+
+  } catch(err) {
+    adminMsg("pdf-msg","Error: "+err.message,"err");
+  } finally {
+    if (btnR) btnR.disabled = false;
+    if (btnM) btnM.disabled = false;
+  }
+}
+
 async function extractPdfText(arrayBuffer) {
   // Load PDF.js to render page as image
   if (!window.pdfjsLib) {
@@ -4018,8 +4067,6 @@ async function extractPdfText(arrayBuffer) {
     c2.getContext("2d").drawImage(canvas, 0, 0, c2.width, c2.height);
     base64 = c2.toDataURL("image/jpeg", 0.3).split(",")[1];
   }
-
-  return "__VISION__" + base64;
 
   return "__VISION__" + base64;
 }
@@ -5820,7 +5867,7 @@ function buildMenuPdfHtml(m) {
       <span>Kitchen MEP · 212 Nooch Richti</span>
     </div>
   </div>`;
-} 
+}
 
 </script>
   
