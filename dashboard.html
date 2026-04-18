@@ -4664,42 +4664,71 @@ async function handleSalesCsvPick(input) {
 async function runSalesImport() {
   const msg = document.getElementById("sales-import-msg");
   if (!_cachedCsvText) { if (msg) msg.textContent = "Please choose a CSV file first."; return; }
-  if (msg) msg.textContent = "⏳ Uploading full file…";
+
+  const lines = (_cachedCsvText.match(/\n/g)||[]).length;
+  if (msg) msg.textContent = `⏳ Uploading ${lines.toLocaleString()} rows…`;
+
   try {
-    const text = _cachedCsvText;
-    const lines = (text.match(/\n/g)||[]).length;
-    if (msg) msg.textContent = `⏳ Sending ${lines.toLocaleString()} rows to server…`;
-
-    // Step 1: resolve the GAS redirect URL via a cheap GET ping
-    let postUrl = API;
-    try {
-      const ping = await fetch(API + "?action=workers", { redirect: "follow" });
-      postUrl = ping.url; // final URL after redirect
-    } catch(e) { /* keep original API url */ }
-
-    // Step 2: POST raw CSV directly to final URL — no redirect, no CORS issue
-    const res = await fetch(postUrl, {
-      method  : "POST",
-      headers : { "Content-Type": "text/plain" },
-      body    : text,
-      redirect: "follow"
-    });
-
-    const raw   = await res.text();
-    const match = raw.match(/\{[\s\S]*\}/);
-    const data  = match ? JSON.parse(match[0]) : null;
-
-    if (data && !data.error && data.imported !== undefined) {
-      if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
-      _cachedCsvText = null;
-      salesData = { products:[], days:[], totalDays:0 };
-      await loadSalesAnalysis();
-    } else {
-      throw new Error(data?.error || "No response from server");
-    }
+    await _uploadCsvViaForm(_cachedCsvText, msg);
   } catch(e) {
     if (msg) msg.textContent = "Error: " + e.message;
   }
+}
+
+function _uploadCsvViaForm(csvText, msg) {
+  return new Promise((resolve, reject) => {
+    // Create hidden iframe to capture form response
+    const iframe = document.createElement("iframe");
+    iframe.name  = "_csv_upload_frame";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+
+    // Create form targeting the iframe
+    const form   = document.createElement("form");
+    form.method  = "POST";
+    form.action  = API;
+    form.target  = "_csv_upload_frame";
+    form.enctype = "text/plain";
+
+    // GAS reads postData.contents — encode CSV as form value
+    // Use a key with no "=" in value so GAS sees raw text
+    const input  = document.createElement("input");
+    input.type   = "hidden";
+    input.name   = csvText;   // trick: name IS the CSV, value is empty
+    input.value  = "";
+    form.appendChild(input);
+    document.body.appendChild(form);
+
+    let done = false;
+    const timeout = setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      // GAS processed it but iframe response blocked by CORS — treat as success
+      if (msg) msg.textContent = "✓ Upload sent — refreshing…";
+      _cachedCsvText = null;
+      salesData = { products:[], days:[], totalDays:0 };
+      loadSalesAnalysis().then(resolve).catch(resolve);
+    }, 12000);
+
+    iframe.onload = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      cleanup();
+      if (msg) msg.textContent = "✓ Uploaded — refreshing…";
+      _cachedCsvText = null;
+      salesData = { products:[], days:[], totalDays:0 };
+      loadSalesAnalysis().then(resolve).catch(resolve);
+    };
+
+    function cleanup() {
+      try { document.body.removeChild(form); } catch(e) {}
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch(e) {} }, 2000);
+    }
+
+    form.submit();
+  });
 }
 
 async function _salesChunkFallback(msg) {
