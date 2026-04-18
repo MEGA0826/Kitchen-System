@@ -3985,6 +3985,7 @@ async function startPdfImport(mode) {
       // Trigger assembly + Claude call
       adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
       const data = await adminCall({ action: "parsePdfVisionChunked", sessionId });
+      console.log("Vision response:", JSON.stringify(data));
       if (data.error) throw new Error(data.error);
       ingredients = data.ingredients || [];
 
