@@ -1,7 +1,7 @@
-// Kitchen MEP — Service Worker v18
+// Kitchen MEP — Service Worker v19
 // Handles: background sync for offline scan queue, icon caching only
 
-const CACHE = "mep-v18";
+const CACHE = "mep-v19";
 const PRECACHE = [
   "/Kitchen-System/icons/icon-192.png",
   "/Kitchen-System/icons/icon-512.png"
