@@ -4664,16 +4664,42 @@ async function handleSalesCsvPick(input) {
 async function runSalesImport() {
   const msg = document.getElementById("sales-import-msg");
   if (!_cachedCsvText) { if (msg) msg.textContent = "Please choose a CSV file first."; return; }
-  if (msg) msg.textContent = "Uploading…";
+  if (msg) msg.textContent = "⏳ Uploading full file…";
   try {
-    const text  = _cachedCsvText;
-    if (msg) msg.textContent = "Uploading via chunks…";
-    await _salesChunkFallback(msg);
-    return;
-    _cachedCsvText = null;
-    salesData = { products:[], days:[], totalDays:0 };
-    await loadSalesAnalysis();
-  } catch(e) { if (msg) msg.textContent = "Error: " + e.message; }
+    const text = _cachedCsvText;
+    const lines = (text.match(/\n/g)||[]).length;
+    if (msg) msg.textContent = `⏳ Sending ${lines.toLocaleString()} rows to server…`;
+
+    // Step 1: resolve the GAS redirect URL via a cheap GET ping
+    let postUrl = API;
+    try {
+      const ping = await fetch(API + "?action=workers", { redirect: "follow" });
+      postUrl = ping.url; // final URL after redirect
+    } catch(e) { /* keep original API url */ }
+
+    // Step 2: POST raw CSV directly to final URL — no redirect, no CORS issue
+    const res = await fetch(postUrl, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : text,
+      redirect: "follow"
+    });
+
+    const raw   = await res.text();
+    const match = raw.match(/\{[\s\S]*\}/);
+    const data  = match ? JSON.parse(match[0]) : null;
+
+    if (data && !data.error && data.imported !== undefined) {
+      if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
+      _cachedCsvText = null;
+      salesData = { products:[], days:[], totalDays:0 };
+      await loadSalesAnalysis();
+    } else {
+      throw new Error(data?.error || "No response from server");
+    }
+  } catch(e) {
+    if (msg) msg.textContent = "Error: " + e.message;
+  }
 }
 
 async function _salesChunkFallback(msg) {
