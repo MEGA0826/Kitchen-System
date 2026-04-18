@@ -1294,7 +1294,15 @@ window.onerror = function(msg, src, line, col) {
 
     <!-- Top sellers ranking -->
     <div class="chart-wrap" style="margin-bottom:20px">
-      <div class="chart-title">🏆 Top sellers ranking</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="chart-title" style="margin:0">🏆 Top sellers ranking</div>
+        <div style="display:flex;gap:4px">
+          <button id="metric-qty" onclick="setSalesMetric('qty')"
+            style="padding:4px 10px;border-radius:20px;border:1px solid var(--amber-brd);background:var(--amber-dim);color:var(--amber);font-family:var(--mono);font-size:10px;cursor:pointer">Units</button>
+          <button id="metric-rev" onclick="setSalesMetric('rev')"
+            style="padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer">CHF</button>
+        </div>
+      </div>
       <div id="sales-ranking" class="bars" style="margin-top:4px">
         <div style="color:var(--muted);font-size:12px">Import a CSV to see rankings.</div>
       </div>
@@ -1302,7 +1310,15 @@ window.onerror = function(msg, src, line, col) {
 
     <!-- Daily trend bars -->
     <div class="chart-wrap" style="margin-bottom:20px">
-      <div class="chart-title">📅 Daily total sold — <span id="sales-period-label">last 7 days</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="chart-title" style="margin:0">📅 Daily total sold — <span id="sales-period-label">last 7 days</span></div>
+        <div style="display:flex;gap:4px">
+          <button id="day-metric-qty" onclick="setSalesMetric('qty')"
+            style="padding:4px 10px;border-radius:20px;border:1px solid var(--amber-brd);background:var(--amber-dim);color:var(--amber);font-family:var(--mono);font-size:10px;cursor:pointer">Units</button>
+          <button id="day-metric-rev" onclick="setSalesMetric('rev')"
+            style="padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer">CHF</button>
+        </div>
+      </div>
       <div id="sales-day-bars" class="bars" style="margin-top:10px">
         <div style="color:var(--muted);font-size:12px">Import a CSV to see trends.</div>
       </div>
@@ -4343,7 +4359,8 @@ let salesData = { products: [], days: [], totalDays: 0 };
 let _salesRows = [];
 let _salesPeriodDays = 7;
 let _salesCatFilter = "";
-let _salesSort = { col: null, dir: 1 };
+let _salesSort   = { col: null, dir: 1 };
+let _salesMetric = "qty"; // "qty" | "rev"
 let _cachedCsvText = null;
 let _salesCustomFrom = null;
 let _salesCustomTo   = null;
@@ -4541,13 +4558,17 @@ function renderSalesKpis(products, days) {
 function renderSalesRanking(products) {
   const el = document.getElementById("sales-ranking");
   if (!el) return;
+  const useRev = _salesMetric === "rev";
   const sorted = [...products].filter(p => p.totalRev > 0)
-    .sort((a,b) => b.totalQty - a.totalQty).slice(0, 8);
+    .sort((a,b) => useRev ? b.totalRev - a.totalRev : b.totalQty - a.totalQty)
+    .slice(0, 8);
   if (!sorted.length) { el.innerHTML = `<div style="color:var(--muted);font-size:12px">No data.</div>`; return; }
-  const max    = sorted[0].totalQty || 1;
+  const max    = sorted[0][useRev ? "totalRev" : "totalQty"] || 1;
   const medals = ["🥇","🥈","🥉"];
   el.innerHTML = sorted.map((p, i) => {
-    const pct   = Math.round(p.totalQty / max * 100);
+    const val   = useRev ? p.totalRev : p.totalQty;
+    const label = useRev ? `CHF ${val.toLocaleString()}` : val;
+    const pct   = Math.round(val / max * 100);
     const medal = medals[i] || `<span style="font-size:12px;color:var(--muted);font-family:var(--mono)">${i+1}</span>`;
     return `<div class="bar-row" style="margin-bottom:2px">
       <div class="bar-name" style="display:flex;align-items:center;gap:6px">
@@ -4555,7 +4576,7 @@ function renderSalesRanking(products) {
         <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>
       </div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${i===0?"var(--amber)":i===1?"var(--blue)":"var(--green)"}"></div></div>
-      <div class="bar-count" style="font-size:11px">${p.totalQty}</div>
+      <div class="bar-count" style="font-size:11px">${label}</div>
     </div>`;
   }).join("");
 }
@@ -4567,9 +4588,13 @@ function renderSalesDayBars(days) {
     el.innerHTML = `<div style="color:var(--muted);font-size:12px">No daily data yet.</div>`;
     return;
   }
-  const max = Math.max(...days.map(d => d.totalQty)) || 1;
+  const useRev = _salesMetric === "rev";
+  const key    = useRev ? "totalRev" : "totalQty";
+  const max    = Math.max(...days.map(d => d[key] || 0)) || 1;
   el.innerHTML = days.map(d => {
-    const pct       = Math.round(d.totalQty / max * 100);
+    const val       = d[key] || 0;
+    const label2    = useRev ? `CHF ${val.toLocaleString()}` : val;
+    const pct       = Math.round(val / max * 100);
     const _d        = new Date(d.date + "T00:00:00");
     const _dn       = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     const label     = `${_dn[_d.getDay()]} ${d.date.slice(5)} ${d.date.slice(0,4)}`;
@@ -4577,7 +4602,7 @@ function renderSalesDayBars(days) {
     return `<div class="bar-row">
       <div class="bar-name" style="font-size:11px;color:${isWeekend?"var(--amber)":"var(--text)"}" title="${d.date}">${label}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${isWeekend?"var(--amber)":"var(--blue)"}"></div></div>
-      <div class="bar-count" style="font-size:11px">${d.totalQty}</div>
+      <div class="bar-count" style="font-size:11px">${label2}</div>
     </div>`;
   }).join("");
 }
@@ -4641,7 +4666,25 @@ function filterSalesTable() {
   }).join("")
   : `<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--muted)">No matching products.</td></tr>`;
 }
-
+function setSalesMetric(metric) {
+  _salesMetric = metric;
+  // Update all 4 toggle buttons
+  ["metric-qty","day-metric-qty"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.style.background    = metric === "qty" ? "var(--amber-dim)" : "var(--surface)";
+    btn.style.color         = metric === "qty" ? "var(--amber)"     : "var(--muted)";
+    btn.style.borderColor   = metric === "qty" ? "var(--amber-brd)" : "var(--border2)";
+  });
+  ["metric-rev","day-metric-rev"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.style.background    = metric === "rev" ? "var(--amber-dim)" : "var(--surface)";
+    btn.style.color         = metric === "rev" ? "var(--amber)"     : "var(--muted)";
+    btn.style.borderColor   = metric === "rev" ? "var(--amber-brd)" : "var(--border2)";
+  });
+  _applyPeriodFilter();
+}
 function sortSalesCol(col, th) {
   if (_salesSort.col === col) { _salesSort.dir *= -1; }
   else { _salesSort.col = col; _salesSort.dir = 1; }
