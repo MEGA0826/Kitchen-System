@@ -4689,14 +4689,16 @@ async function _salesChunkFallback(msg) {
       const qty  = parseFloat(c[4])||0;
       if (!date || !name || qty <= 0) return;
       const key  = date + "|" + name;
-      if (!map[key]) map[key] = { d:date, p:name, k:(c[2]||"").trim(), m:0, u:0, g:0 };
-      map[key].m += Math.round(qty);
-      map[key].u += Math.round(parseFloat(c[5])||0);
-      map[key].g += Math.round(parseFloat(c[11])||0);
+      if (!map[key]) map[key] = { d:date, p:name, k:(c[2]||"").trim(), m:0, u:0, pr:0, wa:0, g:0 };
+      map[key].m  += Math.round(qty);
+      map[key].u  += Math.round(parseFloat(c[5])||0);
+      map[key].pr += Math.round((parseFloat(c[7])||0) * 100) / 100;
+      map[key].wa += Math.abs(parseFloat(c[8])||0);
+      map[key].g  += Math.round(parseFloat(c[11])||0);
     });
     const compact = Object.values(map);
     if (!compact.length) throw new Error("No valid rows in CSV");
-    const CHUNK = 50;
+    const CHUNK = 20;
     let totalImported = 0, totalSkipped = 0;
     for (let i = 0; i < compact.length; i += CHUNK) {
       if (msg) msg.textContent = `Uploading… ${Math.min(i+CHUNK,compact.length)} / ${compact.length}`;
