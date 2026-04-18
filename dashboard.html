@@ -4665,70 +4665,70 @@ async function runSalesImport() {
   const msg = document.getElementById("sales-import-msg");
   if (!_cachedCsvText) { if (msg) msg.textContent = "Please choose a CSV file first."; return; }
 
-  const lines = (_cachedCsvText.match(/\n/g)||[]).length;
-  if (msg) msg.textContent = `⏳ Uploading ${lines.toLocaleString()} rows…`;
+  const lines = (_cachedCsvText.split("\n").filter(l => l.trim()).length) - 1;
+  if (msg) msg.textContent = `⏳ Parsing ${lines.toLocaleString()} rows…`;
 
   try {
-    await _uploadCsvViaForm(_cachedCsvText, msg);
+    // Parse + deduplicate entirely in JS — instant
+    const rows = [];
+    const seen = new Set();
+    _cachedCsvText.split("\n").slice(1).forEach(line => {
+      if (!line.trim()) return;
+      const c    = line.split(",");
+      const date = (c[0] || "").trim().substring(0, 10);
+      const name = (c[3] || "").replace(/^"|"$/g, "").trim();
+      const qty  = parseFloat(c[4]) || 0;
+      if (!date || !name || qty <= 0) return;
+      const key  = date + "|" + name;
+      if (seen.has(key)) return;
+      seen.add(key);
+      rows.push({
+        d : date,
+        p : name,
+        k : (c[2] || "").trim(),
+        m : qty,
+        u : parseFloat(c[5])  || 0,
+        pr: parseFloat(c[7])  || 0,
+        wa: Math.abs(parseFloat(c[8])  || 0),
+        g : parseFloat(c[11]) || 0,
+      });
+    });
+
+    if (!rows.length) { if (msg) msg.textContent = "No valid rows found in CSV."; return; }
+    if (msg) msg.textContent = `⏳ Sending ${rows.length.toLocaleString()} unique rows…`;
+
+    // Send in parallel chunks of 500 rows each
+    const CHUNK  = 500;
+    const chunks = [];
+    for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
+
+    let totalImported = 0, totalSkipped = 0, errors = 0;
+
+    // Run max 4 parallel requests at a time
+    const PARALLEL = 4;
+    for (let i = 0; i < chunks.length; i += PARALLEL) {
+      const batch = chunks.slice(i, i + PARALLEL);
+      const pct   = Math.round((i / chunks.length) * 100);
+      if (msg) msg.textContent = `⏳ Uploading… ${pct}% (${Math.min(i * CHUNK + CHUNK * PARALLEL, rows.length).toLocaleString()} / ${rows.length.toLocaleString()})`;
+
+      const results = await Promise.all(batch.map(chunk =>
+        get({ action: "importSalesCSV", rows: JSON.stringify(chunk) })
+          .catch(e => ({ error: e.message }))
+      ));
+
+      results.forEach(r => {
+        if (r.error) errors++;
+        else { totalImported += r.imported || 0; totalSkipped += r.skipped || 0; }
+      });
+    }
+
+    if (msg) msg.textContent = `✓ ${totalImported.toLocaleString()} imported · ${totalSkipped.toLocaleString()} skipped${errors ? " · " + errors + " errors" : ""} — refreshing…`;
+    _cachedCsvText = null;
+    salesData = { products:[], days:[], totalDays:0 };
+    await loadSalesAnalysis();
   } catch(e) {
     if (msg) msg.textContent = "Error: " + e.message;
   }
-}
-
-function _uploadCsvViaForm(csvText, msg) {
-  return new Promise((resolve, reject) => {
-    // Create hidden iframe to capture form response
-    const iframe = document.createElement("iframe");
-    iframe.name  = "_csv_upload_frame";
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-
-    // Create form targeting the iframe
-    const form   = document.createElement("form");
-    form.method  = "POST";
-    form.action  = API;
-    form.target  = "_csv_upload_frame";
-    form.enctype = "text/plain";
-
-    // GAS reads postData.contents — encode CSV as form value
-    // Use a key with no "=" in value so GAS sees raw text
-    const input  = document.createElement("input");
-    input.type   = "hidden";
-    input.name   = csvText;   // trick: name IS the CSV, value is empty
-    input.value  = "";
-    form.appendChild(input);
-    document.body.appendChild(form);
-
-    let done = false;
-    const timeout = setTimeout(() => {
-      if (done) return;
-      done = true;
-      cleanup();
-      // GAS processed it but iframe response blocked by CORS — treat as success
-      if (msg) msg.textContent = "✓ Upload sent — refreshing…";
-      _cachedCsvText = null;
-      salesData = { products:[], days:[], totalDays:0 };
-      loadSalesAnalysis().then(resolve).catch(resolve);
-    }, 12000);
-
-    iframe.onload = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(timeout);
-      cleanup();
-      if (msg) msg.textContent = "✓ Uploaded — refreshing…";
-      _cachedCsvText = null;
-      salesData = { products:[], days:[], totalDays:0 };
-      loadSalesAnalysis().then(resolve).catch(resolve);
-    };
-
-    function cleanup() {
-      try { document.body.removeChild(form); } catch(e) {}
-      setTimeout(() => { try { document.body.removeChild(iframe); } catch(e) {} }, 2000);
-    }
-
-    form.submit();
-  });
 }
 
 async function _salesChunkFallback(msg) {
