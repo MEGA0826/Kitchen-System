@@ -3947,7 +3947,6 @@ async function startPdfImport(mode) {
   if (btnM) btnM.disabled = true;
   adminMsg("pdf-msg","Reading PDF…","");
 
-   // Pre-load all existing codes for duplicate checking + suggestions
   const [codesData, itemsData] = await Promise.all([
     adminCall({ action: "getAllCodes" }).catch(() => ({})),
     adminCall({ action: "getAllItemsForMatching" }).catch(() => ({}))
@@ -3959,22 +3958,21 @@ async function startPdfImport(mode) {
   _nextMEP     = codesData.nextMEP  || "P-001";
   _nextGR      = codesData.nextGR   || "GR-001";
   _systemItems = itemsData.items    || [];
-  
+
   try {
     const file     = fileEl.files[0];
     const arrayBuf = await file.arrayBuffer();
-    const pdfText = await extractPdfText(arrayBuf);
+    const pdfText  = await extractPdfText(arrayBuf);
 
     let ingredients = [];
 
     if (pdfText.startsWith("__VISION__")) {
       adminMsg("pdf-msg", "Uploading image to Claude Vision…", "");
       const imageData  = pdfText.replace("__VISION__", "");
-      const CHUNK_SIZE = 5000; // safe GET param size
+      const CHUNK_SIZE = 5000;
       const sessionId  = "pdf_" + Date.now();
       const total      = Math.ceil(imageData.length / CHUNK_SIZE);
 
-      // Upload chunks sequentially
       for (let i = 0; i < total; i++) {
         const chunk = imageData.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         adminMsg("pdf-msg", `Uploading… ${i + 1}/${total}`, "");
@@ -3982,66 +3980,7 @@ async function startPdfImport(mode) {
         if (r.error) throw new Error("Chunk upload failed: " + r.error);
       }
 
-      // Trigger assembly + Claude call
-      adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
-      const data = await adminCall({ action: "parsePdfVisionChunked", sessionId });
-      console.log("Vision response:", JSON.stringify(data));
-      if (data.error) throw new Error(data.error);
-      ingredients = data.ingredients || [];
-      console.log("Ingredients set:", ingredients.length);
-    }
-
-    console.log("Before pdfParsedIngredients assignment:", ingredients.length);
-    pdfParsedIngredients = ingredients;
-    console.log("After assignment:", pdfParsedIngredients.length);
-
-    } else {
-      // ── Fallback: text path via OpenAI ──
-      if (!pdfText || pdfText.trim().length < 20)
-        throw new Error("Could not extract text from PDF.");
-      adminMsg("pdf-msg", "Sending to AI…", "");
-      const action = mode === 'menu' ? "parseMenuPdf" : "parseRecipePdf";
-      const data   = await adminCall({
-        action, menuCode, mepCode: menuCode,
-        pdfText: pdfText.substring(0, 8000)
-      });
-      if (data.error) throw new Error(data.error);
-      if (data.menuId) _pdfMenuId = data.menuId;
-      ingredients = mode === 'menu'
-        ? (data.parsed?.ingredients || [])
-        : (data.ingredients || []);
-    }
-
-    // Store parsed ingredients for review
-    pdfParsedIngredients = ingredients;
-    pdfTargetMepCode = menuCode;
-    window._pdfMode  = mode;
-
-    if (!pdfParsedIngredients.length) throw new Error("AI returned no ingredients");
-
-    // Add default type + empty code to each ingredient
-    pdfParsedIngredients = pdfParsedIngredients.map(ing => ({
-      ...ing,
-      type : ing.type || "RM",
-      code : ing.code || ""
-    }));
-    _autoMatchIngredients();
-
-    renderPdfPreview(mode, null);
-
-    const saveBtn = document.querySelector("#pdf-preview .btn-save");
-    if (saveBtn) saveBtn.style.display = "";
-
-    adminMsg("pdf-msg",
-      `✓ Found ${pdfParsedIngredients.length} ingredients — set type & code, then save`, "ok");
-
-  } catch(err) {
-    adminMsg("pdf-msg","Error: "+err.message,"err");
-  } finally {
-    if (btnR) btnR.disabled = false;
-    if (btnM) btnM.disabled = false;
-  }
-}
+      ad
 
 async function extractPdfText(arrayBuffer) {
   // Load PDF.js to render page as image
