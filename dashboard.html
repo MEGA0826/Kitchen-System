@@ -3965,45 +3965,41 @@ async function startPdfImport(mode) {
     const arrayBuf = await file.arrayBuffer();
     const pdfText = await extractPdfText(arrayBuf);
 
-    // ── Claude Vision path: ingredients already parsed ──
-    if (pdfText.startsWith("__CLAUDE_JSON__")) {
-      const parsed = JSON.parse(pdfText.replace("__CLAUDE_JSON__", ""));
-      pdfParsedIngredients = parsed.map(ing => ({
-        name     : ing.name     || "",
-        quantity : ing.quantity || "",
-        unit     : ing.unit     || "",
-        type     : "RM",
-        code     : ""
-      }));
-      if (!pdfParsedIngredients.length) throw new Error("No ingredients found in PDF");
-      pdfTargetMepCode = menuCode;
-      window._pdfMode  = mode;
-      _autoMatchIngredients();
-      renderPdfPreview(mode, null);
-      adminMsg("pdf-msg",
-        `✓ Claude Vision found ${pdfParsedIngredients.length} ingredients — review & save`, "ok");
-      return; // skip GAS call
+    let ingredients = [];
+
+    if (pdfText.startsWith("__VISION__")) {
+      // ── Claude Vision via GAS POST ──
+      adminMsg("pdf-msg", "Sending to Claude Vision…", "");
+      const imageData = pdfText.replace("__VISION__", "");
+      const res = await fetch(API, {
+        method  : "POST",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify({ action: "parsePdfVision", imageData }),
+        redirect: "follow"
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      ingredients = data.ingredients || [];
+
+    } else {
+      // ── Fallback: text path via OpenAI ──
+      if (!pdfText || pdfText.trim().length < 20)
+        throw new Error("Could not extract text from PDF.");
+      adminMsg("pdf-msg", "Sending to AI…", "");
+      const action = mode === 'menu' ? "parseMenuPdf" : "parseRecipePdf";
+      const data   = await adminCall({
+        action, menuCode, mepCode: menuCode,
+        pdfText: pdfText.substring(0, 8000)
+      });
+      if (data.error) throw new Error(data.error);
+      if (data.menuId) _pdfMenuId = data.menuId;
+      ingredients = mode === 'menu'
+        ? (data.parsed?.ingredients || [])
+        : (data.ingredients || []);
     }
 
-    // ── Fallback: text path (legacy) ──
-    if (!pdfText || pdfText.trim().length < 20) {
-      throw new Error("Could not extract text from PDF. Is it a scanned image?");
-    }
-    adminMsg("pdf-msg","Sending to AI…","");
-    const action = mode === 'menu' ? "parseMenuPdf" : "parseRecipePdf";
-    const data   = await adminCall({
-      action,
-      menuCode,
-      mepCode  : menuCode,
-      pdfText  : pdfText.substring(0, 8000)
-    });
-    if (data.error) throw new Error(data.error);
-    if (data.menuId) _pdfMenuId = data.menuId;
-    
     // Store parsed ingredients for review
-    pdfParsedIngredients = mode === 'menu'
-      ? (data.parsed?.ingredients || [])
-      : (data.ingredients || []);
+    pdfParsedIngredients = ingredients;
     pdfTargetMepCode = menuCode;
     window._pdfMode  = mode;
 
