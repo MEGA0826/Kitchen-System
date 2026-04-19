@@ -6789,8 +6789,8 @@ function buildMenuPdfHtml(m) {
       <button class="edit-modal-close" onclick="closeEditProductModal()">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="eif-code" placeholder="e.g. P-001"></div>
-        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="eif-name" placeholder="e.g. Karotten gewürfelt"></div>
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly style="color:var(--amber)"></div>
+      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name" placeholder="e.g. Karotten gewürfelt"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat" placeholder="e.g. Gemüse"></div>
       <div class="form-field"><label class="form-label">MEP Max (GN)</label><input class="form-input" type="number" id="epf-mepmax" placeholder="2" min="0" step="1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
       <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="epf-gnsize" placeholder="GN1/1"></div>
@@ -6885,8 +6885,8 @@ function buildMenuPdfHtml(m) {
       <button class="edit-modal-close" onclick="closeEditInventoryModal()">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="mep-code" placeholder="e.g. P-001" oninput="calcMepTotalWeight()"></div>
-        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="mep-name" placeholder="e.g. Karotten gewürfelt" oninput="calcMepTotalWeight()"></div>
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="eif-code" readonly style="color:var(--amber)"></div>
+      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="eif-name" placeholder="e.g. Karotten gewürfelt"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="eif-kategorie"></div>
       <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="eif-unit"></div>
       <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="eif-qty" step="0.1"></div>
