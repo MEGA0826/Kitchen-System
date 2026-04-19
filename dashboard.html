@@ -4718,6 +4718,20 @@ function filterSalesTable() {
       <td style="padding:8px 10px;text-align:right">
         <span style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);
                      padding:3px 12px;border-radius:20px;font-weight:600;font-size:13px">${p.suggestedMep}</span>
+        ${(()=>{
+          const code = Object.keys(allProducts).find(k => allProducts[k].name === p.name);
+          if (!code) return '';
+          const prod = allProducts[code];
+          const kgPerGN = prod.gnWeight || 0;
+          const totalKg = kgPerGN > 0 ? `<div style="font-size:10px;color:var(--muted)">${(p.suggestedMep * kgPerGN).toFixed(2)} kg</div>` : '';
+          const rms = allRecipes.filter(r => r.mepCode === code);
+          if (!rms.length) return totalKg;
+          const rmRows = rms.map(r => {
+            const needed = p.suggestedMep * (parseFloat(r.menge)||0);
+            return `<div style="font-size:10px;color:var(--muted)">${r.rmCode}: ${needed.toFixed(3)} ${r.einheit||'kg'}</div>`;
+          }).join('');
+          return totalKg + rmRows;
+        })()}
       </td>
     </tr>`;
   }).join("")
@@ -4977,12 +4991,56 @@ function openAddMEPPopup() {
   renderMepAddZutaten();
   const msg = document.getElementById("mep-msg");
   if (msg) { msg.textContent = ""; msg.className = "admin-msg"; }
+  // Reset computed fields
+  const tw = document.getElementById("mep-total-weight");
+  if (tw) tw.textContent = "—";
+  const ss = document.getElementById("mep-sales-suggestion");
+  if (ss) ss.textContent = "";
   const popup = document.getElementById("addMEPPopup");
   popup.style.cssText = "display:flex;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:16px";
 }
 
 function closeAddMEPPopup() {
   document.getElementById("addMEPPopup").style.display = "none";
+}
+
+function calcMepTotalWeight() {
+  const maxGN  = parseFloat(document.getElementById("mep-mepmax")?.value)   || 0;
+  const kgPerGN= parseFloat(document.getElementById("mep-gnweight")?.value) || 0;
+  const total  = maxGN * kgPerGN;
+  const tw = document.getElementById("mep-total-weight");
+  if (tw) tw.textContent = total > 0 ? `${maxGN} GN × ${kgPerGN} kg = ${total.toFixed(2)} kg total` : "—";
+
+  // Sales suggestion: match by code or name
+  const code = (document.getElementById("mep-code")?.value || "").trim();
+  const name = (document.getElementById("mep-name")?.value || "").trim().toLowerCase();
+  const ss = document.getElementById("mep-sales-suggestion");
+  if (!ss) return;
+
+  let match = null;
+  if (salesData?.products?.length) {
+    match = salesData.products.find(p =>
+      (p.code && p.code === code) ||
+      (p.name && p.name.toLowerCase() === name)
+    );
+    if (!match && name) {
+      match = salesData.products.find(p => p.name && p.name.toLowerCase().includes(name));
+    }
+  }
+
+  if (match) {
+    const suggested = match.suggestedMep || Math.ceil((match.avgDaily||0) * 1.2) || 0;
+    const sugKg = kgPerGN > 0 ? ` = ${(suggested * kgPerGN).toFixed(2)} kg` : "";
+    const period = _salesPeriodDays === 0 ? "all time" : `last ${_salesPeriodDays}d`;
+    ss.innerHTML = `📈 Sales (${period}): avg <strong>${match.avgDaily}</strong>/day · suggested target <strong style="color:var(--green)">${suggested} GN${sugKg}</strong>`;
+    // Also pre-fill tagesziel if empty
+    const tzEl = document.getElementById("mep-tagesziel");
+    if (tzEl && !tzEl.value) tzEl.value = suggested;
+  } else {
+    ss.textContent = salesData?.products?.length
+      ? "No sales match found — enter target manually"
+      : "Load sales data for suggestion";
+  }
 }
 async function saveMEPFromPopup() {
   const code = document.getElementById("mep-code").value.trim();
@@ -6072,13 +6130,18 @@ function buildMenuPdfHtml(m) {
       <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly></div>
       <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat"></div>
-      <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="epf-mepmax" min="0"></div>
-      <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="epf-gnsize"></div>
-      <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" min="0" step="0.1"></div>
-      <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="epf-tagesziel" min="0"></div>
+     <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="mep-mepmax" placeholder="2" min="0" oninput="calcMepTotalWeight()"></div>
+        <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="mep-gnsize" placeholder="GN1/1"></div>
+        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="mep-gnweight" placeholder="4" min="0" step="0.1" oninput="calcMepTotalWeight()"></div>
+        <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="mep-tagesziel" placeholder="3" min="0"></div>
       <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" min="1"></div>
-      <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="epf-drive"></div>
-    </div>
+      <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label class="form-label">📦 Total Volume (Max GN × kg/GN)</label>
+          <div id="mep-total-weight" style="padding:9px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--green);font-weight:600">—</div>
+          <div id="mep-sales-suggestion" style="margin-top:4px;font-size:11px;color:var(--amber);min-height:16px"></div>
+        </div>
+      </div>
     <div class="admin-msg" id="epf-msg"></div>
     <div class="form-actions">
       <button class="btn-save" onclick="saveEditedProduct()">Save</button>
@@ -6114,8 +6177,8 @@ function buildMenuPdfHtml(m) {
       <button class="edit-modal-close" onclick="closeEditInventoryModal()">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="eif-code" readonly></div>
-      <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="eif-name"></div>
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="mep-code" placeholder="e.g. P-001" oninput="calcMepTotalWeight()"></div>
+        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="mep-name" placeholder="e.g. Karotten gewürfelt" oninput="calcMepTotalWeight()"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="eif-kategorie"></div>
       <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="eif-unit"></div>
       <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="eif-qty" step="0.1"></div>
