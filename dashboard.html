@@ -5089,6 +5089,30 @@ function calcAgrWa() {
   calcAgrNetto();
 }
 
+function editMepAddZutat(i) {
+  const z = mepAddZutaten[i];
+  if (!z) return;
+  openIngredientPicker('rm', 'mep-add');
+  ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
+  setTimeout(() => {
+    document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
+    document.getElementById('ip-detail').style.display      = 'block';
+    document.getElementById('ip-gewicht').value             = z.gewicht     || '';
+    document.getElementById('ip-allergie').value            = z.allergie    || '';
+    document.getElementById('ip-zubereitung-note').value    = z.zubereitung || '';
+    const ipG = document.getElementById('ip-garverlust');
+    if (ipG) ipG.value = z.garverlust || '';
+    calcIpCost(); calcIpWA();
+    const _editIdx = i;
+    const orig = window.confirmIngredient;
+    window.confirmIngredient = function() {
+      mepAddZutaten.splice(_editIdx, 1);
+      orig();
+      window.confirmIngredient = orig;
+    };
+  }, 80);
+}
+
 function renderMepAddZutaten() {
   const el = document.getElementById('mep-add-zutaten-list');
   if (!el) return;
@@ -5109,7 +5133,10 @@ function renderMepAddZutaten() {
             ${z.allergie?`<span style="color:var(--red)"> · ⚠️${z.allergie}</span>`:''}
           </div>
         </div>
-        <button onclick="mepAddZutaten.splice(${i},1);renderMepAddZutaten()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="editMepAddZutat(${i})" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
+          <button onclick="mepAddZutaten.splice(${i},1);renderMepAddZutaten()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
+        </div>
       </div>`;
     }).join('');
   }
