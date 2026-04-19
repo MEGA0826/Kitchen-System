@@ -151,6 +151,19 @@ const TRANSLATIONS = {
   'total-toproduce':{ en:'To Produce (total)',   de:'Zu prod. (gesamt)',       th:'ต้องผลิต (รวม)',        it:'Da prod. (totale)',          fr:'À prod. (total)',           es:'A prod. (total)' },
   'refresh':        { en:'↺ Refresh',            de:'↺ Aktualisieren',         th:'↺ รีเฟรช',              it:'↺ Aggiorna',                 fr:'↺ Actualiser',              es:'↺ Actualizar' },
   'kds-sub':        { en:'Real-time MEP production tracking', de:'Echtzeit MEP Überwachung', th:'ติดตาม MEP แบบเรียลไทม์', it:'Monitoraggio MEP in tempo reale', fr:'Suivi MEP en temps réel', es:'Seguimiento MEP en tiempo real' },
+
+  // ── MEP Products Tab ──────────────────────────
+  'mep-products':     { en:'MEP Products',                  de:'MEP Produkte',                    th:'สินค้า MEP',                      it:'Prodotti MEP',                    fr:'Produits MEP',                    es:'Productos MEP' },
+  'mep-products-sub': { en:'Select a category to view production items', de:'Kategorie wählen um Produkte anzuzeigen', th:'เลือกหมวดหมู่เพื่อดูรายการผลิต', it:'Seleziona una categoria per i prodotti', fr:'Sélectionner une catégorie pour voir les produits', es:'Selecciona una categoría para ver los productos' },
+
+  // ── Recipe Ingredient Fields ──────────────────
+  'cooking-loss':     { en:'Cooking Loss %',                de:'Garverlust %',                    th:'การสูญเสียจากการปรุง %',          it:'Perdita di cottura %',            fr:'Perte à la cuisson %',            es:'Pérdida de cocción %' },
+  'wa-total':         { en:'WA Total (raw kg)',             de:'WA Total (Rohgewicht kg)',         th:'WA รวม (กก.ดิบ)',                  it:'WA totale (kg lordo)',             fr:'WA total (kg brut)',              es:'WA total (kg bruto)' },
+  'chf-kg-netto':     { en:'CHF/kg netto',                  de:'CHF/kg netto',                    th:'CHF/กก. สุทธิ',                   it:'CHF/kg netto',                    fr:'CHF/kg net',                      es:'CHF/kg neto' },
+  'allergie':         { en:'Allergen',                      de:'Allergie',                        th:'สารก่อภูมิแพ้',                    it:'Allergia',                        fr:'Allergie',                        es:'Alergia' },
+  'edit-ingredient':  { en:'Edit ingredient',               de:'Zutat bearbeiten',                th:'แก้ไขส่วนผสม',                     it:'Modifica ingrediente',            fr:'Modifier l\'ingrédient',          es:'Editar ingrediente' },
+  'no-ingredients':   { en:'No ingredients yet',            de:'Noch keine Zutaten',              th:'ยังไม่มีส่วนผสม',                  it:'Nessun ingrediente',              fr:'Pas encore d\'ingrédients',       es:'Sin ingredientes aún' },
+};
 };
 
 // ─────────────────────────────────────────────
