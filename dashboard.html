@@ -3756,7 +3756,7 @@ function switchTabMobile(select) {
 // Product edit modal
 function openEditProductModal(code) {
   const p = allProducts[code] || {};
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ""; };
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val ?? ""); };
   const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || ""; };
   setVal("epf-code",      code);
   setVal("epf-name",      p.name       || "");
@@ -3767,15 +3767,140 @@ function openEditProductModal(code) {
   setVal("epf-tagesziel", p.tagesziel  ?? "");
   setVal("epf-shelf",     p.shelfLife  ?? "");
   setVal("epf-drive",     p.image      || "");
-  setTxt("editProductTitle", "Edit Product - " + code);
+  setTxt("editProductTitle", "Edit Product — " + (p.name || code));
   setTxt("epf-msg", "");
+  // Render RM list and sales suggestion for this MEP
+  renderEpfRmList(code);
+  calcEpfSuggestion(code);
   const _epm = document.getElementById("editProductModal");
-  if (!_epm) { console.error("editProductModal not found in DOM"); return; }
+  if (!_epm) { console.error("editProductModal not found"); return; }
+  // Remove any inline style that overrides CSS z-index
+  _epm.style.cssText = "";
   _epm.classList.add("active");
 }
 
 function closeEditProductModal() {
   document.getElementById("editProductModal").classList.remove("active");
+  document.getElementById("epf-rm-picker").style.display = "none";
+}
+
+// ── EPF RM management ──
+let _epfCurrentCode = "";
+
+function renderEpfRmList(code) {
+  _epfCurrentCode = code;
+  const el = document.getElementById("epf-rm-list");
+  if (!el) return;
+  const rms = allRecipes.filter(r => r.mepCode === code);
+  if (!rms.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">No ingredients — click ＋ Add RM</div>`;
+    return;
+  }
+  const p = allProducts[code] || {};
+  const kgPerGN = parseFloat(p.gnWeight) || 0;
+  const target  = parseFloat(p.tagesziel || p.mepMax) || 0;
+  el.innerHTML = rms.map(r => {
+    const inv = allInventory.find(x => x.code === r.rmCode) || {};
+    const totalNeeded = target > 0 && r.menge ? (target * parseFloat(r.menge)).toFixed(3) : null;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue);font-weight:700">RM</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500">${inv.name || r.rmCode}</div>
+        <div style="font-size:10px;color:var(--muted)">${r.menge} ${r.einheit}/GN${totalNeeded ? ` · <span style="color:var(--amber)">Total: ${totalNeeded} ${r.einheit}</span>` : ''}</div>
+      </div>
+      <button onclick="deleteEpfRm('${code}','${r.rmCode}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function calcEpfSuggestion(code) {
+  const el = document.getElementById("epf-suggestion");
+  if (!el) return;
+  const p = allProducts[code] || {};
+  const kgPerGN = parseFloat(p.gnWeight) || 0;
+  // Match from salesData
+  let match = null;
+  if (salesData?.products?.length) {
+    match = salesData.products.find(sp =>
+      Object.keys(allProducts).find(k => k === code && allProducts[k].name === sp.name) ||
+      sp.name === p.name
+    );
+  }
+  const maxGN   = parseFloat(p.mepMax) || 0;
+  const target  = parseFloat(p.tagesziel) || 0;
+  const totalKg = maxGN * kgPerGN;
+  let html = "";
+  if (kgPerGN > 0 && maxGN > 0) {
+    html += `<span style="color:var(--green)">📦 Max: ${maxGN} GN × ${kgPerGN} kg = <strong>${totalKg.toFixed(2)} kg</strong></span>`;
+    if (target > 0) html += `<span style="color:var(--amber);margin-left:12px">· Target: ${target} GN = <strong>${(target*kgPerGN).toFixed(2)} kg</strong></span>`;
+  }
+  if (match) {
+    const suggested = match.suggestedMep || Math.ceil((match.avgDaily||0)*1.2) || 0;
+    const sugKg = kgPerGN > 0 ? ` = ${(suggested*kgPerGN).toFixed(2)} kg` : "";
+    const period = _salesPeriodDays === 0 ? "all time" : `last ${_salesPeriodDays}d`;
+    html += `<div style="margin-top:5px;color:var(--amber)">📈 Sales (${period}): avg <strong>${match.avgDaily}/day</strong> · suggested <strong style="color:var(--green)">${suggested} GN${sugKg}</strong></div>`;
+  } else if (salesData?.products?.length) {
+    html += `<div style="margin-top:5px;color:var(--faint);font-size:11px">No sales match — import CSV with this product name to see suggestion</div>`;
+  } else {
+    html += `<div style="margin-top:5px;color:var(--faint);font-size:11px">Load Sales tab data for suggestion</div>`;
+  }
+  el.innerHTML = html || `<span style="color:var(--faint)">Enter GN Weight and MEP Max to see volume</span>`;
+}
+
+function openEpfRmPicker() {
+  const picker = document.getElementById("epf-rm-picker");
+  if (!picker) return;
+  picker.style.display = picker.style.display === "none" ? "block" : "none";
+  if (picker.style.display === "block") {
+    // Populate RM select
+    const sel = document.getElementById("epf-rm-sel");
+    if (sel) {
+      sel.innerHTML = `<option value="">Select RM…</option>`
+        + allInventory.filter(r => r.code).sort((a,b)=>(a.name||"").localeCompare(b.name||""))
+          .map(r => `<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
+      sel.onchange = () => {
+        const inv = allInventory.find(x => x.code === sel.value);
+        const uEl = document.getElementById("epf-rm-unit");
+        if (inv && uEl && !uEl.value) uEl.value = inv.unit || "kg";
+      };
+    }
+    document.getElementById("epf-rm-qty").value = "";
+    document.getElementById("epf-rm-unit").value = "";
+    document.getElementById("epf-rm-msg").textContent = "";
+  }
+}
+
+async function saveEpfRmRow() {
+  const rmCode = document.getElementById("epf-rm-sel")?.value;
+  const menge  = document.getElementById("epf-rm-qty")?.value;
+  const einheit= document.getElementById("epf-rm-unit")?.value || "kg";
+  const msgEl  = document.getElementById("epf-rm-msg");
+  if (!rmCode) { if (msgEl) msgEl.textContent = "Select a raw material"; return; }
+  if (!menge || parseFloat(menge) <= 0) { if (msgEl) msgEl.textContent = "Enter quantity > 0"; return; }
+  if (!_epfCurrentCode) return;
+  try {
+    const data = await adminCall({ action:"saveRecipe", mepCode:_epfCurrentCode, rmCode, menge, einheit });
+    if (data.error) throw new Error(data.error);
+    // Refresh allRecipes
+    const rd = await get({ action:"getRecipes" }).catch(() => ({}));
+    allRecipes = Array.isArray(rd.recipes) ? rd.recipes : allRecipes;
+    renderEpfRmList(_epfCurrentCode);
+    document.getElementById("epf-rm-picker").style.display = "none";
+    if (msgEl) msgEl.textContent = "";
+  } catch(e) {
+    if (msgEl) msgEl.textContent = "Error: " + e.message;
+  }
+}
+
+async function deleteEpfRm(mepCode, rmCode) {
+  if (!confirm("Remove this ingredient?")) return;
+  try {
+    const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
+    if (data.error) throw new Error(data.error);
+    const rd = await get({ action:"getRecipes" }).catch(() => ({}));
+    allRecipes = Array.isArray(rd.recipes) ? rd.recipes : allRecipes;
+    renderEpfRmList(mepCode);
+  } catch(e) { alert("Error: " + e.message); }
 }
 
 async function saveEditedProduct() {
@@ -6142,9 +6267,9 @@ function buildMenuPdfHtml(m) {
       <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly></div>
       <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat"></div>
-     <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="mep-mepmax" placeholder="2" min="0" oninput="calcMepTotalWeight()"></div>
+     <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="epf-mepmax" min="0" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
         <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="mep-gnsize" placeholder="GN1/1"></div>
-        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="mep-gnweight" placeholder="4" min="0" step="0.1" oninput="calcMepTotalWeight()"></div>
+        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" min="0" step="0.1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
         <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="mep-tagesziel" placeholder="3" min="0" oninput="calcMepTotalWeight()"></div>
       <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" min="1"></div>
       <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
@@ -6154,6 +6279,41 @@ function buildMenuPdfHtml(m) {
           <div id="mep-sales-suggestion" style="margin-top:4px;font-size:11px;color:var(--amber);min-height:16px"></div>
         </div>
       </div>
+     <!-- Sales suggestion + total weight -->
+    <div id="epf-suggestion" style="padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border2);margin-bottom:12px;font-size:12px;min-height:40px"></div>
+
+    <!-- RM Ingredients for this MEP -->
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">🧂 Raw Materials per GN</div>
+        <button onclick="openEpfRmPicker()" style="padding:4px 10px;border-radius:7px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);font-size:11px;cursor:pointer;font-weight:600">＋ Add RM</button>
+      </div>
+      <div id="epf-rm-list" style="display:flex;flex-direction:column;gap:4px;min-height:24px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--muted);font-style:italic">No ingredients yet</div>
+      </div>
+      <!-- Inline RM add row -->
+      <div id="epf-rm-picker" style="display:none;background:var(--surface2);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border2)">
+        <div style="display:grid;grid-template-columns:1fr 80px 70px auto;gap:6px;align-items:end">
+          <div class="form-field">
+            <label class="form-label">Raw Material</label>
+            <select class="form-input" id="epf-rm-sel" style="font-size:12px;padding:6px 8px">
+              <option value="">Select RM…</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Qty / GN</label>
+            <input class="form-input" type="number" id="epf-rm-qty" placeholder="0.5" min="0" step="0.001" style="font-size:12px;padding:6px 8px">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Unit</label>
+            <input class="form-input" id="epf-rm-unit" placeholder="kg" style="font-size:12px;padding:6px 8px">
+          </div>
+          <button onclick="saveEpfRmRow()" style="padding:6px 12px;border-radius:7px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;cursor:pointer;font-weight:600;align-self:end">✓ Add</button>
+        </div>
+        <div id="epf-rm-msg" style="font-size:11px;color:var(--red);margin-top:4px;min-height:14px"></div>
+      </div>
+    </div>
+
     <div class="admin-msg" id="epf-msg"></div>
     <div class="form-actions">
       <button class="btn-save" onclick="saveEditedProduct()">Save</button>
