@@ -2389,9 +2389,10 @@ function renderFeed() {
       <span style="font-size:12px">${name}</span>
     </div>`;
   }).join("");
+  const _t = (typeof t === 'function') ? t : (k => k);
   document.getElementById("scan-feed").innerHTML =
-    `<div class="feed-row hdr"><span>${t('date-time')}</span><span>${t('worker')}</span><span>${t('action')}</span><span>${t('product')}</span></div>`
-    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>${t('no-scans-today')}</div>`);
+    `<div class="feed-row hdr"><span>${_t('date-time')}</span><span>${_t('worker')}</span><span>${_t('action')}</span><span>${_t('product')}</span></div>`
+    + (rows || `<div class="empty-state"><div class="empty-icon">📋</div>${_t('no-scans-today')}</div>`);
 }
 
 // ─────────────────────────────────────────────
@@ -2536,7 +2537,7 @@ function renderInventory(rows) {
         <th>kg total</th>
         <th>Min</th><th>Max</th>
         <th>CHF/Unit</th><th>Total CHF</th>
-        ${th("Supplier","lieferant")}<th>MEP avail.</th><th>Status</th><th></th>
+        ${th("Supplier","lieferant")}<th>MEP avail.</th><th>Status</th><th style="width:80px"></th>
       </tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
