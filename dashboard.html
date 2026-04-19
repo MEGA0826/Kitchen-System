@@ -5043,8 +5043,8 @@ function calcMepTotalWeight() {
   }
 }
 async function saveMEPFromPopup() {
-  const code = document.getElementById("mep-code").value.trim();
-  const name = document.getElementById("mep-name").value.trim();
+  const code = (document.getElementById("mep-code")?.value || "").trim();
+  const name = (document.getElementById("mep-name")?.value || "").trim();
   if (!code || !name) { adminMsg("mep-msg", "Code and Name are required", "err"); return; }
 
   // Duplicate protection
@@ -5055,15 +5055,14 @@ async function saveMEPFromPopup() {
   if (dupName) {
     adminMsg("mep-msg", `⚠ Name "${name}" already exists (${dupName.name})`, "err"); return;
   }
-  const btn = document.querySelector("#addMEPPopup .btn-save") ||
-              document.querySelector("#addMEPPopup button[onclick='saveMEPFromPopup()']");
+  const btn = document.querySelector("#addMEPPopup button[onclick='saveMEPFromPopup()']");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
-    const mepMax    = document.getElementById("mep-mepmax").value.trim();
-    const gnWeight  = document.getElementById("mep-gnweight").value.trim();
-    const tagesziel = document.getElementById("mep-tagesziel").value.trim();
-    const shelf     = document.getElementById("mep-shelf").value.trim();
-    const driveRaw  = document.getElementById("mep-drive").value.trim();
+    const mepMax    = (document.getElementById("mep-mepmax")?.value   || "").trim();
+    const gnWeight  = (document.getElementById("mep-gnweight")?.value  || "").trim();
+    const tagesziel = (document.getElementById("mep-tagesziel")?.value || "").trim();
+    const shelf     = (document.getElementById("mep-shelf")?.value     || "").trim();
+    const driveRaw  = (document.getElementById("mep-drive")?.value     || "").trim();
     const driveMatch = driveRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
     const photoLink  = driveMatch ? `https://lh3.googleusercontent.com/d/${driveMatch[1]}` : driveRaw;
     const payload = {
