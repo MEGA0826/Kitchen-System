@@ -2574,7 +2574,7 @@ function renderProductGrid(entries) {
     const inProg  = (produce === 0 && p.mepMax > 0)
       ? Math.max(0, p.mepMax - done)
       : Math.max(0, produce - done);
-    const gnLabel = p.gnSize ? " " + p.gnSize : "";
+    const gnLabel = (p.gnSize && typeof p.gnSize === 'string' && !p.gnSize.includes('GMT')) ? " " + p.gnSize : "";
 
     // ✅ Use toDirectImg() to convert Google Drive links
     const imgSrc = toDirectImg(p.image);
