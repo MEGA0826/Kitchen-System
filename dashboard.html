@@ -2421,10 +2421,10 @@ function filterInventory() {
   const cat = document.getElementById("inv-cat-filter")?.value || "";
   const sup = document.getElementById("inv-sup-filter")?.value || "";
 
-  // Show prompt if no filter active and no search
+  // Allow search alone without category/supplier selection
   if (!q && !cat && !sup) {
     document.getElementById("inv-content").innerHTML =
-      `<div class="empty-state"><div class="empty-icon">🔍</div>Choose a category or supplier above to view inventory</div>`;
+      `<div class="empty-state"><div class="empty-icon">🔍</div>Choose a category or supplier above, or search by name / code</div>`;
     return;
   }
 
@@ -2447,9 +2447,10 @@ function sortInventory(col) {
 }
 
 function renderInventory(rows) {
+  const _t = (typeof t === 'function') ? t : (k => k);
   const el = document.getElementById("inv-content");
   if (!rows || !rows.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>${t('no-data')}</div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>No items found</div>`;
     return;
   }
 
@@ -2469,7 +2470,7 @@ function renderInventory(rows) {
 
   const _sc = (qty, min) => {
     const [cls] = stockClass(qty, min);
-    const labels = { ok: t('in-stock'), low: t('needs-attention'), out: t('no-data') };
+    const labels = { ok: "In stock", low: "Low", out: "Out" };
     return `<span class="stock-pill stock-${cls}">${labels[cls] || cls}</span>`;
   };
 
@@ -2509,12 +2510,12 @@ function renderInventory(rows) {
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${rows.length} item${rows.length!==1?"s":""} — click column header to sort</div>
     <div class="inv-table-wrap"><table class="inv-table">
       <thead><tr>
-        ${th(t('code'),"code")}${th(t('name'),"name")}${th(t('category'),"kategorie")}
-        ${th(t('qty'),"quantity")}${th(t('unit'),"unit")}
-        <th>${t('kg')} total</th>
+        ${th("Code","code")}${th("Name","name")}${th("Category","kategorie")}
+        ${th("Qty","quantity")}${th("Unit","unit")}
+        <th>kg total</th>
         <th>Min</th><th>Max</th>
-        <th>CHF/${t('unit')}</th><th>Total CHF</th>
-        ${th(t('supplier'),"lieferant")}<th>MEP ${t('available')}</th><th>${t('success')}</th>
+        <th>CHF/Unit</th><th>Total CHF</th>
+        ${th("Supplier","lieferant")}<th>MEP avail.</th><th>Status</th>
       </tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
