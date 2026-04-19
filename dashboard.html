@@ -3848,35 +3848,65 @@ function calcEpfSuggestion(code) {
   el.innerHTML = html || `<span style="color:var(--faint)">Enter GN Weight and MEP Max to see volume</span>`;
 }
 
+let _epfRmSelected = null;
+
 function openEpfRmPicker() {
   const picker = document.getElementById("epf-rm-picker");
   if (!picker) return;
-  picker.style.display = picker.style.display === "none" ? "block" : "none";
-  if (picker.style.display === "block") {
-    // Populate RM select
-    const sel = document.getElementById("epf-rm-sel");
-    if (sel) {
-      sel.innerHTML = `<option value="">Select RM…</option>`
-        + allInventory.filter(r => r.code).sort((a,b)=>(a.name||"").localeCompare(b.name||""))
-          .map(r => `<option value="${r.code}">${r.name||r.code} (${r.code})</option>`).join("");
-      sel.onchange = () => {
-        const inv = allInventory.find(x => x.code === sel.value);
-        const uEl = document.getElementById("epf-rm-unit");
-        if (inv && uEl && !uEl.value) uEl.value = inv.unit || "kg";
-      };
-    }
+  const isOpen = picker.style.display !== "none";
+  picker.style.display = isOpen ? "none" : "block";
+  if (!isOpen) {
+    _epfRmSelected = null;
+    document.getElementById("epf-rm-search").value = "";
     document.getElementById("epf-rm-qty").value = "";
     document.getElementById("epf-rm-unit").value = "";
     document.getElementById("epf-rm-msg").textContent = "";
+    document.getElementById("epf-rm-detail").style.display = "none";
+    filterEpfRmSearch();
+    document.getElementById("epf-rm-search").focus();
   }
 }
 
+function filterEpfRmSearch() {
+  const q = (document.getElementById("epf-rm-search")?.value || "").toLowerCase();
+  const el = document.getElementById("epf-rm-results");
+  if (!el) return;
+  const items = allInventory.filter(r => r.code).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+  const filtered = q
+    ? items.filter(r => (r.name||"").toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
+    : items;
+  if (!filtered.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 6px">No results for "${q}"</div>`;
+    return;
+  }
+  el.innerHTML = filtered.slice(0, 40).map(r => `
+    <div onclick="selectEpfRm('${r.code}','${(r.name||r.code).replace(/'/g,"\\'").replace(/"/g,'\\"')}','${r.unit||'kg'}')"
+      style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;border:1px solid transparent"
+      onmouseover="this.style.background='var(--surface2)';this.style.borderColor='var(--blue-brd)'"
+      onmouseout="this.style.background='';this.style.borderColor='transparent'">
+      <span style="font-weight:500;flex:1">${r.name||r.code}</span>
+      <span style="font-size:10px;color:var(--muted)">${r.code}</span>
+      ${r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(r.kostenUnit).toFixed(2)}/kg</span>` : ""}
+    </div>`).join("");
+}
+
+function selectEpfRm(code, name, unit) {
+  _epfRmSelected = { code, name, unit };
+  document.getElementById("epf-rm-selected-name").textContent = `✓ ${name} (${code})`;
+  document.getElementById("epf-rm-detail").style.display = "block";
+  document.getElementById("epf-rm-unit").value = unit || "kg";
+  document.getElementById("epf-rm-qty").value = "";
+  document.getElementById("epf-rm-qty").focus();
+  // Highlight selected in list
+  document.querySelectorAll("#epf-rm-results div").forEach(d => d.style.background = "");
+}
+
 async function saveEpfRmRow() {
-  const rmCode = document.getElementById("epf-rm-sel")?.value;
-  const menge  = document.getElementById("epf-rm-qty")?.value;
-  const einheit= document.getElementById("epf-rm-unit")?.value || "kg";
   const msgEl  = document.getElementById("epf-rm-msg");
-  if (!rmCode) { if (msgEl) msgEl.textContent = "Select a raw material"; return; }
+  if (!_epfRmSelected) { if (msgEl) msgEl.textContent = "Select a raw material first"; return; }
+  const rmCode  = _epfRmSelected.code;
+  const menge   = document.getElementById("epf-rm-qty")?.value;
+  const einheit = (document.getElementById("epf-rm-unit")?.value || "kg").trim();
   if (!menge || parseFloat(menge) <= 0) { if (msgEl) msgEl.textContent = "Enter quantity > 0"; return; }
   if (!_epfCurrentCode) return;
   try {
@@ -3917,11 +3947,6 @@ async function saveEditedProduct() {
     const gnWeight  = v("epf-gnweight");
     const tagesziel = v("epf-tagesziel");
     const shelf     = v("epf-shelf");
-    const driveRaw  = v("epf-drive");
-    const driveMatch = driveRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    const photoLink  = driveMatch
-      ? `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
-      : driveRaw;
     const payload = {
       action    : "saveProduct",
       code, name,
@@ -3931,8 +3956,7 @@ async function saveEditedProduct() {
       gnWeight  : gnWeight  === "" ? "" : Number(gnWeight),
       tagesziel : tagesziel === "" ? "" : Number(tagesziel),
       shelfLife : shelf     === "" ? "" : Number(shelf),
-      driveLink : photoLink,
-      photoLink,
+      driveLink : v("epf-drive"),
     };
     const data = await adminCall(payload);
     if (!data) throw new Error("No response from server");
@@ -5207,9 +5231,6 @@ async function saveMEPFromPopup() {
     const gnWeight  = (document.getElementById("mep-gnweight")?.value  || "").trim();
     const tagesziel = (document.getElementById("mep-tagesziel")?.value || "").trim();
     const shelf     = (document.getElementById("mep-shelf")?.value     || "").trim();
-    const driveRaw  = (document.getElementById("mep-drive")?.value     || "").trim();
-    const driveMatch = driveRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    const photoLink  = driveMatch ? `https://lh3.googleusercontent.com/d/${driveMatch[1]}` : driveRaw;
     const payload = {
       action     : "saveProduct",
       code, name,
@@ -5219,7 +5240,7 @@ async function saveMEPFromPopup() {
       gnWeight   : gnWeight  === "" ? "" : Number(gnWeight),
       tagesziel  : tagesziel === "" ? "" : Number(tagesziel),
       shelfLife  : shelf     === "" ? "" : Number(shelf),
-      photoLink,
+      driveLink  : (document.getElementById("mep-drive")?.value || "").trim(),
     };
     const data = await adminCall(payload);
     if (data.error) throw new Error(data.error);
@@ -6299,23 +6320,29 @@ function buildMenuPdfHtml(m) {
         <div style="font-size:12px;color:var(--muted);font-style:italic">No ingredients yet</div>
       </div>
       <!-- Inline RM add row -->
+      <!-- Inline RM add row with search -->
       <div id="epf-rm-picker" style="display:none;background:var(--surface2);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border2)">
-        <div style="display:grid;grid-template-columns:1fr 80px 70px auto;gap:6px;align-items:end">
-          <div class="form-field">
-            <label class="form-label">Raw Material</label>
-            <select class="form-input" id="epf-rm-sel" style="font-size:12px;padding:6px 8px">
-              <option value="">Select RM…</option>
-            </select>
+        <!-- Search box -->
+        <input id="epf-rm-search" class="form-input" placeholder="🔍 Search raw material…" oninput="filterEpfRmSearch()"
+          style="margin-bottom:8px;font-size:12px;padding:7px 10px">
+        <!-- Scrollable results list -->
+        <div id="epf-rm-results" style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:8px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px;background:var(--surface)">
+          <div style="font-size:12px;color:var(--muted);padding:4px 6px">Type to search…</div>
+        </div>
+        <!-- Selected item + qty -->
+        <div id="epf-rm-detail" style="display:none;border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+          <div id="epf-rm-selected-name" style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px"></div>
+          <div style="display:grid;grid-template-columns:1fr 80px auto;gap:6px;align-items:end">
+            <div class="form-field">
+              <label class="form-label">Qty / GN</label>
+              <input class="form-input" type="number" id="epf-rm-qty" placeholder="0.5" min="0" step="0.001" style="font-size:12px;padding:6px 8px">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Unit</label>
+              <input class="form-input" id="epf-rm-unit" placeholder="kg" style="font-size:12px;padding:6px 8px">
+            </div>
+            <button onclick="saveEpfRmRow()" style="padding:6px 12px;border-radius:7px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;cursor:pointer;font-weight:600;align-self:end">✓ Add</button>
           </div>
-          <div class="form-field">
-            <label class="form-label">Qty / GN</label>
-            <input class="form-input" type="number" id="epf-rm-qty" placeholder="0.5" min="0" step="0.001" style="font-size:12px;padding:6px 8px">
-          </div>
-          <div class="form-field">
-            <label class="form-label">Unit</label>
-            <input class="form-input" id="epf-rm-unit" placeholder="kg" style="font-size:12px;padding:6px 8px">
-          </div>
-          <button onclick="saveEpfRmRow()" style="padding:6px 12px;border-radius:7px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;cursor:pointer;font-weight:600;align-self:end">✓ Add</button>
         </div>
         <div id="epf-rm-msg" style="font-size:11px;color:var(--red);margin-top:4px;min-height:14px"></div>
       </div>
