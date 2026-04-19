@@ -5330,7 +5330,6 @@ let _recipeCat = "";
 
 function setRecipeCat(cat) {
   _recipeCat = cat;
-  // Update button active states
   document.querySelectorAll(".rcat-btn").forEach(b => b.classList.remove("active"));
   if (cat) {
     document.querySelectorAll(".rcat-btn").forEach(b => {
@@ -5339,11 +5338,15 @@ function setRecipeCat(cat) {
   }
   const clearBtn = document.getElementById("rcat-clear");
   if (clearBtn) clearBtn.style.display = cat ? "inline-block" : "none";
-  // Clear search fields so category filter takes over
   const menuSearch = document.getElementById("menu-search");
   if (menuSearch && !cat) menuSearch.value = "";
-  // Filter menu list by category (uses menu.category field)
-  renderMenuListByCat(cat);
+
+  // If menus not loaded yet, load first then render
+  if (!allMenus.length) {
+    loadMenus().then(() => renderMenuListByCat(cat));
+  } else {
+    renderMenuListByCat(cat);
+  }
 }
 
 function renderMenuListByCat(cat) {
