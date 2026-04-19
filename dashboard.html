@@ -3770,9 +3770,9 @@ function openEditProductModal(code) {
   setVal("epf-drive",     p.image      || "");
   setTxt("editProductTitle", "Edit Product — " + (p.name || code));
   setTxt("epf-msg", "");
-  // Render RM list and sales suggestion for this MEP
+  // Render RM list — calcEpfSuggestion called inside after DOM settles
   renderEpfRmList(code);
-  calcEpfSuggestion(code);
+  setTimeout(() => calcEpfSuggestion(code), 0);
   const _epm = document.getElementById("editProductModal");
   if (!_epm) { console.error("editProductModal not found"); return; }
   // Remove any inline style that overrides CSS z-index
@@ -3811,6 +3811,7 @@ function renderEpfRmList(code) {
         <div style="font-size:12px;font-weight:500">${inv.name || r.rmCode}</div>
         <div style="font-size:10px;color:var(--muted)">
           ${r.menge} ${r.einheit}/GN
+          ${r.garverlust > 0 ? `· <span style="color:var(--red)">🔥 ${r.garverlust}% loss</span>` : ''}
           ${totalNeeded ? `· <span style="color:var(--amber)">Total: ${totalNeeded} ${r.einheit}</span>` : ''}
           ${costPerGN > 0 ? `· <span style="color:var(--blue)">CHF ${costPerGN.toFixed(3)}/GN</span>` : ''}
         </div>
@@ -3826,10 +3827,14 @@ function calcEpfSuggestion(code) {
   if (!el) return;
   const p = allProducts[code] || {};
 
-  // Always read LIVE values from the modal fields
-  const maxGN   = parseFloat(document.getElementById("epf-mepmax")?.value)    || parseFloat(p.mepMax)    || 0;
-  const kgPerGN = parseFloat(document.getElementById("epf-gnweight")?.value)  || parseFloat(p.gnWeight)  || 0;
-  const target  = parseFloat(document.getElementById("epf-tagesziel")?.value) || parseFloat(p.tagesziel) || 0;
+  // Read from modal fields first, fall back to allProducts data
+  // Use ?? "" to avoid NaN from empty string
+  const fMax    = document.getElementById("epf-mepmax");
+  const fKg     = document.getElementById("epf-gnweight");
+  const fTarget = document.getElementById("epf-tagesziel");
+  const maxGN   = (fMax    && fMax.value    !== "") ? parseFloat(fMax.value)    : parseFloat(p.mepMax)    || 0;
+  const kgPerGN = (fKg     && fKg.value     !== "") ? parseFloat(fKg.value)     : parseFloat(p.gnWeight)  || 0;
+  const target  = (fTarget && fTarget.value !== "") ? parseFloat(fTarget.value) : parseFloat(p.tagesziel) || 0;
   const totalKg = maxGN * kgPerGN;
 
   let html = "";
@@ -3865,11 +3870,26 @@ function calcEpfSuggestion(code) {
     html += `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Add RM ingredients to calculate WA cost</div>`;
   }
 
-  // ── Sales suggestion ──
+ // ── Sales suggestion ──
   let match = null;
-  if (salesData?.products?.length) {
-    match = salesData.products.find(sp => sp.name === p.name) ||
-            salesData.products.find(sp => p.name && sp.name && sp.name.toLowerCase().includes((p.name||"").toLowerCase()));
+  if (salesData?.products?.length && p.name) {
+    const pNameLow = (p.name || "").toLowerCase().trim();
+    // 1. Exact match
+    match = salesData.products.find(sp => (sp.name||"").toLowerCase().trim() === pNameLow);
+    // 2. Sales name contains MEP name
+    if (!match) match = salesData.products.find(sp => (sp.name||"").toLowerCase().includes(pNameLow));
+    // 3. MEP name contains sales name
+    if (!match) match = salesData.products.find(sp => pNameLow.includes((sp.name||"").toLowerCase().trim()));
+    // 4. Word overlap — any significant word matches
+    if (!match) {
+      const pWords = pNameLow.split(/\s+/).filter(w => w.length > 3);
+      if (pWords.length) {
+        match = salesData.products.find(sp => {
+          const sWords = (sp.name||"").toLowerCase().split(/\s+/);
+          return pWords.some(pw => sWords.some(sw => sw.includes(pw) || pw.includes(sw)));
+        });
+      }
+    }
   }
   if (match) {
     const suggested = match.suggestedMep || Math.ceil((match.avgDaily||0)*1.2) || 0;
@@ -3908,8 +3928,10 @@ function openEpfRmPicker() {
     document.getElementById("epf-rm-search").value = "";
     document.getElementById("epf-rm-qty").value = "";
     document.getElementById("epf-rm-unit").value = "";
+    document.getElementById("epf-rm-garverlust").value = "";
     document.getElementById("epf-rm-msg").textContent = "";
     document.getElementById("epf-rm-detail").style.display = "none";
+    document.getElementById("epf-rm-garv-result").style.display = "none";
     filterEpfRmSearch();
     document.getElementById("epf-rm-search").focus();
   }
@@ -3939,26 +3961,48 @@ function filterEpfRmSearch() {
 }
 
 function selectEpfRm(code, name, unit) {
-  _epfRmSelected = { code, name, unit };
+  const inv = allInventory.find(x => x.code === code);
+  _epfRmSelected = { code, name, unit, unitCost: parseFloat(inv?.kostenUnit || 0) };
   document.getElementById("epf-rm-selected-name").textContent = `✓ ${name} (${code})`;
   document.getElementById("epf-rm-detail").style.display = "block";
   document.getElementById("epf-rm-unit").value = unit || "kg";
   document.getElementById("epf-rm-qty").value = "";
+  document.getElementById("epf-rm-garverlust").value = "";
+  document.getElementById("epf-rm-garv-result").style.display = "none";
+  document.getElementById("epf-rm-netto").textContent = "—";
+  document.getElementById("epf-rm-wa-raw").textContent = "—";
+  document.getElementById("epf-rm-cost").textContent = "—";
   document.getElementById("epf-rm-qty").focus();
-  // Highlight selected in list
-  document.querySelectorAll("#epf-rm-results div").forEach(d => d.style.background = "");
+}
+
+function calcEpfRmGarverlust() {
+  if (!_epfRmSelected) return;
+  const qty    = parseFloat(document.getElementById("epf-rm-qty")?.value)         || 0;
+  const garv   = parseFloat(document.getElementById("epf-rm-garverlust")?.value)  || 0;
+  const result = document.getElementById("epf-rm-garv-result");
+  if (!qty) { if (result) result.style.display = "none"; return; }
+
+  const netto   = garv > 0 ? qty * (1 - garv / 100) : qty;
+  const waRaw   = garv > 0 ? qty / (1 - garv / 100) : qty; // raw kg needed to get qty netto
+  const cost    = qty * (_epfRmSelected.unitCost || 0);
+
+  document.getElementById("epf-rm-netto").textContent   = netto.toFixed(3) + " kg";
+  document.getElementById("epf-rm-wa-raw").textContent  = waRaw.toFixed(3);
+  document.getElementById("epf-rm-cost").textContent    = cost > 0 ? `CHF ${cost.toFixed(3)}` : "—";
+  if (result) result.style.display = "flex";
 }
 
 async function saveEpfRmRow() {
   const msgEl  = document.getElementById("epf-rm-msg");
   if (!_epfRmSelected) { if (msgEl) msgEl.textContent = "Select a raw material first"; return; }
-  const rmCode  = _epfRmSelected.code;
-  const menge   = document.getElementById("epf-rm-qty")?.value;
-  const einheit = (document.getElementById("epf-rm-unit")?.value || "kg").trim();
+  const rmCode     = _epfRmSelected.code;
+  const menge      = document.getElementById("epf-rm-qty")?.value;
+  const einheit    = (document.getElementById("epf-rm-unit")?.value || "kg").trim();
+  const garverlust = parseFloat(document.getElementById("epf-rm-garverlust")?.value) || 0;
   if (!menge || parseFloat(menge) <= 0) { if (msgEl) msgEl.textContent = "Enter quantity > 0"; return; }
   if (!_epfCurrentCode) return;
   try {
-    const data = await adminCall({ action:"saveRecipe", mepCode:_epfCurrentCode, rmCode, menge, einheit });
+    const data = await adminCall({ action:"saveRecipe", mepCode:_epfCurrentCode, rmCode, menge, einheit, garverlust });
     if (data.error) throw new Error(data.error);
     // Refresh allRecipes
     const rd = await get({ action:"getRecipes" }).catch(() => ({}));
@@ -6380,16 +6424,26 @@ function buildMenuPdfHtml(m) {
         <!-- Selected item + qty -->
         <div id="epf-rm-detail" style="display:none;border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
           <div id="epf-rm-selected-name" style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px"></div>
-          <div style="display:grid;grid-template-columns:1fr 80px auto;gap:6px;align-items:end">
+          <div style="display:grid;grid-template-columns:1fr 80px 80px auto;gap:6px;align-items:end">
             <div class="form-field">
-              <label class="form-label">Qty / GN</label>
-              <input class="form-input" type="number" id="epf-rm-qty" placeholder="0.5" min="0" step="0.001" style="font-size:12px;padding:6px 8px">
+              <label class="form-label">Qty / GN (kg)</label>
+              <input class="form-input" type="number" id="epf-rm-qty" placeholder="0.500" min="0" step="0.001" style="font-size:12px;padding:6px 8px" oninput="calcEpfRmGarverlust()">
+            </div>
+            <div class="form-field">
+              <label class="form-label">🔥 Garverl. %</label>
+              <input class="form-input" type="number" id="epf-rm-garverlust" placeholder="0" min="0" max="99" step="0.1" style="font-size:12px;padding:6px 8px" oninput="calcEpfRmGarverlust()">
             </div>
             <div class="form-field">
               <label class="form-label">Unit</label>
               <input class="form-input" id="epf-rm-unit" placeholder="kg" style="font-size:12px;padding:6px 8px">
             </div>
             <button onclick="saveEpfRmRow()" style="padding:6px 12px;border-radius:7px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;cursor:pointer;font-weight:600;align-self:end">✓ Add</button>
+          </div>
+          <!-- Garverlust result row -->
+          <div id="epf-rm-garv-result" style="display:none;margin-top:6px;padding:6px 10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);font-size:11px;display:flex;gap:16px;flex-wrap:wrap">
+            <span>Netto: <strong id="epf-rm-netto" style="color:var(--green)">—</strong></span>
+            <span>WA raw: <strong id="epf-rm-wa-raw" style="color:var(--amber)">—</strong> kg</span>
+            <span>Cost/GN: <strong id="epf-rm-cost" style="color:var(--blue)">—</strong></span>
           </div>
         </div>
         <div id="epf-rm-msg" style="font-size:11px;color:var(--red);margin-top:4px;min-height:14px"></div>
