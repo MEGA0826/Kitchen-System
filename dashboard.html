@@ -1875,13 +1875,8 @@ function switchTab(btn) {
       if (tabId === "orders")       renderOrders();
       if (tabId === "recipes") {
         loadMenus(); loadGRs(); loadRequirements();
-        const role = sessionStorage.getItem("dashRole") || "Manager";
-        const isAdmin = sessionStorage.getItem("isAdminUnlocked") === "true";
-        const canAdd = isAdmin && !RECIPE_VIEW_ONLY.includes(role);
-        ["btn-add-menu","btn-add-gr","btn-add-mep"].forEach(id => {
-          const b = document.getElementById(id);
-          if (b) b.style.display = canAdd ? "flex" : "none";
-        });
+        // Defer button visibility to next tick so DOM is ready
+        setTimeout(() => updateRecipeAddButtons(), 0);
       }
       if (tabId === "deductions")   loadDeductions();
       if (tabId === "reports")      loadReportsTab();
