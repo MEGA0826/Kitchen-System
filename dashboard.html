@@ -2595,13 +2595,14 @@ function renderProductGrid(entries) {
       ["Küchenchef","Manager","Admin"].includes(_role);
     const editBtn = _canEdit
       ? `<button onclick="event.stopPropagation();openEditProductModal('${code}')"
-           style="position:absolute;top:8px;right:8px;background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-family:var(--mono)">✏️</button>`
+           style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:var(--mono);vertical-align:middle;margin-left:6px;flex-shrink:0">✏️</button>`
       : '';
-    return `<div class="product-card" onclick="openProductModal('${code}')" style="position:relative">
-      ${editBtn}
+    return `<div class="product-card" onclick="openProductModal('${code}')">
       ${img}
       <div class="product-body">
-        <div class="product-name-card">${p.name || code}</div>
+        <div class="product-name-card" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+          <span>${p.name || code}</span>${editBtn}
+        </div>
         <div class="product-code-card">CODE · ${code}</div>
         ${statsHtml}
       </div>
