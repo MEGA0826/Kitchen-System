@@ -3795,6 +3795,7 @@ function renderEpfRmList(code) {
   const rms = allRecipes.filter(r => r.mepCode === code);
   if (!rms.length) {
     el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">No ingredients — click ＋ Add RM</div>`;
+    calcEpfSuggestion(code);
     return;
   }
   const p = allProducts[code] || {};
@@ -3803,49 +3804,96 @@ function renderEpfRmList(code) {
   el.innerHTML = rms.map(r => {
     const inv = allInventory.find(x => x.code === r.rmCode) || {};
     const totalNeeded = target > 0 && r.menge ? (target * parseFloat(r.menge)).toFixed(3) : null;
+    const costPerGN = inv ? (parseFloat(inv.kostenUnit)||0) * (parseFloat(r.menge)||0) : 0;
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue);font-weight:700">RM</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:500">${inv.name || r.rmCode}</div>
-        <div style="font-size:10px;color:var(--muted)">${r.menge} ${r.einheit}/GN${totalNeeded ? ` · <span style="color:var(--amber)">Total: ${totalNeeded} ${r.einheit}</span>` : ''}</div>
+        <div style="font-size:10px;color:var(--muted)">
+          ${r.menge} ${r.einheit}/GN
+          ${totalNeeded ? `· <span style="color:var(--amber)">Total: ${totalNeeded} ${r.einheit}</span>` : ''}
+          ${costPerGN > 0 ? `· <span style="color:var(--blue)">CHF ${costPerGN.toFixed(3)}/GN</span>` : ''}
+        </div>
       </div>
       <button onclick="deleteEpfRm('${code}','${r.rmCode}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
     </div>`;
   }).join("");
+  calcEpfSuggestion(code);
 }
 
 function calcEpfSuggestion(code) {
   const el = document.getElementById("epf-suggestion");
   if (!el) return;
   const p = allProducts[code] || {};
-  const kgPerGN = parseFloat(p.gnWeight) || 0;
-  // Match from salesData
+
+  // Always read LIVE values from the modal fields
+  const maxGN   = parseFloat(document.getElementById("epf-mepmax")?.value)    || parseFloat(p.mepMax)    || 0;
+  const kgPerGN = parseFloat(document.getElementById("epf-gnweight")?.value)  || parseFloat(p.gnWeight)  || 0;
+  const target  = parseFloat(document.getElementById("epf-tagesziel")?.value) || parseFloat(p.tagesziel) || 0;
+  const totalKg = maxGN * kgPerGN;
+
+  let html = "";
+
+  // ── Volume row ──
+  if (kgPerGN > 0 && maxGN > 0) {
+    html += `<div style="margin-bottom:4px">
+      <span style="color:var(--green)">📦 Max: <strong>${maxGN} GN × ${kgPerGN} kg = ${totalKg.toFixed(2)} kg</strong></span>`;
+    if (target > 0) {
+      html += `<span style="color:var(--amber);margin-left:12px">· Target: <strong>${target} GN = ${(target*kgPerGN).toFixed(2)} kg</strong></span>`;
+    }
+    html += `</div>`;
+  } else if (!kgPerGN || !maxGN) {
+    html += `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Enter MEP Max and GN Weight to see total volume</div>`;
+  }
+
+  // ── WA from RM ──
+  const rms = allRecipes.filter(r => r.mepCode === code);
+  if (rms.length) {
+    let waPerGN = 0;
+    rms.forEach(r => {
+      const inv = allInventory.find(x => x.code === r.rmCode);
+      const pricePerKg = inv ? (parseFloat(inv.kostenUnit) || 0) : 0;
+      const qty = parseFloat(r.menge) || 0;
+      waPerGN += qty * pricePerKg;
+    });
+    const waTotal = waPerGN * (target > 0 ? target : maxGN);
+    html += `<div style="margin-bottom:4px">
+      <span style="color:var(--blue)">💰 WA/GN: <strong>CHF ${waPerGN.toFixed(2)}</strong></span>
+      ${(target||maxGN) > 0 ? `<span style="color:var(--blue);margin-left:12px">· Total WA (${target||maxGN} GN): <strong>CHF ${waTotal.toFixed(2)}</strong></span>` : ""}
+    </div>`;
+  } else {
+    html += `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Add RM ingredients to calculate WA cost</div>`;
+  }
+
+  // ── Sales suggestion ──
   let match = null;
   if (salesData?.products?.length) {
-    match = salesData.products.find(sp =>
-      Object.keys(allProducts).find(k => k === code && allProducts[k].name === sp.name) ||
-      sp.name === p.name
-    );
-  }
-  const maxGN   = parseFloat(p.mepMax) || 0;
-  const target  = parseFloat(p.tagesziel) || 0;
-  const totalKg = maxGN * kgPerGN;
-  let html = "";
-  if (kgPerGN > 0 && maxGN > 0) {
-    html += `<span style="color:var(--green)">📦 Max: ${maxGN} GN × ${kgPerGN} kg = <strong>${totalKg.toFixed(2)} kg</strong></span>`;
-    if (target > 0) html += `<span style="color:var(--amber);margin-left:12px">· Target: ${target} GN = <strong>${(target*kgPerGN).toFixed(2)} kg</strong></span>`;
+    match = salesData.products.find(sp => sp.name === p.name) ||
+            salesData.products.find(sp => p.name && sp.name && sp.name.toLowerCase().includes((p.name||"").toLowerCase()));
   }
   if (match) {
     const suggested = match.suggestedMep || Math.ceil((match.avgDaily||0)*1.2) || 0;
-    const sugKg = kgPerGN > 0 ? ` = ${(suggested*kgPerGN).toFixed(2)} kg` : "";
+    const sugKg  = kgPerGN > 0 ? ` = ${(suggested*kgPerGN).toFixed(2)} kg` : "";
+    const sugWa  = (() => {
+      const rms2 = allRecipes.filter(r => r.mepCode === code);
+      if (!rms2.length || !suggested) return "";
+      let wa = 0;
+      rms2.forEach(r => {
+        const inv = allInventory.find(x => x.code === r.rmCode);
+        wa += (parseFloat(r.menge)||0) * (inv ? parseFloat(inv.kostenUnit)||0 : 0);
+      });
+      return wa > 0 ? ` · WA CHF ${(wa * suggested).toFixed(2)}` : "";
+    })();
     const period = _salesPeriodDays === 0 ? "all time" : `last ${_salesPeriodDays}d`;
-    html += `<div style="margin-top:5px;color:var(--amber)">📈 Sales (${period}): avg <strong>${match.avgDaily}/day</strong> · suggested <strong style="color:var(--green)">${suggested} GN${sugKg}</strong></div>`;
+    html += `<div style="color:var(--amber)">📈 Sales (${period}): avg <strong>${match.avgDaily}/day</strong>
+      · suggested <strong style="color:var(--green)">${suggested} GN${sugKg}${sugWa}</strong></div>`;
   } else if (salesData?.products?.length) {
-    html += `<div style="margin-top:5px;color:var(--faint);font-size:11px">No sales match — import CSV with this product name to see suggestion</div>`;
+    html += `<div style="color:var(--faint);font-size:11px">No sales match found for this product</div>`;
   } else {
-    html += `<div style="margin-top:5px;color:var(--faint);font-size:11px">Load Sales tab data for suggestion</div>`;
+    html += `<div style="color:var(--faint);font-size:11px">Open Sales tab and import CSV to see suggestion</div>`;
   }
-  el.innerHTML = html || `<span style="color:var(--faint)">Enter GN Weight and MEP Max to see volume</span>`;
+
+  el.innerHTML = html;
 }
 
 let _epfRmSelected = null;
