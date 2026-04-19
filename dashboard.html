@@ -3964,27 +3964,41 @@ function switchTabMobile(select) {
 // Product edit modal
 function openEditProductModal(code) {
   const p = allProducts[code] || {};
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val ?? ""); };
-  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || ""; };
+
+  // Safe setter: handles 0, null, undefined, empty string all correctly
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Use "" only for true null/undefined, keep 0 as "0"
+    el.value = (val === null || val === undefined) ? "" : String(val);
+  };
+  const setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val || "";
+  };
+
   setVal("epf-code",      code);
-  setVal("epf-name",      p.name       || "");
-  setVal("epf-kategorie", p.kategorie  || "");
-  setVal("epf-mepmax",    p.mepMax     ?? "");
-  setVal("epf-gnsize",    p.gnSize     || "");
-  setVal("epf-gnweight",  p.gnWeight   ?? "");
-  setVal("epf-tagesziel", p.tagesziel  ?? "");
-  setVal("epf-shelf",     p.shelfLife  ?? "");
-  setVal("epf-drive",     p.image      || "");
-  setTxt("editProductTitle", "Edit Product — " + (p.name || code));
+  setVal("epf-name",      p.name      ?? "");
+  setVal("epf-kategorie", p.kategorie ?? "");
+  // Numeric fields: 0 is valid — must not become ""
+  setVal("epf-mepmax",    p.mepMax    !== null && p.mepMax    !== undefined ? p.mepMax    : "");
+  setVal("epf-gnsize",    p.gnSize    ?? "");
+  setVal("epf-gnweight",  p.gnWeight  !== null && p.gnWeight  !== undefined ? p.gnWeight  : "");
+  setVal("epf-tagesziel", p.tagesziel !== null && p.tagesziel !== undefined ? p.tagesziel : "");
+  setVal("epf-shelf",     p.shelfLife !== null && p.shelfLife !== undefined ? p.shelfLife : "");
+  // Image: try p.image, p.driveLink, p.photoLink in order
+  setVal("epf-drive",     p.image || p.driveLink || p.photoLink || "");
+
+  setTxt("editProductTitle", "Edit — " + (p.name || code));
   setTxt("epf-msg", "");
-  // Render RM list — calcEpfSuggestion called inside after DOM settles
-  renderEpfRmList(code);
-  setTimeout(() => calcEpfSuggestion(code), 0);
+
   const _epm = document.getElementById("editProductModal");
   if (!_epm) { console.error("editProductModal not found"); return; }
-  // Remove any inline style that overrides CSS z-index
   _epm.style.cssText = "";
   _epm.classList.add("active");
+
+  renderEpfRmList(code);
+  setTimeout(() => calcEpfSuggestion(code), 0);
 }
 
 function closeEditProductModal() {
