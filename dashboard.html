@@ -5547,9 +5547,10 @@ function editMenuZutat(i) {
     const ipG = document.getElementById('ip-garverlust');
     if (ipG) ipG.value = z.garverlust || '';
     calcIpCost(); calcIpWA();
+    const _editIdx = i;
     const orig = window.confirmIngredient;
     window.confirmIngredient = function() {
-      menuZutaten.splice(i, 1);
+      menuZutaten.splice(_editIdx, 1);
       orig();
       window.confirmIngredient = orig;
     };
@@ -5570,9 +5571,10 @@ function editGrZutat(i) {
     const ipG = document.getElementById('ip-garverlust');
     if (ipG) ipG.value = z.garverlust || '';
     calcIpCost(); calcIpWA();
+    const _editIdx = i;
     const orig = window.confirmIngredient;
     window.confirmIngredient = function() {
-      agrZutaten.splice(i, 1);
+      agrZutaten.splice(_editIdx, 1);
       orig();
       window.confirmIngredient = orig;
     };
