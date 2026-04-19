@@ -3767,7 +3767,10 @@ function openEditProductModal(code) {
   document.getElementById("epf-drive").value = p.image || "";
   document.getElementById("editProductTitle").textContent = "Edit Product - " + code;
   document.getElementById("epf-msg").textContent = "";
-  document.getElementById("editProductModal").classList.add("active");
+  const _epm = document.getElementById("editProductModal");
+  _epm.style.position = "fixed";
+  _epm.style.zIndex   = "9999";
+  _epm.classList.add("active");
 }
 
 function closeEditProductModal() {
