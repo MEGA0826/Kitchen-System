@@ -6414,7 +6414,7 @@ function filterIngredientPicker() {
         .filter(([,p]) => p.name && p.name !== '(deleted)')
         .map(([code,p]) => ({ code, name: p.name, unitCost: 0 }))
     : allInventory.filter(r => r.code)
-        .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit, unitCost: parseFloat(r.kostenUnit||r.kosten||0) }));
+        .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit, unitCost: parseFloat(r.kostenUnit||r.kosten||0) || 0 }));
   const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : items;
   const el = document.getElementById('ip-list');
   if (!filtered.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine Ergebnisse.</div>`; return; }
@@ -6429,9 +6429,28 @@ function filterIngredientPicker() {
 }
 
 function selectIngredientItem(code, name, unit, unitCost) {
-  ipSelectedItem = { code, name, unit, unitCost: parseFloat(unitCost)||0 };
+  // For RM: always re-read fresh unitCost from allInventory in case it was 0 in template
+  let resolvedCost = parseFloat(unitCost) || 0;
+  if (ipMode === 'rm' || ipMode === 'RM') {
+    const inv = allInventory.find(x => x.code === code);
+    if (inv) resolvedCost = parseFloat(inv.kostenUnit || inv.kosten || 0) || 0;
+  } else if (ipMode === 'mep' || ipMode === 'MEP') {
+    // MEP cost = sum of RM ingredients × qty per GN
+    const rms = allRecipes.filter(r => r.mepCode === code);
+    let waPerGN = 0;
+    rms.forEach(r => {
+      const inv = allInventory.find(x => x.code === r.rmCode);
+      waPerGN += (parseFloat(r.menge)||0) * (inv ? parseFloat(inv.kostenUnit||0) : 0);
+    });
+    resolvedCost = waPerGN; // CHF per GN
+  }
+  ipSelectedItem = { code, name, unit, unitCost: resolvedCost };
   document.getElementById('ip-selected-name').textContent = name + ' (' + code + ')';
   document.getElementById('ip-detail').style.display = 'block';
+  document.getElementById('ip-gewicht').value = '';
+  const gEl = document.getElementById('ip-garverlust');
+  if (gEl) gEl.value = '';
+  document.getElementById('ip-cost-display').textContent = '—';
   document.getElementById('ip-gewicht').focus();
 }
 
@@ -6439,9 +6458,17 @@ function calcIpCost() {
   if (!ipSelectedItem) return;
   const kg         = parseFloat(document.getElementById('ip-gewicht').value) || 0;
   const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
-  const nettoKg    = garverlust > 0 ? kg * (1 - garverlust / 100) : kg;
-  const cost       = nettoKg * (ipSelectedItem.unitCost || 0);
-  document.getElementById('ip-cost-display').textContent = cost > 0 ? 'CHF ' + cost.toFixed(2) : '—';
+  // For RM: cost on netto weight. For MEP: cost per GN unit (gewicht = number of GN)
+  let cost = 0;
+  if (ipMode === 'mep' || ipMode === 'MEP') {
+    // gewicht field = number of GN portions used
+    cost = kg * (ipSelectedItem.unitCost || 0);
+  } else {
+    const nettoKg = garverlust > 0 ? kg * (1 - garverlust / 100) : kg;
+    cost = nettoKg * (ipSelectedItem.unitCost || 0);
+  }
+  const costEl = document.getElementById('ip-cost-display');
+  if (costEl) costEl.textContent = cost > 0 ? 'CHF ' + cost.toFixed(3) : '—';
 }
 
 function calcIpWA() {
@@ -6532,7 +6559,7 @@ function filterGrPicker() {
     return;
   }
   el.innerHTML = filtered.slice(0,40).map(i => `
-    <div onclick="selectGrItem('${i.code}','${(i.name||'').replace(/'/g,"\\'").replace(/"/g,'\\"')}',${i.unitCost||0},'gr',${i.netto||0})"
+    <div onclick="selectIngredientItem('${i.code}','${(i.name||'').replace(/'/g,"\\'").replace(/"/g,'\\"')}','${i.unit||''}',${parseFloat(i.unitCost)||0})"
       style="padding:8px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);border:1px solid transparent"
       onmouseover="this.style.borderColor='var(--green-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);margin-right:6px">GR</span>
