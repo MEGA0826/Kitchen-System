@@ -2641,10 +2641,10 @@ function renderProductGrid(entries) {
     const _canEdit = sessionStorage.getItem("isAdminUnlocked") === "true" ||
       ["Küchenchef","Manager","Admin"].includes(_role);
     const editBtn = _canEdit
-      ? `<button onclick="event.stopPropagation();openEditProductModal('${code}')"
+      ? `<button data-editcode="${code}" onclick="event.stopPropagation();openEditProductModal(this.dataset.editcode)"
            style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:var(--mono);vertical-align:middle;margin-left:6px;flex-shrink:0">✏️</button>`
       : '';
-    return `<div class="product-card" onclick="openProductModal('${code}')">
+    return `<div class="product-card" data-code="${code}" onclick="openProductModal(this.dataset.code)">
       ${img}
       <div class="product-body">
         <div class="product-name-card" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
@@ -3962,14 +3962,17 @@ function switchTabMobile(select) {
 } 
 
 // Product edit modal
-function openEditProductModal(code) {
-  const p = allProducts[code] || {};
+async function openEditProductModal(code) {
+  const _epm = document.getElementById("editProductModal");
+  if (!_epm) { console.error("editProductModal element missing from DOM"); return; }
 
-  // Safe setter: handles 0, null, undefined, empty string all correctly
+  // Show modal immediately with loading state
+  _epm.style.cssText = "";
+  _epm.classList.add("active");
+
   const setVal = (id, val) => {
     const el = document.getElementById(id);
-    if (!el) return;
-    // Use "" only for true null/undefined, keep 0 as "0"
+    if (!el) { console.warn("Missing field:", id); return; }
     el.value = (val === null || val === undefined) ? "" : String(val);
   };
   const setTxt = (id, val) => {
@@ -3977,25 +3980,32 @@ function openEditProductModal(code) {
     if (el) el.textContent = val || "";
   };
 
+  // Use cached data first
+  let p = allProducts[code] || null;
+
+  // If not in cache or empty — fetch fresh
+  if (!p || (!p.name && !p.mepMax)) {
+    setTxt("editProductTitle", "Loading…");
+    try {
+      const fresh = await loadProducts();
+      p = (fresh && fresh[code]) ? fresh[code] : (allProducts[code] || {});
+    } catch(e) {
+      p = {};
+    }
+  }
+
   setVal("epf-code",      code);
   setVal("epf-name",      p.name      ?? "");
   setVal("epf-kategorie", p.kategorie ?? "");
-  // Numeric fields: 0 is valid — must not become ""
-  setVal("epf-mepmax",    p.mepMax    !== null && p.mepMax    !== undefined ? p.mepMax    : "");
+  setVal("epf-mepmax",    p.mepMax    !== undefined && p.mepMax    !== null ? p.mepMax    : "");
   setVal("epf-gnsize",    p.gnSize    ?? "");
-  setVal("epf-gnweight",  p.gnWeight  !== null && p.gnWeight  !== undefined ? p.gnWeight  : "");
-  setVal("epf-tagesziel", p.tagesziel !== null && p.tagesziel !== undefined ? p.tagesziel : "");
-  setVal("epf-shelf",     p.shelfLife !== null && p.shelfLife !== undefined ? p.shelfLife : "");
-  // Image: try p.image, p.driveLink, p.photoLink in order
+  setVal("epf-gnweight",  p.gnWeight  !== undefined && p.gnWeight  !== null ? p.gnWeight  : "");
+  setVal("epf-tagesziel", p.tagesziel !== undefined && p.tagesziel !== null ? p.tagesziel : "");
+  setVal("epf-shelf",     p.shelfLife !== undefined && p.shelfLife !== null ? p.shelfLife : "");
   setVal("epf-drive",     p.image || p.driveLink || p.photoLink || "");
 
   setTxt("editProductTitle", "Edit — " + (p.name || code));
   setTxt("epf-msg", "");
-
-  const _epm = document.getElementById("editProductModal");
-  if (!_epm) { console.error("editProductModal not found"); return; }
-  _epm.style.cssText = "";
-  _epm.classList.add("active");
 
   renderEpfRmList(code);
   setTimeout(() => calcEpfSuggestion(code), 0);
@@ -4274,7 +4284,16 @@ async function saveEditedProduct() {
   const v = (id) => (g(id)?.value || "").trim();
   const code = v("epf-code");
   const name = v("epf-name");
-  if (!code || !name) { adminMsg("epf-msg", "Code and Name are required", "err"); return; }
+  // Debug: log what we read
+  console.log("saveEditedProduct:", { code, name,
+    epfCode: g("epf-code")?.value,
+    epfName: g("epf-name")?.value,
+    modalActive: document.getElementById("editProductModal")?.classList.contains("active")
+  });
+  if (!code || !name) {
+    adminMsg("epf-msg", `Missing: ${!code?"Code ":""}${!name?"Name":""}`, "err");
+    return;
+  }
   const btn = document.querySelector("#editProductModal .btn-save");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
@@ -6729,27 +6748,22 @@ function buildMenuPdfHtml(m) {
   
 <!-- Edit Modals -->
 <div class="edit-modal" id="editProductModal">
-  <div class="edit-modal-content">
+  <div class="edit-modal-content" style="max-width:580px">
     <div class="edit-modal-header">
       <h3 id="editProductTitle">Edit Product</h3>
       <button class="edit-modal-close" onclick="closeEditProductModal()">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="mep-code" placeholder="e.g. P-001"></div>
-        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="mep-name" placeholder="e.g. Karotten gewürfelt"></div>
-      <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat"></div>
-     <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="mep-mepmax" placeholder="2" min="0"></div>
-        <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="mep-gnsize" placeholder="GN1/1"></div>
-        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="mep-gnweight" placeholder="4" min="0" step="0.1"></div>
-        <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="mep-tagesziel" placeholder="3" min="0" oninput="calcMepTotalWeight()"></div>
-      <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" min="1"></div>
-      <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
-        <div class="form-field" style="grid-column:1/-1">
-          <label class="form-label">📦 Total Volume (Max GN × kg/GN)</label>
-          <div id="mep-total-weight" style="padding:9px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--green);font-weight:600">—</div>
-          <div id="mep-sales-suggestion" style="margin-top:4px;font-size:11px;color:var(--amber);min-height:16px"></div>
-        </div>
-      </div>
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly style="color:var(--amber)"></div>
+      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name" placeholder="e.g. Karotten gewürfelt"></div>
+      <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat" placeholder="e.g. Gemüse"></div>
+      <div class="form-field"><label class="form-label">MEP Max (GN)</label><input class="form-input" type="number" id="epf-mepmax" placeholder="2" min="0" step="1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
+      <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="epf-gnsize" placeholder="GN1/1"></div>
+      <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" placeholder="4" min="0" step="0.1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
+      <div class="form-field"><label class="form-label">Daily Target (GN)</label><input class="form-input" type="number" id="epf-tagesziel" placeholder="3" min="0" step="1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
+      <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" placeholder="2" min="1"></div>
+      <div class="form-field" style="grid-column:1/-1"><label class="form-label">📸 Drive Photo Link</label><input class="form-input" id="epf-drive" placeholder="Paste Google Drive share link"></div>
+    </div>
      <!-- Sales suggestion + total weight -->
     <div id="epf-suggestion" style="padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border2);margin-bottom:12px;font-size:12px;min-height:40px"></div>
 
