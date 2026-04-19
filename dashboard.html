@@ -548,6 +548,7 @@ window.onerror = function(msg, src, line, col) {
   <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span><span data-i18n="inventory">Inventory</span></button>
   <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span><span data-i18n="mep-products">MEP Products</span></button>
   <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span><span data-i18n="recipes">Recipes</span></button>
+  <button class="tab"        data-tab="relations"    onclick="switchTab(this)"><span class="tab-icon">🔗</span><span>Relations</span></button>
   <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span><span data-i18n="orders">Orders</span></button>
   <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span><span data-i18n="reports">Reports</span></button>
   <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span><span data-i18n="deductions">Deductions</span></button>
@@ -1585,6 +1586,30 @@ window.onerror = function(msg, src, line, col) {
     </div>
 
   </div><!-- end panel-admin -->
+<!-- RELATIONS TAB -->
+<div class="panel" id="panel-relations">
+  <div class="section-title">Recipe Relations <span class="section-title-icon">🔗</span></div>
+  <div class="section-sub">Search any RM, MEP, GR or Menu to see all connections</div>
+
+  <!-- Search bar -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <input class="search-input" id="rel-search" type="text" placeholder="🔍 Search RM / MEP / GR / Menu name or code…"
+      oninput="renderRelations()" style="flex:1;min-width:200px">
+    <div style="display:flex;gap:4px">
+      <button class="rcat-btn active" data-rtype="all"  onclick="setRelType('all',this)">All</button>
+      <button class="rcat-btn"        data-rtype="rm"   onclick="setRelType('rm',this)">🔵 RM</button>
+      <button class="rcat-btn"        data-rtype="mep"  onclick="setRelType('mep',this)">🟡 MEP</button>
+      <button class="rcat-btn"        data-rtype="gr"   onclick="setRelType('gr',this)">🟢 GR</button>
+      <button class="rcat-btn"        data-rtype="menu" onclick="setRelType('menu',this)">🍽 Menu</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="rel-results">
+    <div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>
+  </div>
+</div>
+
 </div><!-- end .body -->
 
 <!-- PIN modal -->
@@ -1883,6 +1908,7 @@ function switchTab(btn) {
       if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
       if (tabId === "kds")          loadKDS();
       if (tabId === "sales")        initSalesTab();
+      if (tabId === "relations")    renderRelations();
       if (window._inventoryReadonly && tabId === "inventory") {
         setTimeout(() => {
           document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #inv-form").forEach(el => el.style.display = "none");
@@ -3819,7 +3845,10 @@ function renderEpfRmList(code) {
       <button onclick="deleteEpfRm('${code}','${r.rmCode}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
     </div>`;
   }).join("");
-  calcEpfSuggestion(code);
+  // Recalc suggestion after RM changes (but not on initial open — openEditProductModal handles that)
+  if (document.getElementById("editProductModal")?.classList.contains("active")) {
+    setTimeout(() => calcEpfSuggestion(code), 0);
+  }
 }
 
 function calcEpfSuggestion(code) {
@@ -3870,45 +3899,64 @@ function calcEpfSuggestion(code) {
     html += `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Add RM ingredients to calculate WA cost</div>`;
   }
 
- // ── Sales suggestion ──
+ // ── Sales suggestion: match MEP → menus that use it → menu names vs sales ──
   let match = null;
-  if (salesData?.products?.length && p.name) {
+  let matchedMenuName = "";
+  if (salesData?.products?.length) {
     const pNameLow = (p.name || "").toLowerCase().trim();
-    // 1. Exact match
-    match = salesData.products.find(sp => (sp.name||"").toLowerCase().trim() === pNameLow);
-    // 2. Sales name contains MEP name
-    if (!match) match = salesData.products.find(sp => (sp.name||"").toLowerCase().includes(pNameLow));
-    // 3. MEP name contains sales name
-    if (!match) match = salesData.products.find(sp => pNameLow.includes((sp.name||"").toLowerCase().trim()));
-    // 4. Word overlap — any significant word matches
+
+    // Strategy 1: direct MEP name vs sales name
+    const tryDirect = (name) => {
+      if (!name) return null;
+      const n = name.toLowerCase().trim();
+      return salesData.products.find(sp => (sp.name||"").toLowerCase().trim() === n)
+          || salesData.products.find(sp => (sp.name||"").toLowerCase().includes(n))
+          || salesData.products.find(sp => n.includes((sp.name||"").toLowerCase().trim()))
+          || salesData.products.find(sp => {
+               const pw = n.split(/\s+/).filter(w=>w.length>3);
+               const sw = (sp.name||"").toLowerCase().split(/\s+/);
+               return pw.length && pw.some(w => sw.some(s => s.includes(w)||w.includes(s)));
+             });
+    };
+
+    match = tryDirect(p.name);
+
+    // Strategy 2: find menus that contain this MEP code → try those menu names
     if (!match) {
-      const pWords = pNameLow.split(/\s+/).filter(w => w.length > 3);
-      if (pWords.length) {
-        match = salesData.products.find(sp => {
-          const sWords = (sp.name||"").toLowerCase().split(/\s+/);
-          return pWords.some(pw => sWords.some(sw => sw.includes(pw) || pw.includes(sw)));
-        });
+      const menusWithThisMep = allMenus.filter(m => {
+        try {
+          const z = JSON.parse(m.zutaten || "[]");
+          return z.some(z => z.type === "mep" && z.code === code);
+        } catch(e) { return false; }
+      });
+      for (const menu of menusWithThisMep) {
+        const m2 = tryDirect(menu.name);
+        if (m2) { match = m2; matchedMenuName = menu.name; break; }
       }
     }
+
+    // Strategy 3: match by MEP code in sales (if sales imported with codes)
+    if (!match) {
+      match = salesData.products.find(sp => (sp.code||"") === code);
+    }
   }
+
   if (match) {
     const suggested = match.suggestedMep || Math.ceil((match.avgDaily||0)*1.2) || 0;
     const sugKg  = kgPerGN > 0 ? ` = ${(suggested*kgPerGN).toFixed(2)} kg` : "";
-    const sugWa  = (() => {
-      const rms2 = allRecipes.filter(r => r.mepCode === code);
-      if (!rms2.length || !suggested) return "";
-      let wa = 0;
-      rms2.forEach(r => {
-        const inv = allInventory.find(x => x.code === r.rmCode);
-        wa += (parseFloat(r.menge)||0) * (inv ? parseFloat(inv.kostenUnit)||0 : 0);
-      });
-      return wa > 0 ? ` · WA CHF ${(wa * suggested).toFixed(2)}` : "";
-    })();
+    const rms2   = allRecipes.filter(r => r.mepCode === code);
+    let waPerGN2 = 0;
+    rms2.forEach(r => {
+      const inv = allInventory.find(x => x.code === r.rmCode);
+      waPerGN2 += (parseFloat(r.menge)||0) * (inv ? parseFloat(inv.kostenUnit)||0 : 0);
+    });
+    const sugWa  = (waPerGN2 > 0 && suggested > 0) ? ` · WA CHF ${(waPerGN2*suggested).toFixed(2)}` : "";
+    const via    = matchedMenuName ? ` <span style="font-size:10px;color:var(--muted)">via "${matchedMenuName}"</span>` : "";
     const period = _salesPeriodDays === 0 ? "all time" : `last ${_salesPeriodDays}d`;
-    html += `<div style="color:var(--amber)">📈 Sales (${period}): avg <strong>${match.avgDaily}/day</strong>
+    html += `<div style="color:var(--amber)">📈 Sales (${period}): avg <strong>${match.avgDaily}/day</strong>${via}
       · suggested <strong style="color:var(--green)">${suggested} GN${sugKg}${sugWa}</strong></div>`;
   } else if (salesData?.products?.length) {
-    html += `<div style="color:var(--faint);font-size:11px">No sales match found for this product</div>`;
+    html += `<div style="color:var(--faint);font-size:11px">No sales match — ensure menu names match POS product names, or import CSV</div>`;
   } else {
     html += `<div style="color:var(--faint);font-size:11px">Open Sales tab and import CSV to see suggestion</div>`;
   }
@@ -5722,6 +5770,144 @@ function filterGrDisplay() {
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
       <button type="button" onclick="openEditGRPopup('${g.grCode}')" class="btn-edit" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" onclick="deleteGR('${g.grCode}','${(g.name||g.grCode).replace(/'/g,"\\'")}'))" class="btn-del" style="font-size:11px;padding:3px 8px">🗑</button>
+    </div>`).join("");
+}
+
+// ─────────────────────────────────────────────
+// RELATIONS TAB
+// ─────────────────────────────────────────────
+let _relType = "all";
+
+function setRelType(type, btn) {
+  _relType = type;
+  document.querySelectorAll("[data-rtype]").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  renderRelations();
+}
+
+function renderRelations() {
+  const el = document.getElementById("rel-results");
+  if (!el) return;
+  const q = (document.getElementById("rel-search")?.value || "").trim().toLowerCase();
+  if (!q) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>`;
+    return;
+  }
+
+  let cards = [];
+
+  // ── Search RMs ──
+  if (_relType === "all" || _relType === "rm") {
+    allInventory.filter(r =>
+      (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q)
+    ).forEach(rm => {
+      // Find MEPs that use this RM
+      const mepUses = allRecipes.filter(r => r.rmCode === rm.code);
+      const mepCodes = [...new Set(mepUses.map(r => r.mepCode))];
+      // Find GRs that use this RM
+      const grUses = allGRs.filter(g => {
+        try { return JSON.parse(g.zutaten||"[]").some(z => z.code === rm.code); }
+        catch(e) { return false; }
+      });
+      // Find Menus via MEPs
+      const menuUses = allMenus.filter(m => {
+        try {
+          const z = JSON.parse(m.zutaten||"[]");
+          return z.some(z2 => (z2.type==="mep" && mepCodes.includes(z2.code)) ||
+                               (z2.type==="gr"  && grUses.some(g => g.grCode === z2.code)));
+        } catch(e) { return false; }
+      });
+      cards.push({ type:"rm", code:rm.code, name:rm.name||rm.code,
+        meps:mepCodes.map(c=>({ code:c, name:(allProducts[c]||{}).name||c })),
+        grs: grUses.map(g=>({ code:g.grCode, name:g.name })),
+        menus: menuUses.map(m=>({ id:m.id, name:m.name })) });
+    });
+  }
+
+  // ── Search MEPs ──
+  if (_relType === "all" || _relType === "mep") {
+    Object.entries(allProducts).filter(([code,p]) =>
+      (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)
+    ).forEach(([code,p]) => {
+      const rms = allRecipes.filter(r => r.mepCode === code)
+        .map(r => { const inv=allInventory.find(x=>x.code===r.rmCode)||{}; return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit }; });
+      const menus = allMenus.filter(m => {
+        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="mep" && z.code===code); }
+        catch(e) { return false; }
+      });
+      cards.push({ type:"mep", code, name:p.name||code, rms, menus:menus.map(m=>({ id:m.id, name:m.name })), grs:[] });
+    });
+  }
+
+  // ── Search GRs ──
+  if (_relType === "all" || _relType === "gr") {
+    allGRs.filter(g =>
+      (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q)
+    ).forEach(g => {
+      let rms = [];
+      try { rms = JSON.parse(g.zutaten||"[]").map(z => { const inv=allInventory.find(x=>x.code===z.code)||{}; return { code:z.code, name:inv.name||z.name||z.code, menge:z.gewicht, einheit:z.unit||"kg" }; }); }
+      catch(e) {}
+      const menus = allMenus.filter(m => {
+        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="gr" && z.code===g.grCode); }
+        catch(e) { return false; }
+      });
+      cards.push({ type:"gr", code:g.grCode, name:g.name||g.grCode, rms, menus:menus.map(m=>({ id:m.id, name:m.name })), meps:[], grs:[] });
+    });
+  }
+
+  // ── Search Menus ──
+  if (_relType === "all" || _relType === "menu") {
+    allMenus.filter(m =>
+      (m.name||"").toLowerCase().includes(q) || (m.menuCode||"").toLowerCase().includes(q)
+    ).forEach(m => {
+      let zutaten = [];
+      try { zutaten = JSON.parse(m.zutaten||"[]"); } catch(e) {}
+      const meps = zutaten.filter(z=>z.type==="mep").map(z => ({ code:z.code, name:(allProducts[z.code]||{}).name||z.name||z.code, gewicht:z.gewicht }));
+      const grs  = zutaten.filter(z=>z.type==="gr").map(z => { const g=allGRs.find(x=>x.grCode===z.code)||{}; return { code:z.code, name:g.name||z.name||z.code, gewicht:z.gewicht }; });
+      const rms  = zutaten.filter(z=>z.type==="rm").map(z => { const inv=allInventory.find(x=>x.code===z.code)||{}; return { code:z.code, name:inv.name||z.name||z.code, menge:z.gewicht, einheit:z.unit||"kg" }; });
+      // Also expand MEPs to their RMs
+      const mepRms = meps.flatMap(mp => allRecipes.filter(r=>r.mepCode===mp.code).map(r => {
+        const inv=allInventory.find(x=>x.code===r.rmCode)||{};
+        return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit, via:`via ${mp.name}` };
+      }));
+      cards.push({ type:"menu", code:m.menuCode||m.id, name:m.name, meps, grs, rms:[...rms,...mepRms], menus:[] });
+    });
+  }
+
+  if (!cards.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>No matches for "${q}"</div>`;
+    return;
+  }
+
+  const typeColor = { rm:"var(--blue)", mep:"var(--amber)", gr:"var(--green)", menu:"var(--text)" };
+  const typeBg    = { rm:"var(--blue-dim)", mep:"var(--amber-dim)", gr:"var(--green-dim)", menu:"var(--surface2)" };
+  const typeBrd   = { rm:"var(--blue-brd)", mep:"var(--amber-brd)", gr:"var(--green-brd)", menu:"var(--border2)" };
+  const typeIcon  = { rm:"🔵", mep:"🟡", gr:"🟢", menu:"🍽" };
+
+  const pill = (type, name, code, onclick) =>
+    `<span onclick="${onclick||''}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;background:${typeBg[type]};color:${typeColor[type]};border:1px solid ${typeBrd[type]};margin:2px;${onclick?'cursor:pointer':''}">
+      ${typeIcon[type]} ${name}${code?`<span style="opacity:.6;font-size:10px"> ${code}</span>`:""}
+    </span>`;
+
+  const section = (label, items, type, makePill) =>
+    items.length ? `<div style="margin-top:10px">
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">${label} (${items.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${items.map(makePill).join("")}</div>
+    </div>` : "";
+
+  el.innerHTML = cards.slice(0,20).map(c => `
+    <div style="background:var(--surface);border:1px solid ${typeBrd[c.type]||'var(--border)'};border-radius:var(--radius);padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${typeBg[c.type]};color:${typeColor[c.type]};font-weight:700">${(c.type||"").toUpperCase()}</span>
+        <span style="font-family:var(--serif);font-size:17px;font-weight:600">${c.name}</span>
+        <span style="font-size:11px;color:var(--muted)">${c.code}</span>
+      </div>
+      ${section("Used in MEP", c.meps||[], "mep", i => pill("mep", i.name, i.code, `openEditProductModal('${i.code}')`)) }
+      ${section("Used in GR",  c.grs||[],  "gr",  i => pill("gr",  i.name, i.code, `openEditGRPopup('${i.code}')`)) }
+      ${section("Used in Menu",c.menus||[],"menu", i => pill("menu",i.name, "",    `openMenuView('${i.id}')`)) }
+      ${section("Contains RM", c.rms||[],  "rm",   i => pill("rm", i.name+(i.via?` <em style='opacity:.6;font-size:9px'>${i.via}</em>`:""), i.code+(i.menge?` ${i.menge}${i.einheit||''}`:""))) }
+      ${section("Contains MEP",c.meps&&c.type==="menu"?c.meps:[], "mep", i => pill("mep",i.name+(i.gewicht?` ${i.gewicht}kg`:""), i.code, `openEditProductModal('${i.code}')`)) }
+      ${section("Contains GR", c.grs&&c.type==="menu"?c.grs:[], "gr", i => pill("gr", i.name+(i.gewicht?` ${i.gewicht}kg`:""), i.code, `openEditGRPopup('${i.code}')`)) }
     </div>`).join("");
 }
 
