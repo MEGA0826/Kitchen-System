@@ -5548,9 +5548,14 @@ function calcMepTotalWeight() {
   }
 }
 async function saveMEPFromPopup() {
-  const code = (document.getElementById("mep-code")?.value || "").trim();
-  const name = (document.getElementById("mep-name")?.value || "").trim();
-  if (!code || !name) { adminMsg("mep-msg", "Code and Name are required", "err"); return; }
+  const popup = document.getElementById("addMEPPopup");
+  const gp = (id) => popup ? popup.querySelector("#" + id) : document.getElementById(id);
+  const code = (gp("mep-code")?.value || "").trim();
+  const name = (gp("mep-name")?.value || "").trim();
+  if (!code || !name) {
+    adminMsg("mep-msg", `Missing: ${!code ? "Code " : ""}${!name ? "Name" : ""}`, "err");
+    return;
+  }
 
   // Duplicate protection
   if (allProducts[code]) {
@@ -5560,23 +5565,23 @@ async function saveMEPFromPopup() {
   if (dupName) {
     adminMsg("mep-msg", `⚠ Name "${name}" already exists (${dupName.name})`, "err"); return;
   }
-  const btn = document.querySelector("#addMEPPopup button[onclick='saveMEPFromPopup()']");
+  const btn = popup?.querySelector("button[onclick='saveMEPFromPopup()']");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
-    const mepMax    = (document.getElementById("mep-mepmax")?.value   || "").trim();
-    const gnWeight  = (document.getElementById("mep-gnweight")?.value  || "").trim();
-    const tagesziel = (document.getElementById("mep-tagesziel")?.value || "").trim();
-    const shelf     = (document.getElementById("mep-shelf")?.value     || "").trim();
+    const mepMax    = (gp("mep-mepmax")?.value    || "").trim();
+    const gnWeight  = (gp("mep-gnweight")?.value   || "").trim();
+    const tagesziel = (gp("mep-tagesziel")?.value  || "").trim();
+    const shelf     = (gp("mep-shelf")?.value      || "").trim();
     const payload = {
       action     : "saveProduct",
       code, name,
-      kategorie  : document.getElementById("mep-kategorie").value.trim(),
+      kategorie  : (gp("mep-kategorie")?.value || "").trim(),
       mepMax     : mepMax    === "" ? "" : Number(mepMax),
-      gnSize     : document.getElementById("mep-gnsize").value.trim(),
+      gnSize     : (gp("mep-gnsize")?.value || "").trim(),
       gnWeight   : gnWeight  === "" ? "" : Number(gnWeight),
       tagesziel  : tagesziel === "" ? "" : Number(tagesziel),
       shelfLife  : shelf     === "" ? "" : Number(shelf),
-      driveLink  : (document.getElementById("mep-drive")?.value || "").trim(),
+      driveLink  : (gp("mep-drive")?.value || "").trim(),
     };
     const data = await adminCall(payload);
     if (data.error) throw new Error(data.error);
@@ -5599,6 +5604,7 @@ async function saveMEPFromPopup() {
     adminMsg("mep-msg", "Error: " + e.message, "err");
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = "💾 Save MEP"; }
+    // Re-enable gp reference cleanup
   }
 }
 // Admin-guarded wrappers for the 3 add buttons
@@ -6781,8 +6787,8 @@ function buildMenuPdfHtml(m) {
       <button class="edit-modal-close" onclick="closeEditProductModal()">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly style="color:var(--amber)"></div>
-      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name" placeholder="e.g. Karotten gewürfelt"></div>
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="eif-code" placeholder="e.g. P-001"></div>
+        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="eif-name" placeholder="e.g. Karotten gewürfelt"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat" placeholder="e.g. Gemüse"></div>
       <div class="form-field"><label class="form-label">MEP Max (GN)</label><input class="form-input" type="number" id="epf-mepmax" placeholder="2" min="0" step="1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
       <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="epf-gnsize" placeholder="GN1/1"></div>
