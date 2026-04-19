@@ -546,7 +546,7 @@ window.onerror = function(msg, src, line, col) {
 <div class="nav" id="main-nav">
 <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span><span data-i18n="kds">KDS</span></button>
   <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span><span data-i18n="inventory">Inventory</span></button>
-  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span><span data-i18n="products">Products</span></button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span><span data-i18n="mep-products">MEP Products</span></button>
   <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span><span data-i18n="recipes">Recipes</span></button>
   <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span><span data-i18n="orders">Orders</span></button>
   <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span><span data-i18n="reports">Reports</span></button>
@@ -684,8 +684,8 @@ window.onerror = function(msg, src, line, col) {
 
 <!-- PRODUCTS Tab -->
 <div class="panel" id="panel-products">
-  <div class="section-title"><span data-i18n="products">Products</span> <span class="section-title-icon">🥗</span></div>
-  <div class="section-sub" data-i18n="prod-sub">Select a category to view production items</div>
+  <div class="section-title"><span data-i18n="mep-products">MEP Products</span> <span class="section-title-icon">🥗</span></div>
+  <div class="section-sub" data-i18n="mep-products-sub">Select a category to view production items</div>
   
   <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
     <select class="search-input" id="prodCatFilter" onchange="filterProducts()" style="flex:0 1 200px">
@@ -954,7 +954,19 @@ window.onerror = function(msg, src, line, col) {
             <div id="ip-cost-display" style="padding:9px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--amber)">—</div>
           </div>
           <div class="form-field">
-            <label class="form-label">Allergie</label>
+            <label class="form-label" data-i18n="cooking-loss">🔥 Cooking Loss %</label>
+            <input class="form-input" id="ip-garverlust" type="number" min="0" max="99" step="0.1" placeholder="z.B. 20" oninput="calcIpWA()">
+          </div>
+          <div class="form-field">
+            <label class="form-label" data-i18n="wa-total">WA Total (raw kg)</label>
+            <div id="ip-wa-total" style="padding:9px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--amber)">—</div>
+          </div>
+          <div class="form-field">
+            <label class="form-label" data-i18n="chf-kg-netto">CHF/kg netto</label>
+            <div id="ip-chf-netto" style="padding:9px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--amber)">—</div>
+          </div>
+          <div class="form-field">
+            <label class="form-label" data-i18n="allergie">Allergen</label>
             <input class="form-input" id="ip-allergie" placeholder="z.B. Gluten, Soja…">
           </div>
           <div class="form-field" style="grid-column:1/-1">
@@ -4087,8 +4099,8 @@ function renderPdfPreview(mode, parsedMenu) {
     </div>` : "";
 
   const header = `
-    <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
-      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span></span>
+    <div style="display:grid;grid-template-columns:70px 110px 1fr 60px 50px 100px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
+      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span>${t('allergie')}</span><span></span>
     </div>`;
 
   const rows = pdfParsedIngredients.map((ing, i) => {
@@ -4114,7 +4126,8 @@ function renderPdfPreview(mode, parsedMenu) {
       ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">suggest: ${suggested}</div>` : "";
 
     return `
-    <div style="display:grid;grid-template-columns:70px 110px 1fr 70px 60px 28px;gap:6px;align-items:start;padding:6px 8px;background:${rowBg};border-radius:var(--radius-sm);border:1px solid ${rowBorder};margin-bottom:4px">
+    return `
+    <div style="display:grid;grid-template-columns:70px 110px 1fr 60px 50px 100px 28px;gap:6px;align-items:start;padding:6px 8px;background:${rowBg};border-radius:var(--radius-sm);border:1px solid ${rowBorder};margin-bottom:4px">
 
       <select style="background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;padding:5px 4px;cursor:pointer;width:100%"
         onchange="pdfParsedIngredients[${i}].type=this.value;pdfParsedIngredients[${i}]._matched=false;applyPdfTypePrefix(${i});renderPdfPreview(window._pdfMode)">
@@ -4152,6 +4165,11 @@ function renderPdfPreview(mode, parsedMenu) {
         value="${ing.unit||""}"
         oninput="pdfParsedIngredients[${i}].unit=this.value"
         placeholder="Unit">
+
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px;min-width:0"
+        value="${ing.allergie||""}"
+        oninput="pdfParsedIngredients[${i}].allergie=this.value"
+        placeholder="${t('allergie')}">
 
       <button type="button" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
         onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview(window._pdfMode)">✕</button>
@@ -4324,12 +4342,13 @@ async function confirmPdfImport() {
 
     // Build confirmed zutaten with correct types + codes for menu card
     const confirmedZutaten = pdfParsedIngredients.map(ing => ({
-      type    : (ing.type || "rm").toLowerCase(),
-      code    : ing.code  || ing.name.substring(0,20).replace(/\s+/g,"_").toUpperCase(),
-      name    : ing.name  || "",
-      gewicht : ing.quantity || "",
-      unit    : ing.unit  || "",
-      cost    : 0
+      type     : (ing.type || "rm").toLowerCase(),
+      code     : ing.code  || ing.name.substring(0,20).replace(/\s+/g,"_").toUpperCase(),
+      name     : ing.name  || "",
+      gewicht  : ing.quantity || "",
+      unit     : ing.unit  || "",
+      allergie : ing.allergie || "",
+      cost     : 0
     }));
 
     // Save ALL ingredients to MEP sheet (with their correct type: rm/mep/gr)
@@ -5209,9 +5228,11 @@ function renderMenuList() {
     const fc = (m.wa && m.vk && parseFloat(m.vk)>0)
       ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '—';
     const fcColor = (fc !== '—' && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
-    const imgHtml = m.imageUrl
-  ? `<img src="${toDirectImg(m.imageUrl)}" style="width:100%;height:120px;object-fit:contain;background:var(--surface2);display:block" onerror="this.style.display='none'">`
-  : `<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">🍽️</div>`;
+    const _mImg = toDirectImg(m.imageUrl || "");
+    const imgHtml = _mImg
+      ? `<img src="${_mImg}" style="width:100%;height:120px;object-fit:cover;background:var(--surface2);display:block"
+           onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=\\'width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3\\'>🍽️</div>')">`
+      : `<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">🍽️</div>`;
     return `<div onclick="openMenuView('${m.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s;min-width:0;word-break:break-word" onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
       ${imgHtml}
       <div style="padding:12px">
@@ -5409,33 +5430,44 @@ function closeMenuPopup() {
 // ZUTATEN RENDER + WA CALC
 // ─────────────────────────────────────────────
 function renderMenuZutaten(targetList, targetData) {
-  const listId = targetList || 'mp-zutaten-list';
-  const data   = targetData || menuZutaten;
-  const el     = document.getElementById(listId);
+  const listId     = targetList || 'mp-zutaten-list';
+  const data       = targetData || menuZutaten;
+  const el         = document.getElementById(listId);
   if (!el) return;
+  const isGrTarget = listId === 'gr-zutaten-list';
+  const typeColors = { mep:'var(--amber)', rm:'var(--blue)', gr:'var(--green)' };
+  const typeBg     = { mep:'var(--amber-dim)', rm:'var(--blue-dim)', gr:'var(--green-dim)' };
   if (!data.length) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">Noch keine Zutaten.</div>`;
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">${t('no-ingredients')}</div>`;
   } else {
     el.innerHTML = data.map((z, i) => {
-      const typeColors = {
-        mep: 'var(--amber)', rm: 'var(--blue)', gr: 'var(--green)'
-      };
-      const typeBg = {
-        mep: 'var(--amber-dim)', rm: 'var(--blue-dim)', gr: 'var(--green-dim)'
-      };
-      const isGrTarget = listId === 'gr-zutaten-list';
-      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface2);border-radius:8px">
-        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${typeBg[z.type]||'var(--surface)'};color:${typeColors[z.type]||'var(--text)'};font-weight:700;flex-shrink:0">${(z.type||'RM').toUpperCase()}</span>
+      const garvStr = z.garverlust ? `🔥${z.garverlust}% ${t('cooking-loss')}` : '';
+      const waStr   = z.waTotal    ? `${t('wa-total')}: ${parseFloat(z.waTotal).toFixed(3)}kg` : '';
+      const chfStr  = z.chfKgNetto ? `${t('chf-kg-netto')}: CHF ${parseFloat(z.chfKgNetto).toFixed(2)}` : '';
+      const extras  = [garvStr, waStr, chfStr].filter(Boolean).join(' · ');
+      return `<div style="display:flex;align-items:flex-start;gap:7px;padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:3px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${typeBg[z.type]||'var(--surface)'};color:${typeColors[z.type]||'var(--text)'};font-weight:700;flex-shrink:0;margin-top:2px">${(z.type||'RM').toUpperCase()}</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${z.name||''}</div>
-          <div style="font-size:10px;color:var(--muted)">${z.gewicht?z.gewicht+'kg':''} ${z.cost?'· CHF '+parseFloat(z.cost).toFixed(2):''} ${z.allergie?'⚠️'+z.allergie:''}</div>
+          <div style="font-size:12px;color:var(--text);font-weight:500">${z.name||''}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.6">
+            ${z.gewicht ? `<span>${z.gewicht}kg</span>` : ''}
+            ${z.cost    ? `<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>` : ''}
+            ${extras    ? `<span style="color:var(--blue)"> · ${extras}</span>` : ''}
+            ${z.allergie? `<span style="color:var(--red)"> · ⚠️ ${t('allergie')}: ${z.allergie}</span>` : ''}
+          </div>
         </div>
-        <button onclick="${isGrTarget?'removeGrZutat':'removeMenuZutat'}(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;flex-shrink:0">✕</button>
+        <div style="display:flex;gap:4px;flex-shrink:0;margin-top:2px">
+          <button onclick="${isGrTarget?'editGrZutat':'editMenuZutat'}(${i})"
+            title="${t('edit-ingredient')}"
+            style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
+          <button onclick="${isGrTarget?'removeGrZutat':'removeMenuZutat'}(${i})"
+            style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;padding:0 2px">✕</button>
+        </div>
       </div>`;
     }).join('');
   }
   if (!targetList) calcWaFromZutaten();
-  if (targetList === 'gr-zutaten-list') calcGrPreis();
+  if (targetList === 'gr-zutaten-list') calcGrPreis && calcGrPreis();
 }
 
 function calcWaFromZutaten() {
@@ -5500,6 +5532,52 @@ function removeMenuZutat(i) {
   renderMenuZutaten();
 }
 
+function editMenuZutat(i) {
+  const z = menuZutaten[i];
+  if (!z) return;
+  openIngredientPicker(z.type || 'rm', 'menu');
+  ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
+  setTimeout(() => {
+    document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
+    document.getElementById('ip-detail').style.display      = 'block';
+    document.getElementById('ip-gewicht').value             = z.gewicht     || '';
+    document.getElementById('ip-allergie').value            = z.allergie    || '';
+    document.getElementById('ip-zubereitung-note').value    = z.zubereitung || '';
+    const ipG = document.getElementById('ip-garverlust');
+    if (ipG) ipG.value = z.garverlust || '';
+    calcIpCost(); calcIpWA();
+    const orig = window.confirmIngredient;
+    window.confirmIngredient = function() {
+      menuZutaten.splice(i, 1);
+      orig();
+      window.confirmIngredient = orig;
+    };
+  }, 80);
+}
+
+function editGrZutat(i) {
+  const z = agrZutaten[i];
+  if (!z) return;
+  openIngredientPicker(z.type || 'rm', 'agr');
+  ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
+  setTimeout(() => {
+    document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
+    document.getElementById('ip-detail').style.display      = 'block';
+    document.getElementById('ip-gewicht').value             = z.gewicht     || '';
+    document.getElementById('ip-allergie').value            = z.allergie    || '';
+    document.getElementById('ip-zubereitung-note').value    = z.zubereitung || '';
+    const ipG = document.getElementById('ip-garverlust');
+    if (ipG) ipG.value = z.garverlust || '';
+    calcIpCost(); calcIpWA();
+    const orig = window.confirmIngredient;
+    window.confirmIngredient = function() {
+      agrZutaten.splice(i, 1);
+      orig();
+      window.confirmIngredient = orig;
+    };
+  }, 80);
+}
+
 // ─────────────────────────────────────────────
 // LOGO + IMAGE
 // ─────────────────────────────────────────────
@@ -5550,6 +5628,9 @@ function openIngredientPicker(mode, context) {
   document.getElementById('ip-allergie').value = '';
   document.getElementById('ip-zubereitung-note').value = '';
   document.getElementById('ip-cost-display').textContent = '—';
+  const _ipGarv = document.getElementById('ip-garverlust'); if (_ipGarv) _ipGarv.value = '';
+  const _ipWa   = document.getElementById('ip-wa-total');   if (_ipWa)   _ipWa.textContent = '—';
+  const _ipChf  = document.getElementById('ip-chf-netto');  if (_ipChf)  _ipChf.textContent = '—';
   const popup = document.getElementById('ingredientPickerPopup');
   popup.style.display = 'flex';
   filterIngredientPicker();
@@ -5589,20 +5670,46 @@ function selectIngredientItem(code, name, unit, unitCost) {
 
 function calcIpCost() {
   if (!ipSelectedItem) return;
-  const kg   = parseFloat(document.getElementById('ip-gewicht').value) || 0;
-  const cost = kg * (ipSelectedItem.unitCost || 0);
+  const kg         = parseFloat(document.getElementById('ip-gewicht').value) || 0;
+  const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
+  const nettoKg    = garverlust > 0 ? kg * (1 - garverlust / 100) : kg;
+  const cost       = nettoKg * (ipSelectedItem.unitCost || 0);
   document.getElementById('ip-cost-display').textContent = cost > 0 ? 'CHF ' + cost.toFixed(2) : '—';
+}
+
+function calcIpWA() {
+  if (!ipSelectedItem) return;
+  const kg         = parseFloat(document.getElementById('ip-gewicht').value) || 0;
+  const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
+  const waEl       = document.getElementById('ip-wa-total');
+  const chfEl      = document.getElementById('ip-chf-netto');
+  if (garverlust > 0 && kg > 0) {
+    const waTotal    = kg / (1 - garverlust / 100);
+    const chfKgNetto = ipSelectedItem.unitCost > 0 ? ipSelectedItem.unitCost / (1 - garverlust / 100) : 0;
+    if (waEl)  waEl.textContent  = waTotal.toFixed(4) + ' kg ' + t('raw-material');
+    if (chfEl) chfEl.textContent = chfKgNetto > 0 ? 'CHF ' + chfKgNetto.toFixed(2) + '/kg' : '—';
+  } else {
+    if (waEl)  waEl.textContent  = '—';
+    if (chfEl) chfEl.textContent = '—';
+  }
+  calcIpCost();
 }
 
 function confirmIngredient() {
   if (!ipSelectedItem) return;
   const kg   = parseFloat(document.getElementById('ip-gewicht').value) || 0;
   const cost = kg * (ipSelectedItem.unitCost || 0);
+  const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
+  const waTotal    = garverlust > 0 ? kg / (1 - garverlust / 100) : 0;
+  const chfKgNetto = (garverlust > 0 && ipSelectedItem.unitCost > 0) ? ipSelectedItem.unitCost / (1 - garverlust / 100) : 0;
   const zutat = {
     type        : ipMode,
     code        : ipSelectedItem.code,
     name        : ipSelectedItem.name,
     gewicht     : kg || '',
+    garverlust  : garverlust || '',
+    waTotal     : waTotal    ? +waTotal.toFixed(4)    : '',
+    chfKgNetto  : chfKgNetto ? +chfKgNetto.toFixed(4) : '',
     unitCost    : ipSelectedItem.unitCost,
     cost        : cost,
     allergie    : document.getElementById('ip-allergie').value,
