@@ -4100,7 +4100,7 @@ function renderPdfPreview(mode, parsedMenu) {
 
   const header = `
     <div style="display:grid;grid-template-columns:70px 110px 1fr 60px 50px 100px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
-      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span>${t('allergie')}</span><span></span>
+      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span>${typeof t === 'function' ? t('allergie') : 'Allergen'}</span><span></span>
     </div>`;
 
   const rows = pdfParsedIngredients.map((ing, i) => {
@@ -4168,7 +4168,7 @@ function renderPdfPreview(mode, parsedMenu) {
       <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px;min-width:0"
         value="${ing.allergie||""}"
         oninput="pdfParsedIngredients[${i}].allergie=this.value"
-        placeholder="${t('allergie')}">
+        placeholder="${typeof t === 'function' ? t('allergie') : 'Allergen'}">
 
       <button type="button" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
         onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview(window._pdfMode)">✕</button>
@@ -5437,12 +5437,14 @@ function renderMenuZutaten(targetList, targetData) {
   const typeColors = { mep:'var(--amber)', rm:'var(--blue)', gr:'var(--green)' };
   const typeBg     = { mep:'var(--amber-dim)', rm:'var(--blue-dim)', gr:'var(--green-dim)' };
   if (!data.length) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">${t('no-ingredients')}</div>`;
+    const _t = (typeof t === 'function') ? t : (k => k);
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">${_t('no-ingredients')}</div>`;
   } else {
     el.innerHTML = data.map((z, i) => {
-      const garvStr = z.garverlust ? `🔥${z.garverlust}% ${t('cooking-loss')}` : '';
-      const waStr   = z.waTotal    ? `${t('wa-total')}: ${parseFloat(z.waTotal).toFixed(3)}kg` : '';
-      const chfStr  = z.chfKgNetto ? `${t('chf-kg-netto')}: CHF ${parseFloat(z.chfKgNetto).toFixed(2)}` : '';
+      const _t      = (typeof t === 'function') ? t : (k => k);
+      const garvStr = z.garverlust ? `🔥${z.garverlust}% ${_t('cooking-loss')}` : '';
+      const waStr   = z.waTotal    ? `${_t('wa-total')}: ${parseFloat(z.waTotal).toFixed(3)}kg` : '';
+      const chfStr  = z.chfKgNetto ? `${_t('chf-kg-netto')}: CHF ${parseFloat(z.chfKgNetto).toFixed(2)}` : '';
       const extras  = [garvStr, waStr, chfStr].filter(Boolean).join(' · ');
       return `<div style="display:flex;align-items:flex-start;gap:7px;padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:3px">
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${typeBg[z.type]||'var(--surface)'};color:${typeColors[z.type]||'var(--text)'};font-weight:700;flex-shrink:0;margin-top:2px">${(z.type||'RM').toUpperCase()}</span>
@@ -5452,12 +5454,12 @@ function renderMenuZutaten(targetList, targetData) {
             ${z.gewicht ? `<span>${z.gewicht}kg</span>` : ''}
             ${z.cost    ? `<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>` : ''}
             ${extras    ? `<span style="color:var(--blue)"> · ${extras}</span>` : ''}
-            ${z.allergie? `<span style="color:var(--red)"> · ⚠️ ${t('allergie')}: ${z.allergie}</span>` : ''}
+            ${z.allergie? `<span style="color:var(--red)"> · ⚠️ ${_t('allergie')}: ${z.allergie}</span>` : ''}
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0;margin-top:2px">
           <button onclick="${isGrTarget?'editGrZutat':'editMenuZutat'}(${i})"
-            title="${t('edit-ingredient')}"
+            title="${_t('edit-ingredient')}"
             style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
           <button onclick="${isGrTarget?'removeGrZutat':'removeMenuZutat'}(${i})"
             style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;padding:0 2px">✕</button>
@@ -5685,7 +5687,7 @@ function calcIpWA() {
   if (garverlust > 0 && kg > 0) {
     const waTotal    = kg / (1 - garverlust / 100);
     const chfKgNetto = ipSelectedItem.unitCost > 0 ? ipSelectedItem.unitCost / (1 - garverlust / 100) : 0;
-    if (waEl)  waEl.textContent  = waTotal.toFixed(4) + ' kg ' + t('raw-material');
+    if (waEl)  waEl.textContent  = waTotal.toFixed(4) + ' kg ' + (typeof t === 'function' ? t('raw-material') : 'raw');
     if (chfEl) chfEl.textContent = chfKgNetto > 0 ? 'CHF ' + chfKgNetto.toFixed(2) + '/kg' : '—';
   } else {
     if (waEl)  waEl.textContent  = '—';
