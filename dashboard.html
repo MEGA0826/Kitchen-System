@@ -1740,7 +1740,8 @@ let ipSelectedItem = null;
 let editingMenuId = null;
 let _viewingMenu  = null;
 let _grSelectedItem = null;
-let agrZutaten = [];
+let agrZutaten    = [];
+let mepAddZutaten = [];
 let allGRs = [];
   
 const ROLE_TABS = {
@@ -4962,12 +4963,13 @@ async function loadRequirements() {
 // ADD GR POPUP
 // ─────────────────────────────────────────────
 function openAddMEPPopup() {
-  // Clear the popup's own mep-* fields (NOT the admin pf-* form)
   ["mep-code","mep-name","mep-kategorie","mep-mepmax","mep-gnsize",
    "mep-gnweight","mep-tagesziel","mep-shelf","mep-drive"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
+  mepAddZutaten = [];
+  renderMepAddZutaten();
   const msg = document.getElementById("mep-msg");
   if (msg) { msg.textContent = ""; msg.className = "admin-msg"; }
   const popup = document.getElementById("addMEPPopup");
@@ -5015,6 +5017,18 @@ async function saveMEPFromPopup() {
     const data = await adminCall(payload);
     if (data.error) throw new Error(data.error);
     adminMsg("mep-msg", "Saved OK ✓", "ok");
+    // Save RM ingredients to MEP sheet
+    if (mepAddZutaten.length) {
+      await Promise.all(mepAddZutaten.map(z => adminCall({
+        action     : 'saveRecipe',
+        mepCode    : code,
+        rmCode     : z.code,
+        menge      : z.gewicht || 0,
+        einheit    : z.unit || 'kg',
+        recipeType : 'rm',
+        garverlust : z.garverlust || 0,
+      })));
+    }
     await loadProducts();
     setTimeout(closeAddMEPPopup, 900);
   } catch(e) {
@@ -5073,6 +5087,36 @@ function calcAgrWa() {
   if (waEl) waEl.value = total.toFixed(2);
   if (totEl) totEl.textContent = 'CHF ' + total.toFixed(2);
   calcAgrNetto();
+}
+
+function renderMepAddZutaten() {
+  const el = document.getElementById('mep-add-zutaten-list');
+  if (!el) return;
+  if (!mepAddZutaten.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">${typeof t==='function'?t('no-ingredients'):'No ingredients yet'}</div>`;
+  } else {
+    el.innerHTML = mepAddZutaten.map((z, i) => {
+      const garvStr = z.garverlust ? `🔥${z.garverlust}%` : '';
+      const waStr   = z.waTotal    ? ` WA:${parseFloat(z.waTotal).toFixed(3)}kg` : '';
+      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface2);border-radius:8px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue);font-weight:700">RM</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;color:var(--text);font-weight:500">${z.name||''}</div>
+          <div style="font-size:10px;color:var(--muted)">
+            ${z.gewicht?z.gewicht+'kg':''}
+            ${z.cost?`<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>`:''}
+            ${garvStr?`<span style="color:var(--blue)"> · ${garvStr}${waStr}</span>`:''}
+            ${z.allergie?`<span style="color:var(--red)"> · ⚠️${z.allergie}</span>`:''}
+          </div>
+        </div>
+        <button onclick="mepAddZutaten.splice(${i},1);renderMepAddZutaten()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
+      </div>`;
+    }).join('');
+  }
+  // Update WA total
+  const total = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.cost)||0), 0);
+  const waEl  = document.getElementById('mep-add-wa-total');
+  if (waEl) waEl.textContent = 'CHF ' + total.toFixed(2);
 }
 
 function renderAgrZutaten() {
@@ -5721,6 +5765,9 @@ function confirmIngredient() {
  if (ipContext === 'agr') {
     agrZutaten.push(zutat);
     renderAgrZutaten();
+  } else if (ipContext === 'mep-add') {
+    mepAddZutaten.push(zutat);
+    renderMepAddZutaten();
   } else {
     menuZutaten.push(zutat);
     renderMenuZutaten();
@@ -6071,6 +6118,22 @@ function buildMenuPdfHtml(m) {
         <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="mep-shelf" placeholder="2" min="1"></div>
         <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
       </div>
+      <!-- RM Ingredients -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="form-label" style="margin:0">🧂 Raw Materials (RM)</label>
+          <button type="button" onclick="openIngredientPicker('rm','mep-add')"
+            style="padding:5px 10px;border-radius:7px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);font-size:11px;cursor:pointer;font-weight:600">＋ RM</button>
+        </div>
+        <div id="mep-add-zutaten-list" style="display:flex;flex-direction:column;gap:4px;min-height:24px">
+          <div style="font-size:12px;color:var(--muted);font-style:italic" data-i18n="no-ingredients">No ingredients yet</div>
+        </div>
+        <div style="margin-top:6px;padding:8px 12px;background:var(--surface2);border-radius:8px;display:flex;justify-content:space-between">
+          <span style="font-size:11px;color:var(--muted)">Total WA</span>
+          <span id="mep-add-wa-total" style="font-size:13px;font-weight:700;color:var(--amber)">CHF 0.00</span>
+        </div>
+      </div>
+
       <div class="admin-msg" id="mep-msg"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button onclick="closeAddMEPPopup()" style="padding:10px 18px;border-radius:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;cursor:pointer">Cancel</button>
