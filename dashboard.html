@@ -5936,18 +5936,6 @@ function filterGrDisplay() {
     </div>`).join("");
 }
 
-// ─────────────────────────────────────────────
-// RELATIONS TAB
-// ─────────────────────────────────────────────
-let _relType = "all";
-
-function setRelType(type, btn) {
-  _relType = type;
-  document.querySelectorAll("[data-rtype]").forEach(b => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
-  renderRelations();
-}
-
 function renderRelations() {
   const el = document.getElementById("rel-results");
   if (!el) return;
