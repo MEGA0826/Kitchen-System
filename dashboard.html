@@ -1610,6 +1610,26 @@ window.onerror = function(msg, src, line, col) {
   </div>
 </div>
 
+<div class="panel" id="panel-relations">
+  <div class="section-title">Recipe Relations <span class="section-title-icon">🔗</span></div>
+  <div class="section-sub">Search any RM, MEP, GR or Menu — see all connections instantly</div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <input class="search-input" id="rel-search" type="text"
+      placeholder="🔍 Type RM / MEP / GR / Menu name or code…"
+      oninput="renderRelations()" style="flex:1;min-width:200px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="rcat-btn active" data-rtype="all"  onclick="setRelType('all',this)">All</button>
+      <button class="rcat-btn"        data-rtype="rm"   onclick="setRelType('rm',this)">🔵 RM</button>
+      <button class="rcat-btn"        data-rtype="mep"  onclick="setRelType('mep',this)">🟡 MEP</button>
+      <button class="rcat-btn"        data-rtype="gr"   onclick="setRelType('gr',this)">🟢 GR</button>
+      <button class="rcat-btn"        data-rtype="menu" onclick="setRelType('menu',this)">🍽 Menu</button>
+    </div>
+  </div>
+  <div id="rel-results">
+    <div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>
+  </div>
+</div>
+
 </div><!-- end .body -->
 
 <!-- PIN modal -->
@@ -1771,8 +1791,8 @@ let allGRs = [];
   
 const ROLE_TABS = {
   Teamleader : ['kds','mep-overview','inventory','deductions','admin'],
-  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports','admin'],
-  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','sales','admin'],
+  Küchenchef : ['kds','mep-overview','inventory','recipes','relations','orders','deductions','reports','admin'],
+  Manager    : ['kds','mep-overview','inventory','products','recipes','relations','orders','deductions','reports','sales','admin'],
 };
   
 // Roles that can VIEW recipes but not add/edit
@@ -3753,6 +3773,166 @@ setTimeout(() => { loadMenus(); loadGRs(); }, 600);
 // Auto-refresh KDS every 60s
 setInterval(() => loadKDS(), 60_000);
 
+// ─────────────────────────────────────────────
+// RELATIONS TAB
+// ─────────────────────────────────────────────
+let _relType = "all";
+
+function setRelType(type, btn) {
+  _relType = type;
+  document.querySelectorAll("[data-rtype]").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  renderRelations();
+}
+
+function renderRelations() {
+  const el = document.getElementById("rel-results");
+  if (!el) return;
+  const q = (document.getElementById("rel-search")?.value || "").trim().toLowerCase();
+  if (!q) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>`;
+    return;
+  }
+
+  const typeColor = { rm:"var(--blue)", mep:"var(--amber)", gr:"var(--green)", menu:"var(--text)" };
+  const typeBg    = { rm:"var(--blue-dim)", mep:"var(--amber-dim)", gr:"var(--green-dim)", menu:"var(--surface2)" };
+  const typeBrd   = { rm:"var(--blue-brd)", mep:"var(--amber-brd)", gr:"var(--green-brd)", menu:"var(--border2)" };
+  const typeIcon  = { rm:"🔵", mep:"🟡", gr:"🟢", menu:"🍽" };
+
+  const pill = (type, name, sub, onclick) =>
+    `<span ${onclick?`onclick="${onclick}"`:""}
+      style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;
+             font-size:11px;background:${typeBg[type]};color:${typeColor[type]};
+             border:1px solid ${typeBrd[type]};margin:2px;${onclick?'cursor:pointer':''}">
+      ${typeIcon[type]} ${name}${sub?`<span style="opacity:.55;font-size:10px;margin-left:2px">${sub}</span>`:""}
+    </span>`;
+
+  const section = (label, items, renderFn) =>
+    items.length ? `<div style="margin-top:10px">
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">${label} (${items.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${items.map(renderFn).join("")}</div>
+    </div>` : "";
+
+  let cards = [];
+
+  // ── RM search ──
+  if (_relType === "all" || _relType === "rm") {
+    allInventory.filter(r =>
+      (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q)
+    ).forEach(rm => {
+      const mepUses  = allRecipes.filter(r => r.rmCode === rm.code);
+      const mepCodes = [...new Set(mepUses.map(r => r.mepCode))];
+      const grUses   = allGRs.filter(g => {
+        try { return JSON.parse(g.zutaten||"[]").some(z => z.code === rm.code); } catch(e) { return false; }
+      });
+      const menuUses = allMenus.filter(m => {
+        try {
+          const z = JSON.parse(m.zutaten||"[]");
+          return z.some(z2 =>
+            (z2.type==="mep"  && mepCodes.includes(z2.code)) ||
+            (z2.type==="gr"   && grUses.some(g => g.grCode === z2.code)) ||
+            (z2.type==="rm"   && z2.code === rm.code));
+        } catch(e) { return false; }
+      });
+      cards.push({
+        type:"rm", code:rm.code, name:rm.name||rm.code,
+        meps : mepCodes.map(c => ({ code:c, name:(allProducts[c]||{}).name||c, menge: mepUses.find(r=>r.mepCode===c)?.menge, einheit: mepUses.find(r=>r.mepCode===c)?.einheit })),
+        grs  : grUses.map(g => ({ code:g.grCode, name:g.name })),
+        menus: menuUses.map(m => ({ id:m.id, name:m.name })),
+        rms:[], dirRms:[]
+      });
+    });
+  }
+
+  // ── MEP search ──
+  if (_relType === "all" || _relType === "mep") {
+    Object.entries(allProducts).filter(([code,p]) =>
+      (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)
+    ).forEach(([code,p]) => {
+      const rms   = allRecipes.filter(r => r.mepCode === code).map(r => {
+        const inv = allInventory.find(x=>x.code===r.rmCode)||{};
+        return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit };
+      });
+      const menus = allMenus.filter(m => {
+        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="mep" && z.code===code); }
+        catch(e) { return false; }
+      });
+      cards.push({ type:"mep", code, name:p.name||code, rms, menus:menus.map(m=>({id:m.id,name:m.name})), meps:[], grs:[] });
+    });
+  }
+
+  // ── GR search ──
+  if (_relType === "all" || _relType === "gr") {
+    allGRs.filter(g =>
+      (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q)
+    ).forEach(g => {
+      let rms = [];
+      try { rms = JSON.parse(g.zutaten||"[]").map(z => {
+        const inv = allInventory.find(x=>x.code===z.code)||{};
+        return { code:z.code, name:inv.name||z.name||z.code, menge:z.gewicht, einheit:z.unit||"kg" };
+      }); } catch(e) {}
+      const menus = allMenus.filter(m => {
+        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="gr" && z.code===g.grCode); }
+        catch(e) { return false; }
+      });
+      cards.push({ type:"gr", code:g.grCode, name:g.name||g.grCode, rms, menus:menus.map(m=>({id:m.id,name:m.name})), meps:[], grs:[] });
+    });
+  }
+
+  // ── Menu search ──
+  if (_relType === "all" || _relType === "menu") {
+    allMenus.filter(m =>
+      (m.name||"").toLowerCase().includes(q) || (m.menuCode||"").toLowerCase().includes(q)
+    ).forEach(m => {
+      let z = [];
+      try { z = JSON.parse(m.zutaten||"[]"); } catch(e) {}
+      const meps = z.filter(x=>x.type==="mep").map(x => ({
+        code:x.code, name:(allProducts[x.code]||{}).name||x.name||x.code, gewicht:x.gewicht
+      }));
+      const grs  = z.filter(x=>x.type==="gr").map(x => {
+        const g = allGRs.find(r=>r.grCode===x.code)||{};
+        return { code:x.code, name:g.name||x.name||x.code, gewicht:x.gewicht };
+      });
+      const dirRms = z.filter(x=>x.type==="rm").map(x => {
+        const inv = allInventory.find(r=>r.code===x.code)||{};
+        return { code:x.code, name:inv.name||x.name||x.code, menge:x.gewicht, einheit:x.unit||"kg" };
+      });
+      // Expand MEP → their RMs
+      const mepRms = meps.flatMap(mp => allRecipes.filter(r=>r.mepCode===mp.code).map(r => {
+        const inv = allInventory.find(x=>x.code===r.rmCode)||{};
+        return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit, via:mp.name };
+      }));
+      cards.push({ type:"menu", code:m.menuCode||"", name:m.name, meps, grs, dirRms, rms:mepRms, menus:[] });
+    });
+  }
+
+  if (!cards.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>No matches for "<strong>${q}</strong>"</div>`;
+    return;
+  }
+
+  el.innerHTML = cards.slice(0,20).map(c => `
+    <div style="background:var(--surface);border:2px solid ${typeBrd[c.type]||'var(--border)'};border-radius:var(--radius);padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${typeBg[c.type]};color:${typeColor[c.type]};font-weight:700;letter-spacing:1px">${typeIcon[c.type]} ${c.type.toUpperCase()}</span>
+        <span style="font-family:var(--serif);font-size:19px;font-weight:600">${c.name}</span>
+        ${c.code ? `<span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${c.code}</span>` : ""}
+      </div>
+
+      ${c.type==="menu" ? `
+        ${section("Contains MEP", c.meps, i => pill("mep", i.name, i.gewicht?i.gewicht+"kg":"", `openEditProductModal('${i.code}')`)) }
+        ${section("Contains GR",  c.grs,  i => pill("gr",  i.name, i.gewicht?i.gewicht+"kg":"", `openEditGRPopup('${i.code}')`)) }
+        ${section("Direct RM",    c.dirRms||[], i => pill("rm", i.name, i.menge?i.menge+i.einheit:"")) }
+        ${section("All RM (via MEP)", c.rms, i => pill("rm", i.name, `${i.menge||""}${i.einheit||""} via ${i.via||""}`)) }
+      ` : `
+        ${section("Used in MEP",  c.meps||[], i => pill("mep", i.name, i.menge?i.menge+(i.einheit||"")+" /GN":"", `openEditProductModal('${i.code}')`)) }
+        ${section("Used in GR",   c.grs||[],  i => pill("gr",  i.name, "", `openEditGRPopup('${i.code}')`)) }
+        ${section("Used in Menu", c.menus||[],i => pill("menu",i.name, "", `openMenuView('${i.id}')`)) }
+        ${section("Contains RM",  c.rms||[],  i => pill("rm",  i.name, i.menge?i.menge+(i.einheit||"")+" /GN":"")) }
+      `}
+    </div>`).join("");
+}
+
 // Keep Apps Script warm — ping every 4 min
 setInterval(() => {
   fetch(API + "?action=workers", { cache: "no-store", mode: "no-cors" }).catch(() => {});
@@ -5301,25 +5481,7 @@ function closeAddMEPPopup() {
 }
 
 function calcMepTotalWeight() {
-  const maxGN   = parseFloat(document.getElementById("mep-mepmax")?.value)    || 0;
-  const kgPerGN = parseFloat(document.getElementById("mep-gnweight")?.value)  || 0;
-  const target  = parseFloat(document.getElementById("mep-tagesziel")?.value) || 0;
-  const total   = maxGN * kgPerGN;
-  const targetKg = target * kgPerGN;
-  const tw = document.getElementById("mep-total-weight");
-  if (tw) {
-    if (maxGN > 0 && kgPerGN > 0) {
-      tw.innerHTML = `<span style="color:var(--green)">${maxGN} GN × ${kgPerGN} kg = <strong>${total.toFixed(2)} kg</strong> max capacity</span>`
-        + (target > 0 ? `<span style="color:var(--amber);margin-left:12px">· Target: ${target} GN = <strong>${targetKg.toFixed(2)} kg</strong></span>` : "");
-    } else if (maxGN > 0) {
-      tw.innerHTML = `<span style="color:var(--muted)">${maxGN} GN · enter GN Weight (kg) to calculate total</span>`;
-    } else if (kgPerGN > 0) {
-      tw.innerHTML = `<span style="color:var(--muted)">${kgPerGN} kg/GN · enter MEP Max to calculate total</span>`;
-    } else {
-      tw.textContent = "Enter MEP Max and GN Weight to calculate";
-      tw.style.color = "var(--faint)";
-    }
-  }
+  // Triggers sales suggestion only — total volume display removed
 
   // Sales suggestion: match by code or name
   const code = (document.getElementById("mep-code")?.value || "").trim();
@@ -6571,12 +6733,12 @@ function buildMenuPdfHtml(m) {
       <button class="edit-modal-close" onclick="closeEditProductModal()">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly></div>
-      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name"></div>
+      <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="mep-code" placeholder="e.g. P-001"></div>
+        <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="mep-name" placeholder="e.g. Karotten gewürfelt"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat"></div>
-     <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="epf-mepmax" min="0" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
+     <div class="form-field"><label class="form-label">MEP Max</label><input class="form-input" type="number" id="mep-mepmax" placeholder="2" min="0"></div>
         <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="mep-gnsize" placeholder="GN1/1"></div>
-        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" min="0" step="0.1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
+        <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="mep-gnweight" placeholder="4" min="0" step="0.1"></div>
         <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="mep-tagesziel" placeholder="3" min="0" oninput="calcMepTotalWeight()"></div>
       <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" min="1"></div>
       <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
@@ -6710,12 +6872,6 @@ function buildMenuPdfHtml(m) {
         <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="mep-tagesziel" placeholder="3" min="0"></div>
         <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="mep-shelf" placeholder="2" min="1"></div>
         <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
-      </div>
-      <!-- Total weight display -->
-      <div style="padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border2)">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">📦 Total Volume</div>
-        <div id="mep-total-weight" style="font-size:13px;color:var(--faint)">Enter MEP Max and GN Weight to calculate</div>
-        <div id="mep-sales-suggestion" style="margin-top:6px;font-size:11px;color:var(--amber);min-height:14px"></div>
       </div>
       <!-- RM Ingredients -->
       <div>
