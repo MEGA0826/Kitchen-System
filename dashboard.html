@@ -3905,40 +3905,46 @@ async function deleteEpfRm(mepCode, rmCode) {
 }
 
 async function saveEditedProduct() {
-  const code = document.getElementById("epf-code").value.trim();
-  const name = document.getElementById("epf-name").value.trim();
+  const g = (id) => document.getElementById(id);
+  const v = (id) => (g(id)?.value || "").trim();
+  const code = v("epf-code");
+  const name = v("epf-name");
   if (!code || !name) { adminMsg("epf-msg", "Code and Name are required", "err"); return; }
   const btn = document.querySelector("#editProductModal .btn-save");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
-    const mepMax = document.getElementById("epf-mepmax").value.trim();
-    const gnWeight = document.getElementById("epf-gnweight").value.trim();
-    const tagesziel = document.getElementById("epf-tagesziel").value.trim();
-    const shelf = document.getElementById("epf-shelf").value.trim();
+    const mepMax    = v("epf-mepmax");
+    const gnWeight  = v("epf-gnweight");
+    const tagesziel = v("epf-tagesziel");
+    const shelf     = v("epf-shelf");
+    const driveRaw  = v("epf-drive");
+    const driveMatch = driveRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    const photoLink  = driveMatch
+      ? `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
+      : driveRaw;
     const payload = {
-      action: "saveProduct",
+      action    : "saveProduct",
       code, name,
-      kategorie: document.getElementById("epf-kategorie").value.trim(),
-      mepMax: mepMax === "" ? "" : Number(mepMax),
-      gnSize: document.getElementById("epf-gnsize").value.trim(),
-      gnWeight: gnWeight === "" ? "" : Number(gnWeight),
-      tagesziel: tagesziel === "" ? "" : Number(tagesziel),
-      shelfLife: shelf === "" ? "" : Number(shelf),
-      driveLink: document.getElementById("epf-drive").value.trim(),
+      kategorie : v("epf-kategorie"),
+      mepMax    : mepMax    === "" ? "" : Number(mepMax),
+      gnSize    : v("epf-gnsize"),
+      gnWeight  : gnWeight  === "" ? "" : Number(gnWeight),
+      tagesziel : tagesziel === "" ? "" : Number(tagesziel),
+      shelfLife : shelf     === "" ? "" : Number(shelf),
+      driveLink : photoLink,
+      photoLink,
     };
     const data = await adminCall(payload);
     if (!data) throw new Error("No response from server");
     if (data.error) throw new Error(data.error);
-    adminMsg("epf-msg", "Saved OK", "ok");
+    adminMsg("epf-msg", "✓ Saved", "ok");
     await loadProducts();
-    renderAdminProducts();
+    filterProducts();
     setTimeout(() => closeEditProductModal(), 800);
   } catch(e) {
     adminMsg("epf-msg", "Error: " + e.message, "err");
   } finally {
-    btn.disabled = false;
-    btn.textContent = "Save";
+    if (btn) { btn.disabled = false; btn.textContent = "Save"; }
   }
 }
 
