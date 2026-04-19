@@ -1770,6 +1770,8 @@ function setTheme(mode) {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
+  // Safe i18n wrapper — guards against t() not yet defined
+function _safeT(key) { return (typeof t === 'function') ? t(key) : key; }
 const API = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
 
 let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
@@ -2152,6 +2154,7 @@ function _renderKDS() {
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
 
 function renderStats() {
+  const _t = (typeof t === 'function') ? t : (k => k);
   const todayStr = new Date().toLocaleDateString('en-CA');
   const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toLocaleDateString('en-CA') === todayStr);
   document.getElementById("stat-total").textContent   = todayScans.length;
@@ -4398,9 +4401,26 @@ function openEditInventoryModal(code) {
   document.getElementById("eif-msg").textContent = "";
   document.getElementById("editInventoryModal").classList.add("active");
 }
-
+function calcEifPer100g() {
+  const kosten     = parseFloat(document.getElementById("eif-kosten")?.value) || 0;
+  const weightUnit = parseFloat(document.getElementById("eif-weight")?.value) || 0;
+  const el         = document.getElementById("eif-per100g");
+  if (!el) return;
+  if (kosten > 0 && weightUnit > 0) {
+    // kostenUnit = CHF per 1 unit, weightUnit = kg per unit
+    // CHF per kg = kosten / weightUnit, CHF per 100g = that / 10
+    const per100g = (kosten / weightUnit) / 10;
+    el.textContent = "CHF " + per100g.toFixed(3);
+  } else if (kosten > 0) {
+    // Assume unit is already per kg
+    el.textContent = "CHF " + (kosten / 10).toFixed(3) + " (no weight set)";
+  } else {
+    el.textContent = "—";
+  }
+}
 function closeEditInventoryModal() {
   document.getElementById("editInventoryModal").classList.remove("active");
+  setTimeout(() => calcEifPer100g(), 0);
 }
 
 async function saveEditedInventory() {
@@ -4429,6 +4449,7 @@ async function saveEditedInventory() {
     adminMsg("eif-msg", "Saved OK", "ok");
     await loadInventory();
     renderAdminInventory();
+    filterInventory();
     setTimeout(() => closeEditInventoryModal(), 800);
   } catch(e) {
     adminMsg("eif-msg", "Error: " + e.message, "err");
@@ -6895,7 +6916,8 @@ function buildMenuPdfHtml(m) {
       <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="eif-weight" step="0.01"></div>
       <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="eif-min"></div>
       <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="eif-max"></div>
-      <div class="form-field"><label class="form-label">Cost/Unit (CHF)</label><input class="form-input" type="number" id="eif-kosten" step="0.01"></div>
+      <div class="form-field"><label class="form-label">Cost/Unit (CHF)</label><input class="form-input" type="number" id="eif-kosten" step="0.01" oninput="calcEifPer100g()"></div>
+      <div class="form-field"><label class="form-label">CHF / 100g (auto)</label><div id="eif-per100g" style="padding:9px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--amber)">—</div></div>
       <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="eif-lieferant"></div>
       <div class="form-field"><label class="form-label">Last Order</label><input class="form-input" type="date" id="eif-lastorder"></div>
       <div class="form-field"><label class="form-label">Notes</label><textarea class="form-input" id="eif-notizen" rows="2"></textarea></div>
