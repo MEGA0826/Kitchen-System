@@ -3964,15 +3964,13 @@ function switchTabMobile(select) {
 // Product edit modal
 async function openEditProductModal(code) {
   const _epm = document.getElementById("editProductModal");
-  if (!_epm) { console.error("editProductModal element missing from DOM"); return; }
+  if (!_epm) return;
 
-  // Show modal immediately with loading state
-  _epm.style.cssText = "";
   _epm.classList.add("active");
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
-    if (!el) { console.warn("Missing field:", id); return; }
+    if (!el) return;
     el.value = (val === null || val === undefined) ? "" : String(val);
   };
   const setTxt = (id, val) => {
@@ -3980,37 +3978,37 @@ async function openEditProductModal(code) {
     if (el) el.textContent = val || "";
   };
 
-  // Use cached data first
-  let p = allProducts[code] || null;
+  setTxt("editProductTitle", "Loading…");
+  setTxt("epf-msg", "");
 
-  // If not in cache or empty — fetch fresh
-  if (!p || (!p.name && !p.mepMax)) {
-    setTxt("editProductTitle", "Loading…");
-    try {
-      const fresh = await loadProducts();
-      p = (fresh && fresh[code]) ? fresh[code] : (allProducts[code] || {});
-    } catch(e) {
-      p = allProducts[code] || {};
+  // Fetch fresh products AND recipes in parallel
+  try {
+    const [, rd] = await Promise.allSettled([
+      get({ action: "allProducts" }).then(d => {
+        if (d && !d.error && typeof d === "object" && !Array.isArray(d)) {
+          allProducts = d;
+        }
+      }),
+      get({ action: "getRecipes" })
+    ]);
+    if (rd.status === "fulfilled" && Array.isArray(rd.value?.recipes)) {
+      allRecipes = rd.value.recipes;
     }
-  }
+  } catch(e) {}
 
-  // Always set code first — it never changes
-  setVal("epf-code", code);
+  const p = allProducts[code] || {};
 
-  // If p is still empty after fetch, try allProducts one more time
-  if (!p || !p.name) p = allProducts[code] || {};
-
+  setVal("epf-code",      code);
   setVal("epf-name",      p.name      ?? "");
   setVal("epf-kategorie", p.kategorie ?? "");
-  setVal("epf-mepmax",    p.mepMax    !== undefined && p.mepMax    !== null ? p.mepMax    : "");
+  setVal("epf-mepmax",    p.mepMax    != null ? p.mepMax    : "");
   setVal("epf-gnsize",    p.gnSize    ?? "");
-  setVal("epf-gnweight",  p.gnWeight  !== undefined && p.gnWeight  !== null ? p.gnWeight  : "");
-  setVal("epf-tagesziel", p.tagesziel !== undefined && p.tagesziel !== null ? p.tagesziel : "");
-  setVal("epf-shelf",     p.shelfLife !== undefined && p.shelfLife !== null ? p.shelfLife : "");
+  setVal("epf-gnweight",  p.gnWeight  != null ? p.gnWeight  : "");
+  setVal("epf-tagesziel", p.tagesziel != null ? p.tagesziel : "");
+  setVal("epf-shelf",     p.shelfLife != null ? p.shelfLife : "");
   setVal("epf-drive",     p.image || p.driveLink || p.photoLink || "");
 
   setTxt("editProductTitle", "Edit — " + (p.name || code));
-  setTxt("epf-msg", "");
 
   renderEpfRmList(code);
   setTimeout(() => calcEpfSuggestion(code), 0);
