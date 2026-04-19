@@ -3983,20 +3983,21 @@ async function openEditProductModal(code) {
 
   // Fetch fresh products AND recipes in parallel
   try {
-    const [, rd] = await Promise.allSettled([
-      get({ action: "allProducts" }).then(d => {
-        if (d && !d.error && typeof d === "object" && !Array.isArray(d)) {
-          allProducts = d;
-        }
-      }),
+    const [pd, rd] = await Promise.allSettled([
+      get({ action: "allProducts" }),
       get({ action: "getRecipes" })
     ]);
+    if (pd.status === "fulfilled" && pd.value && !pd.value.error && typeof pd.value === "object" && !Array.isArray(pd.value)) {
+      allProducts = pd.value;
+      try { sessionStorage.setItem("dash_products", JSON.stringify(allProducts)); } catch(e) {}
+    }
     if (rd.status === "fulfilled" && Array.isArray(rd.value?.recipes)) {
       allRecipes = rd.value.recipes;
     }
-  } catch(e) {}
+  } catch(e) { console.error("openEditProductModal fetch error:", e); }
 
   const p = allProducts[code] || {};
+  console.log("EPM open:", code, "→", p, "keys in allProducts:", Object.keys(allProducts).length);
 
   setVal("epf-code",      code);
   setVal("epf-name",      p.name      ?? "");
