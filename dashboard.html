@@ -2590,7 +2590,15 @@ function renderProductGrid(entries) {
         <span class="prod-stat red">✕ ${_t('waste')}: ${waste}${gnLabel}</span>
       </div>` : "";
 
-    return `<div class="product-card" onclick="openProductModal('${code}')">
+    const _role = sessionStorage.getItem("dashRole") || "";
+    const _canEdit = sessionStorage.getItem("isAdminUnlocked") === "true" ||
+      ["Küchenchef","Manager","Admin"].includes(_role);
+    const editBtn = _canEdit
+      ? `<button onclick="event.stopPropagation();openEditProductModal('${code}')"
+           style="position:absolute;top:8px;right:8px;background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-family:var(--mono)">✏️</button>`
+      : '';
+    return `<div class="product-card" onclick="openProductModal('${code}')" style="position:relative">
+      ${editBtn}
       ${img}
       <div class="product-body">
         <div class="product-name-card">${p.name || code}</div>
