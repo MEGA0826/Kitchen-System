@@ -1784,7 +1784,7 @@ setInterval(updateLiveTime, 1000);
 // ─────────────────────────────────────────────
 function goBack(e) {
   e.preventDefault();
-  if (document.referrer && document.referrer !== window.location.href) {
+  if (window.history.length > 1) {
     window.history.back();
   } else {
     window.location.href = "https://mega0826.github.io/Kitchen-System/index.html";
@@ -2559,8 +2559,9 @@ function renderProductGrid(entries) {
   const grid = document.getElementById("product-grid");
   if (!grid) return;
 
+  const _t = (typeof t === 'function') ? t : (k => k);
   if (!entries || !entries.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>${t('no-data')}</div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>${_t('no-data')}</div>`;
     return;
   }
 
@@ -2584,9 +2585,9 @@ function renderProductGrid(entries) {
 
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
-        <span class="prod-stat green">✅ ${t('available')}: ${avail}${gnLabel}</span>
-        <span class="prod-stat amber">↻ ${t('produce')}: ${inProg}${gnLabel}</span>
-        <span class="prod-stat red">✕ ${t('waste')}: ${waste}${gnLabel}</span>
+        <span class="prod-stat green">✅ ${_t('available')}: ${avail}${gnLabel}</span>
+        <span class="prod-stat amber">↻ ${_t('produce')}: ${inProg}${gnLabel}</span>
+        <span class="prod-stat red">✕ ${_t('waste')}: ${waste}${gnLabel}</span>
       </div>` : "";
 
     return `<div class="product-card" onclick="openProductModal('${code}')">
