@@ -3990,11 +3990,16 @@ async function openEditProductModal(code) {
       const fresh = await loadProducts();
       p = (fresh && fresh[code]) ? fresh[code] : (allProducts[code] || {});
     } catch(e) {
-      p = {};
+      p = allProducts[code] || {};
     }
   }
 
-  setVal("epf-code",      code);
+  // Always set code first — it never changes
+  setVal("epf-code", code);
+
+  // If p is still empty after fetch, try allProducts one more time
+  if (!p || !p.name) p = allProducts[code] || {};
+
   setVal("epf-name",      p.name      ?? "");
   setVal("epf-kategorie", p.kategorie ?? "");
   setVal("epf-mepmax",    p.mepMax    !== undefined && p.mepMax    !== null ? p.mepMax    : "");
@@ -4282,16 +4287,15 @@ async function deleteEpfRm(mepCode, rmCode) {
 async function saveEditedProduct() {
   const g = (id) => document.getElementById(id);
   const v = (id) => (g(id)?.value || "").trim();
-  const code = v("epf-code");
-  const name = v("epf-name");
-  // Debug: log what we read
-  console.log("saveEditedProduct:", { code, name,
-    epfCode: g("epf-code")?.value,
-    epfName: g("epf-name")?.value,
-    modalActive: document.getElementById("editProductModal")?.classList.contains("active")
-  });
+  // Re-read directly to avoid stale closure
+  const codeEl = document.getElementById("epf-code");
+  const nameEl = document.getElementById("epf-name");
+  const code = (codeEl?.value || "").trim();
+  const name = (nameEl?.value || "").trim();
   if (!code || !name) {
     adminMsg("epf-msg", `Missing: ${!code?"Code ":""}${!name?"Name":""}`, "err");
+    console.warn("epf fields:", { codeEl, nameEl, code, name,
+      modalActive: document.getElementById("editProductModal")?.classList.contains("active") });
     return;
   }
   const btn = document.querySelector("#editProductModal .btn-save");
