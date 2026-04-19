@@ -2356,7 +2356,7 @@ function renderProductBars() {
   const colors = ["amber","green","red","blue","amber","green","red","blue"];
   document.getElementById("product-bars").innerHTML = sorted.length
     ? sorted.map((p, i) => bar(p.label, p.val, max, colors[i])).join("")
-    : `<div class="empty-state"><div class="empty-icon">📊</div>${t('no-data')}</div>`;
+    : `<div class="empty-state"><div class="empty-icon">📊</div>${typeof t === 'function' ? t('no-data') : 'No data'}</div>`;
 }
 
 function renderWorkerBars() {
@@ -2367,7 +2367,7 @@ function renderWorkerBars() {
   const max = sorted[0]?.[1] || 1;
   document.getElementById("worker-bars").innerHTML = sorted.length
     ? sorted.map(([w, n]) => bar(w, n, max, "blue")).join("")
-    : `<div class="empty-state"><div class="empty-icon">👤</div>${t('no-data')}</div>`;
+    : `<div class="empty-state"><div class="empty-icon">👤</div>${typeof t === 'function' ? t('no-data') : 'No data'}</div>`;
 }
 function renderFeed() {
   const todayStr = new Date().toLocaleDateString('en-CA');
@@ -3997,7 +3997,6 @@ async function openEditProductModal(code) {
   } catch(e) { console.error("openEditProductModal fetch error:", e); }
 
   const p = allProducts[code] || {};
-  console.log("EPM open:", code, "→", p, "keys in allProducts:", Object.keys(allProducts).length);
 
   setVal("epf-code",      code);
   setVal("epf-name",      p.name      ?? "");
