@@ -4055,18 +4055,27 @@ function renderEpfRmList(code) {
   el.innerHTML = rms.map(r => {
     const inv = allInventory.find(x => x.code === r.rmCode) || {};
     const totalNeeded = target > 0 && r.menge ? (target * parseFloat(r.menge)).toFixed(3) : null;
-    const costPerGN = inv ? (parseFloat(inv.kostenUnit)||0) * (parseFloat(r.menge)||0) : 0;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
-      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue);font-weight:700">RM</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500">${inv.name || r.rmCode}</div>
-        <div style="font-size:10px;color:var(--muted)">
-          ${r.menge} ${r.einheit}/GN
-          ${r.garverlust > 0 ? `· <span style="color:var(--red)">🔥 ${r.garverlust}% loss</span>` : ''}
-          ${totalNeeded ? `· <span style="color:var(--amber)">Total: ${totalNeeded} ${r.einheit}</span>` : ''}
-          ${costPerGN > 0 ? `· <span style="color:var(--blue)">CHF ${costPerGN.toFixed(3)}/GN</span>` : ''}
-        </div>
-      </div>
+    const pricePerKg = parseFloat(inv?.kostenUnit) || 0;
+        const mengeKg    = parseFloat(r.menge) || 0;
+        const garvPct    = parseFloat(r.garverlust) || 0;
+        // Raw kg needed accounting for cooking loss
+        const rawKg      = garvPct > 0 ? mengeKg / (1 - garvPct / 100) : mengeKg;
+        const costPerGN  = rawKg * pricePerKg;
+        // WA per kg netto = price adjusted for cooking loss
+        const waPerKgNetto = garvPct > 0 ? pricePerKg / (1 - garvPct / 100) : pricePerKg;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+          <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue);font-weight:700">RM</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:500">${inv.name || r.rmCode}</div>
+            <div style="font-size:10px;color:var(--muted)">
+              ${mengeKg} ${r.einheit}/GN
+              ${garvPct > 0 ? `· <span style="color:var(--red)">🔥 ${garvPct}% loss → raw ${rawKg.toFixed(3)} kg</span>` : ''}
+              ${totalNeeded ? `· <span style="color:var(--amber)">Total: ${(parseFloat(totalNeeded)*( garvPct>0 ? 1/(1-garvPct/100) : 1)).toFixed(3)} ${r.einheit} raw</span>` : ''}
+              ${pricePerKg > 0 ? `· <span style="color:var(--muted)">CHF ${pricePerKg.toFixed(2)}/kg</span>` : ''}
+              ${costPerGN > 0 ? `· <span style="color:var(--blue)">CHF ${costPerGN.toFixed(3)}/GN</span>` : ''}
+              ${waPerKgNetto > 0 && garvPct > 0 ? `· <span style="color:var(--amber)">WA ${waPerKgNetto.toFixed(2)} CHF/kg netto</span>` : ''}
+            </div>
+          </div>
       <button onclick="editEpfRmRow('${code}','${r.rmCode}')" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
       <button onclick="deleteEpfRm('${code}','${r.rmCode}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
     </div>`;
