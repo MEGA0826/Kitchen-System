@@ -4066,6 +4066,7 @@ function renderEpfRmList(code) {
           ${costPerGN > 0 ? `· <span style="color:var(--blue)">CHF ${costPerGN.toFixed(3)}/GN</span>` : ''}
         </div>
       </div>
+      <button onclick="editEpfRmRow('${code}','${r.rmCode}')" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
       <button onclick="deleteEpfRm('${code}','${r.rmCode}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
     </div>`;
   }).join("");
@@ -4073,6 +4074,61 @@ function renderEpfRmList(code) {
   if (document.getElementById("editProductModal")?.classList.contains("active")) {
     setTimeout(() => calcEpfSuggestion(code), 0);
   }
+}
+function autoFillMepMaxFromSales() {
+  const code    = _epfCurrentCode;
+  const p       = allProducts[code] || {};
+  const kgPerGN = parseFloat(document.getElementById("epf-gnweight")?.value) || parseFloat(p.gnWeight) || 0;
+  const hintEl  = document.getElementById("epf-sales-hint");
+
+  if (!salesData?.products?.length) {
+    if (hintEl) hintEl.textContent = "⚠ Import sales CSV first";
+    return;
+  }
+
+  // Match by MEP name or via menus that use this MEP
+  const pNameLow = (p.name || "").toLowerCase().trim();
+  let match = salesData.products.find(sp =>
+    (sp.name || "").toLowerCase().trim() === pNameLow
+  ) || salesData.products.find(sp =>
+    (sp.name || "").toLowerCase().includes(pNameLow) ||
+    pNameLow.includes((sp.name || "").toLowerCase().trim())
+  );
+
+  // Try via menus
+  if (!match) {
+    const menusWithMep = allMenus.filter(m => {
+      try { return JSON.parse(m.zutaten || "[]").some(z => z.type === "mep" && z.code === code); }
+      catch(e) { return false; }
+    });
+    for (const menu of menusWithMep) {
+      const mName = (menu.name || "").toLowerCase().trim();
+      match = salesData.products.find(sp =>
+        (sp.name || "").toLowerCase().trim() === mName ||
+        (sp.name || "").toLowerCase().includes(mName)
+      );
+      if (match) break;
+    }
+  }
+
+  if (!match) {
+    if (hintEl) hintEl.textContent = "⚠ No sales match found";
+    return;
+  }
+
+  // avg last 7d × 1.2 safety buffer × kgPerGN
+  const avgDaily     = parseFloat(match.avgDaily) || 0;
+  const suggested    = Math.ceil(avgDaily * 1.2);
+  const suggestedKg  = kgPerGN > 0 ? +(suggested * kgPerGN).toFixed(2) : null;
+
+  const maxEl = document.getElementById("epf-mepmax");
+  if (maxEl) maxEl.value = suggestedKg !== null ? suggestedKg : suggested;
+
+  if (hintEl) hintEl.textContent = suggestedKg !== null
+    ? `✓ avg ${avgDaily}/day → ${suggested} GN × ${kgPerGN}kg = ${suggestedKg}kg`
+    : `✓ avg ${avgDaily}/day → ${suggested} GN (set GN weight for kg)`;
+
+  calcEpfMaxGN();
 }
 function calcEpfMaxGN() {
   const maxKg   = parseFloat(document.getElementById("epf-mepmax")?.value)   || 0;
@@ -4189,6 +4245,9 @@ function calcEpfSuggestion(code) {
   }
 
   if (match) {
+    // Update the hint label automatically
+    const hintEl = document.getElementById("epf-sales-hint");
+    if (hintEl && !hintEl.textContent) hintEl.textContent = `avg ${match.avgDaily || 0}/day last 7d`;
     const suggested = match.suggestedMep || Math.ceil((match.avgDaily||0)*1.2) || 0;
     const sugKg  = kgPerGN > 0 ? ` = ${(suggested*kgPerGN).toFixed(2)} kg → set MEP Max to ${(suggested*kgPerGN).toFixed(1)} kg` : "";
     const rms2   = allRecipes.filter(r => r.mepCode === code);
@@ -4212,7 +4271,32 @@ function calcEpfSuggestion(code) {
 }
 
 let _epfRmSelected = null;
-
+function editEpfRmRow(mepCode, rmCode) {
+  const r   = allRecipes.find(x => x.mepCode === mepCode && x.rmCode === rmCode);
+  const inv = allInventory.find(x => x.code === rmCode) || {};
+  if (!r) return;
+  // Pre-select in picker
+  _epfRmSelected = { code: rmCode, name: inv.name || rmCode, unit: r.einheit || "kg", unitCost: parseFloat(inv.kostenUnit || 0) };
+  openEpfRmPicker();
+  setTimeout(() => {
+    // Fill search so user sees the item
+    const searchEl = document.getElementById("epf-rm-search");
+    if (searchEl) { searchEl.value = inv.name || rmCode; filterEpfRmSearch(); }
+    // Pre-fill detail fields
+    selectEpfRm(rmCode, inv.name || rmCode, r.einheit || "kg");
+    document.getElementById("epf-rm-qty").value        = r.menge        || "";
+    document.getElementById("epf-rm-garverlust").value = r.garverlust   || "";
+    document.getElementById("epf-rm-unit").value       = r.einheit      || "kg";
+    calcEpfRmGarverlust();
+    // On confirm — delete old row first then save new
+    const origSave = window.saveEpfRmRow;
+    window.saveEpfRmRow = async function() {
+      await deleteEpfRm(mepCode, rmCode, true); // silent delete
+      await origSave.call(this);
+      window.saveEpfRmRow = origSave;
+    };
+  }, 80);
+}
 function openEpfRmPicker() {
   const picker = document.getElementById("epf-rm-picker");
   if (!picker) return;
@@ -4310,8 +4394,8 @@ async function saveEpfRmRow() {
   }
 }
 
-async function deleteEpfRm(mepCode, rmCode) {
-  if (!confirm("Remove this ingredient?")) return;
+async function deleteEpfRm(mepCode, rmCode, silent) {
+  if (!silent && !confirm("Remove this ingredient?")) return;
   try {
     const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
     if (data.error) throw new Error(data.error);
@@ -5875,7 +5959,8 @@ async function loadMenus() {
     const data = await get({ action: "getMenus" });
     if (data.error) throw new Error(data.error);
     allMenus = Array.isArray(data.menus) ? data.menus : [];
-    renderMenuList();
+    if (_recipeCat) renderMenuListByCat(_recipeCat);
+    else renderMenuList();
     populateMenuFilters();
   } catch(e) {
     console.error("loadMenus:", e);
@@ -6860,7 +6945,14 @@ function buildMenuPdfHtml(m) {
       <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly style="color:var(--amber)"></div>
       <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name" placeholder="e.g. Karotten gewürfelt"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat" placeholder="e.g. Gemüse"></div>
-      <div class="form-field"><label class="form-label">MEP Max (kg)</label><input class="form-input" type="number" id="epf-mepmax" placeholder="e.g. 12" min="0" step="0.1" oninput="calcEpfMaxGN()"></div>
+      <div class="form-field" style="grid-column:1/-1">
+        <label class="form-label">MEP Max (kg) <span id="epf-sales-hint" style="color:var(--green);font-size:10px;margin-left:6px"></span></label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input class="form-input" type="number" id="epf-mepmax" placeholder="e.g. 12" min="0" step="0.1" oninput="calcEpfMaxGN()" style="flex:1">
+          <button type="button" onclick="autoFillMepMaxFromSales()" style="padding:7px 12px;border-radius:var(--radius-sm);background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;cursor:pointer;white-space:nowrap">📈 Auto-fill</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Based on average last 7 days sales × kg per GN</div>
+      </div>
       <div class="form-field"><label class="form-label">GN Count (auto)</label><div id="epf-gn-count" style="padding:9px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--green)">—</div></div>
       <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="epf-gnsize" placeholder="GN1/1"></div>
       <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" placeholder="4" min="0" step="0.1" oninput="calcEpfMaxGN()"></div>
