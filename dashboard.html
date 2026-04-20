@@ -3376,6 +3376,7 @@ function orderCalClick(key) {
 }
 
 function renderOrders() {
+  const _safeT = (typeof t === 'function') ? t : (k => k);
   const container = document.getElementById("order-content");
   const summary   = document.getElementById("order-summary");
   if (!container) return;
@@ -3449,7 +3450,7 @@ function renderOrders() {
   renderOrderCal();
 
   if (!visible.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">${showMode==="shortage"?"✅":"📦"}</div>${showMode==="shortage"?t('all-done'):t('no-data')}</div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">${showMode==="shortage"?"✅":"📦"}</div>${showMode==="shortage"?_safeT('all-done'):_safeT('no-data')}</div>`;
     if (summary) summary.textContent = "";
     return;
   }
@@ -3482,9 +3483,9 @@ function renderOrders() {
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="inv-table" style="width:max-content;min-width:100%">
         <thead><tr>
-          <th>${t('code')}</th><th>${t('product')}</th><th>${t('in-stock')}</th>
-          <th>${t('qty')}/${t('worker')}</th><th>${t('required')} (${days}d+50%)</th>
-          <th>${t('to-order')}</th><th>${t('success')}</th>
+          <th>${_safeT('code')}</th><th>${_safeT('product')}</th><th>${_safeT('in-stock')}</th>
+          <th>${_safeT('qty')}/${_safeT('worker')}</th><th>${_safeT('required')} (${days}d+50%)</th>
+          <th>${_safeT('to-order')}</th><th>${_safeT('success')}</th>
         </tr></thead>
         <tbody>${rows.map(r=>`
           <tr style="${r.shortage?"background:rgba(220,50,50,0.06)":""}">
@@ -3496,7 +3497,7 @@ function renderOrders() {
             <td style="color:var(--muted)">${r.needed1day.toFixed(2)} ${r.unit}</td>
             <td>${r.required.toFixed(2)} ${r.unit}</td>
             <td style="color:${r.shortage?"var(--red)":"var(--green)"};font-weight:600">${r.shortage?"+"+r.toOrder.toFixed(2)+" "+r.unit:"—"}</td>
-            <td><span class="stock-pill stock-${r.shortage?"out":"ok"}">${r.shortage?"⚠ "+t('to-order'):"✓ "+t('in-stock')}</span></td>
+            <td><span class="stock-pill stock-${r.shortage?"out":"ok"}">${r.shortage?"⚠ "+_safeT('to-order'):"✓ "+_safeT('in-stock')}</span></td>
           </tr>`).join("")}
         </tbody>
       </table>
@@ -4567,7 +4568,7 @@ async function saveEditedInventory() {
     adminMsg("eif-msg", "Saved OK", "ok");
     await loadInventory();
     renderAdminInventory();
-    filterInventory();
+    try { filterInventory(); } catch(e) {}
     setTimeout(() => closeEditInventoryModal(), 800);
   } catch(e) {
     adminMsg("eif-msg", "Error: " + e.message, "err");
