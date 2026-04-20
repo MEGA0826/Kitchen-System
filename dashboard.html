@@ -4054,8 +4054,9 @@ function renderEpfRmList(code) {
   const target  = parseFloat(p.tagesziel || p.mepMax) || 0;
   el.innerHTML = rms.map(r => {
     const inv = allInventory.find(x => x.code === r.rmCode) || {};
-    const totalNeeded = target > 0 && r.menge ? (target * parseFloat(r.menge)).toFixed(3) : null;
-    const pricePerKg = parseFloat(inv?.kostenUnit) || 0;
+      const totalNeeded = target > 0 && r.menge ? (target * parseFloat(r.menge)).toFixed(3) : null;
+      const _weightUnit = parseFloat(inv?.weightUnit) || 1;
+      const pricePerKg = _weightUnit > 0 ? (parseFloat(inv?.kostenUnit) || 0) / _weightUnit : (parseFloat(inv?.kostenUnit) || 0);
         const mengeKg    = parseFloat(r.menge) || 0;
         const garvPct    = parseFloat(r.garverlust) || 0;
         // Raw kg needed accounting for cooking loss
