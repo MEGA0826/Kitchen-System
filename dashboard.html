@@ -4554,6 +4554,25 @@ function closeEditInventoryModal() {
   setTimeout(() => calcEifPer100g(), 0);
 }
 
+  async function deleteInventoryItem(code) {
+  if (!code) return;
+  const name = document.getElementById("eif-name")?.value || code;
+  if (!confirm(`Delete "${name}" from inventory? This cannot be undone.`)) return;
+  const btn = document.querySelector("#editInventoryModal .btn-del");
+  if (btn) { btn.disabled = true; btn.textContent = "Deleting…"; }
+  try {
+    const data = await adminCall({ action: "deleteInventory", code });
+    if (data.error) throw new Error(data.error);
+    closeEditInventoryModal();
+    await loadInventory();
+    try { renderAdminInventory(); } catch(e) {}
+    try { filterInventory(); } catch(e) {}
+  } catch(e) {
+    adminMsg("eif-msg", "Error: " + e.message, "err");
+    if (btn) { btn.disabled = false; btn.textContent = "🗑 Delete"; }
+  }
+}
+  
 async function saveEditedInventory() {
   const code = document.getElementById("eif-code").value.trim();
   if (!code) { adminMsg("eif-msg", "Code is required", "err"); return; }
@@ -7080,6 +7099,7 @@ function buildMenuPdfHtml(m) {
     <div class="form-actions">
       <button class="btn-save" onclick="saveEditedInventory()">Save</button>
       <button class="btn-edit" onclick="closeEditInventoryModal()">Cancel</button>
+      <button class="btn-del" onclick="deleteInventoryItem(document.getElementById('eif-code').value)">🗑 Delete</button>
     </div>
   </div>
 </div>
