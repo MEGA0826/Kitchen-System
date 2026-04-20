@@ -2526,6 +2526,7 @@ function renderInventory(rows) {
     const mepStr = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "-";
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"-"}</td>
+      <td><button onclick="openEditInventoryModal('${r.code}')" style="padding:2px 7px;border-radius:6px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-family:var(--mono);font-size:11px;cursor:pointer">✏️</button></td>
       <td>${r.name||"-"}</td>
       <td style="color:var(--muted);font-size:11px">${r.kategorie||"-"}</td>
       <td style="font-weight:500">${qtyDisplay}${qtyDisplay !== "-" && r.unit ? " "+r.unit : ""}</td>
@@ -2538,7 +2539,7 @@ function renderInventory(rows) {
       <td style="font-size:11px;color:var(--muted)">${r.lieferant||"-"}</td>
       <td style="color:var(--green)">${mepStr}</td>
       <td>${_sc(qtyNum, minNum)}</td>
-      <td><button onclick="openEditInventoryModal('${r.code}')" style="padding:3px 10px;border-radius:6px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-family:var(--mono);font-size:11px;cursor:pointer">✏️ Edit</button></td>
+      <td></td>
     </tr>`;
   }).join("");
 
@@ -2546,7 +2547,7 @@ function renderInventory(rows) {
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${rows.length} item${rows.length!==1?"s":""} — click column header to sort</div>
     <div class="inv-table-wrap"><table class="inv-table">
       <thead><tr>
-        ${th("Code","code")}${th("Name","name")}${th("Category","kategorie")}
+        ${th("Code","code")}<th></th>${th("Name","name")}${th("Category","kategorie")}
         ${th("Qty","quantity")}${th("Unit","unit")}
         <th>kg total</th>
         <th>Min</th><th>Max</th>
