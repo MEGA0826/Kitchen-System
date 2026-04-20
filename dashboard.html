@@ -4563,10 +4563,14 @@ function closeEditInventoryModal() {
   try {
     const data = await adminCall({ action: "deleteInventory", code });
     if (data.error) throw new Error(data.error);
+    // Remove from local cache immediately so list updates before network refresh
+    allInventory = allInventory.filter(r => r.code !== code);
+    try { sessionStorage.setItem("dash_inventory", JSON.stringify(allInventory)); } catch(e) {}
     closeEditInventoryModal();
-    await loadInventory();
     try { renderAdminInventory(); } catch(e) {}
     try { filterInventory(); } catch(e) {}
+    // Refresh from server in background
+    loadInventory().catch(() => {});
   } catch(e) {
     adminMsg("eif-msg", "Error: " + e.message, "err");
     if (btn) { btn.disabled = false; btn.textContent = "🗑 Delete"; }
