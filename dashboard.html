@@ -1772,6 +1772,16 @@ function setTheme(mode) {
 // ─────────────────────────────────────────────
   // Safe i18n wrapper — guards against t() not yet defined
 function _safeT(key) { return (typeof t === 'function') ? t(key) : key; }
+  // Convert stored mepMax (kg) to GN count using gnWeight
+function _mepMaxGN(p) {
+  const kgPerGN = parseFloat(p.gnWeight) || 0;
+  const maxKg   = parseFloat(p.mepMax)   || 0;
+  if (!kgPerGN || !maxKg) return maxKg; // fallback: treat as GN if no weight set
+  return Math.ceil(maxKg / kgPerGN);
+}
+function _mepMaxKg(p) {
+  return parseFloat(p.mepMax) || 0;
+}
 const API = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
 
 let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
@@ -2168,7 +2178,7 @@ function renderStats() {
     const st        = (window.todayScanStats || {})[code] || {};
     const done      = st.done    || 0;
     const waste     = st.waste   || 0;
-    const mepMax    = p.mepMax   || 0;
+    const mepMax    = _mepMaxGN(p); // kg→GN
     const tagesziel = p.tagesziel || 0;
     if (!mepMax && !tagesziel) return;
     const available = Math.max(0, done - waste);
@@ -2201,13 +2211,14 @@ function buildMepAlerts(products, stats) {
     const gnSize       = p.gnSize    || "";
     const gnWeight     = p.gnWeight  || 0;
     const tagesziel    = p.tagesziel || 0;
-    const mepMax       = p.mepMax    || 0;
+    const mepMax       = _mepMaxGN(p); // convert stored kg → GN count
+    const mepMaxKg     = _mepMaxKg(p);
     
     // CRITICAL: Declare available BEFORE using it in inProgress
     const available    = Math.max(0, doneCount - wasteCount - usedCount);
     const inProgress   = Math.max(0, mepMax - available);
     const availableWt  = available   * gnWeight;
-    const listWeight   = inProgress  * gnWeight;
+    const listWeight   = mepMaxKg > 0 ? mepMaxKg : inProgress * gnWeight;
     const overDone     = tagesziel > 0 && available > tagesziel;
     const goalMet      = tagesziel > 0 && available >= tagesziel;
     const listFull     = mepMax > 0 && inProgress >= mepMax;
@@ -4016,7 +4027,7 @@ async function openEditProductModal(code) {
   setTxt("editProductTitle", "Edit — " + (p.name || code));
 
   renderEpfRmList(code);
-  setTimeout(() => calcEpfSuggestion(code), 0);
+  setTimeout(() => { calcEpfMaxGN(); calcEpfSuggestion(code); }, 0);
 }
 
 function closeEditProductModal() {
@@ -4063,7 +4074,27 @@ function renderEpfRmList(code) {
     setTimeout(() => calcEpfSuggestion(code), 0);
   }
 }
-
+function calcEpfMaxGN() {
+  const maxKg   = parseFloat(document.getElementById("epf-mepmax")?.value)   || 0;
+  const kgPerGN = parseFloat(document.getElementById("epf-gnweight")?.value) || 0;
+  const el      = document.getElementById("epf-gn-count");
+  if (!el) return;
+  if (maxKg > 0 && kgPerGN > 0) {
+    const gnCount = Math.ceil(maxKg / kgPerGN);
+    el.textContent = `${gnCount} GN  (${maxKg} kg ÷ ${kgPerGN} kg/GN)`;
+    el.style.color = "var(--green)";
+    // Auto-fill Daily Target if empty
+    const tzEl = document.getElementById("epf-tagesziel");
+    if (tzEl && !tzEl.value) tzEl.value = gnCount;
+  } else if (maxKg > 0) {
+    el.textContent = `${maxKg} kg — set GN Weight to calc GN count`;
+    el.style.color = "var(--amber)";
+  } else {
+    el.textContent = "—";
+    el.style.color = "var(--muted)";
+  }
+  calcEpfSuggestion(_epfCurrentCode);
+}
 function calcEpfSuggestion(code) {
   const el = document.getElementById("epf-suggestion");
   if (!el) return;
@@ -4082,15 +4113,18 @@ function calcEpfSuggestion(code) {
   let html = "";
 
   // ── Volume row ──
-  if (kgPerGN > 0 && maxGN > 0) {
+  // ── Volume row — MEP Max is now in kg ──
+  const maxKgVal = maxGN; // maxGN field now stores kg
+  const gnCount  = (kgPerGN > 0 && maxKgVal > 0) ? Math.ceil(maxKgVal / kgPerGN) : 0;
+  if (maxKgVal > 0 && kgPerGN > 0) {
     html += `<div style="margin-bottom:4px">
-      <span style="color:var(--green)">📦 Max: <strong>${maxGN} GN × ${kgPerGN} kg = ${totalKg.toFixed(2)} kg</strong></span>`;
+      <span style="color:var(--green)">📦 Max: <strong>${maxKgVal} kg → ${gnCount} GN</strong> (${kgPerGN} kg/GN)</span>`;
     if (target > 0) {
       html += `<span style="color:var(--amber);margin-left:12px">· Target: <strong>${target} GN = ${(target*kgPerGN).toFixed(2)} kg</strong></span>`;
     }
     html += `</div>`;
-  } else if (!kgPerGN || !maxGN) {
-    html += `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Enter MEP Max and GN Weight to see total volume</div>`;
+  } else if (!kgPerGN || !maxKgVal) {
+    html += `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Enter MEP Max (kg) and GN Weight to see GN count</div>`;
   }
 
   // ── WA from RM ──
@@ -4156,7 +4190,7 @@ function calcEpfSuggestion(code) {
 
   if (match) {
     const suggested = match.suggestedMep || Math.ceil((match.avgDaily||0)*1.2) || 0;
-    const sugKg  = kgPerGN > 0 ? ` = ${(suggested*kgPerGN).toFixed(2)} kg` : "";
+    const sugKg  = kgPerGN > 0 ? ` = ${(suggested*kgPerGN).toFixed(2)} kg → set MEP Max to ${(suggested*kgPerGN).toFixed(1)} kg` : "";
     const rms2   = allRecipes.filter(r => r.mepCode === code);
     let waPerGN2 = 0;
     rms2.forEach(r => {
@@ -6473,6 +6507,11 @@ function selectIngredientItem(code, name, unit, unitCost) {
       const inv = allInventory.find(x => x.code === r.rmCode);
       waPerGN += (parseFloat(r.menge)||0) * (inv ? parseFloat(inv.kostenUnit||0) : 0);
     });
+    // Fallback: check if product has a stored WA value
+    if (!waPerGN) {
+      const mepProd = allProducts[code] || {};
+      waPerGN = parseFloat(mepProd.wa || mepProd.waPerGN || 0);
+    }
     resolvedCost = waPerGN; // CHF per GN
   }
   ipSelectedItem = { code, name, unit, unitCost: resolvedCost };
@@ -6489,17 +6528,23 @@ function calcIpCost() {
   if (!ipSelectedItem) return;
   const kg         = parseFloat(document.getElementById('ip-gewicht').value) || 0;
   const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
-  // For RM: cost on netto weight. For MEP: cost per GN unit (gewicht = number of GN)
   let cost = 0;
   if (ipMode === 'mep' || ipMode === 'MEP') {
-    // gewicht field = number of GN portions used
     cost = kg * (ipSelectedItem.unitCost || 0);
   } else {
     const nettoKg = garverlust > 0 ? kg * (1 - garverlust / 100) : kg;
     cost = nettoKg * (ipSelectedItem.unitCost || 0);
   }
   const costEl = document.getElementById('ip-cost-display');
-  if (costEl) costEl.textContent = cost > 0 ? 'CHF ' + cost.toFixed(3) : '—';
+  if (!costEl) return;
+  if (cost > 0) {
+    costEl.textContent = 'CHF ' + cost.toFixed(3);
+  } else if (ipSelectedItem.unitCost > 0) {
+    // Show unit cost even before qty entered so user sees the rate
+    costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /GN (enter qty)`;
+  } else {
+    costEl.textContent = '— (no recipe costs found)';
+  }
 }
 
 function calcIpWA() {
@@ -6815,9 +6860,10 @@ function buildMenuPdfHtml(m) {
       <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="epf-code" readonly style="color:var(--amber)"></div>
       <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="epf-name" placeholder="e.g. Karotten gewürfelt"></div>
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="epf-kategorie" list="dl-prod-cat" placeholder="e.g. Gemüse"></div>
-      <div class="form-field"><label class="form-label">MEP Max (GN)</label><input class="form-input" type="number" id="epf-mepmax" placeholder="2" min="0" step="1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
+      <div class="form-field"><label class="form-label">MEP Max (kg)</label><input class="form-input" type="number" id="epf-mepmax" placeholder="e.g. 12" min="0" step="0.1" oninput="calcEpfMaxGN()"></div>
+      <div class="form-field"><label class="form-label">GN Count (auto)</label><div id="epf-gn-count" style="padding:9px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--green)">—</div></div>
       <div class="form-field"><label class="form-label">GN Size</label><input class="form-input" id="epf-gnsize" placeholder="GN1/1"></div>
-      <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" placeholder="4" min="0" step="0.1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
+      <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" placeholder="4" min="0" step="0.1" oninput="calcEpfMaxGN()"></div>
       <div class="form-field"><label class="form-label">Daily Target (GN)</label><input class="form-input" type="number" id="epf-tagesziel" placeholder="3" min="0" step="1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
       <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" placeholder="2" min="1"></div>
       <div class="form-field" style="grid-column:1/-1"><label class="form-label">📸 Drive Photo Link</label><input class="form-input" id="epf-drive" placeholder="Paste Google Drive share link"></div>
