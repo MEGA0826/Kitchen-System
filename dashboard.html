@@ -6596,20 +6596,23 @@ function selectIngredientItem(code, name, unit, unitCost) {
   if (ipMode === 'rm' || ipMode === 'RM') {
     const inv = allInventory.find(x => x.code === code);
     if (inv) { const _wu = parseFloat(inv.weightUnit) || 1; resolvedCost = (parseFloat(inv.kostenUnit || inv.kosten || 0) || 0) / _wu; }
-  } else if (ipMode === 'mep' || ipMode === 'MEP') {
-    // MEP cost = sum of RM ingredients × qty per GN
+ } else if (ipMode === 'mep' || ipMode === 'MEP') {
+    // MEP cost = CHF per kg (sum of RM costs divided by total kg per GN)
     const rms = allRecipes.filter(r => r.mepCode === code);
+    const mepProd = allProducts[code] || {};
+    const kgPerGN = parseFloat(mepProd.gnWeight) || 1;
     let waPerGN = 0;
     rms.forEach(r => {
       const inv = allInventory.find(x => x.code === r.rmCode);
-      waPerGN += (parseFloat(r.menge)||0) * (inv ? parseFloat(inv.kostenUnit||0) : 0);
+      const _wu = parseFloat(inv?.weightUnit) || 1;
+      const pricePerKg = inv ? (parseFloat(inv.kostenUnit || 0) / _wu) : 0;
+      waPerGN += (parseFloat(r.menge) || 0) * pricePerKg;
     });
-    // Fallback: check if product has a stored WA value
     if (!waPerGN) {
-      const mepProd = allProducts[code] || {};
       waPerGN = parseFloat(mepProd.wa || mepProd.waPerGN || 0);
     }
-    resolvedCost = waPerGN; // CHF per GN
+    // Convert to CHF/kg so user enters kg and gets correct cost
+    resolvedCost = kgPerGN > 0 ? waPerGN / kgPerGN : waPerGN;
   }
   ipSelectedItem = { code, name, unit, unitCost: resolvedCost };
   document.getElementById('ip-selected-name').textContent = name + ' (' + code + ')';
