@@ -4578,10 +4578,10 @@ async function saveEditedInventory() {
     });
     if (data.error) throw new Error(data.error);
     adminMsg("eif-msg", "Saved OK", "ok");
+    closeEditInventoryModal();
     await loadInventory();
-    renderAdminInventory();
+    try { renderAdminInventory(); } catch(e) {}
     try { filterInventory(); } catch(e) {}
-    setTimeout(() => closeEditInventoryModal(), 800);
   } catch(e) {
     adminMsg("eif-msg", "Error: " + e.message, "err");
   } finally {
