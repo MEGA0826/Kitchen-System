@@ -4797,8 +4797,8 @@ function renderPdfPreview(mode, parsedMenu) {
     </div>` : "";
 
   const header = `
-    <div style="display:grid;grid-template-columns:70px 110px 1fr 60px 50px 100px 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
-      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span>${typeof t === 'function' ? t('allergie') : 'Allergen'}</span><span></span>
+    <div style="display:grid;grid-template-columns:70px 160px 1fr 80px 50px 100px 1fr 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
+      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span>Allergen</span><span>Description</span><span></span>
     </div>`;
 
   const rows = pdfParsedIngredients.map((ing, i) => {
@@ -4823,8 +4823,29 @@ function renderPdfPreview(mode, parsedMenu) {
     const showSuggest = !isMatched && !code
       ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">suggest: ${suggested}</div>` : "";
 
+    // Build system suggestions for this ingredient name
+    const ingNameLow = (ing.name || "").toLowerCase().trim();
+    const suggestions = _systemItems.filter(item => {
+      if (!ingNameLow || ingNameLow.length < 2) return false;
+      const n = item.name.toLowerCase();
+      return n.includes(ingNameLow) || ingNameLow.includes(n) ||
+        ingNameLow.split(/\s+/).some(w => w.length > 2 && n.includes(w));
+    }).slice(0, 5);
+
+    const suggestHtml = suggestions.length ? `
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">
+        ${suggestions.map(s => `
+          <span onclick="pdfSelectSuggestion(${i},'${s.code}','${s.type.toUpperCase()}','${(s.name||'').replace(/'/g,"\\'")}')"
+            style="font-size:10px;padding:2px 7px;border-radius:10px;cursor:pointer;
+                   background:${s.type==='mep'?'var(--amber-dim)':s.type==='gr'?'var(--green-dim)':'var(--blue-dim)'};
+                   color:${s.type==='mep'?'var(--amber)':s.type==='gr'?'var(--green)':'var(--blue)'};
+                   border:1px solid ${s.type==='mep'?'var(--amber-brd)':s.type==='gr'?'var(--green-brd)':'var(--blue-brd)'}">
+            ${s.type==='mep'?'🟡':s.type==='gr'?'🟢':'🔵'} ${s.name}
+          </span>`).join('')}
+      </div>` : '';
+
     return `
-    <div style="display:grid;grid-template-columns:70px 110px 1fr 60px 50px 100px 28px;gap:6px;align-items:start;padding:6px 8px;background:${rowBg};border-radius:var(--radius-sm);border:1px solid ${rowBorder};margin-bottom:4px">
+    <div style="display:grid;grid-template-columns:70px 160px 1fr 80px 50px 100px 1fr 28px;gap:6px;align-items:start;padding:6px 8px;background:${rowBg};border-radius:var(--radius-sm);border:1px solid ${rowBorder};margin-bottom:4px">
 
       <select style="background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--mono);font-size:11px;padding:5px 4px;cursor:pointer;width:100%"
         onchange="pdfParsedIngredients[${i}].type=this.value;pdfParsedIngredients[${i}]._matched=false;applyPdfTypePrefix(${i});renderPdfPreview(window._pdfMode)">
@@ -4848,15 +4869,18 @@ function renderPdfPreview(mode, parsedMenu) {
         ${showSuggest}
       </div>
 
-      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
-        value="${ing.name||""}"
-        oninput="pdfParsedIngredients[${i}].name=this.value"
-        placeholder="Name">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
+          value="${ing.name||""}"
+          oninput="pdfParsedIngredients[${i}].name=this.value;renderPdfPreview(window._pdfMode)"
+          placeholder="Name">
+        ${suggestHtml}
+      </div>
 
-      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0;text-align:right"
         value="${ing.quantity||""}"
         oninput="pdfParsedIngredients[${i}].quantity=this.value"
-        placeholder="Qty" type="number">
+        placeholder="0.000" type="number" step="0.001">
 
       <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
         value="${ing.unit||""}"
@@ -4866,7 +4890,12 @@ function renderPdfPreview(mode, parsedMenu) {
       <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px;min-width:0"
         value="${ing.allergie||""}"
         oninput="pdfParsedIngredients[${i}].allergie=this.value"
-        placeholder="${typeof t === 'function' ? t('allergie') : 'Allergen'}">
+        placeholder="Allergen">
+
+      <input class="form-input" style="margin:0;padding:4px 6px;font-size:11px;min-width:0"
+        value="${ing.description||""}"
+        oninput="pdfParsedIngredients[${i}].description=this.value"
+        placeholder="e.g. fein schneiden">
 
       <button type="button" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
         onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview(window._pdfMode)">✕</button>
@@ -4929,6 +4958,33 @@ function _isPdfCodeDuplicate(type, code) {
   const count = pdfParsedIngredients.filter(ing => (ing.code||"") === code).length;
   return count > 1;
 }
+  async function pdfSelectSuggestion(i, code, type, name) {
+  const ing = pdfParsedIngredients[i];
+  if (!ing) return;
+
+  // Check if code/name already used in this preview list (excluding self)
+  const dupInPreview = pdfParsedIngredients.some((x, idx) => idx !== i && (x.code === code || (x.name||'').toLowerCase() === name.toLowerCase()));
+  // Check if exists in system
+  const dupInSystem = (type === 'MEP' && _allMepCodes.includes(code)) ||
+                      (type === 'GR'  && _allGrCodes.includes(code))  ||
+                      (type === 'RM'  && _allRmCodes.includes(code));
+
+  if (dupInPreview || dupInSystem) {
+    const where = dupInSystem ? 'already exists in system' : 'already used in this list';
+    const overwrite = confirm(`"${name}" (${code}) ${where}.\n\nClick OK to use it anyway (will link to existing), or Cancel to keep current.`);
+    if (!overwrite) return;
+  }
+
+  // Apply selection
+  ing.code       = code;
+  ing.type       = type;
+  ing.name       = name;
+  ing._matched   = true;
+  ing._matchType = 'manual';
+
+  renderPdfPreview(window._pdfMode);
+}
+  
 function pdfCodeInput(i, val) {
   pdfParsedIngredients[i].code = val;
   pdfParsedIngredients[i]._matched = false;
