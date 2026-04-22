@@ -1587,47 +1587,8 @@ window.onerror = function(msg, src, line, col) {
 
   </div><!-- end panel-admin -->
 <!-- RELATIONS TAB -->
-<div class="panel" id="panel-relations">
-  <div class="section-title">Recipe Relations <span class="section-title-icon">🔗</span></div>
-  <div class="section-sub">Search any RM, MEP, GR or Menu to see all connections</div>
-
-  <!-- Search bar -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-    <input class="search-input" id="rel-search" type="text" placeholder="🔍 Search RM / MEP / GR / Menu name or code…"
-      oninput="renderRelations()" style="flex:1;min-width:200px">
-    <div style="display:flex;gap:4px">
-      <button class="rcat-btn active" data-rtype="all"  onclick="setRelType('all',this)">All</button>
-      <button class="rcat-btn"        data-rtype="rm"   onclick="setRelType('rm',this)">🔵 RM</button>
-      <button class="rcat-btn"        data-rtype="mep"  onclick="setRelType('mep',this)">🟡 MEP</button>
-      <button class="rcat-btn"        data-rtype="gr"   onclick="setRelType('gr',this)">🟢 GR</button>
-      <button class="rcat-btn"        data-rtype="menu" onclick="setRelType('menu',this)">🍽 Menu</button>
-    </div>
-  </div>
-
-  <!-- Results -->
-  <div id="rel-results">
-    <div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>
-  </div>
-</div>
-
-<div class="panel" id="panel-relations">
-  <div class="section-title">Recipe Relations <span class="section-title-icon">🔗</span></div>
-  <div class="section-sub">Search any RM, MEP, GR or Menu — see all connections instantly</div>
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-    <input class="search-input" id="rel-search" type="text"
-      placeholder="🔍 Type RM / MEP / GR / Menu name or code…"
-      oninput="renderRelations()" style="flex:1;min-width:200px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="rcat-btn active" data-rtype="all"  onclick="setRelType('all',this)">All</button>
-      <button class="rcat-btn"        data-rtype="rm"   onclick="setRelType('rm',this)">🔵 RM</button>
-      <button class="rcat-btn"        data-rtype="mep"  onclick="setRelType('mep',this)">🟡 MEP</button>
-      <button class="rcat-btn"        data-rtype="gr"   onclick="setRelType('gr',this)">🟢 GR</button>
-      <button class="rcat-btn"        data-rtype="menu" onclick="setRelType('menu',this)">🍽 Menu</button>
-    </div>
-  </div>
-  <div id="rel-results">
-    <div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>
-  </div>
+<div class="panel" id="panel-relations" style="padding:0;height:calc(100vh - 114px);overflow:hidden;display:none">
+  <div id="rel-root" style="height:100%;display:flex;flex-direction:column;font-family:'DM Mono',monospace"></div>
 </div>
 
 </div><!-- end .body -->
@@ -1940,7 +1901,7 @@ function switchTab(btn) {
       if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
       if (tabId === "kds")          loadKDS();
       if (tabId === "sales")        initSalesTab();
-      if (tabId === "relations")    renderRelations();
+      if (tabId === "relations")    initRelationsTab();
       if (window._inventoryReadonly && tabId === "inventory") {
         setTimeout(() => {
           document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #inv-form").forEach(el => el.style.display = "none");
@@ -3792,164 +3753,11 @@ setTimeout(() => { loadMenus(); loadGRs(); }, 600);
 setInterval(() => loadKDS(), 60_000);
 
 // ─────────────────────────────────────────────
-// RELATIONS TAB
+// RELATIONS TAB — placeholder stubs (real logic injected by initRelationsTab)
 // ─────────────────────────────────────────────
 let _relType = "all";
-
-function setRelType(type, btn) {
-  _relType = type;
-  document.querySelectorAll("[data-rtype]").forEach(b => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
-  renderRelations();
-}
-
-function renderRelations() {
-  const el = document.getElementById("rel-results");
-  if (!el) return;
-  const q = (document.getElementById("rel-search")?.value || "").trim().toLowerCase();
-  if (!q) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>`;
-    return;
-  }
-
-  const typeColor = { rm:"var(--blue)", mep:"var(--amber)", gr:"var(--green)", menu:"var(--text)" };
-  const typeBg    = { rm:"var(--blue-dim)", mep:"var(--amber-dim)", gr:"var(--green-dim)", menu:"var(--surface2)" };
-  const typeBrd   = { rm:"var(--blue-brd)", mep:"var(--amber-brd)", gr:"var(--green-brd)", menu:"var(--border2)" };
-  const typeIcon  = { rm:"🔵", mep:"🟡", gr:"🟢", menu:"🍽" };
-
-  const pill = (type, name, sub, onclick) =>
-    `<span ${onclick?`onclick="${onclick}"`:""}
-      style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;
-             font-size:11px;background:${typeBg[type]};color:${typeColor[type]};
-             border:1px solid ${typeBrd[type]};margin:2px;${onclick?'cursor:pointer':''}">
-      ${typeIcon[type]} ${name}${sub?`<span style="opacity:.55;font-size:10px;margin-left:2px">${sub}</span>`:""}
-    </span>`;
-
-  const section = (label, items, renderFn) =>
-    items.length ? `<div style="margin-top:10px">
-      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">${label} (${items.length})</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${items.map(renderFn).join("")}</div>
-    </div>` : "";
-
-  let cards = [];
-
-  // ── RM search ──
-  if (_relType === "all" || _relType === "rm") {
-    allInventory.filter(r =>
-      (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q)
-    ).forEach(rm => {
-      const mepUses  = allRecipes.filter(r => r.rmCode === rm.code);
-      const mepCodes = [...new Set(mepUses.map(r => r.mepCode))];
-      const grUses   = allGRs.filter(g => {
-        try { return JSON.parse(g.zutaten||"[]").some(z => z.code === rm.code); } catch(e) { return false; }
-      });
-      const menuUses = allMenus.filter(m => {
-        try {
-          const z = JSON.parse(m.zutaten||"[]");
-          return z.some(z2 =>
-            (z2.type==="mep"  && mepCodes.includes(z2.code)) ||
-            (z2.type==="gr"   && grUses.some(g => g.grCode === z2.code)) ||
-            (z2.type==="rm"   && z2.code === rm.code));
-        } catch(e) { return false; }
-      });
-      cards.push({
-        type:"rm", code:rm.code, name:rm.name||rm.code,
-        meps : mepCodes.map(c => ({ code:c, name:(allProducts[c]||{}).name||c, menge: mepUses.find(r=>r.mepCode===c)?.menge, einheit: mepUses.find(r=>r.mepCode===c)?.einheit })),
-        grs  : grUses.map(g => ({ code:g.grCode, name:g.name })),
-        menus: menuUses.map(m => ({ id:m.id, name:m.name })),
-        rms:[], dirRms:[]
-      });
-    });
-  }
-
-  // ── MEP search ──
-  if (_relType === "all" || _relType === "mep") {
-    Object.entries(allProducts).filter(([code,p]) =>
-      (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)
-    ).forEach(([code,p]) => {
-      const rms   = allRecipes.filter(r => r.mepCode === code).map(r => {
-        const inv = allInventory.find(x=>x.code===r.rmCode)||{};
-        return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit };
-      });
-      const menus = allMenus.filter(m => {
-        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="mep" && z.code===code); }
-        catch(e) { return false; }
-      });
-      cards.push({ type:"mep", code, name:p.name||code, rms, menus:menus.map(m=>({id:m.id,name:m.name})), meps:[], grs:[] });
-    });
-  }
-
-  // ── GR search ──
-  if (_relType === "all" || _relType === "gr") {
-    allGRs.filter(g =>
-      (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q)
-    ).forEach(g => {
-      let rms = [];
-      try { rms = JSON.parse(g.zutaten||"[]").map(z => {
-        const inv = allInventory.find(x=>x.code===z.code)||{};
-        return { code:z.code, name:inv.name||z.name||z.code, menge:z.gewicht, einheit:z.unit||"kg" };
-      }); } catch(e) {}
-      const menus = allMenus.filter(m => {
-        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="gr" && z.code===g.grCode); }
-        catch(e) { return false; }
-      });
-      cards.push({ type:"gr", code:g.grCode, name:g.name||g.grCode, rms, menus:menus.map(m=>({id:m.id,name:m.name})), meps:[], grs:[] });
-    });
-  }
-
-  // ── Menu search ──
-  if (_relType === "all" || _relType === "menu") {
-    allMenus.filter(m =>
-      (m.name||"").toLowerCase().includes(q) || (m.menuCode||"").toLowerCase().includes(q)
-    ).forEach(m => {
-      let z = [];
-      try { z = JSON.parse(m.zutaten||"[]"); } catch(e) {}
-      const meps = z.filter(x=>x.type==="mep").map(x => ({
-        code:x.code, name:(allProducts[x.code]||{}).name||x.name||x.code, gewicht:x.gewicht
-      }));
-      const grs  = z.filter(x=>x.type==="gr").map(x => {
-        const g = allGRs.find(r=>r.grCode===x.code)||{};
-        return { code:x.code, name:g.name||x.name||x.code, gewicht:x.gewicht };
-      });
-      const dirRms = z.filter(x=>x.type==="rm").map(x => {
-        const inv = allInventory.find(r=>r.code===x.code)||{};
-        return { code:x.code, name:inv.name||x.name||x.code, menge:x.gewicht, einheit:x.unit||"kg" };
-      });
-      // Expand MEP → their RMs
-      const mepRms = meps.flatMap(mp => allRecipes.filter(r=>r.mepCode===mp.code).map(r => {
-        const inv = allInventory.find(x=>x.code===r.rmCode)||{};
-        return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit, via:mp.name };
-      }));
-      cards.push({ type:"menu", code:m.menuCode||"", name:m.name, meps, grs, dirRms, rms:mepRms, menus:[] });
-    });
-  }
-
-  if (!cards.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>No matches for "<strong>${q}</strong>"</div>`;
-    return;
-  }
-
-  el.innerHTML = cards.slice(0,20).map(c => `
-    <div style="background:var(--surface);border:2px solid ${typeBrd[c.type]||'var(--border)'};border-radius:var(--radius);padding:16px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <span style="font-size:11px;padding:2px 10px;border-radius:10px;background:${typeBg[c.type]};color:${typeColor[c.type]};font-weight:700;letter-spacing:1px">${typeIcon[c.type]} ${c.type.toUpperCase()}</span>
-        <span style="font-family:var(--serif);font-size:19px;font-weight:600">${c.name}</span>
-        ${c.code ? `<span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${c.code}</span>` : ""}
-      </div>
-
-      ${c.type==="menu" ? `
-        ${section("Contains MEP", c.meps, i => pill("mep", i.name, i.gewicht?i.gewicht+"kg":"", `openEditProductModal('${i.code}')`)) }
-        ${section("Contains GR",  c.grs,  i => pill("gr",  i.name, i.gewicht?i.gewicht+"kg":"", `openEditGRPopup('${i.code}')`)) }
-        ${section("Direct RM",    c.dirRms||[], i => pill("rm", i.name, i.menge?i.menge+i.einheit:"")) }
-        ${section("All RM (via MEP)", c.rms, i => pill("rm", i.name, `${i.menge||""}${i.einheit||""} via ${i.via||""}`)) }
-      ` : `
-        ${section("Used in MEP",  c.meps||[], i => pill("mep", i.name, i.menge?i.menge+(i.einheit||"")+" /GN":"", `openEditProductModal('${i.code}')`)) }
-        ${section("Used in GR",   c.grs||[],  i => pill("gr",  i.name, "", `openEditGRPopup('${i.code}')`)) }
-        ${section("Used in Menu", c.menus||[],i => pill("menu",i.name, "", `openMenuView('${i.id}')`)) }
-        ${section("Contains RM",  c.rms||[],  i => pill("rm",  i.name, i.menge?i.menge+(i.einheit||"")+" /GN":"")) }
-      `}
-    </div>`).join("");
-}
+function setRelType() {}
+function renderRelations() {}
 
 // Keep Apps Script warm — ping every 4 min
 setInterval(() => {
@@ -6211,132 +6019,6 @@ function filterGrDisplay() {
     </div>`).join("");
 }
 
-function renderRelations() {
-  const el = document.getElementById("rel-results");
-  if (!el) return;
-  const q = (document.getElementById("rel-search")?.value || "").trim().toLowerCase();
-  if (!q) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div>Search above to explore ingredient relationships</div>`;
-    return;
-  }
-
-  let cards = [];
-
-  // ── Search RMs ──
-  if (_relType === "all" || _relType === "rm") {
-    allInventory.filter(r =>
-      (r.name||"").toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q)
-    ).forEach(rm => {
-      // Find MEPs that use this RM
-      const mepUses = allRecipes.filter(r => r.rmCode === rm.code);
-      const mepCodes = [...new Set(mepUses.map(r => r.mepCode))];
-      // Find GRs that use this RM
-      const grUses = allGRs.filter(g => {
-        try { return JSON.parse(g.zutaten||"[]").some(z => z.code === rm.code); }
-        catch(e) { return false; }
-      });
-      // Find Menus via MEPs
-      const menuUses = allMenus.filter(m => {
-        try {
-          const z = JSON.parse(m.zutaten||"[]");
-          return z.some(z2 => (z2.type==="mep" && mepCodes.includes(z2.code)) ||
-                               (z2.type==="gr"  && grUses.some(g => g.grCode === z2.code)));
-        } catch(e) { return false; }
-      });
-      cards.push({ type:"rm", code:rm.code, name:rm.name||rm.code,
-        meps:mepCodes.map(c=>({ code:c, name:(allProducts[c]||{}).name||c })),
-        grs: grUses.map(g=>({ code:g.grCode, name:g.name })),
-        menus: menuUses.map(m=>({ id:m.id, name:m.name })) });
-    });
-  }
-
-  // ── Search MEPs ──
-  if (_relType === "all" || _relType === "mep") {
-    Object.entries(allProducts).filter(([code,p]) =>
-      (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q)
-    ).forEach(([code,p]) => {
-      const rms = allRecipes.filter(r => r.mepCode === code)
-        .map(r => { const inv=allInventory.find(x=>x.code===r.rmCode)||{}; return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit }; });
-      const menus = allMenus.filter(m => {
-        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="mep" && z.code===code); }
-        catch(e) { return false; }
-      });
-      cards.push({ type:"mep", code, name:p.name||code, rms, menus:menus.map(m=>({ id:m.id, name:m.name })), grs:[] });
-    });
-  }
-
-  // ── Search GRs ──
-  if (_relType === "all" || _relType === "gr") {
-    allGRs.filter(g =>
-      (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q)
-    ).forEach(g => {
-      let rms = [];
-      try { rms = JSON.parse(g.zutaten||"[]").map(z => { const inv=allInventory.find(x=>x.code===z.code)||{}; return { code:z.code, name:inv.name||z.name||z.code, menge:z.gewicht, einheit:z.unit||"kg" }; }); }
-      catch(e) {}
-      const menus = allMenus.filter(m => {
-        try { return JSON.parse(m.zutaten||"[]").some(z => z.type==="gr" && z.code===g.grCode); }
-        catch(e) { return false; }
-      });
-      cards.push({ type:"gr", code:g.grCode, name:g.name||g.grCode, rms, menus:menus.map(m=>({ id:m.id, name:m.name })), meps:[], grs:[] });
-    });
-  }
-
-  // ── Search Menus ──
-  if (_relType === "all" || _relType === "menu") {
-    allMenus.filter(m =>
-      (m.name||"").toLowerCase().includes(q) || (m.menuCode||"").toLowerCase().includes(q)
-    ).forEach(m => {
-      let zutaten = [];
-      try { zutaten = JSON.parse(m.zutaten||"[]"); } catch(e) {}
-      const meps = zutaten.filter(z=>z.type==="mep").map(z => ({ code:z.code, name:(allProducts[z.code]||{}).name||z.name||z.code, gewicht:z.gewicht }));
-      const grs  = zutaten.filter(z=>z.type==="gr").map(z => { const g=allGRs.find(x=>x.grCode===z.code)||{}; return { code:z.code, name:g.name||z.name||z.code, gewicht:z.gewicht }; });
-      const rms  = zutaten.filter(z=>z.type==="rm").map(z => { const inv=allInventory.find(x=>x.code===z.code)||{}; return { code:z.code, name:inv.name||z.name||z.code, menge:z.gewicht, einheit:z.unit||"kg" }; });
-      // Also expand MEPs to their RMs
-      const mepRms = meps.flatMap(mp => allRecipes.filter(r=>r.mepCode===mp.code).map(r => {
-        const inv=allInventory.find(x=>x.code===r.rmCode)||{};
-        return { code:r.rmCode, name:inv.name||r.rmCode, menge:r.menge, einheit:r.einheit, via:`via ${mp.name}` };
-      }));
-      cards.push({ type:"menu", code:m.menuCode||m.id, name:m.name, meps, grs, rms:[...rms,...mepRms], menus:[] });
-    });
-  }
-
-  if (!cards.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>No matches for "${q}"</div>`;
-    return;
-  }
-
-  const typeColor = { rm:"var(--blue)", mep:"var(--amber)", gr:"var(--green)", menu:"var(--text)" };
-  const typeBg    = { rm:"var(--blue-dim)", mep:"var(--amber-dim)", gr:"var(--green-dim)", menu:"var(--surface2)" };
-  const typeBrd   = { rm:"var(--blue-brd)", mep:"var(--amber-brd)", gr:"var(--green-brd)", menu:"var(--border2)" };
-  const typeIcon  = { rm:"🔵", mep:"🟡", gr:"🟢", menu:"🍽" };
-
-  const pill = (type, name, code, onclick) =>
-    `<span onclick="${onclick||''}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;background:${typeBg[type]};color:${typeColor[type]};border:1px solid ${typeBrd[type]};margin:2px;${onclick?'cursor:pointer':''}">
-      ${typeIcon[type]} ${name}${code?`<span style="opacity:.6;font-size:10px"> ${code}</span>`:""}
-    </span>`;
-
-  const section = (label, items, type, makePill) =>
-    items.length ? `<div style="margin-top:10px">
-      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">${label} (${items.length})</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${items.map(makePill).join("")}</div>
-    </div>` : "";
-
-  el.innerHTML = cards.slice(0,20).map(c => `
-    <div style="background:var(--surface);border:1px solid ${typeBrd[c.type]||'var(--border)'};border-radius:var(--radius);padding:14px 16px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${typeBg[c.type]};color:${typeColor[c.type]};font-weight:700">${(c.type||"").toUpperCase()}</span>
-        <span style="font-family:var(--serif);font-size:17px;font-weight:600">${c.name}</span>
-        <span style="font-size:11px;color:var(--muted)">${c.code}</span>
-      </div>
-      ${section("Used in MEP", c.meps||[], "mep", i => pill("mep", i.name, i.code, `openEditProductModal('${i.code}')`)) }
-      ${section("Used in GR",  c.grs||[],  "gr",  i => pill("gr",  i.name, i.code, `openEditGRPopup('${i.code}')`)) }
-      ${section("Used in Menu",c.menus||[],"menu", i => pill("menu",i.name, "",    `openMenuView('${i.id}')`)) }
-      ${section("Contains RM", c.rms||[],  "rm",   i => pill("rm", i.name+(i.via?` <em style='opacity:.6;font-size:9px'>${i.via}</em>`:""), i.code+(i.menge?` ${i.menge}${i.einheit||''}`:""))) }
-      ${section("Contains MEP",c.meps&&c.type==="menu"?c.meps:[], "mep", i => pill("mep",i.name+(i.gewicht?` ${i.gewicht}kg`:""), i.code, `openEditProductModal('${i.code}')`)) }
-      ${section("Contains GR", c.grs&&c.type==="menu"?c.grs:[], "gr", i => pill("gr", i.name+(i.gewicht?` ${i.gewicht}kg`:""), i.code, `openEditGRPopup('${i.code}')`)) }
-    </div>`).join("");
-}
-
 function filterMepDisplay() {
   const q = (document.getElementById("mep-filter-search")?.value || "").toLowerCase();
   const el = document.getElementById("mep-search-results");
@@ -7206,5 +6888,603 @@ function buildMenuPdfHtml(m) {
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════
+     RELATIONS TAB v2 — Diagram + BOM Calculator
+     CSS injected here, JS appended after main script
+════════════════════════════════════════════════════════ -->
+<style>
+/* ── Relations tab shell ── */
+#panel-relations.active { display:flex !important; flex-direction:column; }
+#rel-root {
+  --rr:#38bdf8; --rr-bg:#071e2e; --rr-soft:#0d3048;
+  --rm:#34d399; --rm-bg:#071f14; --rm-soft:#0e3322;
+  --rg:#c084fc; --rg-bg:#160b28; --rg-soft:#251244;
+  --rn:#fbbf24; --rn-bg:#1f1505; --rn-soft:#342208;
+  --rs:#0f1218; --rs2:#151820; --rb:#1c2030; --rb2:#252a3a;
+  background:#080a0f; color:#e2e8f0;
+  font-family:'DM Mono',monospace;
+}
+.rtbar{height:44px;display:flex;align-items:center;gap:0;border-bottom:1px solid var(--rb);background:var(--rs);flex-shrink:0;z-index:30;padding:0 8px}
+.rttabs{display:flex;gap:2px;padding:6px;border-right:1px solid var(--rb);margin-right:10px}
+.rttab{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:5px;border:1px solid transparent;cursor:pointer;color:#6b7280;background:transparent;transition:all .15s}
+.rttab.active{color:#e2e8f0;background:var(--rs2);border-color:var(--rb2)}
+.rtsw{position:relative;flex:1;max-width:320px}
+.rtsw svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#4b5563;pointer-events:none;width:13px;height:13px}
+.rtsi{width:100%;background:#080a0f;border:1px solid var(--rb2);border-radius:6px;color:#e2e8f0;font-family:'DM Mono',monospace;font-size:11px;padding:6px 10px 6px 29px;outline:none}
+.rtsi:focus{border-color:var(--rr)}
+.rtsi::placeholder{color:#374151}
+.rtclr{position:absolute;right:7px;top:50%;transform:translateY(-50%);background:none;border:none;color:#4b5563;cursor:pointer;font-size:15px;display:none}
+.rtclr.vis{display:block}
+.rtfs{display:flex;gap:4px;margin-left:auto}
+.rtfb{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;border-radius:5px;padding:4px 9px;border:1px solid;cursor:pointer;transition:all .15s;opacity:.35}
+.rtfb.active{opacity:1}
+.rtfb[data-ft="rm"]  {color:var(--rr);border-color:var(--rr);background:var(--rr-bg)}
+.rtfb[data-ft="mep"] {color:var(--rm);border-color:var(--rm);background:var(--rm-bg)}
+.rtfb[data-ft="gr"]  {color:var(--rg);border-color:var(--rg);background:var(--rg-bg)}
+.rtfb[data-ft="menu"]{color:var(--rn);border-color:var(--rn);background:var(--rn-bg)}
+.rtmain{display:flex;flex:1;overflow:hidden;position:relative}
+.rtcwrap{flex:1;overflow:hidden;position:relative;display:flex}
+#rtSvg{width:100%;height:100%;cursor:grab;user-select:none}
+#rtSvg.grabbing{cursor:grabbing}
+.rtsb{width:360px;background:var(--rs);border-left:1px solid var(--rb);display:flex;flex-direction:column;transform:translateX(360px);transition:transform .28s cubic-bezier(.4,0,.2,1);position:absolute;right:0;top:0;bottom:0;z-index:20}
+.rtsb.open{transform:translateX(0)}
+.rtsbhdr{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--rb);flex-shrink:0}
+.rtbadge{font-size:9px;letter-spacing:.12em;padding:3px 8px;border-radius:4px;border:1px solid}
+.rtbadge.rm  {color:var(--rr);border-color:var(--rr);background:var(--rr-bg)}
+.rtbadge.mep {color:var(--rm);border-color:var(--rm);background:var(--rm-bg)}
+.rtbadge.gr  {color:var(--rg);border-color:var(--rg);background:var(--rg-bg)}
+.rtbadge.menu{color:var(--rn);border-color:var(--rn);background:var(--rn-bg)}
+.rtsbclose{background:none;border:none;color:#4b5563;cursor:pointer;font-size:18px;border-radius:4px;padding:2px 5px}
+.rtsbclose:hover{color:#e2e8f0;background:var(--rb)}
+.rtsbbody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.rtsbbody::-webkit-scrollbar{width:3px}
+.rtsbbody::-webkit-scrollbar-thumb{background:var(--rb2);border-radius:3px}
+.rtfield{display:flex;flex-direction:column;gap:3px}
+.rtflbl{font-size:9px;letter-spacing:.1em;color:#4b5563;text-transform:uppercase}
+.rtfval{font-size:12px;color:#e2e8f0;background:#080a0f;border:1px solid var(--rb2);border-radius:5px;padding:7px 10px}
+.rtfval.code{font-size:11px;color:#6b7280}
+.rtssec{font-size:9px;letter-spacing:.1em;color:#4b5563;text-transform:uppercase;margin-top:4px;padding-bottom:5px;border-bottom:1px solid var(--rb)}
+.rtri{display:flex;align-items:center;gap:7px;padding:7px 9px;background:#080a0f;border:1px solid var(--rb);border-radius:5px;cursor:pointer;transition:border-color .15s}
+.rtri:hover{border-color:var(--rb2)}
+.rtrn{font-size:11px;color:#e2e8f0;flex:1}
+.rtrc{font-size:9px;color:#4b5563}
+.rtrw{font-size:10px;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.rtrw.rm  {color:var(--rr);background:var(--rr-bg)}
+.rtrw.mep {color:var(--rm);background:var(--rm-bg)}
+.rtrw.gr  {color:var(--rg);background:var(--rg-bg)}
+.rtrw.menu{color:var(--rn);background:var(--rn-bg)}
+.rtsbfoot{padding:11px 14px;border-top:1px solid var(--rb);flex-shrink:0;display:flex;flex-direction:column;gap:7px}
+.rtedit{width:100%;padding:9px;border-radius:7px;border:none;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer}
+.rtedit.rm  {background:var(--rr);color:#000}
+.rtedit.mep {background:var(--rm);color:#000}
+.rtedit.gr  {background:var(--rg);color:#000}
+.rtedit.menu{background:var(--rn);color:#000}
+.rtcalcopen{width:100%;padding:8px;border-radius:7px;background:var(--rs2);border:1px solid var(--rb2);font-family:'DM Mono',monospace;font-size:10px;color:#6b7280;cursor:pointer;letter-spacing:.06em}
+.rtcalcopen:hover{color:#e2e8f0;border-color:var(--rn)}
+.rtzoom{position:absolute;bottom:18px;left:18px;display:flex;flex-direction:column;gap:3px;z-index:5}
+.rtzb{width:30px;height:30px;background:var(--rs);border:1px solid var(--rb2);border-radius:5px;color:#6b7280;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rtzb:hover{color:#e2e8f0}
+.rtleg{position:absolute;bottom:18px;right:18px;background:var(--rs);border:1px solid var(--rb);border-radius:7px;padding:9px 11px;display:flex;flex-direction:column;gap:4px;z-index:5}
+.rtlegi{display:flex;align-items:center;gap:6px;font-size:9px}
+.rtlegd{width:9px;height:9px;border-radius:2px;border:1.5px solid;flex-shrink:0}
+/* calc view */
+.rtcalcview{flex:1;display:flex;overflow:hidden}
+.rtcalcview.hidden,.rtdwrap.hidden{display:none}
+.rtcalcl{width:320px;border-right:1px solid var(--rb);display:flex;flex-direction:column;background:var(--rs);flex-shrink:0}
+.rtclhdr{padding:14px 16px 10px;border-bottom:1px solid var(--rb);flex-shrink:0}
+.rtclhdr h2{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:3px}
+.rtclhdr p{font-size:9px;color:#4b5563;letter-spacing:.06em}
+.rtaddrow{display:flex;gap:5px;padding:10px 12px;border-bottom:1px solid var(--rb);flex-shrink:0}
+.rtmsel{flex:1;background:#080a0f;border:1px solid var(--rb2);border-radius:6px;color:#e2e8f0;font-family:'DM Mono',monospace;font-size:10px;padding:6px 8px;outline:none;cursor:pointer}
+.rtmsel:focus{border-color:var(--rn)}
+.rtmsel option{background:#080a0f}
+.rtqin{width:52px;background:#080a0f;border:1px solid var(--rb2);border-radius:6px;color:#e2e8f0;font-family:'DM Mono',monospace;font-size:11px;padding:6px 6px;outline:none;text-align:center}
+.rtqin:focus{border-color:var(--rn)}
+.rtaddbtn{background:var(--rn-soft);border:1px solid var(--rn);border-radius:6px;color:var(--rn);font-family:'DM Mono',monospace;font-size:11px;padding:6px 10px;cursor:pointer}
+.rtaddbtn:hover{background:var(--rn);color:#000}
+.rtmlist{flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:5px}
+.rtmlist::-webkit-scrollbar{width:3px}
+.rtchip{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--rn-bg);border:1px solid var(--rn-soft);border-radius:7px;animation:rtfade .2s ease}
+@keyframes rtfade{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.rtcstep{display:flex;align-items:center;gap:3px}
+.rtcsb{width:20px;height:20px;border-radius:4px;background:var(--rn-soft);border:1px solid var(--rn);color:var(--rn);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rtcsb:hover{background:var(--rn);color:#000}
+.rtcqty{font-size:13px;font-weight:700;color:var(--rn);min-width:20px;text-align:center}
+.rtcinfo{flex:1}
+.rtcname{font-size:11px;color:#e2e8f0}
+.rtccode{font-size:9px;color:#4b5563;margin-top:1px}
+.rtcdel{background:none;border:none;color:#4b5563;cursor:pointer;font-size:15px}
+.rtcdel:hover{color:#f87171}
+.rtcbw{padding:10px 12px;border-top:1px solid var(--rb);flex-shrink:0}
+.rtcbtn{width:100%;padding:10px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#000;cursor:pointer;letter-spacing:.04em;transition:filter .15s}
+.rtcbtn:hover{filter:brightness(1.1)}
+.rtcbtn:disabled{opacity:.3;cursor:not-allowed}
+/* BOM right */
+.rtcalcr{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.rtbhdr{padding:12px 18px;border-bottom:1px solid var(--rb);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.rtbhdr h3{font-size:13px;font-weight:700;color:#e2e8f0}
+.rtbacts{display:flex;gap:5px}
+.rtbact{background:var(--rs2);border:1px solid var(--rb2);border-radius:5px;color:#6b7280;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;padding:4px 9px;cursor:pointer}
+.rtbact:hover{color:#e2e8f0}
+.rtbbody{flex:1;overflow-y:auto;padding:14px 18px}
+.rtbbody::-webkit-scrollbar{width:3px}
+.rtbbody::-webkit-scrollbar-thumb{background:var(--rb2);border-radius:3px}
+.rtbempty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:#4b5563}
+.rtbempty-icon{font-size:36px;opacity:.2}
+.rtmblock{background:var(--rn-bg);border:1px solid var(--rn-soft);border-radius:9px;overflow:hidden;margin-bottom:8px}
+.rtmbhdr{display:flex;align-items:center;gap:9px;padding:10px 13px;cursor:pointer;user-select:none}
+.rtmbhdr:hover{background:rgba(251,191,36,.05)}
+.rtbmqty{font-size:19px;font-weight:800;color:var(--rn);min-width:28px;text-align:center}
+.rtbminfo{flex:1}
+.rtbmname{font-size:12px;font-weight:600;color:#e2e8f0}
+.rtbmcode{font-size:9px;color:#4b5563;margin-top:1px}
+.rtbmtot{font-size:9px;color:var(--rn);text-align:right}
+.rtbmtot span{display:block;font-size:13px;font-weight:700}
+.rtchev{color:#4b5563;font-size:10px;transition:transform .2s}
+.rtchev.open{transform:rotate(90deg)}
+.rtbkids{padding:0 13px 8px;display:flex;flex-direction:column;gap:3px}
+.rtbkids.collapsed{display:none}
+.rtbrow{display:flex;align-items:center;border-radius:5px;overflow:hidden;border:1px solid var(--rb);cursor:pointer;transition:border-color .12s}
+.rtbrow:hover{border-color:var(--rb2)}
+.rtbstripe{width:3px;flex-shrink:0;align-self:stretch}
+.rtbstripe.rm  {background:var(--rr)}
+.rtbstripe.mep {background:var(--rm)}
+.rtbstripe.gr  {background:var(--rg)}
+.rtbrinn{flex:1;display:flex;align-items:center;gap:7px;padding:7px 9px;background:#080a0f}
+.rtbrinn.gr {background:rgba(192,132,252,.04)}
+.rtbrinn.mep{background:rgba(52,211,153,.04)}
+.rtbexp{width:15px;height:15px;border-radius:3px;background:var(--rs2);border:1px solid var(--rb2);color:#4b5563;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rtbexp:hover{color:#e2e8f0}
+.rtbbadge{font-size:8px;letter-spacing:.1em;padding:2px 5px;border-radius:3px;border:1px solid;flex-shrink:0}
+.rtbbadge.rm  {color:var(--rr);border-color:var(--rr-soft);background:var(--rr-bg)}
+.rtbbadge.mep {color:var(--rm);border-color:var(--rm-soft);background:var(--rm-bg)}
+.rtbbadge.gr  {color:var(--rg);border-color:var(--rg-soft);background:var(--rg-bg)}
+.rtbrnm{font-size:11px;color:#e2e8f0;flex:1}
+.rtbrcd{font-size:9px;color:#4b5563}
+.rtbrwt{font-size:11px;font-weight:700;text-align:right;white-space:nowrap}
+.rtbrwt.rm  {color:var(--rr)}
+.rtbrwt.mep {color:var(--rm)}
+.rtbrwt.gr  {color:var(--rg)}
+.rtbrwtu{font-size:8px;color:#4b5563;display:block;text-align:right}
+/* BOM summary */
+.rtbsum{border-top:1px solid var(--rb);padding:12px 18px;display:flex;flex-direction:column;gap:7px;flex-shrink:0;background:var(--rs)}
+.rtbsttl{font-size:9px;letter-spacing:.1em;color:#4b5563;text-transform:uppercase}
+.rtbsgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.rtbscard{background:#080a0f;border:1px solid var(--rb);border-radius:7px;padding:9px 11px}
+.rtbst{font-size:8px;letter-spacing:.1em;margin-bottom:3px}
+.rtbst.rm  {color:var(--rr)}
+.rtbst.mep {color:var(--rm)}
+.rtbst.gr  {color:var(--rg)}
+.rtbsv{font-size:14px;font-weight:700;color:#e2e8f0}
+.rtbsu{font-size:8px;color:#4b5563}
+.rtrmflat{margin-top:5px;background:var(--rs);border:1px solid var(--rb);border-radius:7px;overflow:hidden}
+.rtrmfhdr{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;cursor:pointer;font-size:10px;letter-spacing:.08em;color:var(--rr);user-select:none}
+.rtrmfhdr:hover{background:rgba(56,189,248,.04)}
+.rtrmflist{padding:6px 13px 8px;display:flex;flex-direction:column;gap:3px}
+.rtrmflist.hidden{display:none}
+.rtrmfrow{display:flex;align-items:center;gap:7px;padding:5px 7px;background:var(--rr-bg);border:1px solid var(--rr-soft);border-radius:4px}
+.rtrmfnm{font-size:10px;color:#e2e8f0;flex:1}
+.rtrmfcd{font-size:8px;color:#4b5563}
+.rtrmfwt{font-size:11px;font-weight:700;color:var(--rr)}
+</style>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// RELATIONS TAB v2 — full implementation
+// Reads: allInventory, allProducts, allRecipes, allGRs, allMenus
+// ═══════════════════════════════════════════════════════════════
+(function(){
+'use strict';
+
+const RC={rm:'#38bdf8',mep:'#34d399',gr:'#c084fc',menu:'#fbbf24'};
+const RBG={rm:'#071e2e',mep:'#071f14',gr:'#160b28',menu:'#1f1505'};
+const CX={rm:60,mep:310,gr:560,menu:810};
+const NW=170,NH=50,RG=72,CT=55;
+
+let rN=[],rE=[],rNM={};
+let rF=new Set(['rm','mep','gr','menu']);
+let rQ='',rSel=null,rTx={x:20,y:20,scale:1},rPan=false,rPS={x:0,y:0};
+let rCM=[],rView='diagram',rBuilt=false;
+
+// ── helpers ──
+function svgE(tag,a={}){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+function fmtW(kg){if(kg==null)return'—';kg=parseFloat(kg)||0;return kg>=1?(kg%1===0?kg:kg.toFixed(2))+' kg':Math.round(kg*1000)+' g';}
+function parseZ(s){try{return JSON.parse(typeof s==='string'?s:JSON.stringify(s||'[]'));}catch(e){return[];}}
+
+// ── build graph ──
+function rBuild(){
+  rN=[];rE=[];rNM={};
+  function addN(type,code,name){
+    const id=type+':'+code;
+    if(!rNM[id]){const row=rN.filter(n=>n.col===type).length;const nd={id,type,code,name,col:type,row,data:null};rN.push(nd);rNM[id]=nd;}
+    return rNM[id];
+  }
+  (window.allInventory||[]).forEach(r=>{if(r.code)addN('rm',r.code,r.name||r.code);});
+  Object.entries(window.allProducts||{}).forEach(([c,p])=>{if(p&&p.name&&p.name!=='(deleted)'){const n=addN('mep',c,p.name);n.data={type:'mep',zutaten:[]};}});
+  (window.allGRs||[]).forEach(g=>{const n=addN('gr',g.grCode||g.id,g.name||g.grCode);n.data=g;});
+  (window.allMenus||[]).forEach(m=>{const n=addN('menu',m.menuCode||m.id,m.name||'?');n.data=m;});
+
+  (window.allRecipes||[]).forEach(r=>{
+    const fi='rm:'+r.rmCode,ti='mep:'+r.mepCode;
+    if(rNM[fi]&&rNM[ti])rE.push({from:fi,to:ti,weight:r.menge,srcType:'rm'});
+  });
+  (window.allGRs||[]).forEach(g=>{
+    const ti='gr:'+(g.grCode||g.id);
+    parseZ(g.zutaten).forEach(z=>{const fi=(z.type||'rm')+':'+z.code;if(rNM[fi]&&rNM[ti])rE.push({from:fi,to:ti,weight:z.gewicht,srcType:z.type||'rm'});});
+  });
+  (window.allMenus||[]).forEach(m=>{
+    const ti='menu:'+(m.menuCode||m.id);
+    parseZ(m.zutaten).forEach(z=>{const fi=(z.type||'rm')+':'+z.code;if(rNM[fi]&&rNM[ti])rE.push({from:fi,to:ti,weight:z.gewicht,srcType:z.type||'rm'});});
+  });
+  rDraw();
+}
+
+// ── layout ──
+function rLayout(vis){
+  const ci={};
+  vis.forEach(n=>{if(ci[n.col]===undefined)ci[n.col]=0;n._x=CX[n.col];n._y=CT+ci[n.col]*RG;ci[n.col]++;});
+}
+
+// ── draw ──
+function rDraw(){
+  const svg=document.getElementById('rtSvg');if(!svg)return;
+  const eL=document.getElementById('rtEL'),nL=document.getElementById('rtNL'),lL=document.getElementById('rtLL'),df=document.getElementById('rtDF');
+  if(!eL)return;
+  eL.innerHTML='';nL.innerHTML='';lL.innerHTML='';df.innerHTML='';
+
+  Object.entries(RC).forEach(([t,c])=>{
+    const m=svgE('marker',{id:'rta-'+t,markerWidth:'7',markerHeight:'7',refX:'6',refY:'3',orient:'auto'});
+    m.appendChild(svgE('path',{d:'M0,0 L7,3 L0,6 Z',fill:c}));df.appendChild(m);
+  });
+
+  let vis=rN.filter(n=>rF.has(n.type));
+  const hi=new Set();
+  if(rQ){
+    const q=rQ.toLowerCase();
+    vis.forEach(n=>{if(n.name.toLowerCase().includes(q)||n.code.toLowerCase().includes(q)){hi.add(n.id);rE.forEach(e=>{if(e.from===n.id)hi.add(e.to);if(e.to===n.id)hi.add(e.from);});}});
+  }
+  if(!vis.length)return;
+  rLayout(vis);
+  const nb={};vis.forEach(n=>nb[n.id]=n);
+  const maxY=Math.max(...vis.map(n=>n._y))+NH+40;
+  const lbls={rm:'Raw Material',mep:'MEP',gr:'Grundrezeptur',menu:'Menu / Product'};
+  const pairs=[['rm','mep'],['mep','gr'],['gr','menu']];
+
+  Object.keys(CX).forEach(type=>{
+    if(!rF.has(type))return;
+    const t=svgE('text',{x:CX[type]+NW/2,y:22,'text-anchor':'middle','font-family':'DM Mono,monospace','font-size':'9','letter-spacing':'1.4',fill:RC[type],opacity:'0.55'});
+    t.textContent=lbls[type].toUpperCase();lL.appendChild(t);
+  });
+  pairs.forEach(([a,b])=>{
+    if(!rF.has(a)||!rF.has(b))return;
+    const lx=CX[a]+NW+(CX[b]-CX[a]-NW)/2;
+    lL.appendChild(svgE('line',{x1:lx,y1:34,x2:lx,y2:maxY,stroke:'#1c2030','stroke-width':'1'}));
+  });
+
+  rE.forEach(e=>{
+    const fn=nb[e.from],tn=nb[e.to];if(!fn||!tn)return;
+    const dim=rQ&&!hi.has(e.from)&&!hi.has(e.to);
+    const hlt=rQ&&hi.has(e.from)&&hi.has(e.to);
+    const c=RC[e.srcType]||RC.rm;
+    const x1=fn._x+NW,y1=fn._y+NH/2,x2=tn._x,y2=tn._y+NH/2,mx=(x1+x2)/2;
+    eL.appendChild(svgE('path',{d:`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`,fill:'none',stroke:c,'stroke-width':hlt?'2':'1.4',opacity:dim?'0.03':hlt?'0.88':'0.42','marker-end':'url(#rta-'+e.srcType+')'}));
+    if(!dim&&e.weight){
+      const bx=mx,by=(y1+y2)/2,lbl=fmtW(e.weight),lw=lbl.length*6+9;
+      eL.appendChild(svgE('rect',{x:bx-lw/2,y:by-7,width:lw,height:14,rx:'3',fill:'#080a0f',stroke:c,'stroke-width':'0.7'}));
+      const wt=svgE('text',{x:bx,y:by+1,'font-family':'DM Mono,monospace','font-size':'8',fill:c,'text-anchor':'middle','dominant-baseline':'middle'});
+      wt.textContent=lbl;eL.appendChild(wt);
+    }
+  });
+
+  vis.forEach(n=>{
+    const dim=rQ&&!hi.has(n.id),sel=rSel&&rSel.id===n.id;
+    const g=svgE('g',{transform:`translate(${n._x},${n._y})`,opacity:dim?'0.07':'1'});
+    g.style.cursor='pointer';
+    g.appendChild(svgE('rect',{width:NW,height:NH,rx:'6',fill:RBG[n.type],stroke:RC[n.type],'stroke-width':sel?'2.5':'1.5'}));
+    const ct=svgE('text',{x:NW/2,y:15,'text-anchor':'middle','dominant-baseline':'middle','font-family':'DM Mono,monospace','font-size':'8.5',fill:RC[n.type],opacity:'0.65'});
+    ct.textContent=n.code;g.appendChild(ct);
+    const nt=svgE('text',{x:NW/2,y:33,'text-anchor':'middle','dominant-baseline':'middle','font-family':'DM Mono,monospace','font-size':'10','font-weight':'500',fill:RC[n.type]});
+    nt.textContent=n.name.length>22?n.name.slice(0,21)+'…':n.name;g.appendChild(nt);
+    g.addEventListener('click',()=>rOpenSB(n));
+    nL.appendChild(g);
+  });
+  document.getElementById('rtZG')?.setAttribute('transform',`translate(${rTx.x},${rTx.y}) scale(${rTx.scale})`);
+}
+
+// ── sidebar ──
+function rGetZ(node){
+  if(node.type==='mep')return(window.allRecipes||[]).filter(r=>r.mepCode===node.code).map(r=>{const inv=(window.allInventory||[]).find(x=>x.code===r.rmCode)||{};return{type:'rm',code:r.rmCode,name:inv.name||r.rmCode,gewicht:r.menge};});
+  if(node.data)return parseZ(node.data.zutaten);
+  return[];
+}
+
+function rOpenSB(node){
+  rSel=node;
+  const badge=document.getElementById('rtBadge'),body=document.getElementById('rtSBBody'),editBtn=document.getElementById('rtEditBtn'),calcBtn=document.getElementById('rtCalcBtn');
+  if(!badge)return;
+  badge.textContent=node.type.toUpperCase();badge.className='rtbadge '+node.type;
+  editBtn.className='rtedit '+node.type;
+  editBtn.onclick=()=>{if(node.type==='mep')openEditProductModal&&openEditProductModal(node.code);else if(node.type==='gr')openEditGRPopup&&openEditGRPopup(node.code);else if(node.type==='menu')openMenuView&&openMenuView(node.code);};
+  calcBtn.style.display=node.type==='menu'?'block':'none';
+  calcBtn.onclick=()=>{rSwitch('calc');rAddChip(node.code,node.name,1);};
+  body.innerHTML='';
+  body.appendChild(rFld('Code',node.code,true));
+  body.appendChild(rFld('Name',node.name));
+  const z=rGetZ(node);
+  if(z.length){body.appendChild(rSec('Zutaten'));z.forEach(zi=>body.appendChild(rRI(zi.name,zi.code,zi.type,fmtW(zi.gewicht),()=>{const f=rN.find(n=>n.type===zi.type&&n.code===zi.code);if(f)rOpenSB(f);})));}
+  const usedIn=rE.filter(e=>e.from===node.id).map(e=>({node:rN.find(n=>n.id===e.to),weight:e.weight})).filter(u=>u.node);
+  if(usedIn.length){body.appendChild(rSec('Verwendet in'));usedIn.forEach(u=>body.appendChild(rRI(u.node.name,u.node.code,u.node.type,fmtW(u.weight),()=>rOpenSB(u.node))));}
+  document.getElementById('rtSB').classList.add('open');
+  rDraw();
+}
+
+function rFld(label,val,isCode=false){const w=document.createElement('div');w.className='rtfield';w.innerHTML=`<span class="rtflbl">${label}</span><div class="rtfval${isCode?' code':''}">${val||'—'}</div>`;return w;}
+function rSec(t){const d=document.createElement('div');d.className='rtssec';d.textContent=t;return d;}
+function rRI(name,code,type,weight,onclick){const d=document.createElement('div');d.className='rtri';d.onclick=onclick;d.innerHTML=`<div style="display:flex;flex-direction:column;gap:2px;flex:1"><span class="rtrn">${name}</span><span class="rtrc">${code}</span></div><span class="rtrw ${type||'rm'}">${weight}</span>`;return d;}
+
+// ── view switch ──
+function rSwitch(v){
+  rView=v;
+  document.getElementById('rtDW')?.classList.toggle('hidden',v!=='diagram');
+  document.getElementById('rtCV')?.classList.toggle('hidden',v!=='calc');
+  document.getElementById('rtTD')?.classList.toggle('active',v==='diagram');
+  document.getElementById('rtTC')?.classList.toggle('active',v==='calc');
+  const sw=document.getElementById('rtSW'),fw=document.getElementById('rtFW');
+  if(sw)sw.style.display=v==='diagram'?'':'none';
+  if(fw)fw.style.display=v==='diagram'?'':'none';
+}
+
+// ── calculator ──
+function rAddChip(code,name,qty){const ex=rCM.find(m=>m.code===code);if(ex)ex.qty+=qty;else rCM.push({code,name,qty});rRenderChips();}
+function rRenderChips(){
+  const list=document.getElementById('rtML'),btn=document.getElementById('rtCBTN');
+  if(!list)return;
+  list.innerHTML='';
+  if(!rCM.length){list.innerHTML='<div style="font-size:10px;color:#4b5563;text-align:center;padding-top:24px">No menus added yet</div>';if(btn)btn.disabled=true;return;}
+  if(btn)btn.disabled=false;
+  rCM.forEach((m,i)=>{
+    const chip=document.createElement('div');chip.className='rtchip';
+    chip.innerHTML=`<div class="rtcstep"><button class="rtcsb" data-i="${i}" data-d="-1">−</button><span class="rtcqty">${m.qty}×</span><button class="rtcsb" data-i="${i}" data-d="1">+</button></div><div class="rtcinfo"><div class="rtcname">${m.name}</div><div class="rtccode">${m.code}</div></div><button class="rtcdel" data-i="${i}">×</button>`;
+    chip.querySelectorAll('.rtcsb').forEach(b=>b.onclick=()=>{const idx=+b.dataset.i,d=+b.dataset.d;rCM[idx].qty=Math.max(1,rCM[idx].qty+d);rRenderChips();});
+    chip.querySelector('.rtcdel').onclick=()=>{rCM.splice(i,1);rRenderChips();};
+    list.appendChild(chip);
+  });
+}
+
+function rExplode(type,code,name,mult,vis=new Set()){
+  const key=type+':'+code;
+  if(vis.has(key))return{type,code,name,weight:mult,children:[],circular:true};
+  const v2=new Set(vis);v2.add(key);
+  let z=[];
+  if(type==='mep')z=(window.allRecipes||[]).filter(r=>r.mepCode===code).map(r=>({type:'rm',code:r.rmCode,name:((window.allInventory||[]).find(x=>x.code===r.rmCode)||{}).name||r.rmCode,gewicht:r.menge}));
+  else if(type==='gr'||type==='menu'){
+    const it=type==='gr'?(window.allGRs||[]).find(g=>g.grCode===code||g.id===code):(window.allMenus||[]).find(m=>m.menuCode===code||m.id===code);
+    if(it)z=parseZ(it.zutaten);
+  }
+  if(!z.length)return{type,code,name,weight:mult,children:[]};
+  const children=z.map(zi=>rExplode(zi.type||'rm',zi.code,zi.name||zi.code,parseFloat(zi.gewicht||zi.menge||0)*mult,v2));
+  return{type,code,name,weight:mult,children};
+}
+
+function rFlatRM(node,acc={}){
+  if(node.type==='rm'){const k=node.code;if(!acc[k])acc[k]={code:k,name:node.name,total:0};acc[k].total+=node.weight;}
+  (node.children||[]).forEach(c=>rFlatRM(c,acc));
+  return acc;
+}
+
+function rCalc(){
+  const body=document.getElementById('rtBBody'),sum=document.getElementById('rtBSum');
+  if(!body||!rCM.length)return;
+  body.innerHTML='';
+  const allRM={};let totRM=0,totMEP=0,totGR=0;
+  const tree=document.createElement('div');
+  rCM.forEach(cm=>{
+    const mn=rExplode('menu',cm.code,cm.name,cm.qty);
+    rFlatRM(mn,allRM);
+    function wk(n){if(n.type==='rm')totRM+=n.weight;else if(n.type==='mep')totMEP+=n.weight;else if(n.type==='gr')totGR+=n.weight;(n.children||[]).forEach(wk);}
+    wk(mn);
+    const block=document.createElement('div');block.className='rtmblock';
+    const hdr=document.createElement('div');hdr.className='rtmbhdr';
+    const md=(window.allMenus||[]).find(m=>m.menuCode===cm.code||m.id===cm.code);
+    hdr.innerHTML=`<div class="rtbmqty">${cm.qty}×</div><div class="rtbminfo"><div class="rtbmname">${cm.name}</div><div class="rtbmcode">${cm.code}</div></div><div class="rtbmtot">Total<span>${md?.gewicht||'—'}</span></div><span class="rtchev open">▶</span>`;
+    const kids=document.createElement('div');kids.className='rtbkids';
+    hdr.onclick=()=>{const ch=hdr.querySelector('.rtchev');kids.classList.toggle('collapsed');ch.classList.toggle('open',!kids.classList.contains('collapsed'));};
+    mn.children.forEach(child=>kids.appendChild(rBRow(child,0)));
+    block.appendChild(hdr);block.appendChild(kids);tree.appendChild(block);
+  });
+  body.appendChild(tree);
+  if(sum){
+    sum.style.display='flex';
+    document.getElementById('rtBSG').innerHTML=['rm','mep','gr'].map(t=>{const v=t==='rm'?totRM:t==='mep'?totMEP:totGR,disp=v>=1?v.toFixed(2):Math.round(v*1000),unit=v>=1?'kg':'g';return`<div class="rtbscard"><div class="rtbst ${t}">${t.toUpperCase()}</div><div class="rtbsv">${disp}</div><div class="rtbsu">${unit}</div></div>`;}).join('');
+    const rl=document.getElementById('rtRML');
+    if(rl)rl.innerHTML=Object.values(allRM).sort((a,b)=>b.total-a.total).map(rm=>`<div class="rtrmfrow"><span class="rtrmfnm">${rm.name}</span><span class="rtrmfcd">${rm.code}</span><span class="rtrmfwt">${fmtW(rm.total)}</span></div>`).join('');
+    document.getElementById('rtBTTL').textContent=`Stückliste — ${rCM.reduce((s,m)=>s+m.qty,0)} Portionen`;
+  }
+}
+
+function rBRow(node,depth){
+  const hasK=node.children?.length>0;
+  const wrap=document.createElement('div');
+  const row=document.createElement('div');row.className='rtbrow';
+  if(depth>0){const ind=document.createElement('div');ind.style.width=(depth*14)+'px';row.appendChild(ind);}
+  const stripe=document.createElement('div');stripe.className='rtbstripe '+node.type;row.appendChild(stripe);
+  const inner=document.createElement('div');inner.className='rtbrinn '+node.type;
+  if(hasK){const eb=document.createElement('button');eb.className='rtbexp';eb.textContent='▾';inner.appendChild(eb);eb.onclick=(e)=>{e.stopPropagation();const cw=wrap.querySelector('.rtbck');if(cw){const c=cw.style.display==='none';cw.style.display=c?'':'none';eb.textContent=c?'▾':'▸';}};}
+  const badge=document.createElement('span');badge.className='rtbbadge '+node.type;badge.textContent=node.type.toUpperCase();inner.appendChild(badge);
+  const nw=document.createElement('div');nw.style.cssText='flex:1;display:flex;flex-direction:column;gap:1px';
+  nw.innerHTML=`<span class="rtbrnm">${node.name}</span><span class="rtbrcd">${node.code}</span>`;inner.appendChild(nw);
+  const wt=document.createElement('div');wt.className='rtbrwt '+node.type;
+  const kg=node.weight>=1;wt.innerHTML=`${kg?parseFloat(node.weight).toFixed(2):Math.round(node.weight*1000)}<span class="rtbrwtu">${kg?'kg':'g'}</span>`;inner.appendChild(wt);
+  row.appendChild(inner);wrap.appendChild(row);
+  if(hasK){const cw=document.createElement('div');cw.className='rtbck';cw.style.cssText='display:flex;flex-direction:column;gap:3px;margin-top:3px';node.children.forEach(c=>cw.appendChild(rBRow(c,depth+1)));wrap.appendChild(cw);}
+  return wrap;
+}
+
+// ── build DOM ──
+function rBuildDOM(){
+  const root=document.getElementById('rel-root');if(!root)return;
+  root.innerHTML=`
+  <div class="rtbar">
+    <div class="rttabs">
+      <button class="rttab active" id="rtTD">⬡ Diagram</button>
+      <button class="rttab" id="rtTC">⚖ Calculator</button>
+    </div>
+    <div class="rtsw" id="rtSW">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="rtSI" class="rtsi" type="text" placeholder="Search RM, MEP, GR, Menu…" autocomplete="off">
+      <button class="rtclr" id="rtCLR">×</button>
+    </div>
+    <div class="rtfs" id="rtFW">
+      <button class="rtfb active" data-ft="rm">RM</button>
+      <button class="rtfb active" data-ft="mep">MEP</button>
+      <button class="rtfb active" data-ft="gr">GR</button>
+      <button class="rtfb active" data-ft="menu">MENU</button>
+    </div>
+  </div>
+  <div class="rtmain">
+    <div class="rtcwrap rtdwrap" id="rtDW">
+      <svg id="rtSvg" xmlns="http://www.w3.org/2000/svg">
+        <defs id="rtDF"></defs>
+        <g id="rtZG"><g id="rtEL"></g><g id="rtNL"></g><g id="rtLL"></g></g>
+      </svg>
+      <div class="rtzoom">
+        <button class="rtzb" id="rtZI">+</button>
+        <button class="rtzb" id="rtZO">−</button>
+        <button class="rtzb" id="rtZR" style="font-size:11px">⊙</button>
+      </div>
+      <div class="rtleg">
+        <div class="rtlegi"><div class="rtlegd" style="border-color:#38bdf8;background:#071e2e"></div><span style="color:#38bdf8;font-size:9px">Raw Material</span></div>
+        <div class="rtlegi"><div class="rtlegd" style="border-color:#34d399;background:#071f14"></div><span style="color:#34d399;font-size:9px">MEP</span></div>
+        <div class="rtlegi"><div class="rtlegd" style="border-color:#c084fc;background:#160b28"></div><span style="color:#c084fc;font-size:9px">Grundrezeptur</span></div>
+        <div class="rtlegi"><div class="rtlegd" style="border-color:#fbbf24;background:#1f1505"></div><span style="color:#fbbf24;font-size:9px">Menu / Product</span></div>
+      </div>
+    </div>
+    <div class="rtsb" id="rtSB">
+      <div class="rtsbhdr">
+        <span class="rtbadge rm" id="rtBadge">RM</span>
+        <button class="rtsbclose" id="rtSBC">×</button>
+      </div>
+      <div class="rtsbbody" id="rtSBBody"></div>
+      <div class="rtsbfoot">
+        <button class="rtcalcopen" id="rtCalcBtn" style="display:none">⚖ In Calculator öffnen</button>
+        <button class="rtedit rm" id="rtEditBtn">Bearbeiten →</button>
+      </div>
+    </div>
+    <div class="rtcalcview hidden" id="rtCV">
+      <div class="rtcalcl">
+        <div class="rtclhdr"><h2>BOM Calculator</h2><p>MENGEN EINGEBEN → ZUTATEN BERECHNEN</p></div>
+        <div class="rtaddrow">
+          <select class="rtmsel" id="rtMS"><option value="">— Menu wählen —</option></select>
+          <input class="rtqin" id="rtQI" type="number" value="1" min="1" max="9999">
+          <button class="rtaddbtn" id="rtAB">+ Add</button>
+        </div>
+        <div class="rtmlist" id="rtML"><div style="font-size:10px;color:#4b5563;text-align:center;padding-top:24px">No menus added yet</div></div>
+        <div class="rtcbw"><button class="rtcbtn" id="rtCBTN" disabled>⚖ Zutaten berechnen</button></div>
+      </div>
+      <div class="rtcalcr">
+        <div class="rtbhdr">
+          <h3 id="rtBTTL">Stückliste</h3>
+          <div class="rtbacts">
+            <button class="rtbact" id="rtEA">Alle aufklappen</button>
+            <button class="rtbact" id="rtCA">Alle zuklappen</button>
+          </div>
+        </div>
+        <div class="rtbbody" id="rtBBody">
+          <div class="rtbempty"><div class="rtbempty-icon">⚖</div><div style="font-size:11px;letter-spacing:.06em">Menüs hinzufügen und berechnen</div></div>
+        </div>
+        <div class="rtbsum" id="rtBSum" style="display:none">
+          <div class="rtbsttl">Gesamt-Rohstoffe</div>
+          <div class="rtbsgrid" id="rtBSG"></div>
+          <div class="rtrmflat">
+            <div class="rtrmfhdr" id="rtRMFH">▶ Alle RM aufgelistet (Flat-Übersicht)</div>
+            <div class="rtrmflist hidden" id="rtRML"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // tab switching
+  document.getElementById('rtTD').onclick=()=>rSwitch('diagram');
+  document.getElementById('rtTC').onclick=()=>rSwitch('calc');
+  document.getElementById('rtSBC').onclick=()=>{document.getElementById('rtSB').classList.remove('open');rSel=null;rDraw();};
+
+  // search
+  const si=document.getElementById('rtSI'),clr=document.getElementById('rtCLR');
+  si.addEventListener('input',()=>{rQ=si.value.trim();clr.classList.toggle('vis',!!rQ);rDraw();});
+  clr.onclick=()=>{si.value='';rQ='';clr.classList.remove('vis');rDraw();};
+
+  // filter buttons
+  root.querySelectorAll('.rtfb').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=btn.dataset.ft;
+      if(rF.has(t)){if(rF.size===1)return;rF.delete(t);btn.classList.remove('active');}
+      else{rF.add(t);btn.classList.add('active');}
+      rDraw();
+    });
+  });
+
+  // pan/zoom
+  const svg=document.getElementById('rtSvg'),zg=document.getElementById('rtZG');
+  function applyT(){zg?.setAttribute('transform',`translate(${rTx.x},${rTx.y}) scale(${rTx.scale})`);}
+  svg.addEventListener('mousedown',e=>{if(e.target.closest('[cursor="pointer"]'))return;rPan=true;rPS={x:e.clientX-rTx.x,y:e.clientY-rTx.y};svg.classList.add('grabbing');});
+  window.addEventListener('mousemove',e=>{if(!rPan)return;rTx.x=e.clientX-rPS.x;rTx.y=e.clientY-rPS.y;applyT();});
+  window.addEventListener('mouseup',()=>{rPan=false;svg.classList.remove('grabbing');});
+  svg.addEventListener('wheel',e=>{e.preventDefault();const d=e.deltaY>0?.9:1.1,r=svg.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;rTx.x=mx-(mx-rTx.x)*d;rTx.y=my-(my-rTx.y)*d;rTx.scale=Math.min(3,Math.max(0.15,rTx.scale*d));applyT();},{passive:false});
+  document.getElementById('rtZI').onclick=()=>{rTx.scale=Math.min(3,rTx.scale*1.2);applyT();};
+  document.getElementById('rtZO').onclick=()=>{rTx.scale=Math.max(0.15,rTx.scale*.8);applyT();};
+  document.getElementById('rtZR').onclick=()=>{rTx={x:20,y:20,scale:1};applyT();};
+  let lt=null;
+  svg.addEventListener('touchstart',e=>{if(e.touches.length===1)lt={x:e.touches[0].clientX,y:e.touches[0].clientY};});
+  svg.addEventListener('touchmove',e=>{if(e.touches.length===1&&lt){rTx.x+=e.touches[0].clientX-lt.x;rTx.y+=e.touches[0].clientY-lt.y;lt={x:e.touches[0].clientX,y:e.touches[0].clientY};applyT();}});
+  svg.addEventListener('touchend',()=>lt=null);
+
+  // calculator
+  rPopMS();
+  document.getElementById('rtAB').onclick=()=>{
+    const sel=document.getElementById('rtMS'),qty=parseInt(document.getElementById('rtQI').value)||1;
+    if(!sel.value)return;
+    const m=(window.allMenus||[]).find(x=>x.menuCode===sel.value||x.id===sel.value);
+    if(!m)return;
+    rAddChip(m.menuCode||m.id,m.name,qty);
+    sel.value='';document.getElementById('rtQI').value=1;
+  };
+  document.getElementById('rtCBTN').onclick=rCalc;
+  document.getElementById('rtEA').onclick=()=>{
+    document.querySelectorAll('.rtbck').forEach(e=>e.style.display='');
+    document.querySelectorAll('.rtbexp').forEach(b=>b.textContent='▾');
+    document.querySelectorAll('.rtbkids').forEach(c=>c.classList.remove('collapsed'));
+    document.querySelectorAll('.rtchev').forEach(c=>c.classList.add('open'));
+  };
+  document.getElementById('rtCA').onclick=()=>{
+    document.querySelectorAll('.rtbck').forEach(e=>e.style.display='none');
+    document.querySelectorAll('.rtbexp').forEach(b=>b.textContent='▸');
+    document.querySelectorAll('.rtbkids').forEach(c=>c.classList.add('collapsed'));
+    document.querySelectorAll('.rtchev').forEach(c=>c.classList.remove('open'));
+  };
+  document.getElementById('rtRMFH').onclick=function(){
+    const list=document.getElementById('rtRML');
+    const open=list.classList.toggle('hidden');
+    this.textContent=(open?'▶':'▼')+' Alle RM aufgelistet (Flat-Übersicht)';
+  };
+}
+
+function rPopMS(){
+  const sel=document.getElementById('rtMS');if(!sel)return;
+  sel.innerHTML='<option value="">— Menu wählen —</option>';
+  (window.allMenus||[]).forEach(m=>{const o=document.createElement('option');o.value=m.menuCode||m.id;o.textContent=`${m.menuCode||m.id} – ${m.name}`;sel.appendChild(o);});
+}
+
+// ── public entry point ──
+window.initRelationsTab=function(){
+  if(!document.getElementById('rel-root'))return;
+  if(!rBuilt){rBuildDOM();rBuilt=true;}
+  rBuild();
+  rPopMS();
+};
+
+})();
+</script>
 </body>
 </html>
