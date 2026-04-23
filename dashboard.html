@@ -1841,8 +1841,11 @@ setInterval(updateLiveTime, 1000);
 // ─────────────────────────────────────────────
 function goBack(e) {
   e.preventDefault();
-  if (window.history.length > 1) {
-    window.history.back();
+  // Always navigate to index — this is a SPA, "back" = home page
+  // document.referrer tells us if user came from index or an external link
+  const ref = document.referrer;
+  if (ref && ref !== window.location.href && !ref.includes('dashboard.html')) {
+    window.location.href = ref;
   } else {
     window.location.href = "https://mega0826.github.io/Kitchen-System/index.html";
   }
@@ -4740,40 +4743,73 @@ adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
 }
 
 async function extractPdfText(arrayBuffer) {
-  // Load PDF.js to render page as image
+  // ── Load PDF.js ──
+  // Try CDN sources in order; disable worker to avoid Android "file not found" error
   if (!window.pdfjsLib) {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    });
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const PDFJS_SRCS = [
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+      "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js",
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+    ];
+    let loaded = false;
+    for (const src of PDFJS_SRCS) {
+      try {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = src;
+          s.onload = resolve;
+          s.onerror = () => reject(new Error("load failed: " + src));
+          document.head.appendChild(s);
+        });
+        loaded = true;
+        break;
+      } catch(e) {
+        console.warn("PDF.js source failed, trying next:", e.message);
+      }
+    }
+    if (!loaded) throw new Error("Could not load PDF.js from any source");
+
+    // ── ANDROID FIX: disable the worker entirely ──
+    // The worker URL fetch causes "file not found" on Android WebView / Chrome.
+    // Running PDF.js in main thread is slower but works on all devices.
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+    }
   }
 
-  // Render first page to canvas → base64 JPEG
-  const pdf      = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const page     = await pdf.getPage(1);
+  // ── Render first page to canvas → base64 JPEG ──
+  const loadParams = {
+    data: arrayBuffer,
+    disableWorker: true,      // Android fix: no separate worker thread
+    disableRange:  true,      // avoid partial fetch errors on mobile
+    disableStream: true,
+  };
+
+  const pdf  = await pdfjsLib.getDocument(loadParams).promise;
+  const page = await pdf.getPage(1);
+
+  // Scale to max 720px wide (smaller = faster on mobile)
   const viewport = page.getViewport({ scale: 1.0 });
-  const canvas   = document.createElement("canvas");
-  // Force max 800px wide to keep base64 small enough for GET
-  const scale    = Math.min(1.0, 800 / viewport.width);
+  const maxW     = 720;
+  const scale    = Math.min(1.0, maxW / viewport.width);
   const vp2      = page.getViewport({ scale });
+
+  const canvas   = document.createElement("canvas");
   canvas.width   = vp2.width;
   canvas.height  = vp2.height;
   await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp2 }).promise;
 
-  // Compress aggressively — recipe text still readable at 0.3
-  let base64 = canvas.toDataURL("image/jpeg", 0.3).split(",")[1];
+  // Compress to JPEG — aggressive quality still readable for AI
+  let base64 = canvas.toDataURL("image/jpeg", 0.35).split(",")[1];
 
-  // If still too long, resize canvas further
+  // If still too large, shrink further
   if (base64.length > 80000) {
-    const c2  = document.createElement("canvas");
-    c2.width  = Math.round(canvas.width  * 0.6);
-    c2.height = Math.round(canvas.height * 0.6);
+    const c2    = document.createElement("canvas");
+    const ratio = Math.sqrt(70000 / base64.length);  // proportional shrink
+    c2.width    = Math.round(canvas.width  * ratio);
+    c2.height   = Math.round(canvas.height * ratio);
     c2.getContext("2d").drawImage(canvas, 0, 0, c2.width, c2.height);
-    base64 = c2.toDataURL("image/jpeg", 0.3).split(",")[1];
+    base64 = c2.toDataURL("image/jpeg", 0.35).split(",")[1];
   }
 
   return "__VISION__" + base64;
@@ -4797,13 +4833,8 @@ function renderPdfPreview(mode, parsedMenu) {
     </div>` : "";
 
   const header = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="display:grid;grid-template-columns:70px 160px 1fr 80px 50px 100px 1fr 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);flex:1">
-        <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span>Allergen</span><span>Description</span><span></span>
-      </div>
-      <button onclick="pdfOpenQuickAdd()" style="flex-shrink:0;margin-left:10px;padding:5px 12px;border-radius:8px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">
-        ＋ Add missing RM/MEP/GR/Menu
-      </button>
+    <div style="display:grid;grid-template-columns:70px 160px 1fr 80px 50px 100px 1fr 28px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">
+      <span>Type</span><span>Code</span><span>Name</span><span>Qty</span><span>Unit</span><span>Allergen</span><span>Description</span><span></span>
     </div>`;
 
   const rows = pdfParsedIngredients.map((ing, i) => {
@@ -4967,22 +4998,25 @@ function _isPdfCodeDuplicate(type, code) {
   const ing = pdfParsedIngredients[i];
   if (!ing) return;
 
-  // Only warn if same code used by another NEW (non-matched) ingredient
-  const dupInPreview = pdfParsedIngredients.some((x, idx) => idx !== i && !x._matched && x.code === code);
-  if (dupInPreview) {
-    if (!confirm(`Code "${code}" is already used by another ingredient.\n\nClick OK to use anyway, Cancel to keep current.`)) return;
+  // Check if code/name already used in this preview list (excluding self)
+  const dupInPreview = pdfParsedIngredients.some((x, idx) => idx !== i && (x.code === code || (x.name||'').toLowerCase() === name.toLowerCase()));
+  // Check if exists in system
+  const dupInSystem = (type === 'MEP' && _allMepCodes.includes(code)) ||
+                      (type === 'GR'  && _allGrCodes.includes(code))  ||
+                      (type === 'RM'  && _allRmCodes.includes(code));
+
+  if (dupInPreview || dupInSystem) {
+    const where = dupInSystem ? 'already exists in system' : 'already used in this list';
+    const overwrite = confirm(`"${name}" (${code}) ${where}.\n\nClick OK to use it anyway (will link to existing), or Cancel to keep current.`);
+    if (!overwrite) return;
   }
 
-  // Apply — system codes are valid links, mark matched so dup checker ignores them
+  // Apply selection
   ing.code       = code;
-  ing.type       = type.toUpperCase();
+  ing.type       = type;
   ing.name       = name;
   ing._matched   = true;
   ing._matchType = 'manual';
-
-  // ── FIX 1: update DOM input immediately ──
-  const el = document.getElementById('pdf-code-' + i);
-  if (el) { el.value = code; el.style.borderColor = 'var(--green)'; }
 
   renderPdfPreview(window._pdfMode);
 }
@@ -4990,35 +5024,6 @@ function _isPdfCodeDuplicate(type, code) {
 function pdfCodeInput(i, val) {
   pdfParsedIngredients[i].code = val;
   pdfParsedIngredients[i]._matched = false;
-  // ── FIX 2: live dup indicator — update just this row's border + warning ──
-  const el = document.getElementById('pdf-code-' + i);
-  if (!el) return;
-  const type = pdfParsedIngredients[i].type || 'RM';
-  const isDup = val && _isPdfCodeDuplicate(type, val);
-  const isKnown = val && (
-    (type==='RM'  && _allRmCodes.includes(val)) ||
-    (type==='MEP' && _allMepCodes.includes(val)) ||
-    (type==='GR'  && _allGrCodes.includes(val))
-  );
-  el.style.borderColor = isDup ? 'var(--red)' : isKnown ? 'var(--green)' : val ? 'var(--amber)' : '';
-  // update warning text under input
-  let warnEl = document.getElementById('pdf-dupwarn-' + i);
-  if (!warnEl) {
-    warnEl = document.createElement('div');
-    warnEl.id = 'pdf-dupwarn-' + i;
-    warnEl.style.cssText = 'font-size:9px;margin-top:2px';
-    el.parentNode.appendChild(warnEl);
-  }
-  if (isDup && !isKnown) {
-    warnEl.style.color = 'var(--red)';
-    warnEl.textContent = '⚠ duplicate code';
-  } else if (isKnown) {
-    warnEl.style.color = 'var(--green)';
-    warnEl.textContent = '✓ links to existing';
-    pdfParsedIngredients[i]._matched = true;
-  } else {
-    warnEl.textContent = '';
-  }
 }
 
 function pdfTypePrefix(type) {
@@ -5176,161 +5181,6 @@ async function confirmPdfImport() {
     if (btn) { btn.disabled=false; btn.textContent="✓ Save all to Recipes"; }
   }
 }
-
-// ─────────────────────────────────────────────
-// PDF QUICK-ADD (missing RM / MEP / GR / Menu)
-// ─────────────────────────────────────────────
-let _pdfQAType = 'rm';
-
-function pdfOpenQuickAdd() {
-  _pdfQAType = 'rm';
-  _pdfQASetTypeUI('rm');
-  document.getElementById('pdfqa-code').value = _suggestPdfCode('RM', pdfParsedIngredients.length);
-  document.getElementById('pdfqa-name').value = '';
-  document.getElementById('pdfqa-cat').value  = '';
-  document.getElementById('pdfqa-unit').value = '';
-  document.getElementById('pdfqa-cost').value = '';
-  document.getElementById('pdfqa-sup').value  = '';
-  document.getElementById('pdfqa-art').value  = 'Hauptgang';
-  document.getElementById('pdfqa-vk').value   = '';
-  document.getElementById('pdfqa-msg').textContent = '';
-  document.getElementById('pdfqa-also-add').checked = true;
-  document.getElementById('pdfQuickAddModal').style.display = 'flex';
-  setTimeout(() => document.getElementById('pdfqa-name').focus(), 80);
-}
-
-function pdfCloseQuickAdd() {
-  document.getElementById('pdfQuickAddModal').style.display = 'none';
-}
-
-function pdfQASetType(t) {
-  _pdfQAType = t;
-  _pdfQASetTypeUI(t);
-  // auto-suggest code for this type
-  const codeEl = document.getElementById('pdfqa-code');
-  if (codeEl && !codeEl.value.trim()) {
-    codeEl.value = _suggestPdfCode(t.toUpperCase(), pdfParsedIngredients.length);
-  }
-}
-
-function _pdfQASetTypeUI(t) {
-  document.querySelectorAll('.pdfqa-type-btn').forEach(btn => {
-    const bt = btn.dataset.t;
-    const colors = {rm:'blue',mep:'amber',gr:'green',menu:'text'};
-    const col = colors[bt] || 'text';
-    if (bt === t) {
-      btn.style.borderColor = `var(--${col}-brd,var(--border2))`;
-      btn.style.background  = `var(--${col}-dim,var(--surface2))`;
-      btn.style.color       = `var(--${col})`;
-      btn.style.fontWeight  = '700';
-    } else {
-      btn.style.borderColor = 'var(--border2)';
-      btn.style.background  = 'var(--surface2)';
-      btn.style.color       = 'var(--muted)';
-      btn.style.fontWeight  = '400';
-    }
-  });
-  document.getElementById('pdfQATypeLabel').textContent = t.toUpperCase();
-  // show/hide fields
-  const isMenu = t === 'menu';
-  ['pdfqa-cat-wrap','pdfqa-unit-wrap','pdfqa-cost-wrap','pdfqa-sup-wrap'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = isMenu ? 'none' : '';
-  });
-  ['pdfqa-art-wrap','pdfqa-vk-wrap'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = isMenu ? '' : 'none';
-  });
-}
-
-async function pdfQASave() {
-  const code = document.getElementById('pdfqa-code').value.trim();
-  const name = document.getElementById('pdfqa-name').value.trim();
-  const msg  = document.getElementById('pdfqa-msg');
-  if (!code || !name) { msg.style.color='var(--red)'; msg.textContent='Code and Name are required'; return; }
-
-  const saveBtn = document.querySelector('#pdfQuickAddModal button[onclick="pdfQASave()"]');
-  if (saveBtn) { saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
-  msg.textContent = '';
-
-  try {
-    let data;
-    if (_pdfQAType === 'rm') {
-      // save to inventory
-      data = await adminCall({
-        action    : 'saveInventory',
-        code, name,
-        kategorie : document.getElementById('pdfqa-cat').value.trim(),
-        unit      : document.getElementById('pdfqa-unit').value.trim(),
-        kostenUnit: document.getElementById('pdfqa-cost').value || '',
-        lieferant : document.getElementById('pdfqa-sup').value.trim(),
-        quantity  : 0, minimum: 0
-      });
-    } else if (_pdfQAType === 'mep') {
-      // save to products
-      data = await adminCall({
-        action    : 'saveProduct',
-        code, name,
-        kategorie : document.getElementById('pdfqa-cat').value.trim(),
-      });
-    } else if (_pdfQAType === 'gr') {
-      // save GR skeleton
-      data = await adminCall({
-        action  : 'saveGR',
-        grCode  : code, name,
-        art     : 'Grundrezeptur',
-        zutaten : '[]'
-      });
-    } else if (_pdfQAType === 'menu') {
-      // save menu
-      data = await adminCall({
-        action   : 'saveMenu',
-        menuId   : '',
-        menuCode : code, name,
-        art      : document.getElementById('pdfqa-art').value,
-        vk       : document.getElementById('pdfqa-vk').value || '',
-        zutaten  : '[]',
-        lastUpdate: new Date().toISOString()
-      });
-    }
-    if (data?.error) throw new Error(data.error);
-
-    // refresh system code lists
-    if (_pdfQAType === 'rm')   _allRmCodes  = [..._allRmCodes,  code];
-    if (_pdfQAType === 'mep')  _allMepCodes = [..._allMepCodes, code];
-    if (_pdfQAType === 'gr')   _allGrCodes  = [..._allGrCodes,  code];
-    // refresh _systemItems for future suggestions
-    _systemItems.push({ type: _pdfQAType, code, name });
-
-    // also add to preview ingredient list if checkbox checked
-    if (document.getElementById('pdfqa-also-add').checked) {
-      pdfParsedIngredients.push({
-        type     : _pdfQAType.toUpperCase(),
-        code, name,
-        quantity : '',
-        unit     : document.getElementById('pdfqa-unit').value.trim() || '',
-        allergie : '',
-        description: '',
-        _matched : true,
-        _matchType: 'manual'
-      });
-    }
-
-    msg.style.color = 'var(--green)';
-    msg.textContent = `✓ ${_pdfQAType.toUpperCase()} "${name}" saved`;
-    setTimeout(() => {
-      pdfCloseQuickAdd();
-      renderPdfPreview(window._pdfMode);
-    }, 700);
-
-  } catch(e) {
-    msg.style.color = 'var(--red)';
-    msg.textContent = 'Error: ' + e.message;
-  } finally {
-    if (saveBtn) { saveBtn.disabled=false; saveBtn.textContent='💾 Save & Add'; }
-  }
-}
-
 
 function cancelPdfImport() {
   pdfParsedIngredients = [];
@@ -7388,74 +7238,6 @@ function buildMenuPdfHtml(m) {
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button onclick="closeAddMEPPopup()" style="padding:10px 18px;border-radius:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;cursor:pointer">Cancel</button>
         <button onclick="saveMEPFromPopup()" style="padding:10px 24px;border-radius:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:13px;font-weight:600;cursor:pointer">💾 Save MEP</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ PDF Quick-Add Modal ═══ -->
-<div id="pdfQuickAddModal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.82);align-items:center;justify-content:center;padding:16px">
-  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:560px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.7)">
-    <div style="background:var(--surface2);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
-      <div style="font-size:13px;font-weight:600;color:var(--text)">＋ Quick Add — <span id="pdfQATypeLabel" style="color:var(--amber)">RM</span></div>
-      <button onclick="pdfCloseQuickAdd()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
-    </div>
-    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
-      <!-- Type selector -->
-      <div style="display:flex;gap:6px">
-        <button class="pdfqa-type-btn" data-t="rm"   onclick="pdfQASetType('rm')"   style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--blue-brd);background:var(--blue-dim);color:var(--blue);font-family:var(--mono);font-size:11px;cursor:pointer;font-weight:600">🔵 RM</button>
-        <button class="pdfqa-type-btn" data-t="mep"  onclick="pdfQASetType('mep')"  style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer">🟡 MEP</button>
-        <button class="pdfqa-type-btn" data-t="gr"   onclick="pdfQASetType('gr')"   style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer">🟢 GR</button>
-        <button class="pdfqa-type-btn" data-t="menu" onclick="pdfQASetType('menu')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer">🍽 Menu</button>
-      </div>
-      <!-- Fields (change based on type) -->
-      <div class="form-grid">
-        <div class="form-field">
-          <label class="form-label">Code *</label>
-          <input class="form-input" id="pdfqa-code" placeholder="auto-generated">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Name *</label>
-          <input class="form-input" id="pdfqa-name" placeholder="e.g. Knoblauch, frisch">
-        </div>
-        <!-- RM/MEP/GR extra fields -->
-        <div class="form-field" id="pdfqa-cat-wrap">
-          <label class="form-label">Category</label>
-          <input class="form-input" id="pdfqa-cat" placeholder="e.g. Gemüse">
-        </div>
-        <div class="form-field" id="pdfqa-unit-wrap">
-          <label class="form-label">Unit</label>
-          <input class="form-input" id="pdfqa-unit" placeholder="kg / pcs / btl">
-        </div>
-        <div class="form-field" id="pdfqa-cost-wrap">
-          <label class="form-label">Cost/Unit (CHF)</label>
-          <input class="form-input" type="number" id="pdfqa-cost" placeholder="0.00" step="0.01">
-        </div>
-        <div class="form-field" id="pdfqa-sup-wrap">
-          <label class="form-label">Supplier</label>
-          <input class="form-input" id="pdfqa-sup" placeholder="e.g. Transgourmet">
-        </div>
-        <!-- Menu extra fields -->
-        <div class="form-field" id="pdfqa-art-wrap" style="display:none">
-          <label class="form-label">Art</label>
-          <select class="form-input" id="pdfqa-art">
-            <option>Hauptgang</option><option>Starter</option><option>Noodle</option><option>Soup</option><option>Bowl</option><option>Dessert</option>
-          </select>
-        </div>
-        <div class="form-field" id="pdfqa-vk-wrap" style="display:none">
-          <label class="form-label">VK (CHF)</label>
-          <input class="form-input" type="number" id="pdfqa-vk" placeholder="0.00" step="0.05">
-        </div>
-      </div>
-      <!-- Also add to current preview list? -->
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
-        <input type="checkbox" id="pdfqa-also-add" checked style="width:14px;height:14px;cursor:pointer">
-        Also add to current ingredient list below
-      </label>
-      <div id="pdfqa-msg" style="font-size:11px;color:var(--muted);min-height:14px;text-align:center;font-family:var(--mono)"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button onclick="pdfCloseQuickAdd()" style="padding:9px 18px;border-radius:10px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;cursor:pointer">Cancel</button>
-        <button onclick="pdfQASave()" style="padding:9px 22px;border-radius:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:13px;font-weight:600;cursor:pointer">💾 Save & Add</button>
       </div>
     </div>
   </div>
