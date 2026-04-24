@@ -4971,7 +4971,12 @@ async function confirmPdfImport() {
 
     cancelPdfImport();
     await loadMenus();
-    await loadRecipes();
+    await loadGRs();
+    // refresh allRecipes for Orders/Requirements
+    const rd = await get({ action: "getRecipes" }).catch(() => ({}));
+    allRecipes = Array.isArray(rd.recipes) ? rd.recipes : allRecipes;
+    renderMenuList();
+    loadRequirements();
 
   } catch(err) {
     adminMsg("pdf-msg","Save error: "+err.message,"err");
