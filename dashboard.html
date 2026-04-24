@@ -4972,11 +4972,20 @@ async function confirmPdfImport() {
     cancelPdfImport();
     await loadMenus();
     await loadGRs();
-    // refresh allRecipes for Orders/Requirements
     const rd = await get({ action: "getRecipes" }).catch(() => ({}));
     allRecipes = Array.isArray(rd.recipes) ? rd.recipes : allRecipes;
-    renderMenuList();
     loadRequirements();
+
+    // ── Navigate to Recipes tab and show saved menu ──
+    const recipesBtn = document.querySelector('.tab[data-tab="recipes"]');
+    if (recipesBtn) {
+      switchTab(recipesBtn);
+      const menuSearch = document.getElementById("menu-search");
+      if (menuSearch) {
+        menuSearch.value = pdfTargetMepCode || "";
+        renderMenuList();
+      }
+    }
 
   } catch(err) {
     adminMsg("pdf-msg","Save error: "+err.message,"err");
