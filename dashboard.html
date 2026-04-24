@@ -4905,7 +4905,6 @@ function _updatePdfRowStyle(sel, i) {
 async function confirmPdfImport() {
   if (!pdfParsedIngredients.length || !pdfTargetMepCode) return;
 
-  // Block if duplicates exist on NEW ingredients only
   const dups = pdfParsedIngredients.filter(ing =>
     !ing._matched && _isPdfCodeDuplicate(ing.type||"RM", ing.code||"")
   );
@@ -4913,8 +4912,6 @@ async function confirmPdfImport() {
     adminMsg("pdf-msg", `⚠ Fix ${dups.length} duplicate code${dups.length>1?"s":""} before saving`, "err");
     return;
   }
-
-  // Block if any new ingredient has no code
   const missing = pdfParsedIngredients.filter(ing => !ing.code && !ing._matched);
   if (missing.length) {
     adminMsg("pdf-msg", `⚠ ${missing.length} ingredient${missing.length>1?"s":""} missing code`, "err");
@@ -4927,10 +4924,10 @@ async function confirmPdfImport() {
   try {
     const mode = window._pdfMode || 'recipes';
 
-    // Build confirmed zutaten with correct types + codes for menu card
-    const confirmedZutaten = pdfParsedIngredients.map(ing => ({
+    // Build zutaten array for the menu entry
+    const zutaten = pdfParsedIngredients.map(ing => ({
       type     : (ing.type || "rm").toLowerCase(),
-      code     : ing.code  || ing.name.substring(0,20).replace(/\s+/g,"_").toUpperCase(),
+      code     : ing.code  || "",
       name     : ing.name  || "",
       gewicht  : ing.quantity || "",
       unit     : ing.unit  || "",
@@ -4938,53 +4935,58 @@ async function confirmPdfImport() {
       cost     : 0
     }));
 
-    // Save ALL ingredients to MEP sheet (with their correct type: rm/mep/gr)
-    // Skip ones already matched in system to avoid duplicates
-    const toSave = pdfParsedIngredients.filter(ing => !ing._matched);
+    // Build allergen declaration line for zubereitung
+    const allergens = pdfParsedIngredients
+      .map(ing => ing.allergie).filter(Boolean)
+      .join(", ");
+    const zubereitungLine = allergens ? `Deklaration: ${allergens}` : "";
 
+    // ── Save as a Menu entry (Menus sheet) so it appears in Recipes tab ──
+    const menuPayload = {
+      action      : "saveMenu",
+      menuId      : "",                        // new entry
+      name        : pdfTargetMepCode,          // use the code as name (manager can edit later)
+      menuCode    : pdfTargetMepCode,
+      category    : mode === "menu" ? "Menu Card" : "Recipe",
+      art         : mode === "menu" ? "Hauptgang" : "MEP",
+      saison      : "All Year",
+      zutaten     : JSON.stringify(zutaten),
+      zubereitung : zubereitungLine,
+      wa          : "",
+      vk          : "",
+      lastUpdate  : new Date().toISOString()
+    };
+
+    const saved = await adminCall(menuPayload);
+    if (saved.error) throw new Error(saved.error);
+
+    // Also save new RM/MEP/GR items that don't exist yet in system
+    const toSave = pdfParsedIngredients.filter(ing => !ing._matched);
     if (toSave.length) {
       const data = await adminCall({
         action      : "importParsedRecipe",
         mepCode     : pdfTargetMepCode,
         ingredients : JSON.stringify(toSave)
       });
-      if (data.error) throw new Error(data.error);
+      if (data.error) console.warn("importParsedRecipe:", data.error);
     }
 
-    // If menu mode — update menu card zutaten with confirmed types/codes
-    if (mode === 'menu' && _pdfMenuId) {
-      const upd = await adminCall({
-        action  : "updateMenuZutaten",
-        menuId  : _pdfMenuId,
-        zutaten : JSON.stringify(confirmedZutaten)
-      });
-      if (upd.error) throw new Error(upd.error);
-    }
-
-    const savedCount = toSave.length;
+    const savedCount   = toSave.length;
     const matchedCount = pdfParsedIngredients.length - savedCount;
-
     adminMsg("pdf-msg",
-      `✓ Saved ${savedCount} new ingredient${savedCount!==1?"s":""}${matchedCount?" · "+matchedCount+" already in system":""}`
-      + (mode==='menu' ? " · Menu card updated" : ""),
+      `✓ Saved to Recipes tab as "${pdfTargetMepCode}" · ${savedCount} new item${savedCount!==1?"s":""}${matchedCount?" · "+matchedCount+" linked":""}`,
       "ok");
 
     cancelPdfImport();
+
+    // Reload menus and navigate to Recipes tab
     await loadMenus();
     await loadGRs();
-    const rd = await get({ action: "getRecipes" }).catch(() => ({}));
-    allRecipes = Array.isArray(rd.recipes) ? rd.recipes : allRecipes;
-    loadRequirements();
-
-    // ── Navigate to Recipes tab and show saved menu ──
     const recipesBtn = document.querySelector('.tab[data-tab="recipes"]');
     if (recipesBtn) {
       switchTab(recipesBtn);
       const menuSearch = document.getElementById("menu-search");
-      if (menuSearch) {
-        menuSearch.value = pdfTargetMepCode || "";
-        renderMenuList();
-      }
+      if (menuSearch) { menuSearch.value = pdfTargetMepCode; renderMenuList(); }
     }
 
   } catch(err) {
