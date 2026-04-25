@@ -7196,26 +7196,51 @@ function pdfQAType(t) {
   var codeEl = document.getElementById('pdfqa-code');
   if (codeEl && !codeEl.value.trim()) codeEl.value = _suggestPdfCode(t.toUpperCase(), pdfParsedIngredients.length);
 }
-function pdfQASearchRM(q) {
+
+  function pdfQASearchRM(q) {
   const el = document.getElementById('pdfqa-rm-results');
   if (!el) return;
   q = (q || '').toLowerCase().trim();
   if (!q) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  const results = (allInventory || []).filter(r =>
-    r.code && ((r.name||'').toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
-  ).slice(0, 8);
+  const results = (allInventory || []).filter(function(r) {
+    return r.code && ((r.name||'').toLowerCase().includes(q) || r.code.toLowerCase().includes(q));
+  }).slice(0, 8);
   if (!results.length) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
+  el.style.flexDirection = 'column';
   el.innerHTML = '';
   results.forEach(function(r) {
     const div = document.createElement('div');
-    div.style.cssText = 'padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid transparent';
-    div.onmouseover = function(){ this.style.borderColor='var(--blue-brd)'; };
-    div.onmouseout  = function(){ this.style.borderColor='transparent'; };
-    div.onclick     = function(){ pdfQASelectRM(r.code, r.name||r.code); };
-    div.innerHTML   = `<span style="flex:1;font-weight:500">${r.name||r.code}</span>`
-      + `<span style="font-size:10px;color:var(--muted)">${r.code}</span>`
-      + (r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(r.kostenUnit).toFixed(2)}</span>` : '');
+    div.style.padding = '6px 10px';
+    div.style.borderRadius = '6px';
+    div.style.cursor = 'pointer';
+    div.style.fontSize = '12px';
+    div.style.display = 'flex';
+    div.style.alignItems = 'center';
+    div.style.gap = '8px';
+    div.style.background = 'var(--surface2)';
+    div.style.border = '1px solid transparent';
+    div.style.marginBottom = '3px';
+    div.onmouseover = function() { this.style.borderColor = 'var(--blue-brd)'; };
+    div.onmouseout  = function() { this.style.borderColor = 'transparent'; };
+    div.onclick     = function() { pdfQASelectRM(r.code, r.name || r.code); };
+    const nameSpan = document.createElement('span');
+    nameSpan.style.flex = '1';
+    nameSpan.style.fontWeight = '500';
+    nameSpan.textContent = r.name || r.code;
+    const codeSpan = document.createElement('span');
+    codeSpan.style.fontSize = '10px';
+    codeSpan.style.color = 'var(--muted)';
+    codeSpan.textContent = r.code;
+    div.appendChild(nameSpan);
+    div.appendChild(codeSpan);
+    if (r.kostenUnit) {
+      const costSpan = document.createElement('span');
+      costSpan.style.fontSize = '10px';
+      costSpan.style.color = 'var(--amber)';
+      costSpan.textContent = 'CHF ' + parseFloat(r.kostenUnit).toFixed(2);
+      div.appendChild(costSpan);
+    }
     el.appendChild(div);
   });
 }
