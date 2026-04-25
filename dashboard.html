@@ -2109,7 +2109,8 @@ async function loadKDS() {
     renderFeed(allScans.slice(-50));
     } catch(e) {
     console.error("loadKDS error:", e);
-    document.getElementById("scan-feed").innerHTML = `<div class="error-msg">Error loading data: ${e.message}</div>`;
+    const sf = document.getElementById("scan-feed");
+    if (sf) sf.innerHTML = `<div class="error-msg">Error loading data: ${e.message}</div>`;
   }
 }
 function _renderKDS() {
@@ -2124,31 +2125,29 @@ function _renderKDS() {
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
 
 function renderStats() {
-  const _t = (typeof t === 'function') ? t : (k => k);
-  const todayStr = new Date().toLocaleDateString('en-CA');
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const todayStr   = new Date().toLocaleDateString('en-CA');
   const todayScans = allScans.filter(s => s.timestamp && new Date(s.timestamp).toLocaleDateString('en-CA') === todayStr);
-  document.getElementById("stat-total").textContent   = todayScans.length;
-  document.getElementById("stat-produce").textContent = todayScans.filter(s => s.action === "produce").length;
-  document.getElementById("stat-done").textContent    = todayScans.filter(s => s.action === "done").length;
-  document.getElementById("stat-waste").textContent   = todayScans.filter(s => s.action === "waste").length;
+  set("stat-total",   todayScans.length);
+  set("stat-produce", todayScans.filter(s => s.action === "produce").length);
+  set("stat-done",    todayScans.filter(s => s.action === "done").length);
+  set("stat-waste",   todayScans.filter(s => s.action === "waste").length);
 
-  // Aggregate To Produce and Available across all products with a target
   let totalAvail = 0, totalToProduce = 0;
   Object.entries(allProducts).forEach(([code, p]) => {
     const st        = (window.todayScanStats || {})[code] || {};
-    const done      = st.done    || 0;
-    const waste     = st.waste   || 0;
-    const mepMax    = _mepMaxGN(p); // kg→GN
+    const done      = st.done  || 0;
+    const waste     = st.waste || 0;
+    const mepMax    = _mepMaxGN(p);
     const tagesziel = p.tagesziel || 0;
     if (!mepMax && !tagesziel) return;
     const available = Math.max(0, done - waste);
     const targetQty = tagesziel > 0 ? tagesziel : mepMax;
-    const toProduce = Math.max(0, targetQty - available);
     totalAvail     += available;
-    totalToProduce += toProduce;
+    totalToProduce += Math.max(0, targetQty - available);
   });
-  document.getElementById("stat-available").textContent  = totalAvail;
-  document.getElementById("stat-toproduce").textContent  = totalToProduce;
+  set("stat-available",  totalAvail);
+  set("stat-toproduce",  totalToProduce);
 }
 
 function buildMepAlerts(products, stats) {
