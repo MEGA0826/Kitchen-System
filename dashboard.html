@@ -7207,29 +7207,29 @@ function pdfQASearchRM(q) {
   ).slice(0, 8);
   if (!results.length) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
-  el.innerHTML = results.map(r => `
-    <div onclick="pdfQASelectRM('${r.code}','${(r.name||r.code).replace(/'/g,"\\'")}')"
-      style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;
-             display:flex;align-items:center;gap:8px;background:var(--surface2);
-             border:1px solid transparent"
-      onmouseover="this.style.borderColor='var(--blue-brd)'"
-      onmouseout="this.style.borderColor='transparent'">
-      <span style="flex:1;font-weight:500">${r.name||r.code}</span>
-      <span style="font-size:10px;color:var(--muted)">${r.code}</span>
-      ${r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(r.kostenUnit).toFixed(2)}</span>` : ''}
-    </div>`).join('');
+  el.innerHTML = '';
+  results.forEach(function(r) {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid transparent';
+    div.onmouseover = function(){ this.style.borderColor='var(--blue-brd)'; };
+    div.onmouseout  = function(){ this.style.borderColor='transparent'; };
+    div.onclick     = function(){ pdfQASelectRM(r.code, r.name||r.code); };
+    div.innerHTML   = `<span style="flex:1;font-weight:500">${r.name||r.code}</span>`
+      + `<span style="font-size:10px;color:var(--muted)">${r.code}</span>`
+      + (r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(r.kostenUnit).toFixed(2)}</span>` : '');
+    el.appendChild(div);
+  });
 }
 
 function pdfQASelectRM(code, name) {
-  const codeEl   = document.getElementById('pdfqa-code');
-  const nameEl   = document.getElementById('pdfqa-name');
-  const searchEl = document.getElementById('pdfqa-rm-search');
-  const resultsEl= document.getElementById('pdfqa-rm-results');
-  if (codeEl)    { codeEl.value = code; }
-  if (nameEl)    { nameEl.value = name; }
-  if (searchEl)  { searchEl.value = name; }
-  if (resultsEl) { resultsEl.style.display = 'none'; }
-  // Mark as existing — will skip saveInventory and just add to list
+  const codeEl    = document.getElementById('pdfqa-code');
+  const nameEl    = document.getElementById('pdfqa-name');
+  const searchEl  = document.getElementById('pdfqa-rm-search');
+  const resultsEl = document.getElementById('pdfqa-rm-results');
+  if (codeEl)    codeEl.value = code;
+  if (nameEl)    nameEl.value = name;
+  if (searchEl)  searchEl.value = name;
+  if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
   window._pdfQAIsExisting = true;
 }
 
