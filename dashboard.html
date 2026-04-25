@@ -4593,6 +4593,12 @@ async function extractPdfText(arrayBuffer) {
   return "__VISION__" + base64;
 }
 
+  let _pdfRenderTimer = null;
+function debouncedPdfPreview() {
+  clearTimeout(_pdfRenderTimer);
+  _pdfRenderTimer = setTimeout(() => renderPdfPreview(window._pdfMode), 400);
+}
+  
 function renderPdfPreview(mode, parsedMenu) {
   const listEl  = document.getElementById("pdf-ingredient-list");
   const preview = document.getElementById("pdf-preview");
@@ -4689,7 +4695,7 @@ function renderPdfPreview(mode, parsedMenu) {
       <div style="display:flex;flex-direction:column;gap:2px">
         <input class="form-input" style="margin:0;padding:4px 6px;font-size:12px;min-width:0"
           value="${ing.name||""}"
-          oninput="pdfParsedIngredients[${i}].name=this.value;renderPdfPreview(window._pdfMode)"
+          oninput="pdfParsedIngredients[${i}].name=this.value;debouncedPdfPreview()"
           placeholder="Name">
         ${suggestHtml}
       </div>
@@ -6951,6 +6957,13 @@ function buildMenuPdfHtml(m) {
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Code *</label><input class="form-input" id="pdfqa-code" placeholder="auto"></div>
         <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pdfqa-name" placeholder="e.g. Karotten"></div>
+        <div class="form-field pdfqa-rm-only" id="pdfqa-search-wrap">
+          <label class="form-label">🔍 Search existing RM</label>
+          <input class="form-input" id="pdfqa-rm-search" placeholder="Type to search inventory…"
+            oninput="pdfQASearchRM(this.value)"
+            style="margin-bottom:4px">
+          <div id="pdfqa-rm-results" style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;display:none"></div>
+        </div>
         <div class="form-field pdfqa-rm-mep-gr"><label class="form-label">Category</label><input class="form-input" id="pdfqa-cat" placeholder="e.g. Gemüse"></div>
         <div class="form-field pdfqa-rm-mep-gr"><label class="form-label">Unit</label><input class="form-input" id="pdfqa-unit" placeholder="kg"></div>
         <div class="form-field pdfqa-rm-only"><label class="form-label">Cost/Unit CHF</label><input class="form-input" type="number" id="pdfqa-cost" placeholder="0.00" step="0.01"></div>
@@ -7153,10 +7166,18 @@ function pdfOpenQuickAdd() {
   document.getElementById('pdfQAModal').style.display = 'flex';
   setTimeout(function(){ document.getElementById('pdfqa-name').focus(); }, 80);
 }
-function pdfCloseQA() { document.getElementById('pdfQAModal').style.display = 'none'; }
+function pdfCloseQA() {
+  document.getElementById('pdfQAModal').style.display = 'none';
+  window._pdfQAIsExisting = false;
+  const s = document.getElementById('pdfqa-rm-search');
+  if (s) s.value = '';
+  const r = document.getElementById('pdfqa-rm-results');
+  if (r) { r.style.display = 'none'; r.innerHTML = ''; }
+}
 
 function pdfQAType(t) {
   _pdfQACurrentType = t;
+  window._pdfQAIsExisting = false;
   document.getElementById('pdfQALbl').textContent = t.toUpperCase();
   var cols = { rm:'blue', mep:'amber', gr:'green', menu:'text' };
   document.querySelectorAll('.pdfqa-tb').forEach(function(btn) {
@@ -7176,7 +7197,41 @@ function pdfQAType(t) {
   var codeEl = document.getElementById('pdfqa-code');
   if (codeEl && !codeEl.value.trim()) codeEl.value = _suggestPdfCode(t.toUpperCase(), pdfParsedIngredients.length);
 }
+function pdfQASearchRM(q) {
+  const el = document.getElementById('pdfqa-rm-results');
+  if (!el) return;
+  q = (q || '').toLowerCase().trim();
+  if (!q) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const results = (allInventory || []).filter(r =>
+    r.code && ((r.name||'').toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
+  ).slice(0, 8);
+  if (!results.length) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.innerHTML = results.map(r => `
+    <div onclick="pdfQASelectRM('${r.code}','${(r.name||r.code).replace(/'/g,"\\'")}')"
+      style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;
+             display:flex;align-items:center;gap:8px;background:var(--surface2);
+             border:1px solid transparent"
+      onmouseover="this.style.borderColor='var(--blue-brd)'"
+      onmouseout="this.style.borderColor='transparent'">
+      <span style="flex:1;font-weight:500">${r.name||r.code}</span>
+      <span style="font-size:10px;color:var(--muted)">${r.code}</span>
+      ${r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(r.kostenUnit).toFixed(2)}</span>` : ''}
+    </div>`).join('');
+}
 
+function pdfQASelectRM(code, name) {
+  const codeEl   = document.getElementById('pdfqa-code');
+  const nameEl   = document.getElementById('pdfqa-name');
+  const searchEl = document.getElementById('pdfqa-rm-search');
+  const resultsEl= document.getElementById('pdfqa-rm-results');
+  if (codeEl)    { codeEl.value = code; }
+  if (nameEl)    { nameEl.value = name; }
+  if (searchEl)  { searchEl.value = name; }
+  if (resultsEl) { resultsEl.style.display = 'none'; }
+  // Mark as existing — will skip saveInventory and just add to list
+  window._pdfQAIsExisting = true;
+}
 async function pdfQASave() {
   var code = document.getElementById('pdfqa-code').value.trim();
   var name = document.getElementById('pdfqa-name').value.trim();
@@ -7189,13 +7244,17 @@ async function pdfQASave() {
     var data;
     var t = _pdfQACurrentType;
     if (t === 'rm') {
-      data = await adminCall({ action:'saveInventory', code, name,
-        kategorie: document.getElementById('pdfqa-cat').value.trim(),
-        unit:      document.getElementById('pdfqa-unit').value.trim(),
-        kostenUnit:document.getElementById('pdfqa-cost').value || '',
-        lieferant: document.getElementById('pdfqa-sup').value.trim(),
-        quantity:0, minimum:0 });
-    } else if (t === 'mep') {
+      if (window._pdfQAIsExisting) {
+        // Already exists in system — just link it, don't save again
+        data = { ok: true };
+      } else {
+        data = await adminCall({ action:'saveInventory', code, name,
+          kategorie: document.getElementById('pdfqa-cat').value.trim(),
+          unit:      document.getElementById('pdfqa-unit').value.trim(),
+          kostenUnit:document.getElementById('pdfqa-cost').value || '',
+          lieferant: document.getElementById('pdfqa-sup').value.trim(),
+          quantity:0, minimum:0 });
+      } else if (t === 'mep') {
       data = await adminCall({ action:'saveProduct', code, name,
         kategorie: document.getElementById('pdfqa-cat').value.trim() });
     } else if (t === 'gr') {
