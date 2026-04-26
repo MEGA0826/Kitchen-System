@@ -5859,7 +5859,7 @@ function editMepAddZutat(i) {
   const z = mepAddZutaten[i];
   if (!z) return;
   _ipEditIdx = i;
-  openIngredientPicker(z.type || 'rm', 'mep-add');
+  openIngredientPicker(z.type || 'rm', 'mep-add', true);
   ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
   setTimeout(() => {
     const titleEl = document.getElementById('ip-title');
@@ -6157,16 +6157,18 @@ function filterGrDisplay() {
   if (!q) { el.innerHTML = ""; return; }
   const results = allGRs.filter(g => (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q));
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
-  el.innerHTML = results.slice(0,10).map(g => `
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+  el.innerHTML = results.slice(0,10).map(g => {
+    const safeCode = (g.grCode||'').replace(/"/g,'&quot;');
+    const safeName = (g.name||g.grCode||'').replace(/"/g,'&quot;');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
       <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.grCode||""}</span>
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
-      <button type="button" onclick="openEditGRPopup('${g.grCode}')" class="btn-edit" style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" onclick="deleteGR('${g.grCode}','${(g.name||g.grCode).replace(/'/g,"\\'")}'))" class="btn-del" style="font-size:11px;padding:3px 8px">🗑</button>
-    </div>`).join("");
-}
+      <button type="button" class="btn-edit gr-edit-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}" style="font-size:11px;padding:3px 8px">🗑</button>
+    </div>`;
+  }).join("");
 
 function filterMepDisplay() {
   const q = (document.getElementById("mep-filter-search")?.value || "").toLowerCase();
@@ -6373,7 +6375,7 @@ function editMenuZutat(i) {
   const z = menuZutaten[i];
   if (!z) return;
   _ipEditIdx = i;
-  openIngredientPicker(z.type || 'rm', 'menu');
+  openIngredientPicker(z.type || 'rm', 'menu', true);
   ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
   setTimeout(() => {
     const titleEl = document.getElementById('ip-title');
@@ -6395,7 +6397,7 @@ function editGrZutat(i) {
   const z = agrZutaten[i];
   if (!z) return;
   _ipEditIdx = i;
-  openIngredientPicker(z.type || 'rm', 'agr');
+  openIngredientPicker(z.type || 'rm', 'agr', true);
   ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
   setTimeout(() => {
     const titleEl = document.getElementById('ip-title');
@@ -6484,11 +6486,11 @@ function ipSwitchType(newMode) {
   filterIngredientPicker();
 }
 
-function openIngredientPicker(mode, context) {
+function openIngredientPicker(mode, context, keepEditIdx) {
   ipMode     = mode;
   ipContext  = context || 'menu';
   ipSelectedItem = null;
-  _ipEditIdx = -1;
+  if (!keepEditIdx) _ipEditIdx = -1;
   const titleEl = document.getElementById('ip-title');
   if (titleEl) titleEl.innerHTML = _ipTypeBtns(mode);
   document.getElementById('ip-search').value = '';
