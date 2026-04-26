@@ -7075,6 +7075,27 @@ function buildMenuPdfHtml(m) {
             style="margin-bottom:4px">
           <div id="pdfqa-rm-results" style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;display:none"></div>
         </div>
+        <div class="form-field pdfqa-mep-only" id="pdfqa-mep-search-wrap" style="display:none">
+          <label class="form-label">🔍 Search existing MEP</label>
+          <input class="form-input" id="pdfqa-mep-search" placeholder="Type to search MEP products…"
+            oninput="pdfQASearchType('mep',this.value)"
+            style="margin-bottom:4px">
+          <div id="pdfqa-mep-results" style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;display:none"></div>
+        </div>
+        <div class="form-field pdfqa-gr-only" id="pdfqa-gr-search-wrap" style="display:none">
+          <label class="form-label">🔍 Search existing GR</label>
+          <input class="form-input" id="pdfqa-gr-search" placeholder="Type to search Grundrezepturen…"
+            oninput="pdfQASearchType('gr',this.value)"
+            style="margin-bottom:4px">
+          <div id="pdfqa-gr-results" style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;display:none"></div>
+        </div>
+        <div class="form-field pdfqa-menu-only" id="pdfqa-menu-search-wrap" style="display:none">
+          <label class="form-label">🔍 Search existing Menu</label>
+          <input class="form-input" id="pdfqa-menu-search" placeholder="Type to search Menus…"
+            oninput="pdfQASearchType('menu',this.value)"
+            style="margin-bottom:4px">
+          <div id="pdfqa-menu-results" style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;display:none"></div>
+        </div>
         <div class="form-field pdfqa-rm-mep-gr"><label class="form-label">Category</label><input class="form-input" id="pdfqa-cat" placeholder="e.g. Gemüse"></div>
         <div class="form-field pdfqa-rm-mep-gr"><label class="form-label">Unit</label><input class="form-input" id="pdfqa-unit" placeholder="kg"></div>
         <div class="form-field pdfqa-rm-only"><label class="form-label">Cost/Unit CHF</label><input class="form-input" type="number" id="pdfqa-cost" placeholder="0.00" step="0.01"></div>
@@ -7279,16 +7300,24 @@ function pdfOpenQuickAdd() {
   document.getElementById('pdfqa-vk').value   = '';
   document.getElementById('pdfqa-msg').textContent = '';
   document.getElementById('pdfqa-alsoadd').checked = true;
+  ['pdfqa-mep-search','pdfqa-gr-search','pdfqa-menu-search'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['pdfqa-mep-results','pdfqa-gr-results','pdfqa-menu-results'].forEach(function(id){
+    var el = document.getElementById(id); if (el) { el.innerHTML=''; el.style.display='none'; }
+  });
   document.getElementById('pdfQAModal').style.display = 'flex';
   setTimeout(function(){ document.getElementById('pdfqa-name').focus(); }, 80);
 }
 function pdfCloseQA() {
   document.getElementById('pdfQAModal').style.display = 'none';
   window._pdfQAIsExisting = false;
-  const s = document.getElementById('pdfqa-rm-search');
-  if (s) s.value = '';
-  const r = document.getElementById('pdfqa-rm-results');
-  if (r) { r.style.display = 'none'; r.innerHTML = ''; }
+  ['pdfqa-rm-search','pdfqa-mep-search','pdfqa-gr-search','pdfqa-menu-search'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['pdfqa-rm-results','pdfqa-mep-results','pdfqa-gr-results','pdfqa-menu-results'].forEach(function(id){
+    var el = document.getElementById(id); if (el) { el.style.display='none'; el.innerHTML=''; }
+  });
 }
 
 function pdfQAType(t) {
@@ -7308,7 +7337,16 @@ function pdfQAType(t) {
   var isMenu = t === 'menu';
   document.querySelectorAll('.pdfqa-rm-mep-gr').forEach(function(el){ el.style.display = isMenu ? 'none' : ''; });
   document.querySelectorAll('.pdfqa-rm-only').forEach(function(el){ el.style.display = (t==='rm') ? '' : 'none'; });
+  document.querySelectorAll('.pdfqa-mep-only').forEach(function(el){ el.style.display = (t==='mep') ? '' : 'none'; });
+  document.querySelectorAll('.pdfqa-gr-only').forEach(function(el){ el.style.display = (t==='gr') ? '' : 'none'; });
   document.querySelectorAll('.pdfqa-menu-only').forEach(function(el){ el.style.display = isMenu ? '' : 'none'; });
+  // Clear search fields on type switch
+  ['pdfqa-mep-search','pdfqa-gr-search','pdfqa-menu-search'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['pdfqa-mep-results','pdfqa-gr-results','pdfqa-menu-results'].forEach(function(id){
+    var el = document.getElementById(id); if (el) { el.innerHTML=''; el.style.display='none'; }
+  });
   // auto-suggest code
   var codeEl = document.getElementById('pdfqa-code');
   if (codeEl && !codeEl.value.trim()) codeEl.value = _suggestPdfCode(t.toUpperCase(), pdfParsedIngredients.length);
@@ -7361,7 +7399,66 @@ function pdfQAType(t) {
     el.appendChild(div);
   });
 }
+function pdfQASearchType(type, q) {
+  var resultsId = 'pdfqa-' + type + '-results';
+  var el = document.getElementById(resultsId);
+  if (!el) return;
+  q = (q || '').toLowerCase().trim();
+  if (!q) { el.style.display = 'none'; el.innerHTML = ''; return; }
 
+  var items = [];
+  if (type === 'mep') {
+    items = Object.entries(window.allProducts || {})
+      .filter(function(e){ return e[1].name && e[1].name !== '(deleted)'; })
+      .map(function(e){ return { code: e[0], name: e[1].name }; });
+  } else if (type === 'gr') {
+    items = (window.allGRs || []).map(function(g){
+      return { code: g.grCode || g.id, name: g.name || g.grCode };
+    });
+  } else if (type === 'menu') {
+    items = (window.allMenus || []).map(function(m){
+      return { code: m.menuCode || m.id, name: m.name || m.menuCode };
+    });
+  }
+
+  var filtered = items.filter(function(i){
+    return (i.name||'').toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q);
+  }).slice(0, 8);
+
+  if (!filtered.length) { el.style.display = 'none'; return; }
+
+  el.style.display = 'flex';
+  el.style.flexDirection = 'column';
+  el.innerHTML = '';
+  filtered.forEach(function(r) {
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid transparent;margin-bottom:3px';
+    div.onmouseover = function(){ this.style.borderColor = 'var(--amber-brd)'; };
+    div.onmouseout  = function(){ this.style.borderColor = 'transparent'; };
+    div.onclick     = function(){ pdfQASelectType(type, r.code, r.name); };
+    var nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'flex:1;font-weight:500';
+    nameSpan.textContent = r.name;
+    var codeSpan = document.createElement('span');
+    codeSpan.style.cssText = 'font-size:10px;color:var(--muted)';
+    codeSpan.textContent = r.code;
+    div.appendChild(nameSpan);
+    div.appendChild(codeSpan);
+    el.appendChild(div);
+  });
+}
+
+function pdfQASelectType(type, code, name) {
+  var codeEl   = document.getElementById('pdfqa-code');
+  var nameEl   = document.getElementById('pdfqa-name');
+  var searchEl = document.getElementById('pdfqa-' + type + '-search');
+  var resultsEl= document.getElementById('pdfqa-' + type + '-results');
+  if (codeEl)    codeEl.value = code;
+  if (nameEl)    nameEl.value = name;
+  if (searchEl)  searchEl.value = name;
+  if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
+  window._pdfQAIsExisting = true;
+}
 function pdfQASelectRM(code, name) {
   const codeEl    = document.getElementById('pdfqa-code');
   const nameEl    = document.getElementById('pdfqa-name');
