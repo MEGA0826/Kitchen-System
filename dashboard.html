@@ -5858,9 +5858,12 @@ function calcAgrWa() {
 function editMepAddZutat(i) {
   const z = mepAddZutaten[i];
   if (!z) return;
-  openIngredientPicker('rm', 'mep-add');
+  _ipEditIdx = i;
+  openIngredientPicker(z.type || 'rm', 'mep-add');
   ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
   setTimeout(() => {
+    const titleEl = document.getElementById('ip-title');
+    if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
     document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
     document.getElementById('ip-detail').style.display      = 'block';
     document.getElementById('ip-gewicht').value             = z.gewicht     || '';
@@ -5869,13 +5872,6 @@ function editMepAddZutat(i) {
     const ipG = document.getElementById('ip-garverlust');
     if (ipG) ipG.value = z.garverlust || '';
     calcIpCost(); calcIpWA();
-    const _editIdx = i;
-    const orig = window.confirmIngredient;
-    window.confirmIngredient = function() {
-      mepAddZutaten.splice(_editIdx, 1);
-      orig();
-      window.confirmIngredient = orig;
-    };
   }, 80);
 }
 
@@ -6380,6 +6376,8 @@ function editMenuZutat(i) {
   openIngredientPicker(z.type || 'rm', 'menu');
   ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
   setTimeout(() => {
+    const titleEl = document.getElementById('ip-title');
+    if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
     document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
     document.getElementById('ip-detail').style.display      = 'block';
     document.getElementById('ip-gewicht').value             = z.gewicht     || '';
@@ -6400,6 +6398,8 @@ function editGrZutat(i) {
   openIngredientPicker(z.type || 'rm', 'agr');
   ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
   setTimeout(() => {
+    const titleEl = document.getElementById('ip-title');
+    if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
     document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
     document.getElementById('ip-detail').style.display      = 'block';
     document.getElementById('ip-gewicht').value             = z.gewicht     || '';
@@ -6451,15 +6451,46 @@ function removeMenuImage() {
 // ─────────────────────────────────────────────
 // INGREDIENT PICKER
 // ─────────────────────────────────────────────
+// Helper: render RM/MEP/GR type selector buttons
+function _ipTypeBtns(activeType) {
+  return ['rm','mep','gr'].map(t => {
+    const labels = { rm:'🔵 RM', mep:'🟡 MEP', gr:'🟢 GR' };
+    const colors = { rm:'blue',  mep:'amber',   gr:'green' };
+    const c = colors[t];
+    const active = t === activeType;
+    return `<button class="ip-type-btn" data-t="${t}" onclick="ipSwitchType('${t}')"
+      style="padding:4px 10px;border-radius:5px;border:1px solid;font-size:10px;cursor:pointer;font-family:var(--mono);margin-right:4px;
+             background:${active?`var(--${c}-dim)`:'var(--surface2)'};
+             color:${active?`var(--${c})`:'var(--muted)'};
+             border-color:${active?`var(--${c}-brd)`:'var(--border2)'}">${labels[t]}</button>`;
+  }).join('');
+}
+
+function ipSwitchType(newMode) {
+  ipMode = newMode;
+  ipSelectedItem = null;
+  document.querySelectorAll('.ip-type-btn').forEach(btn => {
+    const t = btn.dataset.t;
+    const colors = { rm:'blue', mep:'amber', gr:'green' };
+    const c = colors[t] || 'blue';
+    const active = t === newMode;
+    btn.style.background  = active ? `var(--${c}-dim)`  : 'var(--surface2)';
+    btn.style.color       = active ? `var(--${c})`      : 'var(--muted)';
+    btn.style.borderColor = active ? `var(--${c}-brd)`  : 'var(--border2)';
+  });
+  document.getElementById('ip-selected-name').textContent = '';
+  document.getElementById('ip-detail').style.display = 'none';
+  document.getElementById('ip-search').value = '';
+  filterIngredientPicker();
+}
+
 function openIngredientPicker(mode, context) {
-  ipMode    = mode;
-  ipContext = context || 'menu';
+  ipMode     = mode;
+  ipContext  = context || 'menu';
   ipSelectedItem = null;
   _ipEditIdx = -1;
-  const dekoEl = document.getElementById('ip-is-deko');
-  if (dekoEl) dekoEl.checked = false;
-  document.getElementById('ip-title').textContent =
-    mode === 'mep' ? '🟡 MEP auswählen' : '🔵 Rohstoff auswählen';
+  const titleEl = document.getElementById('ip-title');
+  if (titleEl) titleEl.innerHTML = _ipTypeBtns(mode);
   document.getElementById('ip-search').value = '';
   document.getElementById('ip-detail').style.display = 'none';
   document.getElementById('ip-gewicht').value = '';
@@ -6469,13 +6500,15 @@ function openIngredientPicker(mode, context) {
   const _ipGarv = document.getElementById('ip-garverlust'); if (_ipGarv) _ipGarv.value = '';
   const _ipWa   = document.getElementById('ip-wa-total');   if (_ipWa)   _ipWa.textContent = '—';
   const _ipChf  = document.getElementById('ip-chf-netto');  if (_ipChf)  _ipChf.textContent = '—';
-  const popup = document.getElementById('ingredientPickerPopup');
-  popup.style.display = 'flex';
+  const ipD = document.getElementById('ip-is-deko');
+  if (ipD) ipD.checked = false;
+  document.getElementById('ingredientPickerPopup').style.display = 'flex';
   filterIngredientPicker();
 }
 
 function closeIngredientPicker() {
   document.getElementById('ingredientPickerPopup').style.display = 'none';
+  _ipEditIdx = -1;
 }
 
 function filterIngredientPicker() {
@@ -6484,9 +6517,11 @@ function filterIngredientPicker() {
     ? Object.entries(allProducts)
         .filter(([,p]) => p.name && p.name !== '(deleted)')
         .map(([code,p]) => ({ code, name: p.name, unitCost: 0 }))
+    : ipMode === 'gr'
+    ? (allGRs || []).map(g => ({ code: g.grCode||g.id, name: g.name||g.grCode, unitCost: parseFloat(g.wa)||0 }))
     : allInventory.filter(r => r.code)
-        .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit, unitCost: parseFloat(r.kostenUnit||r.kosten||0) || 0 }));
-  const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : items;
+        .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit, unitCost: parseFloat(r.kostenUnit||r.kosten||0)||0 }));
+  const filtered = q ? items.filter(i => (i.name||'').toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q)) : items;
   const el = document.getElementById('ip-list');
   if (!filtered.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine Ergebnisse.</div>`; return; }
   el.innerHTML = filtered.slice(0,40).map(i => {
@@ -6498,7 +6533,7 @@ function filterIngredientPicker() {
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
-      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/kg</span>` : ''}
+      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -6580,21 +6615,21 @@ function calcIpWA() {
 
 function confirmIngredient() {
   if (!ipSelectedItem) return;
-  const kg   = parseFloat(document.getElementById('ip-gewicht').value) || 0;
-  const cost = kg * (ipSelectedItem.unitCost || 0);
+  const kg         = parseFloat(document.getElementById('ip-gewicht').value) || 0;
   const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
   const waTotal    = garverlust > 0 ? kg / (1 - garverlust / 100) : 0;
   const chfKgNetto = (garverlust > 0 && ipSelectedItem.unitCost > 0) ? ipSelectedItem.unitCost / (1 - garverlust / 100) : 0;
+  const cost       = +(kg * (ipSelectedItem.unitCost || 0)).toFixed(3);
   const zutat = {
     type        : ipMode,
     code        : ipSelectedItem.code,
     name        : ipSelectedItem.name,
     gewicht     : kg || '',
     garverlust  : garverlust || '',
-    waTotal     : waTotal    ? +waTotal.toFixed(4)    : '',
+    waTotal     : waTotal    ? +waTotal.toFixed(4) : '',
     chfKgNetto  : chfKgNetto ? +chfKgNetto.toFixed(4) : '',
     unitCost    : ipSelectedItem.unitCost,
-    cost        : cost,
+    cost,
     allergie    : document.getElementById('ip-allergie').value,
     zubereitung : document.getElementById('ip-zubereitung-note').value,
     isDeko      : document.getElementById('ip-is-deko')?.checked || false
