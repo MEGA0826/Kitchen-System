@@ -4593,6 +4593,15 @@ async function extractPdfText(arrayBuffer) {
 }
 
   let _pdfRenderTimer = null;
+  document.addEventListener('click', function(e) {
+  const pill = e.target.closest('.pdf-sug-pill');
+  if (!pill) return;
+  const idx  = parseInt(pill.dataset.idx);
+  const code = pill.dataset.code;
+  const type = pill.dataset.type;
+  const name = pill.dataset.name;
+  pdfSelectSuggestion(idx, code, type, name);
+});
 function debouncedPdfPreview() {
   clearTimeout(_pdfRenderTimer);
   _pdfRenderTimer = setTimeout(() => renderPdfPreview(window._pdfMode), 400);
@@ -4656,14 +4665,19 @@ function renderPdfPreview(mode, parsedMenu) {
 
     const suggestHtml = suggestions.length ? `
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">
-        ${suggestions.map(s => `
-          <span onclick="pdfSelectSuggestion(${i},'${s.code}','${s.type.toUpperCase()}','${(s.name||'').replace(/'/g,"\\'")}')"
-            style="font-size:10px;padding:2px 7px;border-radius:10px;cursor:pointer;
-                   background:${s.type==='mep'?'var(--amber-dim)':s.type==='gr'?'var(--green-dim)':'var(--blue-dim)'};
-                   color:${s.type==='mep'?'var(--amber)':s.type==='gr'?'var(--green)':'var(--blue)'};
-                   border:1px solid ${s.type==='mep'?'var(--amber-brd)':s.type==='gr'?'var(--green-brd)':'var(--blue-brd)'}">
-            ${s.type==='mep'?'🟡':s.type==='gr'?'🟢':'🔵'} ${s.name}
-          </span>`).join('')}
+        ${suggestions.map(s => {
+          const safeCode = (s.code||'').replace(/"/g,'&quot;');
+          const safeType = (s.type||'rm').toUpperCase().replace(/"/g,'&quot;');
+          const safeName = (s.name||'').replace(/"/g,'&quot;');
+          const bg = s.type==='mep'?'var(--amber-dim)':s.type==='gr'?'var(--green-dim)':'var(--blue-dim)';
+          const cl = s.type==='mep'?'var(--amber)':s.type==='gr'?'var(--green)':'var(--blue)';
+          const bd = s.type==='mep'?'var(--amber-brd)':s.type==='gr'?'var(--green-brd)':'var(--blue-brd)';
+          const ic = s.type==='mep'?'🟡':s.type==='gr'?'🟢':'🔵';
+          return `<span class="pdf-sug-pill" data-idx="${i}" data-code="${safeCode}" data-type="${safeType}" data-name="${safeName}"
+            style="font-size:10px;padding:2px 7px;border-radius:10px;cursor:pointer;background:${bg};color:${cl};border:1px solid ${bd}">
+            ${ic} ${s.name}
+          </span>`;
+        }).join('')}
       </div>` : '';
 
     return `
@@ -6993,11 +7007,16 @@ function buildMenuPdfHtml(m) {
   --rp:#f97316;--rp-bg:#1c0a00;--rp-s:#3d1800;
   --rs:#0f1218;--rs2:#151820;--rb:#1c2030;--rb2:#252a3a;
 }
-.rtbar{height:44px;display:flex;align-items:center;border-bottom:1px solid var(--rb);background:var(--rs);flex-shrink:0;padding:0 8px;gap:0}
+.rtbar{display:flex;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--rb);background:var(--rs);flex-shrink:0;padding:0 8px;gap:0;min-height:44px}
 .rttabs{display:flex;gap:2px;padding:6px;border-right:1px solid var(--rb);margin-right:10px}
 .rttab{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:5px;border:1px solid transparent;cursor:pointer;color:#6b7280;background:transparent;font-family:'DM Mono',monospace}
 .rttab.active{color:#e2e8f0;background:var(--rs2);border-color:var(--rb2)}
 .rtsw{position:relative;flex:1;max-width:380px}
+@media(max-width:700px){
+  .rtsw{order:3;flex:1 1 100%;padding:6px 0;max-width:100%;border-top:1px solid var(--rb)}
+  .rtfs{order:2;margin-left:0;padding:4px 0}
+  .rtbar{padding:4px 8px 0}
+}
 .rtsw svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#4b5563;pointer-events:none;width:13px;height:13px}
 .rtsi{width:100%;background:#080a0f;border:1px solid var(--rb2);border-radius:6px;color:#e2e8f0;font-family:'DM Mono',monospace;font-size:11px;padding:6px 10px 6px 29px;outline:none}
 .rtsi:focus{border-color:var(--rr)}
