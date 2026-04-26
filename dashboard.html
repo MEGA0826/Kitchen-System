@@ -4536,6 +4536,8 @@ adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
       const visionData = await adminCall({ action: "parsePdfVisionChunked", sessionId });
       if (visionData.error) throw new Error(visionData.error);
       ingredients = visionData.ingredients || [];
+      // Store menuInfo for pre-filling fields
+      window._pdfMenuInfo = visionData.menuInfo || {};
 
     } else {
       if (!pdfText || pdfText.trim().length < 20)
@@ -4565,15 +4567,16 @@ adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
       code : ing.code || ""
     }));
     _autoMatchIngredients();
-    // Pre-fill menu info fields
+    // Pre-fill menu info fields from parsed data
+    const mi = window._pdfMenuInfo || {};
     const nameEl = document.getElementById('pdf-menu-name');
     const catEl  = document.getElementById('pdf-menu-category');
     const artEl  = document.getElementById('pdf-menu-art');
     const vkEl   = document.getElementById('pdf-menu-vk');
-    if (nameEl) nameEl.value = menuCode; // manager corrects this
-    if (catEl)  catEl.value  = '';
-    if (artEl)  artEl.value  = mode === 'menu' ? 'Hauptgang' : 'MEP';
-    if (vkEl)   vkEl.value   = '';
+    if (nameEl) nameEl.value = mi.name     || menuCode;
+    if (catEl)  catEl.value  = mi.category || '';
+    if (artEl)  artEl.value  = mi.art      || (mode === 'menu' ? 'Hauptgang' : 'MEP');
+    if (vkEl)   vkEl.value   = mi.verkaufspreis || '';
     renderPdfPreview(mode, null);
 
     const saveBtn = document.querySelector("#pdf-preview .btn-save");
@@ -5002,22 +5005,40 @@ async function confirmPdfImport() {
   try {
     const mode = window._pdfMode || 'recipes';
 
-    // Build zutaten array for the menu entry
-    const zutaten = pdfParsedIngredients.map(ing => ({
-      type     : (ing.type || "rm").toLowerCase(),
-      code     : ing.code  || "",
-      name     : ing.name  || "",
-      gewicht  : ing.quantity || "",
-      unit     : ing.unit  || "",
-      allergie : ing.allergie || "",
-      cost     : 0
-    }));
+    // Build zutaten array — resolve cost from inventory for matched items
+    const zutaten = pdfParsedIngredients.map(ing => {
+      let cost = 0;
+      const qty = parseFloat(ing.quantity) || 0;
+      if (ing._matched && ing.code) {
+        const inv = (allInventory || []).find(x => x.code === ing.code);
+        if (inv) {
+          const wu = parseFloat(inv.weightUnit) || 1;
+          const pricePerKg = (parseFloat(inv.kostenUnit) || 0) / wu;
+          cost = qty * pricePerKg;
+        }
+      }
+      // fallback: use warenaufwand from PDF parse if available
+      if (!cost && ing.warenaufwand) cost = parseFloat(ing.warenaufwand) || 0;
+      return {
+        type     : (ing.type || "rm").toLowerCase(),
+        code     : ing.code  || "",
+        name     : ing.name  || "",
+        gewicht  : qty || "",
+        unit     : ing.unit  || "",
+        allergie : ing.allergie || "",
+        cost     : +cost.toFixed(3)
+      };
+    });;
 
-    // Build allergen declaration line for zubereitung
-    const allergens = pdfParsedIngredients
-      .map(ing => ing.allergie).filter(Boolean)
-      .join(", ");
-    const zubereitungLine = allergens ? `Deklaration: ${allergens}` : "";
+    // Build full zubereitung from parsed PDF + allergen declaration
+    const mi = window._pdfMenuInfo || {};
+    const allergens = pdfParsedIngredients.map(ing => ing.allergie).filter(Boolean).join(", ");
+    const allergenLine = (mi.deklaration || allergens) ? `\n\nAllergen: ${mi.deklaration || allergens}` : "";
+    const warentraegerLine = mi.warentraeger ? `Warenträger: ${mi.warentraeger}` : "";
+    const specLine = mi.produktspezifikation ? `\n\nProdukte Spezifikation:\n${mi.produktspezifikation}` : "";
+    const naehrLine = mi.naehrwerte ? `\n\nNährwerte: ${mi.naehrwerte}` : "";
+    const zubereitungLine = [mi.zubereitung || "", warentraegerLine, allergenLine, specLine, naehrLine]
+      .filter(Boolean).join("\n");
 
     // ── Read user-editable meta fields ──
     const pdfMenuName = (document.getElementById('pdf-menu-name')?.value || '').trim() || pdfTargetMepCode;
@@ -5036,8 +5057,9 @@ async function confirmPdfImport() {
       saison      : "All Year",
       zutaten     : JSON.stringify(zutaten),
       zubereitung : zubereitungLine,
-      wa          : "",
-      vk          : pdfMenuVk,
+      wa          : mi.warenaufwand || "",
+      vk          : pdfMenuVk || mi.verkaufspreis || "",
+      gewicht     : mi.gewicht || "",
       lastUpdate  : new Date().toISOString()
     };
 
