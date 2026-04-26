@@ -1573,6 +1573,40 @@ window.onerror = function(msg, src, line, col) {
 
         <!-- Preview area -->
         <div id="pdf-preview" style="display:none;margin-top:16px">
+          <!-- Menu meta fields — editable before save -->
+          <div style="background:var(--surface2);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px">
+            <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);margin-bottom:10px">📋 Menu Info — verify before saving</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="form-label">Menu Name *</label>
+                <input class="form-input" id="pdf-menu-name" placeholder="e.g. Beef & Zen">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Category (Konzept)</label>
+                <input class="form-input" id="pdf-menu-category" placeholder="e.g. Wok, Sushi…" list="mp-cat-list">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Art</label>
+                <select class="form-input" id="pdf-menu-art">
+                  <option value="Hauptgang">Hauptgang</option>
+                  <option value="Starter">Starter</option>
+                  <option value="Noodle">Noodle</option>
+                  <option value="Fried Rice">Fried Rice</option>
+                  <option value="Soup">Soup</option>
+                  <option value="Sushi">Sushi</option>
+                  <option value="Bowl">Bowl</option>
+                  <option value="Dessert">Dessert</option>
+                  <option value="Specials">Specials</option>
+                  <option value="MEP">MEP</option>
+                  <option value="Grundrezeptur">Grundrezeptur</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">VK (CHF)</label>
+                <input class="form-input" type="number" id="pdf-menu-vk" placeholder="29.90" step="0.05">
+              </div>
+            </div>
+          </div>
           <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
             Parsed Ingredients — review before saving
           </div>
@@ -4525,6 +4559,15 @@ adminMsg("pdf-msg", "Analyzing with Claude Vision…", "");
       code : ing.code || ""
     }));
     _autoMatchIngredients();
+    // Pre-fill menu info fields
+    const nameEl = document.getElementById('pdf-menu-name');
+    const catEl  = document.getElementById('pdf-menu-category');
+    const artEl  = document.getElementById('pdf-menu-art');
+    const vkEl   = document.getElementById('pdf-menu-vk');
+    if (nameEl) nameEl.value = menuCode; // manager corrects this
+    if (catEl)  catEl.value  = '';
+    if (artEl)  artEl.value  = mode === 'menu' ? 'Hauptgang' : 'MEP';
+    if (vkEl)   vkEl.value   = '';
     renderPdfPreview(mode, null);
 
     const saveBtn = document.querySelector("#pdf-preview .btn-save");
@@ -4960,19 +5003,25 @@ async function confirmPdfImport() {
       .join(", ");
     const zubereitungLine = allergens ? `Deklaration: ${allergens}` : "";
 
+    // ── Read user-editable meta fields ──
+    const pdfMenuName = (document.getElementById('pdf-menu-name')?.value || '').trim() || pdfTargetMepCode;
+    const pdfMenuCat  = (document.getElementById('pdf-menu-category')?.value || '').trim();
+    const pdfMenuArt  = document.getElementById('pdf-menu-art')?.value || (mode === 'menu' ? 'Hauptgang' : 'MEP');
+    const pdfMenuVk   = document.getElementById('pdf-menu-vk')?.value || '';
+
     // ── Save as a Menu entry (Menus sheet) so it appears in Recipes tab ──
     const menuPayload = {
       action      : "saveMenu",
-      menuId      : "",                        // new entry
-      name        : pdfTargetMepCode,          // use the code as name (manager can edit later)
+      menuId      : "",
+      name        : pdfMenuName,
       menuCode    : pdfTargetMepCode,
-      category    : mode === "menu" ? "Menu Card" : "Recipe",
-      art         : mode === "menu" ? "Hauptgang" : "MEP",
+      category    : pdfMenuCat,
+      art         : pdfMenuArt,
       saison      : "All Year",
       zutaten     : JSON.stringify(zutaten),
       zubereitung : zubereitungLine,
       wa          : "",
-      vk          : "",
+      vk          : pdfMenuVk,
       lastUpdate  : new Date().toISOString()
     };
 
@@ -4997,7 +5046,7 @@ async function confirmPdfImport() {
       "ok");
 
     // ── capture name before cancelPdfImport clears it ──
-    const savedMenuName = pdfTargetMepCode;
+    const savedMenuName = (document.getElementById('pdf-menu-name')?.value || '').trim() || pdfTargetMepCode;
     cancelPdfImport();
 
     // Reload menus and navigate to Recipes tab
