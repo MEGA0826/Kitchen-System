@@ -4996,6 +4996,8 @@ async function confirmPdfImport() {
       `✓ Saved to Recipes tab as "${pdfTargetMepCode}" · ${savedCount} new item${savedCount!==1?"s":""}${matchedCount?" · "+matchedCount+" linked":""}`,
       "ok");
 
+    // ── capture name before cancelPdfImport clears it ──
+    const savedMenuName = pdfTargetMepCode;
     cancelPdfImport();
 
     // Reload menus and navigate to Recipes tab
@@ -5005,7 +5007,10 @@ async function confirmPdfImport() {
     if (recipesBtn) {
       switchTab(recipesBtn);
       const menuSearch = document.getElementById("menu-search");
-      if (menuSearch) { menuSearch.value = pdfTargetMepCode; renderMenuList(); }
+      if (menuSearch) {
+        menuSearch.value = savedMenuName;
+        renderMenuList();
+      }
     }
 
   } catch(err) {
