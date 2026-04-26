@@ -4177,15 +4177,19 @@ function filterEpfRmSearch() {
     el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 6px">No results for "${q}"</div>`;
     return;
   }
-  el.innerHTML = filtered.slice(0, 40).map(r => `
-    <div onclick="selectEpfRm('${r.code}','${(r.name||r.code).replace(/'/g,"\\'").replace(/"/g,'\\"')}','${r.unit||'kg'}')"
+  el.innerHTML = filtered.slice(0, 40).map(r => {
+    const sc = (r.code||'').replace(/"/g,'&quot;');
+    const sn = (r.name||r.code||'').replace(/"/g,'&quot;');
+    const su = (r.unit||'kg').replace(/"/g,'&quot;');
+    return `<div class="epf-rm-pick-row" data-code="${sc}" data-name="${sn}" data-unit="${su}"
       style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;border:1px solid transparent"
       onmouseover="this.style.background='var(--surface2)';this.style.borderColor='var(--blue-brd)'"
       onmouseout="this.style.background='';this.style.borderColor='transparent'">
       <span style="font-weight:500;flex:1">${r.name||r.code}</span>
       <span style="font-size:10px;color:var(--muted)">${r.code}</span>
       ${r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(r.kostenUnit).toFixed(2)}/kg</span>` : ""}
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 function selectEpfRm(code, name, unit) {
@@ -4637,13 +4641,23 @@ async function extractPdfText(arrayBuffer) {
 
   let _pdfRenderTimer = null;
   document.addEventListener('click', function(e) {
+  // PDF suggestion pills
   const pill = e.target.closest('.pdf-sug-pill');
-  if (!pill) return;
-  const idx  = parseInt(pill.dataset.idx);
-  const code = pill.dataset.code;
-  const type = pill.dataset.type;
-  const name = pill.dataset.name;
-  pdfSelectSuggestion(idx, code, type, name);
+  if (pill) { pdfSelectSuggestion(parseInt(pill.dataset.idx), pill.dataset.code, pill.dataset.type, pill.dataset.name); return; }
+  // GR list buttons
+  const editBtn = e.target.closest('.gr-edit-btn');
+  if (editBtn) { openEditGRPopup(editBtn.dataset.code); return; }
+  const delBtn = e.target.closest('.gr-del-btn');
+  if (delBtn) { deleteGR(delBtn.dataset.code, delBtn.dataset.name); return; }
+  // EPF RM picker rows
+  const epfRow = e.target.closest('.epf-rm-pick-row');
+  if (epfRow) { selectEpfRm(epfRow.dataset.code, epfRow.dataset.name, epfRow.dataset.unit); return; }
+  // Ingredient picker rows (MEP/RM)
+  const ingRow = e.target.closest('.ing-pick-row');
+  if (ingRow) { selectIngredientItem(ingRow.dataset.code, ingRow.dataset.name, ingRow.dataset.unit, ingRow.dataset.cost); return; }
+  // GR picker rows
+  const grRow = e.target.closest('.gr-pick-row');
+  if (grRow) { selectIngredientItem(grRow.dataset.code, grRow.dataset.name, grRow.dataset.unit, grRow.dataset.cost); return; }
 });
 function debouncedPdfPreview() {
   clearTimeout(_pdfRenderTimer);
@@ -6457,14 +6471,18 @@ function filterIngredientPicker() {
   const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : items;
   const el = document.getElementById('ip-list');
   if (!filtered.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine Ergebnisse.</div>`; return; }
-  el.innerHTML = filtered.slice(0,40).map(i => `
-    <div onclick="selectIngredientItem('${i.code}','${(i.name||'').replace(/'/g,"\\'").replace(/"/g,'\\"')}','${i.unit||''}',${i.unitCost||0})"
+  el.innerHTML = filtered.slice(0,40).map(i => {
+    const sc = (i.code||'').replace(/"/g,'&quot;');
+    const sn = (i.name||'').replace(/"/g,'&quot;');
+    const su = (i.unit||'').replace(/"/g,'&quot;');
+    return `<div class="ing-pick-row" data-code="${sc}" data-name="${sn}" data-unit="${su}" data-cost="${i.unitCost||0}"
       style="padding:8px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);border:1px solid transparent"
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
       ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/kg</span>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function selectIngredientItem(code, name, unit, unitCost) {
@@ -6611,15 +6629,19 @@ function filterGrPicker() {
     el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine GR gefunden. Erstelle zuerst eine GR.</div>`;
     return;
   }
-  el.innerHTML = filtered.slice(0,40).map(i => `
-    <div onclick="selectIngredientItem('${i.code}','${(i.name||'').replace(/'/g,"\\'").replace(/"/g,'\\"')}','${i.unit||''}',${parseFloat(i.unitCost)||0})"
+  el.innerHTML = filtered.slice(0,40).map(i => {
+    const sc = (i.code||'').replace(/"/g,'&quot;');
+    const sn = (i.name||'').replace(/"/g,'&quot;');
+    const su = (i.unit||'').replace(/"/g,'&quot;');
+    return `<div class="gr-pick-row" data-code="${sc}" data-name="${sn}" data-unit="${su}" data-cost="${parseFloat(i.unitCost)||0}"
       style="padding:8px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);border:1px solid transparent"
       onmouseover="this.style.borderColor='var(--green-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);margin-right:6px">GR</span>
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
       ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/kg</span>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function selectGrItem(code, name, unitCost, source, netto) {
