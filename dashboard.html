@@ -6371,7 +6371,7 @@ function editMenuZutat(i) {
   }, 80);
 }
 
-function editGrZutat
+function editGrZutat(i) {
   const z = agrZutaten[i];
   if (!z) return;
   _ipEditIdx = i;
@@ -6385,6 +6385,8 @@ function editGrZutat
     document.getElementById('ip-zubereitung-note').value    = z.zubereitung || '';
     const ipG = document.getElementById('ip-garverlust');
     if (ipG) ipG.value = z.garverlust || '';
+    const ipD = document.getElementById('ip-is-deko');
+    if (ipD) ipD.checked = z.isDeko || false;
     calcIpCost(); calcIpWA();
   }, 80);
 }
