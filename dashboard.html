@@ -2839,15 +2839,26 @@ async function saveProduct() {
     const gnWeight  = document.getElementById("pf-gnweight").value.trim();
     const tagesziel = document.getElementById("pf-tagesziel").value.trim();
     const shelf     = document.getElementById("pf-shelf").value.trim();
+    // Auto-calc WA from RM ingredients
+    const _rms = allRecipes.filter(r => r.mepCode === code);
+    let _waPerGN = 0;
+    _rms.forEach(r => {
+      const _inv = allInventory.find(x => x.code === r.rmCode);
+      const _wu  = parseFloat(_inv?.weightUnit) || 1;
+      _waPerGN  += (parseFloat(r.menge) || 0) * ((parseFloat(_inv?.kostenUnit) || 0) / _wu);
+    });
+
     const payload = {
-      action    : "saveProduct", code, name,
-      kategorie : document.getElementById("pf-kategorie").value.trim(),
+      action    : "saveProduct",
+      code, name,
+      kategorie : v("epf-kategorie"),
       mepMax    : mepMax    === "" ? "" : Number(mepMax),
-      gnSize    : document.getElementById("pf-gnsize").value.trim(),
+      gnSize    : v("epf-gnsize"),
       gnWeight  : gnWeight  === "" ? "" : Number(gnWeight),
       tagesziel : tagesziel === "" ? "" : Number(tagesziel),
       shelfLife : shelf     === "" ? "" : Number(shelf),
-      driveLink : document.getElementById("pf-drive").value.trim(),
+      driveLink : v("epf-drive"),
+      wa        : _waPerGN > 0 ? +_waPerGN.toFixed(4) : "",
     };
     const data = await adminCall(payload);
     if (!data) throw new Error("No response from server");
