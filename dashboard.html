@@ -6906,7 +6906,6 @@ function buildMenuPdfHtml(m) {
   </div>`;
 }
 
-let _pdfRenderTimer = null;
 document.addEventListener('click', function(e) {
   const pill = e.target.closest('.pdf-sug-pill');
   if (pill) { pdfSelectSuggestion(parseInt(pill.dataset.idx), pill.dataset.code, pill.dataset.type, pill.dataset.name); return; }
