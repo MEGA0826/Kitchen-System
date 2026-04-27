@@ -6157,7 +6157,7 @@ function filterGrDisplay() {
   if (!q) { el.innerHTML = ""; return; }
   const results = allGRs.filter(g => (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q));
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
-  el.innerHTML = results.slice(0,10).map(g => {
+el.innerHTML = results.slice(0,10).map(g => {
     const safeCode = (g.grCode||'').replace(/"/g,'&quot;');
     const safeName = (g.name||g.grCode||'').replace(/"/g,'&quot;');
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
@@ -6169,6 +6169,7 @@ function filterGrDisplay() {
       <button type="button" class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
   }).join("");
+}
 
 function filterMepDisplay() {
   const q = (document.getElementById("mep-filter-search")?.value || "").toLowerCase();
@@ -6920,6 +6921,10 @@ document.addEventListener('click', function(e) {
   const grRow = e.target.closest('.gr-pick-row');
   if (grRow) { selectIngredientItem(grRow.dataset.code, grRow.dataset.name, grRow.dataset.unit, grRow.dataset.cost); return; }
 });
+function debouncedPdfPreview() {
+  clearTimeout(_pdfRenderTimer);
+  _pdfRenderTimer = setTimeout(() => renderPdfPreview(window._pdfMode), 400);
+}
 
 </script>
   
