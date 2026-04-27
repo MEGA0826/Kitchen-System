@@ -6533,7 +6533,18 @@ function filterIngredientPicker() {
   const items = ipMode === 'mep'
     ? Object.entries(allProducts)
         .filter(([,p]) => p.name && p.name !== '(deleted)')
-        .map(([code,p]) => ({ code, name: p.name, unitCost: 0 }))
+        .map(([code,p]) => {
+          const kgPerGN = parseFloat(p.gnWeight) || 1;
+          let waPerGN = parseFloat(p.wa) || 0;
+          if (!waPerGN) {
+            allRecipes.filter(r => r.mepCode === code).forEach(r => {
+              const inv = allInventory.find(x => x.code === r.rmCode);
+              const wu  = parseFloat(inv?.weightUnit) || 1;
+              waPerGN += (parseFloat(r.menge) || 0) * ((parseFloat(inv?.kostenUnit) || 0) / wu);
+            });
+          }
+          return { code, name: p.name, unitCost: kgPerGN > 0 ? waPerGN / kgPerGN : waPerGN };
+        })
     : ipMode === 'gr'
     ? (allGRs || []).map(g => ({ code: g.grCode||g.id, name: g.name||g.grCode, unitCost: parseFloat(g.wa)||0 }))
     : allInventory.filter(r => r.code)
