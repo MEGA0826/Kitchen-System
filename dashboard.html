@@ -6905,6 +6905,22 @@ function buildMenuPdfHtml(m) {
   </div>`;
 }
 
+let _pdfRenderTimer = null;
+document.addEventListener('click', function(e) {
+  const pill = e.target.closest('.pdf-sug-pill');
+  if (pill) { pdfSelectSuggestion(parseInt(pill.dataset.idx), pill.dataset.code, pill.dataset.type, pill.dataset.name); return; }
+  const editBtn = e.target.closest('.gr-edit-btn');
+  if (editBtn) { openEditGRPopup(editBtn.dataset.code); return; }
+  const delBtn = e.target.closest('.gr-del-btn');
+  if (delBtn) { deleteGR(delBtn.dataset.code, delBtn.dataset.name); return; }
+  const epfRow = e.target.closest('.epf-rm-pick-row');
+  if (epfRow) { selectEpfRm(epfRow.dataset.code, epfRow.dataset.name, epfRow.dataset.unit); return; }
+  const ingRow = e.target.closest('.ing-pick-row');
+  if (ingRow) { selectIngredientItem(ingRow.dataset.code, ingRow.dataset.name, ingRow.dataset.unit, ingRow.dataset.cost); return; }
+  const grRow = e.target.closest('.gr-pick-row');
+  if (grRow) { selectIngredientItem(grRow.dataset.code, grRow.dataset.name, grRow.dataset.unit, grRow.dataset.cost); return; }
+});
+
 </script>
   
 <!-- Edit Modals -->
