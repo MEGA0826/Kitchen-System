@@ -2874,6 +2874,7 @@ async function delProduct(code) {
   if (data.error) { alert("Error: "+data.error); return; }
   await loadProducts();
   renderAdminProducts();
+  filterMepDisplay();
 }
 
 // Auto-fill product name from code
