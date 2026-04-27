@@ -2573,6 +2573,7 @@ function populateProductCategories() {
   const cats = [...new Set(Object.values(allProducts).map(p => p.kategorie).filter(Boolean))].sort();
   const sel = document.getElementById('prodCatFilter');
   if (!sel) return;
+  const current = sel.value;
   sel.innerHTML = '<option value="">-- Kategorie wählen --</option>';
   cats.forEach(c => {
     const opt = document.createElement('option');
@@ -2580,6 +2581,7 @@ function populateProductCategories() {
     opt.textContent = c;
     sel.appendChild(opt);
   });
+  if (current) sel.value = current;
 }
 
 function filterProducts() {
