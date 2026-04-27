@@ -4641,22 +4641,14 @@ async function extractPdfText(arrayBuffer) {
     c2.getContext("2d").drawImage(canvas, 0, 0, c2.width, c2.height);
     base64 = c2.toDataURL("image/jpeg", 0.35).split(",")[1];
   }
-  return "__VISION__" + base64;
+return "__VISION__" + base64;
 }
 
 let _pdfRenderTimer = null;
-  document.addEventListener('click', function(e) {
-    // PDF suggestion pills
-    const pill = e.target.closest('.pdf-sug-pill');
-    if (pill) {
-      pdfSelectSuggestion(
-        parseInt(pill.dataset.idx),
-        pill.dataset.code,
-        pill.dataset.type,
-        pill.dataset.name
-      );
-    }
-  });
+document.addEventListener('click', function(e) {
+  // PDF suggestion pills
+  const pill = e.target.closest('.pdf-sug-pill');
+  if (pill) { pdfSelectSuggestion(parseInt(pill.dataset.idx), pill.dataset.code, pill.dataset.type, pill.dataset.name); return; }
   // GR list buttons
   const editBtn = e.target.closest('.gr-edit-btn');
   if (editBtn) { openEditGRPopup(editBtn.dataset.code); return; }
