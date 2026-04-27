@@ -4644,11 +4644,19 @@ async function extractPdfText(arrayBuffer) {
   return "__VISION__" + base64;
 }
 
-  let _pdfRenderTimer = null;
+let _pdfRenderTimer = null;
   document.addEventListener('click', function(e) {
-  // PDF suggestion pills
-  const pill = e.target.closest('.pdf-sug-pill');
-  if (pill) { pdfSelectSuggestion(parseInt(pill.dataset.idx), pill.dataset.code, pill.dataset.type, pill.dataset.name); return; }
+    // PDF suggestion pills
+    const pill = e.target.closest('.pdf-sug-pill');
+    if (pill) {
+      pdfSelectSuggestion(
+        parseInt(pill.dataset.idx),
+        pill.dataset.code,
+        pill.dataset.type,
+        pill.dataset.name
+      );
+    }
+  });
   // GR list buttons
   const editBtn = e.target.closest('.gr-edit-btn');
   if (editBtn) { openEditGRPopup(editBtn.dataset.code); return; }
