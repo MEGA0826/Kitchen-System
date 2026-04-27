@@ -6565,6 +6565,16 @@ function selectIngredientItem(code, name, unit, unitCost) {
     if (!waPerGN) {
       waPerGN = parseFloat(mepProd.wa || mepProd.waPerGN || 0);
     }
+    if (!waPerGN) {
+      // Fallback: find WA from linked menu entry
+      const linkedMenu = allMenus.find(m => (m.menuCode || m.id) === code);
+      if (linkedMenu) waPerGN = parseFloat(linkedMenu.wa || 0);
+    }
+    if (!waPerGN && kgPerGN > 0) {
+      // Fallback: use unitCost from inventory if RM linked
+      const inv = allInventory.find(x => x.code === code);
+      if (inv) waPerGN = (parseFloat(inv.kostenUnit || 0) / (parseFloat(inv.weightUnit) || 1)) * kgPerGN;
+    }
     // Convert to CHF/kg so user enters kg and gets correct cost
     resolvedCost = kgPerGN > 0 ? waPerGN / kgPerGN : waPerGN;
   }
