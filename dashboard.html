@@ -6557,7 +6557,7 @@ function filterIngredientPicker() {
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
-      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/${i.unit||'kg'}</span>` : ''}
+      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}${ipMode==='rm'||ipMode==='RM' ? '/'+( i.unit||'unit') : ipMode==='mep'||ipMode==='MEP' ? '/GN' : ''}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -6728,7 +6728,7 @@ function filterGrPicker() {
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);margin-right:6px">GR</span>
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
-      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/${i.unit||'kg'}</span>` : ''}
+      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}${ipMode==='rm'||ipMode==='RM' ? '/'+( i.unit||'unit') : ipMode==='mep'||ipMode==='MEP' ? '/GN' : ''}</span>` : ''}
     </div>`;
   }).join('');
 }
