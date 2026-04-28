@@ -6544,7 +6544,7 @@ function filterIngredientPicker() {
     : ipMode === 'gr'
     ? (allGRs || []).map(g => ({ code: g.grCode||g.id, name: g.name||g.grCode, unitCost: parseFloat(g.wa)||0 }))
     : allInventory.filter(r => r.code)
-        .map(r => { const wu = parseFloat(r.weightUnit)||1; return { code: r.code, name: r.name||r.code, unit: r.unit, unitCost: (parseFloat(r.kostenUnit||r.kosten||0)||0)/wu }; });
+        .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit||'kg', unitCost: parseFloat(r.kostenUnit||r.kosten||0)||0 }));
   const filtered = q ? items.filter(i => (i.name||'').toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q)) : items;
   const el = document.getElementById('ip-list');
   if (!filtered.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine Ergebnisse.</div>`; return; }
@@ -6557,7 +6557,7 @@ function filterIngredientPicker() {
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
-      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}${i._isPerGN?'/GN':'/kg'}</span>` : ''}
+      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/${i.unit||'kg'}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -6728,7 +6728,7 @@ function filterGrPicker() {
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);margin-right:6px">GR</span>
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
-      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/kg</span>` : ''}
+      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}/${i.unit||'kg'}</span>` : ''}
     </div>`;
   }).join('');
 }
