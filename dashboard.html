@@ -897,9 +897,7 @@ window.onerror = function(msg, src, line, col) {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <label class="form-label" style="margin:0">🧂 Zutaten</label>
           <div style="display:flex;gap:6px">
-            <button onclick="openIngredientPicker('mep')" style="padding:5px 10px;border-radius:7px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:11px;cursor:pointer;font-weight:600">＋ MEP</button>
-            <button onclick="openIngredientPicker('rm')"  style="padding:5px 10px;border-radius:7px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);font-size:11px;cursor:pointer;font-weight:600">＋ RM</button>
-            <button onclick="openGrPopup()"               style="padding:5px 10px;border-radius:7px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;cursor:pointer;font-weight:600">＋ GR</button>
+            <button onclick="openIngredientPicker('rm')" style="padding:5px 10px;border-radius:7px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);font-size:11px;cursor:pointer;font-weight:600">＋ Add</button>
           </div>
         </div>
         <div id="mp-zutaten-list" style="display:flex;flex-direction:column;gap:5px;min-height:28px">
@@ -1067,9 +1065,8 @@ window.onerror = function(msg, src, line, col) {
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <label class="form-label" style="margin:0">🧂 Zutaten</label>
-          <div style="display:flex;gap:6px">
-            <button onclick="openIngredientPicker('mep','agr')" style="padding:5px 10px;border-radius:7px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:11px;cursor:pointer;font-weight:600">＋ MEP</button>
-            <button onclick="openIngredientPicker('rm','agr')"  style="padding:5px 10px;border-radius:7px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);font-size:11px;cursor:pointer;font-weight:600">＋ RM</button>
+        <div style="display:flex;gap:6px">
+            <button onclick="openIngredientPicker('rm','agr')" style="padding:5px 10px;border-radius:7px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);font-size:11px;cursor:pointer;font-weight:600">＋ Add</button>
           </div>
         </div>
         <div id="agr-zutaten-list" style="display:flex;flex-direction:column;gap:5px;min-height:24px">
@@ -7120,7 +7117,7 @@ function debouncedPdfPreview() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <label class="form-label" style="margin:0">🧂 Raw Materials (RM)</label>
           <button type="button" onclick="openIngredientPicker('rm','mep-add')"
-            style="padding:5px 10px;border-radius:7px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);font-size:11px;cursor:pointer;font-weight:600">＋ RM</button>
+            style="padding:5px 10px;border-radius:7px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);font-size:11px;cursor:pointer;font-weight:600">＋ Add</button>
         </div>
         <div id="mep-add-zutaten-list" style="display:flex;flex-direction:column;gap:4px;min-height:24px">
           <div style="font-size:12px;color:var(--muted);font-style:italic" data-i18n="no-ingredients">No ingredients yet</div>
