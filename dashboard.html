@@ -7920,6 +7920,15 @@ function rExplode(type,code,name,mult,vis){
   return{type:type,code:code,name:name,weight:mult,children:z.map(function(zi){return rExplode(zi.type||'rm',zi.code,zi.name||zi.code,(parseFloat(zi.gewicht||zi.menge)||0)*mult,v2);})};
 }
 function rFlatRM(node,acc){acc=acc||{};if(node.type==='rm'){if(!acc[node.code])acc[node.code]={code:node.code,name:node.name,total:0};acc[node.code].total+=node.weight;}(node.children||[]).forEach(function(c){rFlatRM(c,acc);});return acc;}
+function rNodeCost(node){
+  if(node.type==='rm'){
+    var inv=(window.allInventory||[]).find(function(x){return x.code===node.code;})||{};
+    var wu=parseFloat(inv.weightUnit)||1;
+    var ppu=(parseFloat(inv.kostenUnit||0)||0)/wu;
+    return node.weight*ppu;
+  }
+  return (node.children||[]).reduce(function(s,c){return s+rNodeCost(c);},0);
+}
 function rCalc(){
   var body=$('rtBBody'),sum=$('rtBSum');if(!body||!rCM.length)return;body.innerHTML='';
   var allRM={},tRM=0,tMEP=0,tGR=0;var tree=document.createElement('div');
@@ -7939,8 +7948,9 @@ function rCalc(){
   body.appendChild(tree);
   if(sum){
     sum.style.display='flex';
-    $('rtBSG').innerHTML=['rm','mep','gr'].map(function(t){var v=t==='rm'?tRM:t==='mep'?tMEP:tGR,d=v>=1?v.toFixed(2):Math.round(v*1000),u=v>=1?'kg':'g';return'<div class="rtbscard"><div class="rtbst '+t+'">'+t.toUpperCase()+'</div><div class="rtbsv">'+d+'</div><div class="rtbsu">'+u+'</div></div>';}).join('');
-    var rl=$('rtRML');if(rl)rl.innerHTML=Object.values(allRM).sort(function(a,b){return b.total-a.total;}).map(function(rm){return'<div class="rtrmfrow"><span class="rtrmfnm">'+rm.name+'</span><span class="rtrmfcd">'+rm.code+'</span><span class="rtrmfwt">'+fmtW(rm.total)+'</span></div>';}).join('');
+    var tCHF=0;Object.values(allRM).forEach(function(rm){var inv=(window.allInventory||[]).find(function(x){return x.code===rm.code;})||{};var wu=parseFloat(inv.weightUnit)||1;tCHF+=rm.total*((parseFloat(inv.kostenUnit||0)||0)/wu);});
+    $('rtBSG').innerHTML=['rm','mep','gr'].map(function(t){var v=t==='rm'?tRM:t==='mep'?tMEP:tGR,d=v>=1?v.toFixed(2):Math.round(v*1000),u=v>=1?'kg':'g';return'<div class="rtbscard"><div class="rtbst '+t+'">'+t.toUpperCase()+'</div><div class="rtbsv">'+d+'</div><div class="rtbsu">'+u+'</div></div>';}).join('')+(tCHF>0?'<div class="rtbscard" style="border-color:#34d399"><div class="rtbst mep">CHF</div><div class="rtbsv" style="color:#34d399">'+tCHF.toFixed(2)+'</div><div class="rtbsu">total</div></div>':'');
+    var rl=$('rtRML');if(rl)rl.innerHTML=Object.values(allRM).sort(function(a,b){return b.total-a.total;}).map(function(rm){var inv=(window.allInventory||[]).find(function(x){return x.code===rm.code;})||{};var wu=parseFloat(inv.weightUnit)||1;var cost=rm.total*((parseFloat(inv.kostenUnit||0)||0)/wu);return'<div class="rtrmfrow"><span class="rtrmfnm">'+rm.name+'</span><span class="rtrmfcd">'+rm.code+'</span><span class="rtrmfwt">'+fmtW(rm.total)+'</span>'+(cost>0?'<span style="color:#34d399;font-family:DM Mono,monospace;font-size:10px;min-width:56px;text-align:right">CHF '+cost.toFixed(2)+'</span>':'')+'</div>';}).join('');
     $('rtBTTL').textContent='Stückliste — '+rCM.reduce(function(s,m){return s+m.qty;},0)+' Portionen';
   }
 }
