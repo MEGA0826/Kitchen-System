@@ -1785,6 +1785,7 @@ let menuZutaten   = [];
 let ipMode        = 'rm';
 let ipContext     = 'menu';
 let ipSelectedItem = null;
+let _ipMepWaPerGN = 0;
 let _ipEditIdx    = -1;  // index of zutat being edited, -1 = new add
 let editingMenuId = null;
 let _viewingMenu  = null;
@@ -6569,11 +6570,12 @@ function selectIngredientItem(code, name, unit, unitCost) {
   if (ipMode === 'rm' || ipMode === 'RM') {
     const inv = allInventory.find(x => x.code === code);
     if (inv) { const _wu = parseFloat(inv.weightUnit) || 1; resolvedCost = (parseFloat(inv.kostenUnit || inv.kosten || 0) || 0) / _wu; }
- } else if (ipMode === 'mep' || ipMode === 'MEP') {
+} else if (ipMode === 'mep' || ipMode === 'MEP') {
     // MEP cost = CHF per kg (sum of RM costs divided by total kg per GN)
     const rms = allRecipes.filter(r => r.mepCode === code);
     const mepProd = allProducts[code] || {};
-    const kgPerGN = parseFloat(mepProd.gnWeight) || 1;
+    // Read gnWeight from open modal field first (user may have just typed it), fallback to saved value
+    const kgPerGN = parseFloat(document.getElementById('epf-gnweight')?.value) || parseFloat(mepProd.gnWeight) || 0;
     let waPerGN = 0;
     rms.forEach(r => {
       const inv = allInventory.find(x => x.code === r.rmCode);
@@ -6584,18 +6586,9 @@ function selectIngredientItem(code, name, unit, unitCost) {
     if (!waPerGN) {
       waPerGN = parseFloat(mepProd.wa || mepProd.waPerGN || 0);
     }
-    if (!waPerGN) {
-      // Fallback: find WA from linked menu entry
-      const linkedMenu = allMenus.find(m => (m.menuCode || m.id) === code);
-      if (linkedMenu) waPerGN = parseFloat(linkedMenu.wa || 0);
-    }
-    if (!waPerGN && kgPerGN > 0) {
-      // Fallback: use unitCost from inventory if RM linked
-      const inv = allInventory.find(x => x.code === code);
-      if (inv) waPerGN = (parseFloat(inv.kostenUnit || 0) / (parseFloat(inv.weightUnit) || 1)) * kgPerGN;
-    }
-    // Convert to CHF/kg so user enters kg and gets correct cost
+    // Store waPerGN on item so calcIpCost can recalc if gnWeight changes
     resolvedCost = kgPerGN > 0 ? waPerGN / kgPerGN : waPerGN;
+    _ipMepWaPerGN = waPerGN;
   }
   ipSelectedItem = { code, name, unit, unitCost: resolvedCost };
   document.getElementById('ip-selected-name').textContent = name + ' (' + code + ')';
@@ -6613,6 +6606,9 @@ function calcIpCost() {
   const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
   let cost = 0;
   if (ipMode === 'mep' || ipMode === 'MEP') {
+    // Re-resolve unitCost live from current gnWeight field in case it changed
+    const kgPerGN = parseFloat(document.getElementById('epf-gnweight')?.value) || parseFloat((allProducts[ipSelectedItem.code]||{}).gnWeight) || 0;
+    if (kgPerGN > 0 && _ipMepWaPerGN > 0) ipSelectedItem.unitCost = _ipMepWaPerGN / kgPerGN;
     cost = kg * (ipSelectedItem.unitCost || 0);
   } else {
     const nettoKg = garverlust > 0 ? kg * (1 - garverlust / 100) : kg;
