@@ -6544,7 +6544,7 @@ function filterIngredientPicker() {
     : ipMode === 'gr'
     ? (allGRs || []).map(g => ({ code: g.grCode||g.id, name: g.name||g.grCode, unitCost: parseFloat(g.wa)||0 }))
     : allInventory.filter(r => r.code)
-        .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit, unitCost: parseFloat(r.kostenUnit||r.kosten||0)||0 }));
+        .map(r => { const wu = parseFloat(r.weightUnit)||1; return { code: r.code, name: r.name||r.code, unit: r.unit, unitCost: (parseFloat(r.kostenUnit||r.kosten||0)||0)/wu }; });
   const filtered = q ? items.filter(i => (i.name||'').toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q)) : items;
   const el = document.getElementById('ip-list');
   if (!filtered.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine Ergebnisse.</div>`; return; }
@@ -6607,9 +6607,12 @@ function calcIpCost() {
   if (!costEl) return;
   if (cost > 0) {
     costEl.textContent = 'CHF ' + cost.toFixed(3);
-  } else if (ipSelectedItem.unitCost > 0) {
-    // Show unit cost even before qty entered so user sees the rate
-    costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /GN (enter qty)`;
+ } else if (ipSelectedItem.unitCost > 0) {
+    if (ipMode === 'mep' || ipMode === 'MEP') {
+      costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /GN (enter qty)`;
+    } else {
+      costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /kg`;
+    }
   } else {
     costEl.textContent = '— (no recipe costs found)';
   }
