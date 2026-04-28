@@ -6639,7 +6639,15 @@ function confirmIngredient() {
   const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
   const waTotal    = garverlust > 0 ? kg / (1 - garverlust / 100) : 0;
   const chfKgNetto = (garverlust > 0 && ipSelectedItem.unitCost > 0) ? ipSelectedItem.unitCost / (1 - garverlust / 100) : 0;
-  const cost       = +(kg * (ipSelectedItem.unitCost || 0)).toFixed(3);
+  let cost = 0;
+  if (ipMode === 'mep' || ipMode === 'MEP') {
+    const mepProd = allProducts[ipSelectedItem.code] || {};
+    const kgPerGN = parseFloat(mepProd.gnWeight) || 0;
+    const gn = kgPerGN > 0 ? kg / kgPerGN : 0;
+    cost = +( gn * (_ipMepWaPerGN || ipSelectedItem.unitCost || 0) ).toFixed(3);
+  } else {
+    cost = +(kg * (ipSelectedItem.unitCost || 0)).toFixed(3);
+  }
   const zutat = {
     type        : ipMode,
     code        : ipSelectedItem.code,
