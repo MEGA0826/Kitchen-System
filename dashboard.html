@@ -6532,16 +6532,14 @@ function filterIngredientPicker() {
     ? Object.entries(allProducts)
         .filter(([,p]) => p.name && p.name !== '(deleted)')
         .map(([code,p]) => {
-          const kgPerGN = parseFloat(p.gnWeight) || 1;
-          let waPerGN = parseFloat(p.wa) || 0;
-          if (!waPerGN) {
-            allRecipes.filter(r => r.mepCode === code).forEach(r => {
-              const inv = allInventory.find(x => x.code === r.rmCode);
-              const wu  = parseFloat(inv?.weightUnit) || 1;
-              waPerGN += (parseFloat(r.menge) || 0) * ((parseFloat(inv?.kostenUnit) || 0) / wu);
-            });
-          }
-          return { code, name: p.name, unitCost: kgPerGN > 0 ? waPerGN / kgPerGN : waPerGN };
+          let waPerGN = 0;
+          allRecipes.filter(r => r.mepCode === code).forEach(r => {
+            const inv = allInventory.find(x => x.code === r.rmCode) || {};
+            const wu  = parseFloat(inv.weightUnit) || 1;
+            waPerGN += (parseFloat(r.menge) || 0) * ((parseFloat(inv.kostenUnit) || 0) / wu);
+          });
+          if (!waPerGN) waPerGN = parseFloat(p.wa) || 0;
+          return { code, name: p.name, unitCost: waPerGN, _isPerGN: true };
         })
     : ipMode === 'gr'
     ? (allGRs || []).map(g => ({ code: g.grCode||g.id, name: g.name||g.grCode, unitCost: parseFloat(g.wa)||0 }))
@@ -6554,12 +6552,12 @@ function filterIngredientPicker() {
     const sc = (i.code||'').replace(/"/g,'&quot;');
     const sn = (i.name||'').replace(/"/g,'&quot;');
     const su = (i.unit||'').replace(/"/g,'&quot;');
-    return `<div class="ing-pick-row" data-code="${sc}" data-name="${sn}" data-unit="${su}" data-cost="${i.unitCost||0}"
+    return `<div class="ing-pick-row" data-code="${sc}" data-name="${sn}" data-unit="${su}" data-cost="${i.unitCost||0}" data-pergn="${i._isPerGN?'1':'0'}"
       style="padding:8px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);border:1px solid transparent"
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-weight:500">${i.name}</span>
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
-      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}</span>` : ''}
+      ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}${i._isPerGN?'/GN':'/kg'}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -6571,24 +6569,17 @@ function selectIngredientItem(code, name, unit, unitCost) {
     const inv = allInventory.find(x => x.code === code);
     if (inv) { const _wu = parseFloat(inv.weightUnit) || 1; resolvedCost = (parseFloat(inv.kostenUnit || inv.kosten || 0) || 0) / _wu; }
 } else if (ipMode === 'mep' || ipMode === 'MEP') {
-    // MEP cost = CHF per kg (sum of RM costs divided by total kg per GN)
-    const rms = allRecipes.filter(r => r.mepCode === code);
+    // waPerGN = CHF per GN, computed from RM recipes — no gnWeight needed
     const mepProd = allProducts[code] || {};
-    // Read gnWeight from open modal field first (user may have just typed it), fallback to saved value
-    const kgPerGN = parseFloat(document.getElementById('epf-gnweight')?.value) || parseFloat(mepProd.gnWeight) || 0;
     let waPerGN = 0;
-    rms.forEach(r => {
-      const inv = allInventory.find(x => x.code === r.rmCode);
-      const _wu = parseFloat(inv?.weightUnit) || 1;
-      const pricePerKg = inv ? (parseFloat(inv.kostenUnit || 0) / _wu) : 0;
-      waPerGN += (parseFloat(r.menge) || 0) * pricePerKg;
+    allRecipes.filter(r => r.mepCode === code).forEach(r => {
+      const inv = allInventory.find(x => x.code === r.rmCode) || {};
+      const _wu = parseFloat(inv.weightUnit) || 1;
+      waPerGN += (parseFloat(r.menge) || 0) * ((parseFloat(inv.kostenUnit || 0)) / _wu);
     });
-    if (!waPerGN) {
-      waPerGN = parseFloat(mepProd.wa || mepProd.waPerGN || 0);
-    }
-    // Store waPerGN on item so calcIpCost can recalc if gnWeight changes
-    resolvedCost = kgPerGN > 0 ? waPerGN / kgPerGN : waPerGN;
+    if (!waPerGN) waPerGN = parseFloat(mepProd.wa || 0);
     _ipMepWaPerGN = waPerGN;
+    resolvedCost = waPerGN; // CHF/GN — qty field = number of GN
   }
   ipSelectedItem = { code, name, unit, unitCost: resolvedCost };
   document.getElementById('ip-selected-name').textContent = name + ' (' + code + ')';
@@ -6606,10 +6597,8 @@ function calcIpCost() {
   const garverlust = parseFloat(document.getElementById('ip-garverlust')?.value) || 0;
   let cost = 0;
   if (ipMode === 'mep' || ipMode === 'MEP') {
-    // Re-resolve unitCost live from current gnWeight field in case it changed
-    const kgPerGN = parseFloat(document.getElementById('epf-gnweight')?.value) || parseFloat((allProducts[ipSelectedItem.code]||{}).gnWeight) || 0;
-    if (kgPerGN > 0 && _ipMepWaPerGN > 0) ipSelectedItem.unitCost = _ipMepWaPerGN / kgPerGN;
-    cost = kg * (ipSelectedItem.unitCost || 0);
+    // unitCost = CHF/GN, kg field here = number of GN
+    cost = kg * (_ipMepWaPerGN || ipSelectedItem.unitCost || 0);
   } else {
     const nettoKg = garverlust > 0 ? kg * (1 - garverlust / 100) : kg;
     cost = nettoKg * (ipSelectedItem.unitCost || 0);
