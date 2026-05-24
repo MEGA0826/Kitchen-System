@@ -1170,26 +1170,53 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
   </div>
 
   <!-- UPGRADE MODAL -->
-  <div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeUpgradeModal()">
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);max-width:420px;width:100%;padding:28px">
+  <div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)" onclick="if(event.target===this)closeUpgradeModal()">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);max-width:420px;width:100%;padding:28px;max-height:90vh;overflow-y:auto">
+      <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
         <div style="font-family:var(--serif);font-size:20px">Upgrade to Pro</div>
-        <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+        <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
       </div>
-      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
-        <div style="font-size:22px;font-weight:500;color:var(--text);margin-bottom:4px">CHF 29 / month</div>
-        <div style="font-size:12px;color:var(--muted)">Billed monthly · Cancel anytime</div>
+
+      <!-- Billing toggle: Monthly / Yearly -->
+      <div style="display:flex;background:var(--surface2);border-radius:8px;padding:3px;margin-bottom:20px;gap:3px">
+        <button id="planToggleMonthly" onclick="selectBillingCycle('monthly')"
+          style="flex:1;padding:8px;border-radius:6px;border:none;font-family:var(--mono);font-size:12px;cursor:pointer;background:var(--amber);color:#000;transition:all .15s">
+          Monthly
+        </button>
+        <button id="planToggleYearly" onclick="selectBillingCycle('yearly')"
+          style="flex:1;padding:8px;border-radius:6px;border:none;font-family:var(--mono);font-size:12px;cursor:pointer;background:none;color:var(--muted);transition:all .15s">
+          Yearly <span style="font-size:10px;color:var(--green)">−17%</span>
+        </button>
       </div>
+
+      <!-- Price display -->
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-bottom:4px">
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span id="checkoutPrice" style="font-size:28px;font-weight:500;color:var(--text)">CHF 29</span>
+          <span id="checkoutPer" style="font-size:13px;color:var(--muted)">/ month</span>
+        </div>
+        <div id="checkoutSaveNote" style="display:none;font-size:11px;color:var(--green);margin-top:4px">Save CHF 58 vs monthly — 2 months free</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Cancel anytime · No hidden fees</div>
+      </div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:20px;padding:0 2px">All prices excl. VAT</div>
+
+      <!-- Features -->
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
         <div class="plan-feature">Unlimited MEP products & scanning</div>
         <div class="plan-feature">Full inventory management</div>
-        <div class="plan-feature">Reports, recipes & orders</div>
+        <div class="plan-feature">Reports & analytics</div>
+        <div class="plan-feature">Recipe & order management</div>
         <div class="plan-feature">Priority email support</div>
       </div>
-      <button class="upgrade-btn primary" onclick="startCheckout()" style="margin-bottom:10px">
+
+      <!-- CTA -->
+      <button id="checkoutBtn" class="upgrade-btn primary" onclick="startCheckout()" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">
         🔒 Secure Checkout
       </button>
-      <div style="text-align:center;font-size:11px;color:var(--muted)">Powered by Stripe · SSL encrypted</div>
+      <div style="text-align:center;font-size:11px;color:var(--muted)">
+        Powered by <strong style="color:var(--text)">Stripe</strong> · SSL encrypted · Instant activation
+      </div>
     </div>
   </div>
 
@@ -3580,48 +3607,248 @@ window.addEventListener("offline", () => { updateNetworkBanner(); showToast("You
 updateNetworkBanner();
 
 // ─────────────────────────────────────────────
+// STRIPE CONFIGURATION
+// Replace the placeholder values below with your
+// real keys from the Stripe Dashboard.
+// ─────────────────────────────────────────────
+const STRIPE_CONFIG = {
+  // Stripe Publishable Key  (pk_live_… or pk_test_…)
+  // Get it from: https://dashboard.stripe.com/apikeys
+  publishableKey: "pk_test_REPLACE_WITH_YOUR_PUBLISHABLE_KEY",
+
+  // Price IDs for each billing cycle
+  // Create products at: https://dashboard.stripe.com/products
+  prices: {
+    pro_monthly: "price_REPLACE_PRO_MONTHLY_ID",
+    pro_yearly:  "price_REPLACE_PRO_YEARLY_ID",
+  },
+
+  // Optional: direct Stripe Payment Link (fallback if session creation fails)
+  // Create at: https://dashboard.stripe.com/payment-links
+  paymentLink: "",
+
+  // Redirect URLs after checkout
+  get successUrl() {
+    return window.location.origin + window.location.pathname + "?payment=success&session_id={CHECKOUT_SESSION_ID}";
+  },
+  get cancelUrl() {
+    return window.location.origin + window.location.pathname + "?payment=cancel";
+  },
+};
+
+/*
+ * ─── GOOGLE APPS SCRIPT BACKEND TEMPLATE ──────────────────────────────────
+ * Add this function to your Apps Script (appsscript.json / Code.gs):
+ *
+ * function createStripeSession(e) {
+ *   const STRIPE_SECRET = "sk_live_REPLACE_WITH_YOUR_SECRET_KEY"; // store in PropertiesService!
+ *   const { priceId, restaurantId, successUrl, cancelUrl } = e.parameter;
+ *
+ *   const payload = {
+ *     "mode": "subscription",
+ *     "line_items[0][price]": priceId,
+ *     "line_items[0][quantity]": "1",
+ *     "success_url": successUrl,
+ *     "cancel_url": cancelUrl,
+ *     "metadata[restaurantId]": restaurantId,
+ *     "subscription_data[metadata][restaurantId]": restaurantId,
+ *     "allow_promotion_codes": "true",
+ *   };
+ *
+ *   const res = UrlFetchApp.fetch("https://api.stripe.com/v1/checkout/sessions", {
+ *     method: "post",
+ *     headers: { Authorization: "Basic " + Utilities.base64Encode(STRIPE_SECRET + ":") },
+ *     payload: payload,
+ *     muteHttpExceptions: true,
+ *   });
+ *
+ *   const json = JSON.parse(res.getContentText());
+ *   if (json.error) return { error: json.error.message };
+ *   return { url: json.url, sessionId: json.id };
+ * }
+ *
+ * Then add to your doGet() router:
+ *   if (action === "createStripeSession") return toJSON(createStripeSession(e));
+ *
+ * Security tip: store STRIPE_SECRET in PropertiesService, not in code:
+ *   PropertiesService.getScriptProperties().setProperty("STRIPE_SECRET", "sk_live_...");
+ *   const STRIPE_SECRET = PropertiesService.getScriptProperties().getProperty("STRIPE_SECRET");
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+// ─────────────────────────────────────────────
 // SUBSCRIPTION HELPERS
 // ─────────────────────────────────────────────
+let _checkoutCycle = "monthly"; // "monthly" | "yearly"
+
 function showUpgradeModal(plan) {
+  _checkoutCycle = "monthly";
+  _renderUpgradeModal();
   const modal = document.getElementById("upgradeModal");
   if (modal) modal.style.display = "flex";
 }
+
 function closeUpgradeModal() {
   const modal = document.getElementById("upgradeModal");
   if (modal) modal.style.display = "none";
 }
-function startCheckout() {
-  // TODO: integrate Stripe Checkout here
-  // Example: window.location.href = "/checkout?plan=pro&restaurantId=" + restaurantId;
-  showToast("Checkout coming soon — contact us at hello@kitchenmep.com", "info", 6000);
-  closeUpgradeModal();
+
+function selectBillingCycle(cycle) {
+  _checkoutCycle = cycle;
+  _renderUpgradeModal();
 }
+
+function _renderUpgradeModal() {
+  const isYearly = _checkoutCycle === "yearly";
+  const mBtn = document.getElementById("planToggleMonthly");
+  const yBtn = document.getElementById("planToggleYearly");
+  if (mBtn) { mBtn.style.background = isYearly ? "none" : "var(--amber)"; mBtn.style.color = isYearly ? "var(--muted)" : "#000"; }
+  if (yBtn) { yBtn.style.background = isYearly ? "var(--amber)" : "none"; yBtn.style.color = isYearly ? "#000" : "var(--muted)"; }
+  const priceEl = document.getElementById("checkoutPrice");
+  const perEl   = document.getElementById("checkoutPer");
+  const saveEl  = document.getElementById("checkoutSaveNote");
+  if (priceEl) priceEl.textContent = isYearly ? "CHF 290" : "CHF 29";
+  if (perEl)   perEl.textContent   = isYearly ? "/ year"  : "/ month";
+  if (saveEl)  saveEl.style.display = isYearly ? "block" : "none";
+}
+
+async function startCheckout() {
+  const btn = document.getElementById("checkoutBtn");
+  const origHTML = btn ? btn.innerHTML : "";
+
+  // Guard: keys not configured yet
+  if (STRIPE_CONFIG.publishableKey.includes("REPLACE")) {
+    // Fallback to Payment Link if set, otherwise show contact message
+    if (STRIPE_CONFIG.paymentLink) {
+      window.location.href = STRIPE_CONFIG.paymentLink;
+      return;
+    }
+    showToast("Payment not configured yet — contact hello@kitchenmep.com", "error", 6000);
+    return;
+  }
+
+  // Loading state
+  if (btn) { btn.innerHTML = `<span class="spin"></span> Connecting to Stripe…`; btn.disabled = true; }
+
+  try {
+    const restaurantId = _getOrCreateRestaurantId();
+    const priceKey     = "pro_" + _checkoutCycle;
+    const priceId      = STRIPE_CONFIG.prices[priceKey];
+
+    if (!priceId || priceId.includes("REPLACE")) throw new Error("Price ID not configured");
+
+    // Ask Apps Script backend to create a Stripe Checkout Session
+    const res  = await fetch(API + "?" + new URLSearchParams({
+      action:     "createStripeSession",
+      priceId,
+      restaurantId,
+      successUrl: STRIPE_CONFIG.successUrl,
+      cancelUrl:  STRIPE_CONFIG.cancelUrl,
+    }));
+    const data = await res.json();
+
+    if (data.error || !data.url) throw new Error(data.error || "No checkout URL");
+
+    // Redirect to hosted Stripe Checkout page
+    window.location.href = data.url;
+
+  } catch (err) {
+    console.error("Stripe checkout:", err);
+    // Fallback to Payment Link if set
+    if (STRIPE_CONFIG.paymentLink) {
+      window.location.href = STRIPE_CONFIG.paymentLink;
+      return;
+    }
+    showToast("Checkout unavailable — contact hello@kitchenmep.com", "error", 6000);
+    if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
+  }
+}
+
+function _getOrCreateRestaurantId() {
+  try {
+    let id = localStorage.getItem("mep_restaurant_id");
+    if (!id) {
+      id = "rest_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      localStorage.setItem("mep_restaurant_id", id);
+    }
+    return id;
+  } catch(e) { return "unknown"; }
+}
+
+// ── Handle Stripe redirect return ────────────────────────────────────────────
+function _handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get("payment");
+  if (!result) return;
+
+  // Clean URL without reloading page
+  window.history.replaceState({}, "", window.location.pathname);
+
+  if (result === "success") {
+    try { localStorage.setItem("mep_plan", "pro"); } catch(e) {}
+    _applyPlanUI("pro");
+    showToast("🎉 Welcome to Pro! Your subscription is now active.", "success", 7000);
+  } else if (result === "cancel") {
+    showToast("Checkout cancelled — your plan was not changed.", "info", 4000);
+  }
+}
+
+// ── Apply plan state to all UI elements ──────────────────────────────────────
+function _applyPlanUI(plan) {
+  const badge      = document.getElementById("planBadge");
+  const trialBanner = document.getElementById("trialBanner");
+
+  if (plan === "pro") {
+    if (badge)      { badge.textContent = "✓ Pro"; badge.className = "plan-badge pro"; }
+    if (trialBanner) trialBanner.style.display = "none";
+    // Mark Pro plan card as current
+    document.querySelectorAll(".plan-card.recommended .upgrade-btn").forEach(b => {
+      b.textContent = "✓ Current plan"; b.disabled = true; b.className = "upgrade-btn secondary";
+    });
+    // Hide "Upgrade Now" button from trial banner since plan is active
+    document.querySelectorAll("[onclick='showUpgradeModal()']").forEach(b => b.style.display = "none");
+  }
+}
+
 function contactSales() {
   showToast("Email us at hello@kitchenmep.com for enterprise pricing", "info", 6000);
 }
+
+// ── Init: restore plan state + trial countdown ────────────────────────────────
 function _initSubscriptionUI() {
-  // Compute trial days left from install date (stored in localStorage)
+  // Restore stored plan (e.g. after successful Stripe return)
   try {
-    const installDate = localStorage.getItem("mep_install_date");
-    if (!installDate) localStorage.setItem("mep_install_date", Date.now().toString());
-    const daysSince = Math.floor((Date.now() - Number(installDate || Date.now())) / 86400000);
+    const storedPlan = localStorage.getItem("mep_plan");
+    if (storedPlan === "pro") { _applyPlanUI("pro"); return; }
+  } catch(e) {}
+
+  // Compute trial days remaining
+  try {
+    let installDate = localStorage.getItem("mep_install_date");
+    if (!installDate) {
+      installDate = Date.now().toString();
+      localStorage.setItem("mep_install_date", installDate);
+    }
+    const daysSince = Math.floor((Date.now() - Number(installDate)) / 86400000);
     const trialDays = Math.max(0, 14 - daysSince);
     const el = document.getElementById("trialDaysLeft");
     if (el) el.textContent = trialDays;
-    const badge = document.getElementById("planBadge");
-    if (badge && trialDays === 0) {
-      badge.textContent = "Free";
-      badge.className = "plan-badge free";
+
+    if (trialDays === 0) {
+      const badge = document.getElementById("planBadge");
+      if (badge) { badge.textContent = "Free"; badge.className = "plan-badge free"; }
       const banner = document.getElementById("trialBanner");
       if (banner) {
         banner.style.background = "#1a0a0a";
         banner.style.borderColor = "var(--red-brd)";
-        banner.querySelector("div div").textContent = "⚠ Your trial has ended — upgrade to keep access";
+        const title = banner.querySelector("div > div:first-child");
+        if (title) title.textContent = "⚠ Your trial has ended — upgrade to keep access";
       }
     }
   } catch(e) {}
 }
 
+_handleStripeReturn();   // must run before initDashboard so plan state is set first
 initDashboard();
 _initSubscriptionUI();
 setTimeout(loadRecipes, 800);
