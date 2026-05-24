@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Manager Dashboard - 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
@@ -28,6 +28,48 @@
       --mono: 'DM Mono', monospace; --serif: 'Instrument Serif', serif;
     }
     html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
+
+/* ── iOS Safe Area ── */
+.header { padding-top: max(16px, env(safe-area-inset-top)); padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
+.body { padding-bottom: max(40px, env(safe-area-inset-bottom)); }
+
+/* ── Offline Banner ── */
+#offlineBanner { display:none; position:sticky; top:0; z-index:1350; background:#1a0a00; border-bottom:1px solid #e8a02044; color:var(--amber); font-size:12px; letter-spacing:.5px; padding:8px 20px; text-align:center; }
+#offlineBanner.visible { display:block; }
+
+/* ── Toast Notifications ── */
+#toastContainer { position:fixed; bottom:max(24px,env(safe-area-inset-bottom)); right:20px; z-index:9999; display:flex; flex-direction:column-reverse; gap:8px; pointer-events:none; }
+.toast { display:flex; align-items:center; gap:10px; padding:11px 16px; border-radius:10px; font-size:13px; font-family:var(--mono); letter-spacing:.3px; max-width:320px; box-shadow:0 4px 24px rgba(0,0,0,.5); pointer-events:all; animation:toastIn .2s ease; transition:opacity .3s ease,transform .3s ease; }
+.toast.out { opacity:0; transform:translateY(8px); }
+.toast.success { background:#1a3d1a; border:1px solid var(--green-brd); color:var(--green); }
+.toast.error   { background:#3d1a1a; border:1px solid var(--red-brd);   color:var(--red); }
+.toast.info    { background:var(--surface2); border:1px solid var(--border2); color:var(--muted); }
+@keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── Focus indicators (accessibility) ── */
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--amber); outline-offset:2px; }
+
+/* ── Loading spinner ── */
+.spin { display:inline-block; width:14px; height:14px; border:2px solid var(--border2); border-top-color:var(--amber); border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; margin-right:6px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Subscription badge in admin ── */
+.plan-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:11px; letter-spacing:1px; text-transform:uppercase; }
+.plan-badge.trial { background:var(--amber-dim); color:var(--amber); border:1px solid var(--amber-brd); }
+.plan-badge.pro   { background:var(--green-dim);  color:var(--green);  border:1px solid var(--green-brd); }
+.plan-badge.free  { background:var(--surface2);   color:var(--muted);  border:1px solid var(--border); }
+.plan-card { background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius); padding:20px; display:flex; flex-direction:column; gap:10px; }
+.plan-card.recommended { border-color:var(--amber-brd); box-shadow:0 0 0 1px var(--amber-brd); }
+.plan-price { font-family:var(--serif); font-size:28px; color:var(--text); }
+.plan-price span { font-size:14px; color:var(--muted); font-family:var(--mono); }
+.plan-feature { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+.plan-feature::before { content:"✓"; color:var(--green); font-weight:700; }
+.plan-feature.locked::before { content:"🔒"; }
+.plan-feature.locked { opacity:.5; }
+.upgrade-btn { width:100%; padding:14px; border-radius:10px; border:none; font-family:var(--mono); font-size:13px; font-weight:500; letter-spacing:.5px; cursor:pointer; transition:all .15s; }
+.upgrade-btn.primary { background:var(--amber); color:#000; }
+.upgrade-btn.primary:hover { background:#f0b030; }
+.upgrade-btn.secondary { background:var(--surface2); color:var(--muted); border:1px solid var(--border2); }
 
 .chart-period-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
 .chart-period-btn { padding:5px 12px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); color:var(--muted); font-size:11px; font-family:var(--mono); letter-spacing:.5px; cursor:pointer; transition:all .15s; }
@@ -426,6 +468,8 @@
 </head>
 <body>
 
+<div id="offlineBanner">⚡ Offline — showing cached data. Check your connection.</div>
+<div id="toastContainer"></div>
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px">
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
@@ -559,7 +603,7 @@
     <div class="section-title">Inventory <span class="section-title-icon">📦</span></div>
     <div class="section-sub">Select a category or supplier to load items</div>
     <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
-      <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" style="flex:1;min-width:160px">
+      <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" autocomplete="off" style="flex:1;min-width:160px">
       <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 160px">
         <option value="">All categories</option>
       </select>
@@ -1073,6 +1117,82 @@
 
   <!-- ADMIN Tab-->
   <div class="panel" id="panel-admin">
+
+  <!-- SUBSCRIPTION & BILLING -->
+  <div class="admin-section" id="admin-subscription">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div class="admin-section-title" style="margin-bottom:0">Subscription & Billing</div>
+      <span class="plan-badge trial" id="planBadge">⏳ Trial</span>
+    </div>
+    <div class="admin-section-sub">Manage your Kitchen MEP plan</div>
+
+    <div id="trialBanner" style="background:#1a1200;border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;color:var(--amber);font-weight:500">🕐 Trial ends in <span id="trialDaysLeft">14</span> days</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Upgrade to keep all features after your trial.</div>
+      </div>
+      <button class="upgrade-btn primary" style="width:auto;padding:9px 20px" onclick="showUpgradeModal()">Upgrade Now</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px">
+      <div class="plan-card">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Starter</div>
+        <div class="plan-price">Free <span>/ mo</span></div>
+        <div class="plan-feature">MEP scanning (up to 3 products)</div>
+        <div class="plan-feature">Staff QR codes</div>
+        <div class="plan-feature locked">Inventory management</div>
+        <div class="plan-feature locked">Reports & analytics</div>
+        <div class="plan-feature locked">Recipe management</div>
+        <button class="upgrade-btn secondary" style="margin-top:8px" disabled>Current plan</button>
+      </div>
+      <div class="plan-card recommended">
+        <div style="font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase">Pro ⭐ Recommended</div>
+        <div class="plan-price">CHF 29 <span>/ mo</span></div>
+        <div class="plan-feature">Unlimited MEP products</div>
+        <div class="plan-feature">Full inventory + orders</div>
+        <div class="plan-feature">Reports & analytics</div>
+        <div class="plan-feature">Recipe management</div>
+        <div class="plan-feature">Priority support</div>
+        <button class="upgrade-btn primary" style="margin-top:8px" onclick="showUpgradeModal('pro')">Get Pro</button>
+      </div>
+      <div class="plan-card">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Enterprise</div>
+        <div class="plan-price">Custom <span>pricing</span></div>
+        <div class="plan-feature">Multiple locations</div>
+        <div class="plan-feature">Custom integrations</div>
+        <div class="plan-feature">Dedicated onboarding</div>
+        <div class="plan-feature">SLA support</div>
+        <button class="upgrade-btn secondary" style="margin-top:8px" onclick="contactSales()">Contact Sales</button>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);text-align:center">Secure payments · Cancel anytime · All prices excl. VAT</div>
+  </div>
+
+  <!-- UPGRADE MODAL -->
+  <div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeUpgradeModal()">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);max-width:420px;width:100%;padding:28px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-family:var(--serif);font-size:20px">Upgrade to Pro</div>
+        <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
+        <div style="font-size:22px;font-weight:500;color:var(--text);margin-bottom:4px">CHF 29 / month</div>
+        <div style="font-size:12px;color:var(--muted)">Billed monthly · Cancel anytime</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+        <div class="plan-feature">Unlimited MEP products & scanning</div>
+        <div class="plan-feature">Full inventory management</div>
+        <div class="plan-feature">Reports, recipes & orders</div>
+        <div class="plan-feature">Priority email support</div>
+      </div>
+      <button class="upgrade-btn primary" onclick="startCheckout()" style="margin-bottom:10px">
+        🔒 Secure Checkout
+      </button>
+      <div style="text-align:center;font-size:11px;color:var(--muted)">Powered by Stripe · SSL encrypted</div>
+    </div>
+  </div>
+
  <div class="admin-section">
   <div class="admin-section-title">Scan Sheet Archive</div>
   <div class="admin-section-sub">Move old scans to Archive sheet</div>
@@ -3427,7 +3547,83 @@ window.openEditInventoryModal = function(code) {
   _origOpenEditInv && _origOpenEditInv(code);
 };
 
+// ─────────────────────────────────────────────
+// TOAST NOTIFICATION SYSTEM
+// ─────────────────────────────────────────────
+function showToast(msg, type = "info", duration = 3500) {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => {
+    t.classList.add("out");
+    setTimeout(() => t.remove(), 300);
+  }, duration);
+}
+
+// ─────────────────────────────────────────────
+// OFFLINE / ONLINE INDICATOR
+// ─────────────────────────────────────────────
+function updateNetworkBanner() {
+  const banner = document.getElementById("offlineBanner");
+  if (!banner) return;
+  if (!navigator.onLine) {
+    banner.classList.add("visible");
+  } else {
+    banner.classList.remove("visible");
+  }
+}
+window.addEventListener("online",  () => { updateNetworkBanner(); showToast("Back online", "success"); });
+window.addEventListener("offline", () => { updateNetworkBanner(); showToast("You are offline — data may be stale", "error", 5000); });
+updateNetworkBanner();
+
+// ─────────────────────────────────────────────
+// SUBSCRIPTION HELPERS
+// ─────────────────────────────────────────────
+function showUpgradeModal(plan) {
+  const modal = document.getElementById("upgradeModal");
+  if (modal) modal.style.display = "flex";
+}
+function closeUpgradeModal() {
+  const modal = document.getElementById("upgradeModal");
+  if (modal) modal.style.display = "none";
+}
+function startCheckout() {
+  // TODO: integrate Stripe Checkout here
+  // Example: window.location.href = "/checkout?plan=pro&restaurantId=" + restaurantId;
+  showToast("Checkout coming soon — contact us at hello@kitchenmep.com", "info", 6000);
+  closeUpgradeModal();
+}
+function contactSales() {
+  showToast("Email us at hello@kitchenmep.com for enterprise pricing", "info", 6000);
+}
+function _initSubscriptionUI() {
+  // Compute trial days left from install date (stored in localStorage)
+  try {
+    const installDate = localStorage.getItem("mep_install_date");
+    if (!installDate) localStorage.setItem("mep_install_date", Date.now().toString());
+    const daysSince = Math.floor((Date.now() - Number(installDate || Date.now())) / 86400000);
+    const trialDays = Math.max(0, 14 - daysSince);
+    const el = document.getElementById("trialDaysLeft");
+    if (el) el.textContent = trialDays;
+    const badge = document.getElementById("planBadge");
+    if (badge && trialDays === 0) {
+      badge.textContent = "Free";
+      badge.className = "plan-badge free";
+      const banner = document.getElementById("trialBanner");
+      if (banner) {
+        banner.style.background = "#1a0a0a";
+        banner.style.borderColor = "var(--red-brd)";
+        banner.querySelector("div div").textContent = "⚠ Your trial has ended — upgrade to keep access";
+      }
+    }
+  } catch(e) {}
+}
+
 initDashboard();
+_initSubscriptionUI();
 setTimeout(loadRecipes, 800);
 
 setInterval(async () => {

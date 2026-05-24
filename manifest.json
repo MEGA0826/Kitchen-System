@@ -1,15 +1,17 @@
 {
   "name": "Kitchen MEP — 212 Nooch Richti",
   "short_name": "Kitchen MEP",
-  "description": "Kitchen MEP tracking system — scan, produce, manage.",
+  "description": "Real-time kitchen MEP production tracking. Scan, produce, manage — offline-first.",
   "start_url": "/Kitchen-System/index.html",
   "scope": "/Kitchen-System/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0f0f0d",
   "theme_color": "#0f0f0d",
   "lang": "en",
   "categories": ["food", "productivity", "utilities"],
+  "id": "/Kitchen-System/",
 
   "icons": [
     {
@@ -22,25 +24,47 @@
       "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
 
   "shortcuts": [
     {
-      "name": "Dashboard",
+      "name": "Scan MEP",
+      "short_name": "Scan",
+      "description": "Open scanner to record MEP production",
+      "url": "/Kitchen-System/index.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Manager Dashboard",
       "short_name": "Dashboard",
-      "description": "Open manager dashboard",
+      "description": "Open manager dashboard with KDS and inventory",
       "url": "/Kitchen-System/dashboard.html",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     }
   ],
 
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }

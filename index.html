@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Kitchen MEP — 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
 
@@ -1112,6 +1112,9 @@
   <!-- Scanner home state - inline camera, no overlay needed -->
 <style>
   html, body { height: 100%; margin: 0; overflow: hidden; }
+    /* iOS safe area */
+    #staffHome > div:first-child { padding-top: max(12px, env(safe-area-inset-top)); }
+    .scan-toolbar { padding-bottom: max(16px, env(safe-area-inset-bottom)) !important; }
 </style>
  
   <!-- Staff Home: default landing page -->
@@ -1245,7 +1248,7 @@
     <div style="flex-shrink:0;padding:6px 14px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #1e1e1e">
 
      <!-- Worker select -->
-      <select id="worker" class="worker-select" onchange="localStorage.setItem('worker',this.value)"
+      <select id="worker" class="worker-select" onchange="localStorage.setItem('worker',this.value)" autocomplete="off"
         style="width:100%;padding:14px 16px;background:#141414;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-family:var(--mono);font-size:16px;letter-spacing:0.5px;cursor:pointer">
         <option value="">-- Select staff member --</option>
       </select>
