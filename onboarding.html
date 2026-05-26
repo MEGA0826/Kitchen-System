@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Setup — Kitchen MEP</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f0f0d">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Design system — matches dashboard.html exactly ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f0d; --surface: #1a1a16; --surface2: #242420; --surface3: #2e2e28;
+      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+      --text: #f0ede6; --muted: #888880; --faint: #555550;
+      --amber: #e8a020; --amber-dim: rgba(232,160,32,0.13); --amber-brd: rgba(232,160,32,0.28);
+      --green: #5dca8a; --green-dim: rgba(93,202,138,0.12); --green-brd: rgba(93,202,138,0.25);
+      --red: #e86050; --red-dim: rgba(232,96,80,0.12); --red-brd: rgba(232,96,80,0.22);
+      --blue: #60a8e8; --blue-dim: rgba(96,168,232,0.12); --blue-brd: rgba(96,168,232,0.22);
+      --radius: 14px; --radius-sm: 8px;
+      --mono: 'DM Mono', monospace; --serif: 'Instrument Serif', serif;
+    }
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── iOS safe area ── */
+    .ob-header  { padding-top: max(16px, env(safe-area-inset-top)); }
+    .ob-nav     { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+
+    /* ── Layout ── */
+    .ob-shell {
+      max-width: 620px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+
+    /* ── Header ── */
+    .ob-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .ob-logo { font-family: var(--serif); font-size: 20px; }
+    .ob-logo em { font-style: italic; color: var(--amber); }
+    .ob-step-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+    /* ── Progress stepper ── */
+    .ob-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 24px 4px;
+      gap: 0;
+      position: relative;
+    }
+    .ob-step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      position: relative;
+    }
+    .ob-step-item::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      right: 50%;
+      left: -50%;
+      height: 2px;
+      background: var(--border2);
+      z-index: 0;
+    }
+    .ob-step-item:first-child::before { display: none; }
+    .ob-step-item.done::before  { background: var(--green); }
+    .ob-step-item.active::before { background: var(--amber); }
+    .ob-step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--border2);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+      transition: all .25s;
+      font-weight: 500;
+    }
+    .ob-step-item.active .ob-step-dot  { border-color: var(--amber); background: var(--amber-dim); color: var(--amber); }
+    .ob-step-item.done   .ob-step-dot  { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+    .ob-step-name {
+      font-size: 9px;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      color: var(--faint);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .ob-step-item.active .ob-step-name { color: var(--amber); }
+    .ob-step-item.done   .ob-step-name { color: var(--green); }
+
+    /* ── Step panels ── */
+    .ob-body { flex: 1; padding: 24px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .ob-panel { display: none; animation: fadeUp .2s ease; }
+    .ob-panel.active { display: block; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    .ob-panel-title {
+      font-family: var(--serif);
+      font-size: 26px;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .ob-panel-sub { font-size: 12px; color: var(--muted); letter-spacing: .5px; margin-bottom: 24px; line-height: 1.6; }
+
+    /* ── Form elements ── */
+    .ob-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .ob-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .ob-input, .ob-select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 11px 14px;
+      width: 100%;
+      transition: border-color .15s;
+      -webkit-appearance: none;
+    }
+    .ob-input::placeholder { color: var(--faint); }
+    .ob-input:focus, .ob-select:focus { outline: none; border-color: var(--amber); }
+    .ob-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .ob-row { display: grid; gap: 12px; }
+    .ob-row-2 { grid-template-columns: 1fr 1fr; }
+    .ob-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .ob-hint { font-size: 11px; color: var(--faint); margin-top: -8px; margin-bottom: 8px; }
+
+    /* ── Add-row form card ── */
+    .ob-add-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .ob-add-card-title { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+
+    /* ── Buttons ── */
+    .ob-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 22px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .4px;
+      cursor: pointer;
+      transition: all .15s;
+      min-height: 44px;
+    }
+    .ob-btn-primary   { background: var(--amber); color: #000; }
+    .ob-btn-primary:hover { background: #f0b030; }
+    .ob-btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+    .ob-btn-secondary { background: var(--surface2); color: var(--muted); border: 1px solid var(--border2); }
+    .ob-btn-secondary:hover { color: var(--text); border-color: var(--border); }
+    .ob-btn-green     { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
+    .ob-btn-green:hover { background: rgba(93,202,138,.2); }
+    .ob-btn-sm { padding: 8px 14px; font-size: 11px; min-height: 36px; }
+    .ob-btn-full { width: 100%; }
+    .ob-btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); }
+
+    /* ── Item list cards ── */
+    .ob-item-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .ob-item-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .ob-item-card.error { border-color: var(--red-brd); background: var(--red-dim); }
+    .ob-item-main { display: flex; flex-direction: column; gap: 2px; }
+    .ob-item-name { font-size: 14px; color: var(--text); }
+    .ob-item-sub  { font-size: 11px; color: var(--muted); }
+    .ob-item-code { font-size: 10px; background: var(--surface2); color: var(--amber); padding: 2px 7px; border-radius: 20px; letter-spacing: .5px; white-space: nowrap; }
+    .ob-remove-btn {
+      background: none;
+      border: none;
+      color: var(--faint);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      line-height: 1;
+      flex-shrink: 0;
+      min-width: 32px;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: color .15s, background .15s;
+    }
+    .ob-remove-btn:hover { color: var(--red); background: var(--red-dim); }
+
+    /* ── Empty state ── */
+    .ob-empty {
+      text-align: center;
+      padding: 32px 20px;
+      border: 1px dashed var(--border2);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+    .ob-empty-icon { font-size: 32px; display: block; margin-bottom: 10px; }
+
+    /* ── Target config table (step 2) ── */
+    .ob-target-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }
+    .ob-target-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .ob-target-name { font-family: var(--serif); font-size: 17px; }
+    .ob-target-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (min-width: 420px) { .ob-target-fields { grid-template-columns: 1fr 1fr 1fr; } }
+    .ob-mini-field { display: flex; flex-direction: column; gap: 4px; }
+    .ob-mini-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+    .ob-mini-input {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 10px;
+      width: 100%;
+      -webkit-appearance: none;
+      transition: border-color .15s;
+    }
+    .ob-mini-input:focus { outline: none; border-color: var(--amber); }
+    .ob-mini-input::placeholder { color: var(--faint); }
+
+    /* ── PIN dots ── */
+    .pin-dots { display: flex; gap: 8px; margin-top: 4px; }
+    .pin-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--border2); background: none; transition: all .15s; }
+    .pin-dot.filled { background: var(--amber); border-color: var(--amber); }
+
+    /* ── QR label grid (step 4) ── */
+    .ob-qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .ob-qr-card {
+      background: #fff;
+      border-radius: var(--radius-sm);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+      color: #000;
+    }
+    .ob-qr-card img { width: 120px; height: 120px; display: block; image-rendering: pixelated; }
+    .ob-qr-product-name { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: #111; line-height: 1.3; }
+    .ob-qr-code-label   { font-size: 10px; color: #666; letter-spacing: 1px; background: #f0f0f0; padding: 2px 8px; border-radius: 10px; }
+    .ob-qr-restaurant   { font-size: 9px; color: #999; letter-spacing: .5px; }
+
+    /* ── Go-live summary (step 5) ── */
+    .ob-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+    @media (max-width: 400px) { .ob-summary-grid { grid-template-columns: 1fr; } }
+    .ob-summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .ob-summary-count { font-size: 28px; font-family: var(--serif); color: var(--amber); }
+    .ob-summary-label { font-size: 11px; color: var(--muted); letter-spacing: .5px; margin-top: 2px; }
+
+    .ob-checklist { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .ob-check-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+    .ob-check-item.saving { color: var(--muted); }
+    .ob-check-item.saved  { border-color: var(--green-brd); background: var(--green-dim); color: var(--green); }
+    .ob-check-item.failed { border-color: var(--red-brd); background: var(--red-dim); color: var(--red); }
+    .ob-check-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* ── Bottom navigation ── */
+    .ob-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      bottom: 0;
+    }
+    .ob-nav-left  { flex: 1; display: flex; }
+    .ob-nav-right { flex: 1; display: flex; justify-content: flex-end; }
+    .ob-progress-text { font-size: 11px; color: var(--muted); letter-spacing: .5px; white-space: nowrap; align-self: center; }
+
+    /* ── Validation message ── */
+    .ob-error-msg {
+      background: var(--red-dim);
+      border: 1px solid var(--red-brd);
+      border-radius: var(--radius-sm);
+      color: var(--red);
+      font-size: 12px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .ob-error-msg.visible { display: block; }
+
+    /* ── Spinner ── */
+    .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,.2); border-top-color: #000; border-radius: 50%; animation: spin .6s linear infinite; }
+    .spin.light { border-color: var(--border2); border-top-color: var(--amber); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Focus accessibility ── */
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+    /* ── Print styles for QR labels ── */
+    @media print {
+      .ob-header, .ob-stepper, .ob-nav, .ob-panel-title, .ob-panel-sub,
+      .ob-print-btn, .ob-error-msg { display: none !important; }
+      body, .ob-body, .ob-panel { background: #fff !important; color: #000 !important; }
+      .ob-qr-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .ob-qr-card { break-inside: avoid; border: 1px solid #ddd; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .ob-body { padding: 16px; }
+      .ob-panel-title { font-size: 22px; }
+      .ob-header { padding: 16px; }
+      .ob-step-name { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="ob-shell">
+
+  <!-- Header -->
+  <header class="ob-header">
+    <div class="ob-logo">Kitchen <em>MEP</em></div>
+    <div class="ob-step-label" id="headerStepLabel">Step 1 of 5</div>
+  </header>
+
+  <!-- Progress stepper -->
+  <div class="ob-stepper" id="stepper">
+    <div class="ob-step-item active" data-step="1">
+      <div class="ob-step-dot">1</div>
+      <div class="ob-step-name">Products</div>
+    </div>
+    <div class="ob-step-item" data-step="2">
+      <div class="ob-step-dot">2</div>
+      <div class="ob-step-name">Targets</div>
+    </div>
+    <div class="ob-step-item" data-step="3">
+      <div class="ob-step-dot">3</div>
+      <div class="ob-step-name">Staff</div>
+    </div>
+    <div class="ob-step-item" data-step="4">
+      <div class="ob-step-dot">4</div>
+      <div class="ob-step-name">QR Labels</div>
+    </div>
+    <div class="ob-step-item" data-step="5">
+      <div class="ob-step-dot">5</div>
+      <div class="ob-step-name">Go Live</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       STEP 1 — ADD MEP PRODUCTS
+  ════════════════════════════════════════════════════ -->
+  <main class="ob-body">
+
+    <div class="ob-panel active" id="panel-1">
+      <div class="ob-panel-title">Add your first<br>MEP products</div>
+      <div class="ob-panel-sub">Add up to 5 products to track in your kitchen. You can add more later from the Admin panel.</div>
+
+      <div id="step1Error" class="ob-error-msg"></div>
+
+      <!-- Add-product form -->
+      <div class="ob-add-card">
+        <div class="ob-add-card-title">New product</div>
+        <div class="ob-row ob-row-2">
+          <div class="ob-field">
+            <label class="ob-label" for="p-name">Product name *</label>
+            <input class="ob-input" id="p-name" type="text" placeholder="e.g. Tomatoes" autocomplete="off" maxlength="60">
+          </div>
+          <div class="ob-field">
+            <label class="ob-label" for="p-code">Code *</label>
+            <input class="ob-input" id="p-code" type="text" placeholder="e.g. TOM01" autocomplete="off" maxlength="12" style="text-transform:uppercase">
+          </div>
+        </div>
+        <div class="ob-row ob-row-2">
+          <div class="ob-field">
+            <label class="ob-label" for="p-cat">Category</label>
+            <select class="ob-select" id="p-cat">
+              <option value="">— select —</option>
+              <option>Vegetables</option>
+              <option>Fruit</option>
+              <option>Protein</option>
+              <option>Dairy</option>
+              <option>Grains</option>
+              <option>Sauces</option>
+              <option>Garnish</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="ob-field">
+            <label class="ob-label" for="p-gnsize">GN size</label>
+            <input class="ob-input" id="p-gnsize" type="text" placeholder="e.g. 1/3 GN" autocomplete="off" maxlength="20">
+          </div>
+        </div>
+        <button class="ob-btn ob-btn-green ob-btn-full" onclick="addProduct()">＋ Add product</button>
+      </div>
+
+      <!-- Product list -->
+      <div id="productList" class="ob-item-list">
+        <!-- filled by renderProductList() -->
+      </div>
+      <div id="productEmpty" class="ob-empty" style="display:none">
+        <span class="ob-empty-icon">🥗</span>
+        No products added yet. Add at least one to continue.
+      </div>
+
+      <div style="font-size:11px;color:var(--faint);text-align:center">
+        You can add up to 5 products now · more later in Admin
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         STEP 2 — SET DAILY TARGETS
+    ════════════════════════════════════════════════════ -->
+    <div class="ob-panel" id="panel-2">
+      <div class="ob-panel-title">Set daily targets</div>
+      <div class="ob-panel-sub">Configure how much of each product your kitchen needs to prepare. MEP Max is the maximum quantity on the prep list at once.</div>
+
+      <div id="step2Error" class="ob-error-msg"></div>
+      <div id="targetCards">
+        <!-- filled by renderTargetCards() -->
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         STEP 3 — ADD STAFF PINs
+    ════════════════════════════════════════════════════ -->
+    <div class="ob-panel" id="panel-3">
+      <div class="ob-panel-title">Add your staff</div>
+      <div class="ob-panel-sub">Each staff member gets a 4-digit PIN to log their production actions. Add at least one person to continue.</div>
+
+      <div id="step3Error" class="ob-error-msg"></div>
+
+      <!-- Add-worker form -->
+      <div class="ob-add-card">
+        <div class="ob-add-card-title">New staff member</div>
+        <div class="ob-row ob-row-2">
+          <div class="ob-field">
+            <label class="ob-label" for="w-name">Full name *</label>
+            <input class="ob-input" id="w-name" type="text" placeholder="e.g. Maria" autocomplete="off" maxlength="40">
+          </div>
+          <div class="ob-field">
+            <label class="ob-label" for="w-role">Role *</label>
+            <select class="ob-select" id="w-role">
+              <option value="Staff">Staff</option>
+              <option value="Teamleader">Teamleader</option>
+              <option value="Küchenchef">Küchenchef</option>
+              <option value="Manager">Manager</option>
+            </select>
+          </div>
+        </div>
+        <div class="ob-field">
+          <label class="ob-label" for="w-pin">4-digit PIN *</label>
+          <input class="ob-input" id="w-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" autocomplete="new-password">
+          <div class="pin-dots" id="pinDots">
+            <div class="pin-dot" id="pd0"></div>
+            <div class="pin-dot" id="pd1"></div>
+            <div class="pin-dot" id="pd2"></div>
+            <div class="pin-dot" id="pd3"></div>
+          </div>
+        </div>
+        <button class="ob-btn ob-btn-green ob-btn-full" onclick="addWorker()">＋ Add staff member</button>
+      </div>
+
+      <!-- Worker list -->
+      <div id="workerList" class="ob-item-list">
+        <!-- filled by renderWorkerList() -->
+      </div>
+      <div id="workerEmpty" class="ob-empty" style="display:none">
+        <span class="ob-empty-icon">👨‍🍳</span>
+        No staff added yet. Add at least one to continue.
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         STEP 4 — PREVIEW QR LABELS
+    ════════════════════════════════════════════════════ -->
+    <div class="ob-panel" id="panel-4">
+      <div class="ob-panel-title">Preview QR labels</div>
+      <div class="ob-panel-sub">Print these labels and attach them to each product's prep container. Staff scan them to log production actions.</div>
+
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+        <button class="ob-btn ob-btn-secondary ob-btn-sm ob-print-btn" onclick="printLabels()">🖨 Print labels</button>
+        <button class="ob-btn ob-btn-secondary ob-btn-sm" onclick="downloadLabels()">⬇ Save as PDF</button>
+      </div>
+
+      <div class="ob-qr-grid" id="qrGrid">
+        <!-- filled by renderQRGrid() -->
+      </div>
+
+      <div style="font-size:11px;color:var(--faint);text-align:center;margin-top:8px">
+        Tip: Laminate labels for longer life in kitchen environments
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         STEP 5 — GO LIVE
+    ════════════════════════════════════════════════════ -->
+    <div class="ob-panel" id="panel-5">
+      <div class="ob-panel-title">Ready to go live</div>
+      <div class="ob-panel-sub">Here's a summary of your setup. Click <strong style="color:var(--text)">Save & Launch</strong> to push everything to your kitchen system.</div>
+
+      <!-- Summary counts -->
+      <div class="ob-summary-grid" id="summaryGrid">
+        <!-- filled by renderSummary() -->
+      </div>
+
+      <!-- Save checklist -->
+      <div class="ob-checklist" id="saveChecklist">
+        <!-- filled by renderSaveChecklist() -->
+      </div>
+
+      <div id="step5Error" class="ob-error-msg"></div>
+
+      <button id="btnSaveLaunch" class="ob-btn ob-btn-primary ob-btn-full" onclick="saveLaunch()" style="margin-bottom:12px;font-size:14px;padding:16px">
+        Save & Launch →
+      </button>
+      <button id="btnOpenDashboard" class="ob-btn ob-btn-green ob-btn-full" onclick="openDashboard()" style="display:none">
+        🚀 Open Manager Dashboard
+      </button>
+      <div id="btnOpenStaff" style="display:none;margin-top:10px">
+        <button class="ob-btn ob-btn-secondary ob-btn-full" onclick="openStaffHome()">
+          📱 Open Staff Scanner
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom navigation -->
+  <nav class="ob-nav">
+    <div class="ob-nav-left">
+      <button class="ob-btn ob-btn-secondary" id="btnBack" onclick="prevStep()" style="display:none">
+        ← Back
+      </button>
+    </div>
+    <span class="ob-progress-text" id="navProgress">1 / 5</span>
+    <div class="ob-nav-right">
+      <button class="ob-btn ob-btn-primary" id="btnNext" onclick="nextStep()">
+        Next →
+      </button>
+    </div>
+  </nav>
+
+</div><!-- /ob-shell -->
+
+<script>
+"use strict";
+
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const API = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentStep = 1;
+const TOTAL_STEPS = 5;
+
+// Step 1+2: products
+// [ { code, name, kategorie, gnSize, mepMax, tagesziel, gnWeight, shelfLife } ]
+let ob_products = [];
+
+// Step 3: workers
+// [ { name, role, pin } ]
+let ob_workers = [];
+
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+function goToStep(n) {
+  // Animate out current, in next
+  const cur  = document.getElementById("panel-" + currentStep);
+  const next = document.getElementById("panel-" + n);
+  if (cur)  cur.classList.remove("active");
+  if (next) next.classList.add("active");
+  currentStep = n;
+  _updateUI();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function nextStep() {
+  if (!_validateStep(currentStep)) return;
+  if (currentStep === 1) renderTargetCards();
+  if (currentStep === 3) renderQRGrid();
+  if (currentStep === 4) renderSummary();
+  if (currentStep < TOTAL_STEPS) goToStep(currentStep + 1);
+}
+
+function prevStep() {
+  if (currentStep > 1) goToStep(currentStep - 1);
+}
+
+function _updateUI() {
+  // Stepper dots
+  document.querySelectorAll(".ob-step-item").forEach(el => {
+    const s = Number(el.dataset.step);
+    el.classList.toggle("active", s === currentStep);
+    el.classList.toggle("done",   s < currentStep);
+    const dot = el.querySelector(".ob-step-dot");
+    if (dot) dot.textContent = s < currentStep ? "✓" : s;
+  });
+
+  // Back / Next buttons
+  const btnBack = document.getElementById("btnBack");
+  const btnNext = document.getElementById("btnNext");
+  if (btnBack) btnBack.style.display = currentStep > 1 ? "inline-flex" : "none";
+  if (btnNext) {
+    btnNext.style.display = currentStep === 5 ? "none" : "inline-flex";
+    btnNext.textContent   = currentStep === 4 ? "Continue →" : "Next →";
+  }
+
+  // Header + progress labels
+  document.getElementById("headerStepLabel").textContent = `Step ${currentStep} of ${TOTAL_STEPS}`;
+  document.getElementById("navProgress").textContent     = `${currentStep} / ${TOTAL_STEPS}`;
+}
+
+// ─────────────────────────────────────────────
+// VALIDATION
+// ─────────────────────────────────────────────
+function _validateStep(step) {
+  if (step === 1) {
+    if (ob_products.length === 0) {
+      _showError("step1Error", "Add at least one MEP product to continue.");
+      return false;
+    }
+    _hideError("step1Error");
+    return true;
+  }
+  if (step === 2) {
+    for (const p of ob_products) {
+      if (!p.mepMax || Number(p.mepMax) < 1) {
+        _showError("step2Error", `Set MEP Max for "${p.name}" (must be at least 1).`);
+        return false;
+      }
+    }
+    _hideError("step2Error");
+    return true;
+  }
+  if (step === 3) {
+    if (ob_workers.length === 0) {
+      _showError("step3Error", "Add at least one staff member to continue.");
+      return false;
+    }
+    _hideError("step3Error");
+    return true;
+  }
+  return true;
+}
+
+function _showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add("visible");
+}
+function _hideError(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("visible");
+}
+
+// ─────────────────────────────────────────────
+// STEP 1 — ADD PRODUCT
+// ─────────────────────────────────────────────
+function addProduct() {
+  const nameEl = document.getElementById("p-name");
+  const codeEl = document.getElementById("p-code");
+  const catEl  = document.getElementById("p-cat");
+  const gnEl   = document.getElementById("p-gnsize");
+
+  const name = (nameEl.value || "").trim();
+  const raw  = (codeEl.value || "").trim().toUpperCase();
+  const code = raw || _slugify(name);
+  const cat  = catEl.value;
+  const gn   = (gnEl.value || "").trim();
+
+  if (!name) { _showError("step1Error", "Product name is required."); nameEl.focus(); return; }
+  if (!code) { _showError("step1Error", "Product code is required."); codeEl.focus(); return; }
+  if (ob_products.some(p => p.code === code)) {
+    _showError("step1Error", `Code "${code}" is already used — choose a different one.`); codeEl.focus(); return;
+  }
+  if (ob_products.length >= 5) {
+    _showError("step1Error", "You can add up to 5 products during setup. Add more later in Admin."); return;
+  }
+
+  ob_products.push({ code, name, kategorie: cat, gnSize: gn, mepMax: "", tagesziel: "", gnWeight: "", shelfLife: 2 });
+  _hideError("step1Error");
+
+  // Reset form
+  nameEl.value = ""; codeEl.value = ""; catEl.value = ""; gnEl.value = "";
+  nameEl.focus();
+  renderProductList();
+}
+
+function removeProduct(code) {
+  ob_products = ob_products.filter(p => p.code !== code);
+  renderProductList();
+}
+
+function renderProductList() {
+  const list  = document.getElementById("productList");
+  const empty = document.getElementById("productEmpty");
+  if (!ob_products.length) {
+    list.innerHTML = ""; empty.style.display = "block"; return;
+  }
+  empty.style.display = "none";
+  list.innerHTML = ob_products.map(p => `
+    <div class="ob-item-card">
+      <div class="ob-item-main">
+        <span class="ob-item-name">${_esc(p.name)}</span>
+        <span class="ob-item-sub">${_esc(p.kategorie || "No category")}${p.gnSize ? " · " + _esc(p.gnSize) : ""}</span>
+      </div>
+      <span class="ob-item-code">${_esc(p.code)}</span>
+      <button class="ob-remove-btn" onclick="removeProduct('${_esc(p.code)}')" title="Remove">✕</button>
+    </div>
+  `).join("");
+}
+
+// Auto-generate code from name: "Tomatoes" → "TOM01"
+function _slugify(name) {
+  const base = name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 4);
+  const n    = (ob_products.length + 1).toString().padStart(2, "0");
+  return base + n;
+}
+
+// Allow Enter key to add product
+document.getElementById("p-name").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); document.getElementById("p-code").focus(); } });
+document.getElementById("p-code").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addProduct(); } });
+
+// Auto-fill code as name is typed
+document.getElementById("p-name").addEventListener("input", () => {
+  const codeEl = document.getElementById("p-code");
+  if (!codeEl.value.trim()) codeEl.value = _slugify(document.getElementById("p-name").value.trim());
+});
+
+// ─────────────────────────────────────────────
+// STEP 2 — TARGET CARDS
+// ─────────────────────────────────────────────
+function renderTargetCards() {
+  const el = document.getElementById("targetCards");
+  if (!el) return;
+  el.innerHTML = ob_products.map((p, i) => `
+    <div class="ob-target-card">
+      <div class="ob-target-header">
+        <div>
+          <div class="ob-target-name">${_esc(p.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${_esc(p.code)}${p.kategorie ? " · " + _esc(p.kategorie) : ""}</div>
+        </div>
+      </div>
+      <div class="ob-target-fields">
+        <div class="ob-mini-field">
+          <label class="ob-mini-label" for="t-mepmax-${i}">MEP Max *</label>
+          <input class="ob-mini-input" id="t-mepmax-${i}" type="number" min="1" max="999" placeholder="e.g. 10"
+            value="${_esc(p.mepMax)}" oninput="ob_products[${i}].mepMax=this.value" inputmode="numeric">
+        </div>
+        <div class="ob-mini-field">
+          <label class="ob-mini-label" for="t-target-${i}">Daily target</label>
+          <input class="ob-mini-input" id="t-target-${i}" type="number" min="0" max="999" placeholder="e.g. 8"
+            value="${_esc(p.tagesziel)}" oninput="ob_products[${i}].tagesziel=this.value" inputmode="numeric">
+        </div>
+        <div class="ob-mini-field">
+          <label class="ob-mini-label" for="t-weight-${i}">kg / GN</label>
+          <input class="ob-mini-input" id="t-weight-${i}" type="number" min="0" step="0.1" placeholder="e.g. 2.5"
+            value="${_esc(p.gnWeight)}" oninput="ob_products[${i}].gnWeight=this.value" inputmode="decimal">
+        </div>
+        <div class="ob-mini-field">
+          <label class="ob-mini-label" for="t-shelf-${i}">Shelf life (days)</label>
+          <input class="ob-mini-input" id="t-shelf-${i}" type="number" min="1" max="30" placeholder="2"
+            value="${p.shelfLife || 2}" oninput="ob_products[${i}].shelfLife=this.value" inputmode="numeric">
+        </div>
+        <div class="ob-mini-field" style="grid-column:1/-1">
+          <label class="ob-mini-label" for="t-gnsize-${i}">GN size label</label>
+          <input class="ob-mini-input" id="t-gnsize-${i}" type="text" placeholder="e.g. 1/3 GN"
+            value="${_esc(p.gnSize)}" oninput="ob_products[${i}].gnSize=this.value" maxlength="20">
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ─────────────────────────────────────────────
+// STEP 3 — ADD WORKER
+// ─────────────────────────────────────────────
+document.getElementById("w-pin").addEventListener("input", function() {
+  const v = this.value.replace(/\D/g, "").slice(0, 4);
+  this.value = v;
+  for (let i = 0; i < 4; i++) {
+    document.getElementById("pd" + i).classList.toggle("filled", i < v.length);
+  }
+});
+document.getElementById("w-pin").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addWorker(); } });
+document.getElementById("w-name").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); document.getElementById("w-pin").focus(); } });
+
+function addWorker() {
+  const nameEl = document.getElementById("w-name");
+  const roleEl = document.getElementById("w-role");
+  const pinEl  = document.getElementById("w-pin");
+
+  const name = (nameEl.value || "").trim();
+  const role = roleEl.value;
+  const pin  = (pinEl.value || "").replace(/\D/g, "");
+
+  if (!name) { _showError("step3Error", "Staff name is required."); nameEl.focus(); return; }
+  if (pin.length !== 4) { _showError("step3Error", "PIN must be exactly 4 digits."); pinEl.focus(); return; }
+  if (ob_workers.some(w => w.pin === pin)) {
+    _showError("step3Error", "This PIN is already used — choose a different one."); pinEl.focus(); return;
+  }
+  if (ob_workers.some(w => w.name.toLowerCase() === name.toLowerCase())) {
+    _showError("step3Error", `"${name}" is already added.`); nameEl.focus(); return;
+  }
+
+  ob_workers.push({ name, role, pin });
+  _hideError("step3Error");
+
+  nameEl.value = ""; pinEl.value = ""; roleEl.value = "Staff";
+  for (let i = 0; i < 4; i++) document.getElementById("pd" + i).classList.remove("filled");
+  nameEl.focus();
+  renderWorkerList();
+}
+
+function removeWorker(name) {
+  ob_workers = ob_workers.filter(w => w.name !== name);
+  renderWorkerList();
+}
+
+function renderWorkerList() {
+  const list  = document.getElementById("workerList");
+  const empty = document.getElementById("workerEmpty");
+  if (!ob_workers.length) {
+    list.innerHTML = ""; empty.style.display = "block"; return;
+  }
+  empty.style.display = "none";
+  const roleIcon = { Staff: "🧑‍🍳", Teamleader: "⭐", Küchenchef: "👨‍🍳", Manager: "🔐" };
+  list.innerHTML = ob_workers.map(w => `
+    <div class="ob-item-card">
+      <div class="ob-item-main">
+        <span class="ob-item-name">${roleIcon[w.role] || "🧑‍🍳"} ${_esc(w.name)}</span>
+        <span class="ob-item-sub">${_esc(w.role)} · PIN ••••</span>
+      </div>
+      <button class="ob-remove-btn" onclick="removeWorker('${_esc(w.name)}')" title="Remove">✕</button>
+    </div>
+  `).join("");
+}
+
+// ─────────────────────────────────────────────
+// STEP 4 — QR GRID
+// ─────────────────────────────────────────────
+function renderQRGrid() {
+  const grid = document.getElementById("qrGrid");
+  if (!grid) return;
+  const restaurant = localStorage.getItem("mep_restaurant_id") || "Kitchen MEP";
+  grid.innerHTML = ob_products.map(p => {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(p.code)}`;
+    return `
+      <div class="ob-qr-card">
+        <img src="${qrUrl}" alt="QR code for ${_esc(p.name)}" loading="lazy"
+          onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><rect width=%22120%22 height=%22120%22 fill=%22%23eee%22/><text x=%2260%22 y=%2265%22 font-size=%2211%22 text-anchor=%22middle%22 fill=%22%23999%22>QR offline</text></svg>'">
+        <div class="ob-qr-product-name">${_esc(p.name)}</div>
+        <div class="ob-qr-code-label">${_esc(p.code)}</div>
+        ${p.gnSize ? `<div class="ob-qr-restaurant">${_esc(p.gnSize)}</div>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+function printLabels() {
+  window.print();
+}
+
+function downloadLabels() {
+  // Trigger browser print dialog — user can save as PDF from there
+  window.print();
+}
+
+// ─────────────────────────────────────────────
+// STEP 5 — SUMMARY + SAVE
+// ─────────────────────────────────────────────
+function renderSummary() {
+  const grid = document.getElementById("summaryGrid");
+  if (grid) {
+    grid.innerHTML = `
+      <div class="ob-summary-card">
+        <div class="ob-summary-count">${ob_products.length}</div>
+        <div class="ob-summary-label">MEP Products</div>
+      </div>
+      <div class="ob-summary-card">
+        <div class="ob-summary-count">${ob_workers.length}</div>
+        <div class="ob-summary-label">Staff members</div>
+      </div>
+    `;
+  }
+
+  const checklist = document.getElementById("saveChecklist");
+  if (checklist) {
+    const items = [
+      ...ob_products.map(p => ({ id: "prod-" + p.code, label: `Product: ${p.name} (${p.code})`, type: "product" })),
+      ...ob_workers.map(w  => ({ id: "work-" + w.name,  label: `Staff: ${w.name} (${w.role})`,  type: "worker"  })),
+    ];
+    checklist.innerHTML = items.map(item => `
+      <div class="ob-check-item" id="${_esc(item.id)}">
+        <span class="ob-check-icon">⏳</span>
+        <span>${_esc(item.label)}</span>
+      </div>
+    `).join("");
+  }
+}
+
+async function saveLaunch() {
+  const btn = document.getElementById("btnSaveLaunch");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin"></span> Saving…`;
+  _hideError("step5Error");
+
+  let allOk = true;
+
+  // Save products
+  for (const p of ob_products) {
+    const itemId = "prod-" + p.code;
+    _setCheckState(itemId, "saving", "💾");
+    try {
+      const res  = await _apiCall({
+        action    : "saveProduct",
+        code      : p.code,
+        name      : p.name,
+        kategorie : p.kategorie || "",
+        mepMax    : p.mepMax !== "" ? Number(p.mepMax) : "",
+        gnSize    : p.gnSize || "",
+        gnWeight  : p.gnWeight !== "" ? Number(p.gnWeight) : "",
+        tagesziel : p.tagesziel !== "" ? Number(p.tagesziel) : "",
+        shelfLife : p.shelfLife !== "" ? Number(p.shelfLife) : 2,
+        driveLink : "",
+      });
+      if (res.error) throw new Error(res.error);
+      _setCheckState(itemId, "saved", "✓");
+    } catch(e) {
+      _setCheckState(itemId, "failed", "✗");
+      allOk = false;
+    }
+  }
+
+  // Save workers
+  for (const w of ob_workers) {
+    const itemId = "work-" + w.name;
+    _setCheckState(itemId, "saving", "💾");
+    try {
+      const res = await _apiCall({
+        action       : "saveWorker",
+        originalName : "",
+        name         : w.name,
+        role         : w.role,
+        pin          : w.pin,
+        active       : "true",
+      });
+      if (res.error) throw new Error(res.error);
+      _setCheckState(itemId, "saved", "✓");
+    } catch(e) {
+      _setCheckState(itemId, "failed", "✗");
+      allOk = false;
+    }
+  }
+
+  if (allOk) {
+    btn.style.display = "none";
+    document.getElementById("btnOpenDashboard").style.display = "flex";
+    document.getElementById("btnOpenStaff").style.display     = "block";
+    // Mark setup as complete
+    try { localStorage.setItem("mep_onboarding_done", "1"); } catch(e) {}
+  } else {
+    btn.disabled  = false;
+    btn.innerHTML = "⚠ Retry failed items →";
+    _showError("step5Error", "Some items failed to save. Check your connection and try again.");
+  }
+}
+
+function _setCheckState(id, state, icon) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = "ob-check-item " + state;
+  const iconEl = el.querySelector(".ob-check-icon");
+  if (iconEl) iconEl.textContent = state === "saving" ? `<span class="spin light"></span>` : icon;
+  if (state === "saving") {
+    iconEl.innerHTML = `<span class="spin light" style="width:14px;height:14px"></span>`;
+  } else {
+    iconEl.textContent = icon;
+  }
+}
+
+function openDashboard() {
+  window.location.href = "dashboard.html";
+}
+
+function openStaffHome() {
+  window.location.href = "index.html";
+}
+
+// ─────────────────────────────────────────────
+// API HELPER
+// ─────────────────────────────────────────────
+async function _apiCall(params) {
+  const res = await fetch(API + "?" + new URLSearchParams(params));
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+// ─────────────────────────────────────────────
+// UTILITY
+// ─────────────────────────────────────────────
+function _esc(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+renderProductList();
+renderWorkerList();
+_updateUI();
+
+// If onboarding already done, show a notice
+if (localStorage.getItem("mep_onboarding_done") === "1") {
+  const notice = document.createElement("div");
+  notice.style.cssText = "position:fixed;top:0;left:0;right:0;background:#1a3d1a;border-bottom:1px solid var(--green-brd);color:var(--green);font-size:12px;padding:10px 20px;text-align:center;z-index:9999;font-family:var(--mono)";
+  notice.innerHTML = `Setup previously completed. <a href="dashboard.html" style="color:var(--amber);text-decoration:underline">Open Dashboard ›</a>`;
+  document.body.prepend(notice);
+}
+</script>
+
+</body>
+</html>

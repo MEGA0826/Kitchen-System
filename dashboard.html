@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Manager Dashboard - 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
@@ -87,7 +87,7 @@
 /* always show on mobile, hide on desktop */
 @media (max-width: 768px) { .hamburger-btn { display: flex; } }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .body { padding-left: 16px; padding-right: 16px; }
   .header { padding-left: 16px; padding-right: 16px; }
   .feed-row { grid-template-columns: 90px 1fr 70px; }
@@ -96,9 +96,6 @@
   .bar-row { grid-template-columns: 90px 1fr 36px; }
   .mep-alerts { display: flex !important; }
   .mep-alert { display: flex !important; }
-
-  /* Show hamburger on mobile */
-  .hamburger-btn { display: flex; }
 
   /* Hide tab bar entirely on mobile — shown only when open */
 .nav {
@@ -109,7 +106,7 @@
     top: 70px; left: 0;
     width: fit-content;
     min-width: 200px;
-    z-index: 500;
+    z-index: 1400;
     background: var(--surface);
     box-shadow: 4px 8px 32px rgba(0,0,0,0.8);
     border-right: 1px solid var(--border);
@@ -138,7 +135,7 @@
 }
 
     /* HEADER */
-    .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 300; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 1300; }
     .logo { font-family: var(--serif); font-size: 22px; letter-spacing: -0.3px; }
     .logo em { font-style: italic; color: var(--amber); }
     .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
@@ -474,51 +471,43 @@
     .recipe-wa { font-size:11px; color:var(--amber); flex-shrink:0; }
     .order-detail-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:16px; }
     .order-detail-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:16px; }
-    .order-detail-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:10px; }   
+    .order-detail-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:10px; }
 
-  /* ── Sortable table headers ── */
-.sort-th { cursor:pointer; user-select:none; white-space:nowrap; }
-.sort-th:hover { color:var(--amber); }
-.sort-th .sort-icon::after { content:"⇅"; opacity:.45; font-size:9px; margin-left:3px; }
-.sort-th.asc  .sort-icon::after { content:"▲"; opacity:1; color:var(--amber); }
-.sort-th.desc .sort-icon::after { content:"▼"; opacity:1; color:var(--amber); }  
-
-/* ── SALES TAB ENHANCEMENTS ── */
-.sales-period-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
-.sales-period-btn { padding:6px 14px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); color:var(--muted); font-size:11px; font-family:var(--mono); letter-spacing:.5px; cursor:pointer; transition:all .15s; }
-.sales-period-btn.active { background:var(--amber-dim); color:var(--amber); border-color:var(--amber-brd); }
-.sales-period-btn:hover:not(.active) { color:var(--text); border-color:var(--border); }
-.sales-kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:20px; }
-.sales-kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; position:relative; overflow:hidden; }
-.sales-kpi-icon { font-size:28px; margin-bottom:6px; display:block; }
-.sales-kpi-val { font-family:var(--serif); font-size:32px; line-height:1; margin-bottom:4px; }
-.sales-kpi-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
-.sales-kpi-trend { font-size:11px; margin-top:6px; }
-.sales-kpi-trend.up { color:var(--green); }
-.sales-kpi-trend.down { color:var(--red); }
-.sales-kpi-bg { position:absolute; right:-8px; top:50%; transform:translateY(-50%); font-size:64px; opacity:.04; pointer-events:none; }
-.sparkline { display:inline-flex; align-items:flex-end; gap:2px; height:28px; vertical-align:middle; }
-.sparkline-bar { width:5px; border-radius:2px 2px 0 0; background:var(--blue); opacity:.7; min-height:2px; transition:opacity .15s; }
-.sparkline-bar:hover { opacity:1; }
-.rank-medal { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
-.sales-cat-pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:10px; letter-spacing:.5px; background:var(--surface2); color:var(--muted); border:1px solid var(--border2); cursor:pointer; transition:all .15s; margin:2px; }
-.sales-cat-pill.active { background:var(--blue-dim); color:var(--blue); border-color:var(--blue-brd); }
-.sales-cat-pill:hover:not(.active) { color:var(--text); }
-.hit-bar { display:inline-block; height:6px; border-radius:3px; background:var(--green); vertical-align:middle; margin-right:4px; }
-.export-btn { padding:8px 16px; background:var(--green-dim); color:var(--green); border:1px solid var(--green-brd); border-radius:var(--radius-sm); font-family:var(--mono); font-size:11px; letter-spacing:1px; cursor:pointer; transition:all .15s; white-space:nowrap; }
-.export-btn:hover { opacity:.8; }    
+    /* ── MORNING BRIEFING ── */
+    .morning-section { margin-bottom: 28px; }
+    .morning-section-title { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .urgent-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; display:flex; gap:14px; align-items:center; margin-bottom:8px; transition:border-color .15s; }
+    .urgent-card:hover { border-color:var(--border2); }
+    .urgent-rank { font-family:var(--serif); font-size:28px; color:var(--faint); width:28px; flex-shrink:0; text-align:center; line-height:1; }
+    .urgent-body { flex:1; min-width:0; }
+    .urgent-name { font-size:14px; font-weight:500; color:var(--text); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .urgent-meta { font-size:11px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .urgent-badge { padding:2px 8px; border-radius:10px; font-size:10px; letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+    .urgent-progress { display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex-shrink:0; width:56px; }
+    .urgent-pct { font-family:var(--serif); font-size:20px; line-height:1; }
+    .urgent-pct.red   { color:var(--red); }
+    .urgent-pct.amber { color:var(--amber); }
+    .urgent-pct.green { color:var(--green); }
+    .urgent-bar { width:100%; height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+    .urgent-bar-fill { height:100%; border-radius:2px; transition:width .5s ease; }
+    .checklist { display:flex; flex-direction:column; gap:6px; }
+    .check-item { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; user-select:none; -webkit-user-select:none; }
+    .check-item:hover { border-color:var(--border2); }
+    .check-item:active { transform:scale(0.99); }
+    .check-item.done { opacity:.5; }
+    .check-box { width:20px; height:20px; border-radius:6px; border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+    .check-item.done .check-box { background:var(--green); border-color:var(--green); }
+    .check-text { flex:1; font-size:13px; color:var(--text); }
+    .check-item.done .check-text { text-decoration:line-through; color:var(--muted); }
+    .morning-progress-bar { height:4px; background:var(--surface2); border-radius:2px; margin-bottom:14px; overflow:hidden; }
+    .morning-progress-fill { height:100%; background:var(--green); border-radius:2px; transition:width .4s ease; }
   </style>
 <script src="i18n.js"></script>
 </head>
 <body>
-<div id="err-box" style="display:none;position:fixed;inset:0;z-index:99999;background:#fff;color:#c00;padding:20px;font-size:18px;font-family:monospace;overflow:auto;white-space:pre-wrap"></div>
-<script>
-window.onerror = function(msg, src, line, col) {
-  var b = document.getElementById('err-box');
-  b.style.display = 'block';
-  b.textContent = 'ERROR:\n' + msg + '\n\nLINE: ' + line + '\nCOL: ' + col;
-};
-</script>
+
+<div id="offlineBanner">⚡ Offline — showing cached data. Check your connection.</div>
+<div id="toastContainer"></div>
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px">
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">
@@ -544,49 +533,60 @@ window.onerror = function(msg, src, line, col) {
 </div>
 
 <div class="nav" id="main-nav">
-<button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span><span data-i18n="kds">KDS</span></button>
-  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span><span data-i18n="inventory">Inventory</span></button>
-  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span><span data-i18n="mep-products">MEP Products</span></button>
-  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span><span data-i18n="recipes">Recipes</span></button>
-  <button class="tab"        data-tab="relations"    onclick="switchTab(this)"><span class="tab-icon">🔗</span><span>Relations</span></button>
-  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span><span data-i18n="orders">Orders</span></button>
-  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span><span data-i18n="reports">Reports</span></button>
-  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span><span data-i18n="deductions">Deductions</span></button>
-  <button class="tab"        data-tab="sales"        onclick="switchTab(this)"><span class="tab-icon">📈</span><span>Sales</span></button>
-  <button class="tab" onclick="requestAdminAccess()"><span class="tab-icon">🔐</span><span data-i18n="admin">Admin</span></button>
-
-  <!-- Settings section inside hamburger nav -->
-  <div id="nav-settings" style="margin-top:auto;padding:16px 20px 20px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:14px">
-    <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Settings</div>
-    <div>
-      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">🌐 Language</div>
-      <select id="langDropdownNav" onchange="setLangDash(this.value)"
-        style="width:100%;padding:8px 10px;background:var(--surface2);color:var(--amber);border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:12px;cursor:pointer;outline:none">
-        <option value="en">EN — English</option>
-        <option value="de">DE — Deutsch</option>
-        <option value="th">TH — ภาษาไทย</option>
-        <option value="it">IT — Italiano</option>
-        <option value="fr">FR — Français</option>
-        <option value="es">ES — Español</option>
-      </select>
-    </div>
-    <div>
-      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">🎨 Theme</div>
-      <div style="display:flex;gap:8px">
-        <button id="navThemeDark" onclick="setTheme('dark')"
-          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);font-size:20px;cursor:pointer;transition:all .15s">
-          🌙
-        </button>
-        <button id="navThemeLight" onclick="setTheme('light')"
-          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);font-size:20px;cursor:pointer;transition:all .15s">
-          ☀️
-        </button>
-      </div>
-    </div>
-  </div>
+  <button class="tab"        data-tab="morning"      onclick="switchTab(this)"><span class="tab-icon">🌅</span>Morning</button>
+  <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
+  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)"><span class="tab-icon">📋</span>MEP Overview</button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
+  <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
+  <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
+  <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
+  <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
+  <button class="tab"                                onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
 </div>
 
 <div class="body">
+
+<!-- MORNING BRIEFING -->
+<div class="panel" id="panel-morning">
+  <div class="section-title">Morning Briefing <span class="section-title-icon">🌅</span></div>
+  <div class="section-sub" id="morning-date-sub">Today's kitchen prep status</div>
+
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+    <button class="refresh-btn" onclick="loadMorning()" style="padding:8px 16px">↺ Refresh</button>
+  </div>
+
+  <!-- Top 5 urgent MEP -->
+  <div class="morning-section">
+    <div class="morning-section-title">🔥 Top 5 — Urgently needed</div>
+    <div id="morning-urgent">
+      <div class="skeleton" style="height:68px;border-radius:14px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:68px;border-radius:14px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:68px;border-radius:14px"></div>
+    </div>
+  </div>
+
+  <!-- Low-stock alerts -->
+  <div class="morning-section">
+    <div class="morning-section-title">⚠️ Low-Stock Alerts — Lager</div>
+    <div id="morning-stock">
+      <div class="skeleton" style="height:52px;border-radius:14px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:52px;border-radius:14px"></div>
+    </div>
+  </div>
+
+  <!-- Prep checklist -->
+  <div class="morning-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="morning-section-title" style="margin-bottom:0">✅ Prep Checklist</div>
+      <div style="display:flex;gap:8px">
+        <button class="refresh-btn" onclick="resetChecklist()" style="padding:4px 10px">↺ Reset</button>
+        <button class="refresh-btn" onclick="addChecklistItem()" style="padding:4px 10px;color:var(--green);border-color:var(--green-brd)">+ Add</button>
+      </div>
+    </div>
+    <div id="morning-checklist" class="checklist"></div>
+  </div>
+</div>
 
  <!-- KDS -->
   <div class="panel active" id="panel-kds">
@@ -665,12 +665,26 @@ window.onerror = function(msg, src, line, col) {
   
   </div>
 
+<!-- MEP OVERVIEW Tab -->
+  <div class="panel" id="panel-mep-overview">
+    <div class="section-title">MEP Overview <span class="section-title-icon">📋</span></div>
+    <div class="section-sub">Current MEP production status for all products</div>
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <button class="refresh-btn" onclick="loadMepOverview()" style="padding:8px 16px">↺ Refresh</button>
+    </div>
+    <div class="mep-grid" id="mep-overview-grid">
+      <div class="skeleton" style="height:120px;border-radius:14px"></div>
+      <div class="skeleton" style="height:120px;border-radius:14px"></div>
+      <div class="skeleton" style="height:120px;border-radius:14px"></div>
+    </div>
+  </div>
+
 <!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
     <div class="section-title"><span data-i18n="inventory">Inventory</span> <span class="section-title-icon">📦</span></div>
     <div class="section-sub" data-i18n="inv-sub">Select a category or supplier to load items</div>
     <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
-      <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" data-i18n-placeholder="search" oninput="filterInventory()" style="flex:1;min-width:160px">
+      <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" autocomplete="off" style="flex:1;min-width:160px">
       <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 160px">
         <option value="">All categories</option>
       </select>
@@ -1372,6 +1386,109 @@ window.onerror = function(msg, src, line, col) {
   
   <!-- ADMIN Tab-->
   <div class="panel" id="panel-admin">
+
+  <!-- SUBSCRIPTION & BILLING -->
+  <div class="admin-section" id="admin-subscription">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div class="admin-section-title" style="margin-bottom:0">Subscription & Billing</div>
+      <span class="plan-badge trial" id="planBadge">⏳ Trial</span>
+    </div>
+    <div class="admin-section-sub">Manage your Kitchen MEP plan</div>
+
+    <div id="trialBanner" style="background:#1a1200;border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;color:var(--amber);font-weight:500">🕐 Trial ends in <span id="trialDaysLeft">14</span> days</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Upgrade to keep all features after your trial.</div>
+      </div>
+      <button class="upgrade-btn primary" style="width:auto;padding:9px 20px" onclick="showUpgradeModal()">Upgrade Now</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px">
+      <div class="plan-card">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Starter</div>
+        <div class="plan-price">Free <span>/ mo</span></div>
+        <div class="plan-feature">MEP scanning (up to 3 products)</div>
+        <div class="plan-feature">Staff QR codes</div>
+        <div class="plan-feature locked">Inventory management</div>
+        <div class="plan-feature locked">Reports & analytics</div>
+        <div class="plan-feature locked">Recipe management</div>
+        <button class="upgrade-btn secondary" style="margin-top:8px" disabled>Current plan</button>
+      </div>
+      <div class="plan-card recommended">
+        <div style="font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase">Pro ⭐ Recommended</div>
+        <div class="plan-price">CHF 29 <span>/ mo</span></div>
+        <div class="plan-feature">Unlimited MEP products</div>
+        <div class="plan-feature">Full inventory + orders</div>
+        <div class="plan-feature">Reports & analytics</div>
+        <div class="plan-feature">Recipe management</div>
+        <div class="plan-feature">Priority support</div>
+        <button class="upgrade-btn primary" style="margin-top:8px" onclick="showUpgradeModal('pro')">Get Pro</button>
+      </div>
+      <div class="plan-card">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Enterprise</div>
+        <div class="plan-price">Custom <span>pricing</span></div>
+        <div class="plan-feature">Multiple locations</div>
+        <div class="plan-feature">Custom integrations</div>
+        <div class="plan-feature">Dedicated onboarding</div>
+        <div class="plan-feature">SLA support</div>
+        <button class="upgrade-btn secondary" style="margin-top:8px" onclick="contactSales()">Contact Sales</button>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);text-align:center">Secure payments · Cancel anytime · All prices excl. VAT</div>
+  </div>
+
+  <!-- UPGRADE MODAL -->
+  <div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)" onclick="if(event.target===this)closeUpgradeModal()">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);max-width:420px;width:100%;padding:28px;max-height:90vh;overflow-y:auto">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-family:var(--serif);font-size:20px">Upgrade to Pro</div>
+        <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+      </div>
+
+      <!-- Billing toggle: Monthly / Yearly -->
+      <div style="display:flex;background:var(--surface2);border-radius:8px;padding:3px;margin-bottom:20px;gap:3px">
+        <button id="planToggleMonthly" onclick="selectBillingCycle('monthly')"
+          style="flex:1;padding:8px;border-radius:6px;border:none;font-family:var(--mono);font-size:12px;cursor:pointer;background:var(--amber);color:#000;transition:all .15s">
+          Monthly
+        </button>
+        <button id="planToggleYearly" onclick="selectBillingCycle('yearly')"
+          style="flex:1;padding:8px;border-radius:6px;border:none;font-family:var(--mono);font-size:12px;cursor:pointer;background:none;color:var(--muted);transition:all .15s">
+          Yearly <span style="font-size:10px;color:var(--green)">−17%</span>
+        </button>
+      </div>
+
+      <!-- Price display -->
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-bottom:4px">
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span id="checkoutPrice" style="font-size:28px;font-weight:500;color:var(--text)">CHF 29</span>
+          <span id="checkoutPer" style="font-size:13px;color:var(--muted)">/ month</span>
+        </div>
+        <div id="checkoutSaveNote" style="display:none;font-size:11px;color:var(--green);margin-top:4px">Save CHF 58 vs monthly — 2 months free</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Cancel anytime · No hidden fees</div>
+      </div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:20px;padding:0 2px">All prices excl. VAT</div>
+
+      <!-- Features -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+        <div class="plan-feature">Unlimited MEP products & scanning</div>
+        <div class="plan-feature">Full inventory management</div>
+        <div class="plan-feature">Reports & analytics</div>
+        <div class="plan-feature">Recipe & order management</div>
+        <div class="plan-feature">Priority email support</div>
+      </div>
+
+      <!-- CTA -->
+      <button id="checkoutBtn" class="upgrade-btn primary" onclick="startCheckout()" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">
+        🔒 Secure Checkout
+      </button>
+      <div style="text-align:center;font-size:11px;color:var(--muted)">
+        Powered by <strong style="color:var(--text)">Stripe</strong> · SSL encrypted · Instant activation
+      </div>
+    </div>
+  </div>
+
  <div class="admin-section">
   <div class="admin-section-title">Scan Sheet Archive</div>
   <div class="admin-section-sub">Move old scans to Archive sheet</div>
@@ -1795,9 +1912,9 @@ let mepAddZutaten = [];
 let allGRs = [];
   
 const ROLE_TABS = {
-  Teamleader : ['kds','mep-overview','inventory','deductions','admin'],
-  Küchenchef : ['kds','mep-overview','inventory','recipes','relations','orders','deductions','reports','admin'],
-  Manager    : ['kds','mep-overview','inventory','products','recipes','relations','orders','deductions','reports','sales','admin'],
+  Teamleader : ['kds','mep-overview','inventory','deductions'],
+  Küchenchef : ['morning','kds','mep-overview','inventory','recipes','orders','deductions','reports'],
+  Manager    : ['morning','kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
 };
   
 // Roles that can VIEW recipes but not add/edit
@@ -1850,14 +1967,14 @@ function toDirectImg(url) {
 }
   
 // ─────────────────────────────────────────────
-// TAB SWITCHING  — FIX: btn is the DOM element
+// MENU HELPERS
 // ─────────────────────────────────────────────
 function closeMenu() {
   const nav = document.getElementById("main-nav");
   const btn = document.getElementById("hamburgerBtn");
   if (!nav || !btn) return;
   nav.classList.remove("open");
-  btn.classList.remove("open");          // ← resets icon ✕ → ☰
+  btn.classList.remove("open");
 }
 
 function toggleMenu() {
@@ -1891,7 +2008,7 @@ function _updateNavThemeBtns(theme) {
   light.style.cssText = theme === "light" ? active : inactive;
 }
 
-// Close menu when clicking outside
+// Close menu when clicking outside — use capture so it fires before tab click
 document.addEventListener("click", e => {
   const nav = document.getElementById("main-nav");
   const btn = document.getElementById("hamburgerBtn");
@@ -1899,52 +2016,26 @@ document.addEventListener("click", e => {
   if (!nav.contains(e.target) && !btn.contains(e.target)) {
     closeMenu();
   }
-});
+}, true);
 
-function closeMenuOnTabSelect(btn) {
-  switchTab(btn);
-  const nav = document.getElementById("main-nav");
-  const hbtn = document.getElementById("hamburgerBtn");
-  nav.classList.remove("open");
-  hbtn.classList.remove("open");
-}
+// ─────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────
 function switchTab(btn) {
-    // Close hamburger menu directly (no function call to avoid any loop)
-    const nav = document.getElementById("main-nav");
-    const hbtn = document.getElementById("hamburgerBtn");
-    if (nav) nav.classList.remove("open");
-    if (hbtn) hbtn.classList.remove("open");
+  closeMenu();   // ← close + reset icon on every tab click
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  const tabId = btn.dataset.tab;
+  if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
 
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-    btn.classList.add("active");
-    const tabId = btn.dataset.tab;
-    if (tabId) document.getElementById("panel-" + tabId)?.classList.add("active");
-    sessionStorage.setItem("activeTab", tabId);
-    try {
-      if (tabId === "inventory")    { filterInventory && filterInventory(); }
-      if (tabId === "orders")       renderOrders();
-      if (tabId === "recipes") {
-        loadMenus(); loadGRs(); loadRequirements();
-        // Defer button visibility to next tick so DOM is ready
-        setTimeout(() => updateRecipeAddButtons(), 0);
-      }
-      if (tabId === "deductions")   loadDeductions();
-      if (tabId === "reports")      loadReportsTab();
-      if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
-      if (tabId === "kds")          loadKDS();
-      if (tabId === "sales")        initSalesTab();
-      if (tabId === "relations")    initRelationsTab();
-      if (window._inventoryReadonly && tabId === "inventory") {
-        setTimeout(() => {
-          document.querySelectorAll("#panel-inventory .btn-edit, #panel-inventory .btn-del, #inv-form").forEach(el => el.style.display = "none");
-        }, 300);
-      }
-    } catch(e) { console.error("switchTab error [" + tabId + "]:", e); }
-  }
-// Clear admin unlock only on true fresh load (no history in this session)
-if (performance.navigation?.type === 1 || !sessionStorage.getItem("activeTab")) {
-  // Only clear if this is a hard refresh (type=1), not a soft navigation
+  if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
+  if (tabId === "orders")       renderOrders();
+  if (tabId === "recipes")      { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+  if (tabId === "deductions")   loadDeductions();
+  if (tabId === "reports")      loadReportsTab();
+  if (tabId === "mep-overview") loadMepOverview();
+  if (tabId === "morning")      loadMorning();
 }
   
 function applyRoleAccess() {
@@ -2154,6 +2245,86 @@ function _renderKDS() {
   renderProductBars();
   renderWorkerBars();
   renderFeed();
+}
+
+// ─────────────────────────────────────────────
+// MEP OVERVIEW
+// ─────────────────────────────────────────────
+async function loadMepOverview() {
+  try {
+    if (!Object.keys(allProducts).length) await loadProducts();
+    if (!allScans.length) {
+      const data = await get({ action: "scans" });
+      allScans = Array.isArray(data.scans) ? data.scans : [];
+      buildScanStats();
+    }
+    renderMepOverview();
+  } catch(e) {
+    console.error("loadMepOverview error:", e);
+    const grid = document.getElementById("mep-overview-grid");
+    if (grid) grid.innerHTML = `<div style="color:var(--red);font-size:13px">Error loading MEP data: ${e.message}</div>`;
+  }
+}
+
+function renderMepOverview() {
+  const grid = document.getElementById("mep-overview-grid");
+  if (!grid) return;
+  const stats = window.todayScanStats || {};
+  const entries = Object.entries(allProducts).filter(([, p]) => p.mepMax || p.tagesziel);
+  if (!entries.length) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:13px">No MEP products configured.</div>`;
+    return;
+  }
+  grid.innerHTML = entries.map(([code, p]) => {
+    const st         = stats[code] || {};
+    const done       = st.done    || 0;
+    const waste      = st.waste   || 0;
+    const used       = st.used    || 0;
+    const available  = Math.max(0, done - waste - used);
+    const mepMax     = p.mepMax     || 0;
+    const tagesziel  = p.tagesziel  || 0;
+    const targetQty  = tagesziel > 0 ? tagesziel : mepMax;
+    const gnSize     = p.gnSize     || "";
+    const gnWeight   = p.gnWeight   || 0;
+    const goalMet    = targetQty > 0 && available >= targetQty;
+    const overDone   = tagesziel > 0 && available > tagesziel;
+    const cardClass  = overDone ? "over" : goalMet ? "goal" : "";
+    const pct        = targetQty > 0 ? Math.min(100, Math.round(available / targetQty * 100)) : 0;
+    const statusTag  = overDone
+      ? `<span class="mep-tag over">Over target</span>`
+      : goalMet
+        ? `<span class="mep-tag goal">Goal met</span>`
+        : available > 0
+          ? `<span class="mep-tag prog">In progress</span>`
+          : `<span class="mep-tag idle">Not started</span>`;
+    const weightRow  = gnWeight > 0
+      ? `<div class="mep-stat-row"><span class="mep-stat-label">Available kg</span><span class="mep-stat-val">${(available * gnWeight).toFixed(1)} kg</span></div>`
+      : "";
+    return `
+    <div class="mep-card ${cardClass}" id="mep-card-${code}">
+      <div class="mep-card-name">${getProductIcon(p.name)} ${p.name || code}</div>
+      <div class="mep-divider"></div>
+      <div class="mep-card-rows">
+        <div class="mep-stat-row">
+          <span class="mep-stat-label">Available</span>
+          <span class="mep-stat-val ${goalMet ? 'green' : available > 0 ? 'amber' : 'muted'}">${available}${gnSize ? " " + gnSize : ""}</span>
+        </div>
+        <div class="mep-stat-row">
+          <span class="mep-stat-label">Target</span>
+          <span class="mep-stat-val">${targetQty}${gnSize ? " " + gnSize : ""}</span>
+        </div>
+        ${weightRow}
+        <div class="mep-stat-row">
+          <span class="mep-stat-label">Progress</span>
+          <span class="mep-stat-val">${pct}%</span>
+        </div>
+      </div>
+      <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${overDone ? 'var(--red)' : goalMet ? 'var(--green)' : 'var(--amber)'};border-radius:2px;transition:width .3s"></div>
+      </div>
+      ${statusTag}
+    </div>`;
+  }).join("");
 }
 
 // FIX: renderStats now writes to stat-total / stat-produce / stat-done / stat-waste
@@ -3671,6 +3842,7 @@ function renderReportPreview(s) {
 // MANUAL SCAN
 // ─────────────────────────────────────────────
 function openManualScan() {
+  closeMenu();
   const pSel = document.getElementById("ms-product");
   pSel.innerHTML = '<option value="">-- Select product --</option>';
   Object.entries(allProducts).forEach(([code, p]) => {
@@ -3812,6 +3984,295 @@ window.openEditInventoryModal = function(code) {
   if (window._inventoryReadonly) return;
   _origOpenEditInv && _origOpenEditInv(code);
 };
+
+// ─────────────────────────────────────────────
+// TOAST NOTIFICATION SYSTEM
+// ─────────────────────────────────────────────
+function showToast(msg, type = "info", duration = 3500) {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => {
+    t.classList.add("out");
+    setTimeout(() => t.remove(), 300);
+  }, duration);
+}
+
+// ─────────────────────────────────────────────
+// OFFLINE / ONLINE INDICATOR
+// ─────────────────────────────────────────────
+function updateNetworkBanner() {
+  const banner = document.getElementById("offlineBanner");
+  if (!banner) return;
+  if (!navigator.onLine) {
+    banner.classList.add("visible");
+  } else {
+    banner.classList.remove("visible");
+  }
+}
+window.addEventListener("online",  () => { updateNetworkBanner(); showToast("Back online", "success"); });
+window.addEventListener("offline", () => { updateNetworkBanner(); showToast("You are offline — data may be stale", "error", 5000); });
+updateNetworkBanner();
+
+// ─────────────────────────────────────────────
+// STRIPE CONFIGURATION
+// Replace the placeholder values below with your
+// real keys from the Stripe Dashboard.
+// ─────────────────────────────────────────────
+const STRIPE_CONFIG = {
+  // Stripe Publishable Key  (pk_live_… or pk_test_…)
+  // Get it from: https://dashboard.stripe.com/apikeys
+  publishableKey: "pk_test_REPLACE_WITH_YOUR_PUBLISHABLE_KEY",
+
+  // Price IDs for each billing cycle
+  // Create products at: https://dashboard.stripe.com/products
+  prices: {
+    pro_monthly: "price_REPLACE_PRO_MONTHLY_ID",
+    pro_yearly:  "price_REPLACE_PRO_YEARLY_ID",
+  },
+
+  // Optional: direct Stripe Payment Link (fallback if session creation fails)
+  // Create at: https://dashboard.stripe.com/payment-links
+  paymentLink: "",
+
+  // Redirect URLs after checkout
+  get successUrl() {
+    return window.location.origin + window.location.pathname + "?payment=success&session_id={CHECKOUT_SESSION_ID}";
+  },
+  get cancelUrl() {
+    return window.location.origin + window.location.pathname + "?payment=cancel";
+  },
+};
+
+/*
+ * ─── GOOGLE APPS SCRIPT BACKEND TEMPLATE ──────────────────────────────────
+ * Add this function to your Apps Script (appsscript.json / Code.gs):
+ *
+ * function createStripeSession(e) {
+ *   const STRIPE_SECRET = "sk_live_REPLACE_WITH_YOUR_SECRET_KEY"; // store in PropertiesService!
+ *   const { priceId, restaurantId, successUrl, cancelUrl } = e.parameter;
+ *
+ *   const payload = {
+ *     "mode": "subscription",
+ *     "line_items[0][price]": priceId,
+ *     "line_items[0][quantity]": "1",
+ *     "success_url": successUrl,
+ *     "cancel_url": cancelUrl,
+ *     "metadata[restaurantId]": restaurantId,
+ *     "subscription_data[metadata][restaurantId]": restaurantId,
+ *     "allow_promotion_codes": "true",
+ *   };
+ *
+ *   const res = UrlFetchApp.fetch("https://api.stripe.com/v1/checkout/sessions", {
+ *     method: "post",
+ *     headers: { Authorization: "Basic " + Utilities.base64Encode(STRIPE_SECRET + ":") },
+ *     payload: payload,
+ *     muteHttpExceptions: true,
+ *   });
+ *
+ *   const json = JSON.parse(res.getContentText());
+ *   if (json.error) return { error: json.error.message };
+ *   return { url: json.url, sessionId: json.id };
+ * }
+ *
+ * Then add to your doGet() router:
+ *   if (action === "createStripeSession") return toJSON(createStripeSession(e));
+ *
+ * Security tip: store STRIPE_SECRET in PropertiesService, not in code:
+ *   PropertiesService.getScriptProperties().setProperty("STRIPE_SECRET", "sk_live_...");
+ *   const STRIPE_SECRET = PropertiesService.getScriptProperties().getProperty("STRIPE_SECRET");
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+// ─────────────────────────────────────────────
+// SUBSCRIPTION HELPERS
+// ─────────────────────────────────────────────
+let _checkoutCycle = "monthly"; // "monthly" | "yearly"
+
+function showUpgradeModal(plan) {
+  _checkoutCycle = "monthly";
+  _renderUpgradeModal();
+  const modal = document.getElementById("upgradeModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeUpgradeModal() {
+  const modal = document.getElementById("upgradeModal");
+  if (modal) modal.style.display = "none";
+}
+
+function selectBillingCycle(cycle) {
+  _checkoutCycle = cycle;
+  _renderUpgradeModal();
+}
+
+function _renderUpgradeModal() {
+  const isYearly = _checkoutCycle === "yearly";
+  const mBtn = document.getElementById("planToggleMonthly");
+  const yBtn = document.getElementById("planToggleYearly");
+  if (mBtn) { mBtn.style.background = isYearly ? "none" : "var(--amber)"; mBtn.style.color = isYearly ? "var(--muted)" : "#000"; }
+  if (yBtn) { yBtn.style.background = isYearly ? "var(--amber)" : "none"; yBtn.style.color = isYearly ? "#000" : "var(--muted)"; }
+  const priceEl = document.getElementById("checkoutPrice");
+  const perEl   = document.getElementById("checkoutPer");
+  const saveEl  = document.getElementById("checkoutSaveNote");
+  if (priceEl) priceEl.textContent = isYearly ? "CHF 290" : "CHF 29";
+  if (perEl)   perEl.textContent   = isYearly ? "/ year"  : "/ month";
+  if (saveEl)  saveEl.style.display = isYearly ? "block" : "none";
+}
+
+async function startCheckout() {
+  const btn = document.getElementById("checkoutBtn");
+  const origHTML = btn ? btn.innerHTML : "";
+
+  // Guard: keys not configured yet
+  if (STRIPE_CONFIG.publishableKey.includes("REPLACE")) {
+    // Fallback to Payment Link if set, otherwise show contact message
+    if (STRIPE_CONFIG.paymentLink) {
+      window.location.href = STRIPE_CONFIG.paymentLink;
+      return;
+    }
+    showToast("Payment not configured yet — contact hello@kitchenmep.com", "error", 6000);
+    return;
+  }
+
+  // Loading state
+  if (btn) { btn.innerHTML = `<span class="spin"></span> Connecting to Stripe…`; btn.disabled = true; }
+
+  try {
+    const restaurantId = _getOrCreateRestaurantId();
+    const priceKey     = "pro_" + _checkoutCycle;
+    const priceId      = STRIPE_CONFIG.prices[priceKey];
+
+    if (!priceId || priceId.includes("REPLACE")) throw new Error("Price ID not configured");
+
+    // Ask Apps Script backend to create a Stripe Checkout Session
+    const res  = await fetch(API + "?" + new URLSearchParams({
+      action:     "createStripeSession",
+      priceId,
+      restaurantId,
+      successUrl: STRIPE_CONFIG.successUrl,
+      cancelUrl:  STRIPE_CONFIG.cancelUrl,
+    }));
+    const data = await res.json();
+
+    if (data.error || !data.url) throw new Error(data.error || "No checkout URL");
+
+    // Redirect to hosted Stripe Checkout page
+    window.location.href = data.url;
+
+  } catch (err) {
+    console.error("Stripe checkout:", err);
+    // Fallback to Payment Link if set
+    if (STRIPE_CONFIG.paymentLink) {
+      window.location.href = STRIPE_CONFIG.paymentLink;
+      return;
+    }
+    showToast("Checkout unavailable — contact hello@kitchenmep.com", "error", 6000);
+    if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
+  }
+}
+
+function _getOrCreateRestaurantId() {
+  try {
+    let id = localStorage.getItem("mep_restaurant_id");
+    if (!id) {
+      id = "rest_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      localStorage.setItem("mep_restaurant_id", id);
+    }
+    return id;
+  } catch(e) { return "unknown"; }
+}
+
+// ── Handle Stripe redirect return ────────────────────────────────────────────
+function _handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get("payment");
+  if (!result) return;
+
+  // Clean URL without reloading page
+  window.history.replaceState({}, "", window.location.pathname);
+
+  if (result === "success") {
+    try { localStorage.setItem("mep_plan", "pro"); } catch(e) {}
+    _applyPlanUI("pro");
+    showToast("🎉 Welcome to Pro! Your subscription is now active.", "success", 7000);
+  } else if (result === "cancel") {
+    showToast("Checkout cancelled — your plan was not changed.", "info", 4000);
+  }
+}
+
+// ── Apply plan state to all UI elements ──────────────────────────────────────
+function _applyPlanUI(plan) {
+  const badge      = document.getElementById("planBadge");
+  const trialBanner = document.getElementById("trialBanner");
+
+  if (plan === "pro") {
+    if (badge)      { badge.textContent = "✓ Pro"; badge.className = "plan-badge pro"; }
+    if (trialBanner) trialBanner.style.display = "none";
+    // Mark Pro plan card as current
+    document.querySelectorAll(".plan-card.recommended .upgrade-btn").forEach(b => {
+      b.textContent = "✓ Current plan"; b.disabled = true; b.className = "upgrade-btn secondary";
+    });
+    // Hide "Upgrade Now" button from trial banner since plan is active
+    document.querySelectorAll("[onclick='showUpgradeModal()']").forEach(b => b.style.display = "none");
+  }
+}
+
+function contactSales() {
+  showToast("Email us at hello@kitchenmep.com for enterprise pricing", "info", 6000);
+}
+
+// ── Init: restore plan state + trial countdown ────────────────────────────────
+function _initSubscriptionUI() {
+  // Restore stored plan (e.g. after successful Stripe return)
+  try {
+    const storedPlan = localStorage.getItem("mep_plan");
+    if (storedPlan === "pro") { _applyPlanUI("pro"); return; }
+  } catch(e) {}
+
+  // Compute trial days remaining
+  try {
+    let installDate = localStorage.getItem("mep_install_date");
+    if (!installDate) {
+      installDate = Date.now().toString();
+      localStorage.setItem("mep_install_date", installDate);
+    }
+    const daysSince = Math.floor((Date.now() - Number(installDate)) / 86400000);
+    const trialDays = Math.max(0, 14 - daysSince);
+    const el = document.getElementById("trialDaysLeft");
+    if (el) el.textContent = trialDays;
+
+    if (trialDays === 0) {
+      const badge = document.getElementById("planBadge");
+      if (badge) { badge.textContent = "Free"; badge.className = "plan-badge free"; }
+      const banner = document.getElementById("trialBanner");
+      if (banner) {
+        banner.style.background = "#1a0a0a";
+        banner.style.borderColor = "var(--red-brd)";
+        const title = banner.querySelector("div > div:first-child");
+        if (title) title.textContent = "⚠ Your trial has ended — upgrade to keep access";
+      }
+    }
+  } catch(e) {}
+}
+
+_handleStripeReturn();   // must run before initDashboard so plan state is set first
+initDashboard();
+_initSubscriptionUI();
+setTimeout(loadRecipes, 800);
+
+setInterval(async () => {
+  const prevLen = allScans.length;
+  await loadKDS();
+  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
+}, 60_000);
+
+setInterval(() => {
+  fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
+}, 4 * 60 * 1000);
   
 // Mobile dropdown tab switching
 function switchTabMobile(select) {
@@ -5829,6 +6290,7 @@ function updateRecipeAddButtons() {
   });
 }
 function openAddGRPopup() {
+  closeMenu();
   agrZutaten = [];
   ['agr-code','agr-name','agr-rohgewicht','agr-garverlust','agr-zubereitung'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
@@ -6205,6 +6667,7 @@ function filterMepDisplay() {
 // MENU POPUP — OPEN / CLOSE
 // ─────────────────────────────────────────────
 function openMenuPopup(menuId) {
+  closeMenu();
   const popup = document.getElementById('menuPopup');
   if (!popup) { console.error('menuPopup element not found'); return; }
 
@@ -6466,42 +6929,10 @@ function removeMenuImage() {
 // ─────────────────────────────────────────────
 // INGREDIENT PICKER
 // ─────────────────────────────────────────────
-// Helper: render RM/MEP/GR type selector buttons
-function _ipTypeBtns(activeType) {
-  return ['rm','mep','gr'].map(t => {
-    const labels = { rm:'🔵 RM', mep:'🟡 MEP', gr:'🟢 GR' };
-    const colors = { rm:'blue',  mep:'amber',   gr:'green' };
-    const c = colors[t];
-    const active = t === activeType;
-    return `<button class="ip-type-btn" data-t="${t}" onclick="ipSwitchType('${t}')"
-      style="padding:4px 10px;border-radius:5px;border:1px solid;font-size:10px;cursor:pointer;font-family:var(--mono);margin-right:4px;
-             background:${active?`var(--${c}-dim)`:'var(--surface2)'};
-             color:${active?`var(--${c})`:'var(--muted)'};
-             border-color:${active?`var(--${c}-brd)`:'var(--border2)'}">${labels[t]}</button>`;
-  }).join('');
-}
-
-function ipSwitchType(newMode) {
-  ipMode = newMode;
-  ipSelectedItem = null;
-  document.querySelectorAll('.ip-type-btn').forEach(btn => {
-    const t = btn.dataset.t;
-    const colors = { rm:'blue', mep:'amber', gr:'green' };
-    const c = colors[t] || 'blue';
-    const active = t === newMode;
-    btn.style.background  = active ? `var(--${c}-dim)`  : 'var(--surface2)';
-    btn.style.color       = active ? `var(--${c})`      : 'var(--muted)';
-    btn.style.borderColor = active ? `var(--${c}-brd)`  : 'var(--border2)';
-  });
-  document.getElementById('ip-selected-name').textContent = '';
-  document.getElementById('ip-detail').style.display = 'none';
-  document.getElementById('ip-search').value = '';
-  filterIngredientPicker();
-}
-
-function openIngredientPicker(mode, context, keepEditIdx) {
-  ipMode     = mode;
-  ipContext  = context || 'menu';
+function openIngredientPicker(mode, context) {
+  closeMenu();
+  ipMode    = mode;
+  ipContext = context || 'menu';
   ipSelectedItem = null;
   if (!keepEditIdx) _ipEditIdx = -1;
   const titleEl = document.getElementById('ip-title');
@@ -6687,6 +7118,7 @@ function confirmIngredient() {
 // ─────────────────────────────────────────────
 
 function openGrPopup() {
+  closeMenu();
   _grSelectedItem = null;
   document.getElementById('gr-search').value = '';
   document.getElementById('gr-detail').style.display = 'none';
@@ -6828,6 +7260,7 @@ async function saveMenuEntry() {
 // MENU VIEW POPUP
 // ─────────────────────────────────────────────
 function openMenuView(menuId) {
+  closeMenu();
   _viewingMenu = allMenus.find(m => m.id === menuId);
   if (!_viewingMenu) return;
   document.getElementById('mvp-title').textContent = _viewingMenu.name || 'Menu';
@@ -6934,23 +7367,233 @@ function buildMenuPdfHtml(m) {
   </div>`;
 }
 
-document.addEventListener('click', function(e) {
-  const pill = e.target.closest('.pdf-sug-pill');
-  if (pill) { pdfSelectSuggestion(parseInt(pill.dataset.idx), pill.dataset.code, pill.dataset.type, pill.dataset.name); return; }
-  const editBtn = e.target.closest('.gr-edit-btn');
-  if (editBtn) { openEditGRPopup(editBtn.dataset.code); return; }
-  const delBtn = e.target.closest('.gr-del-btn');
-  if (delBtn) { deleteGR(delBtn.dataset.code, delBtn.dataset.name); return; }
-  const epfRow = e.target.closest('.epf-rm-pick-row');
-  if (epfRow) { selectEpfRm(epfRow.dataset.code, epfRow.dataset.name, epfRow.dataset.unit); return; }
-  const ingRow = e.target.closest('.ing-pick-row');
-  if (ingRow) { selectIngredientItem(ingRow.dataset.code, ingRow.dataset.name, ingRow.dataset.unit, ingRow.dataset.cost); return; }
-  const grRow = e.target.closest('.gr-pick-row');
-  if (grRow) { selectIngredientItem(grRow.dataset.code, grRow.dataset.name, grRow.dataset.unit, grRow.dataset.cost); return; }
-});
-function debouncedPdfPreview() {
-  clearTimeout(_pdfRenderTimer);
-  _pdfRenderTimer = setTimeout(() => renderPdfPreview(window._pdfMode), 400);
+// ─────────────────────────────────────────────
+// MORNING BRIEFING
+// ─────────────────────────────────────────────
+
+const MORNING_CHECKLIST_DEFAULTS = [
+  "Check fridge & cold chain temps",
+  "Review yesterday's waste log",
+  "Brief team on today's targets",
+  "Confirm incoming deliveries",
+  "Prep stations ready & labelled",
+  "Allergen boards updated",
+  "Cutting boards sanitised",
+  "Date labels checked on all containers",
+];
+
+function _morningChecklistKey() {
+  const d = new Date();
+  return `mep_checklist_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
+}
+
+function _escM(str) {
+  return String(str)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function loadMorning() {
+  const sub = document.getElementById("morning-date-sub");
+  if (sub) {
+    const now  = new Date();
+    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    sub.textContent = `${days[now.getDay()]} · ${now.toLocaleDateString("de-CH")} — Kitchen prep overview`;
+  }
+  _renderMorningUrgent();
+  _renderMorningLowStock();
+  _renderMorningChecklist();
+}
+
+function _renderMorningUrgent() {
+  const el = document.getElementById("morning-urgent");
+  if (!el) return;
+
+  const entries = Object.entries(allProducts).filter(([, p]) => p.tagesziel || p.mepMax);
+  if (!entries.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>No products with targets. Configure them in Admin → Products.</div>`;
+    return;
+  }
+
+  const scored = entries.map(([code, p]) => {
+    const stats     = (window.todayScanStats || {})[code] || {};
+    const available = Math.max(0, (stats.done||0) - (stats.waste||0) - (stats.used||0));
+    const tagesziel = Number(p.tagesziel) || 0;
+    const mepMax    = Number(p.mepMax)    || 0;
+    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+    const shelfLife = Number(p.shelfLife) || 2;
+
+    // Expired-batch count from today's scans
+    const expiredCount = allScans.filter(s => {
+      if (!s.timestamp || s.code !== code || s.action !== "produce") return false;
+      const ageD = (Date.now() - new Date(s.timestamp).getTime()) / 86400000;
+      return ageD > shelfLife;
+    }).length;
+
+    const deficit = Math.max(0, targetQty - available);
+    const pct     = targetQty > 0 ? Math.min(100, Math.round(available / targetQty * 100)) : 0;
+    // Urgency: big deficit + not started bonus + expired penalty + urgency from short shelf life
+    const urgency = deficit * 2
+      + (targetQty > 0 && available === 0 ? 30 : 0)
+      + expiredCount * 15
+      + (10 / shelfLife);
+
+    return { code, p, available, targetQty, shelfLife, expiredCount, deficit, pct, urgency };
+  });
+
+  const top5 = scored
+    .filter(s => s.deficit > 0 || s.expiredCount > 0)
+    .sort((a, b) => b.urgency - a.urgency)
+    .slice(0, 5);
+
+  if (!top5.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">🎉</div>All daily targets met — kitchen is on track!</div>`;
+    return;
+  }
+
+  el.innerHTML = top5.map(({ code, p, available, targetQty, shelfLife, expiredCount, pct }, i) => {
+    const gnSize   = p.gnSize || "";
+    const barColor = pct < 30 ? "var(--red)" : pct < 70 ? "var(--amber)" : "var(--green)";
+    const pctCls   = pct < 30 ? "red"        : pct < 70 ? "amber"        : "green";
+
+    const badges = [];
+    if (expiredCount > 0)
+      badges.push(`<span class="urgent-badge" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd)">${expiredCount} expired</span>`);
+    if (shelfLife <= 1)
+      badges.push(`<span class="urgent-badge" style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd)">1d shelf</span>`);
+    if (available === 0)
+      badges.push(`<span class="urgent-badge" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd)">Not started</span>`);
+
+    return `
+    <div class="urgent-card">
+      <div class="urgent-rank">${i + 1}</div>
+      <div class="urgent-body">
+        <div class="urgent-name">${_escM(p.name || code)}</div>
+        <div class="urgent-meta">
+          <span>${available}${gnSize ? " "+gnSize : ""} / ${targetQty}${gnSize ? " "+gnSize : ""} done</span>
+          <span style="color:var(--faint)">·</span>
+          <span>Shelf ${shelfLife}d</span>
+          ${badges.join(" ")}
+        </div>
+      </div>
+      <div class="urgent-progress">
+        <span class="urgent-pct ${pctCls}">${pct}%</span>
+        <div class="urgent-bar">
+          <div class="urgent-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function _renderMorningLowStock() {
+  const el = document.getElementById("morning-stock");
+  if (!el) return;
+
+  if (!allInventory.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">📦</div>Inventory not loaded yet. <a href="#" onclick="event.preventDefault();loadInventory().then(()=>_renderMorningLowStock())" style="color:var(--amber)">Load now</a></div>`;
+    return;
+  }
+
+  const lowItems = allInventory
+    .filter(r => {
+      const qty = parseFloat(r.quantity) || 0;
+      const min = parseFloat(r.minimum)  || 0;
+      return min > 0 && qty <= min;
+    })
+    .sort((a, b) => (parseFloat(a.quantity)||0) - (parseFloat(b.quantity)||0));
+
+  if (!lowItems.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">✅</div>All Lager items above minimum — good stock levels.</div>`;
+    return;
+  }
+
+  el.innerHTML = lowItems.map(r => {
+    const qty   = parseFloat(r.quantity) || 0;
+    const min   = parseFloat(r.minimum)  || 0;
+    const isOut = qty <= 0;
+    const cls   = isOut ? "red" : "yellow";
+    const icon  = isOut ? "🚨"  : "⚠️";
+    const label = isOut ? "OUT OF STOCK" : "LOW STOCK";
+    const badgeBg  = isOut ? "var(--red-dim)"   : "var(--amber-dim)";
+    const badgeClr = isOut ? "var(--red)"        : "var(--amber)";
+    const badgeBrd = isOut ? "var(--red-brd)"    : "var(--amber-brd)";
+    return `
+    <div class="mep-alert ${cls}" style="margin-bottom:8px;cursor:default">
+      <span class="mep-alert-icon">${icon}</span>
+      <div class="mep-alert-body">
+        <div class="mep-alert-title">${_escM(r.name || r.code)}</div>
+        <div class="mep-alert-sub">${label} · ${qty} ${r.unit||""} (min: ${min}) · ${_escM(r.lieferant||"—")}</div>
+      </div>
+      <span class="urgent-badge" style="margin-left:auto;flex-shrink:0;background:${badgeBg};color:${badgeClr};border:1px solid ${badgeBrd}">Order!</span>
+    </div>`;
+  }).join("");
+}
+
+function _renderMorningChecklist() {
+  const el = document.getElementById("morning-checklist");
+  if (!el) return;
+
+  const key   = _morningChecklistKey();
+  let   items = JSON.parse(localStorage.getItem(key) || "null");
+  if (!items) {
+    items = MORNING_CHECKLIST_DEFAULTS.map((text, i) => ({ id: i, text, done: false }));
+    localStorage.setItem(key, JSON.stringify(items));
+  }
+
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">📝</div>No tasks. Tap <b>+ Add</b> to create one.</div>`;
+    return;
+  }
+
+  const doneCount = items.filter(it => it.done).length;
+  const pct       = items.length ? Math.round(doneCount / items.length * 100) : 0;
+
+  el.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${doneCount} / ${items.length} tasks completed</div>
+    <div class="morning-progress-bar"><div class="morning-progress-fill" style="width:${pct}%"></div></div>
+    ${items.map((item, idx) => `
+    <div class="check-item ${item.done ? "done" : ""}" onclick="toggleCheck(${idx})">
+      <div class="check-box">${item.done
+        ? `<svg width="12" height="10" viewBox="0 0 12 10"><polyline points="1,5 4.5,8.5 11,1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        : ""}</div>
+      <span class="check-text">${_escM(item.text)}</span>
+      <button onclick="event.stopPropagation();removeCheckItem(${idx})"
+        style="background:none;border:none;color:var(--faint);font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0" title="Remove">×</button>
+    </div>`).join("")}`;
+}
+
+function toggleCheck(idx) {
+  const key   = _morningChecklistKey();
+  const items = JSON.parse(localStorage.getItem(key) || "[]");
+  if (items[idx] !== undefined) items[idx].done = !items[idx].done;
+  localStorage.setItem(key, JSON.stringify(items));
+  _renderMorningChecklist();
+}
+
+function removeCheckItem(idx) {
+  const key   = _morningChecklistKey();
+  const items = JSON.parse(localStorage.getItem(key) || "[]");
+  items.splice(idx, 1);
+  localStorage.setItem(key, JSON.stringify(items));
+  _renderMorningChecklist();
+}
+
+function resetChecklist() {
+  const items = MORNING_CHECKLIST_DEFAULTS.map((text, i) => ({ id: i, text, done: false }));
+  localStorage.setItem(_morningChecklistKey(), JSON.stringify(items));
+  _renderMorningChecklist();
+  showToast("Checklist reset for today", "info");
+}
+
+function addChecklistItem() {
+  const text = window.prompt("New task name:");
+  if (!text || !text.trim()) return;
+  const key   = _morningChecklistKey();
+  const items = JSON.parse(localStorage.getItem(key) || "[]");
+  items.push({ id: Date.now(), text: text.trim(), done: false });
+  localStorage.setItem(key, JSON.stringify(items));
+  _renderMorningChecklist();
 }
 
 </script>
