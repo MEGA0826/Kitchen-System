@@ -463,7 +463,36 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
     .order-cal-legend span { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; }
     .order-cal-legend i { display:inline-block; width:10px; height:10px; border-radius:3px; }
     .order-detail-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:16px; }
-    .order-detail-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:10px; }   
+    .order-detail-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:10px; }
+
+    /* ── MORNING BRIEFING ── */
+    .morning-section { margin-bottom: 28px; }
+    .morning-section-title { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .urgent-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; display:flex; gap:14px; align-items:center; margin-bottom:8px; transition:border-color .15s; }
+    .urgent-card:hover { border-color:var(--border2); }
+    .urgent-rank { font-family:var(--serif); font-size:28px; color:var(--faint); width:28px; flex-shrink:0; text-align:center; line-height:1; }
+    .urgent-body { flex:1; min-width:0; }
+    .urgent-name { font-size:14px; font-weight:500; color:var(--text); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .urgent-meta { font-size:11px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .urgent-badge { padding:2px 8px; border-radius:10px; font-size:10px; letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+    .urgent-progress { display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex-shrink:0; width:56px; }
+    .urgent-pct { font-family:var(--serif); font-size:20px; line-height:1; }
+    .urgent-pct.red   { color:var(--red); }
+    .urgent-pct.amber { color:var(--amber); }
+    .urgent-pct.green { color:var(--green); }
+    .urgent-bar { width:100%; height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+    .urgent-bar-fill { height:100%; border-radius:2px; transition:width .5s ease; }
+    .checklist { display:flex; flex-direction:column; gap:6px; }
+    .check-item { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; user-select:none; -webkit-user-select:none; }
+    .check-item:hover { border-color:var(--border2); }
+    .check-item:active { transform:scale(0.99); }
+    .check-item.done { opacity:.5; }
+    .check-box { width:20px; height:20px; border-radius:6px; border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+    .check-item.done .check-box { background:var(--green); border-color:var(--green); }
+    .check-text { flex:1; font-size:13px; color:var(--text); }
+    .check-item.done .check-text { text-decoration:line-through; color:var(--muted); }
+    .morning-progress-bar { height:4px; background:var(--surface2); border-radius:2px; margin-bottom:14px; overflow:hidden; }
+    .morning-progress-fill { height:100%; background:var(--green); border-radius:2px; transition:width .4s ease; }
   </style>
 </head>
 <body>
@@ -494,6 +523,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 </div>
 
 <div class="nav" id="main-nav">
+  <button class="tab"        data-tab="morning"      onclick="switchTab(this)"><span class="tab-icon">🌅</span>Morning</button>
   <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
   <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)"><span class="tab-icon">📋</span>MEP Overview</button>
   <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
@@ -506,6 +536,47 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 </div>
 
 <div class="body">
+
+<!-- MORNING BRIEFING -->
+<div class="panel" id="panel-morning">
+  <div class="section-title">Morning Briefing <span class="section-title-icon">🌅</span></div>
+  <div class="section-sub" id="morning-date-sub">Today's kitchen prep status</div>
+
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+    <button class="refresh-btn" onclick="loadMorning()" style="padding:8px 16px">↺ Refresh</button>
+  </div>
+
+  <!-- Top 5 urgent MEP -->
+  <div class="morning-section">
+    <div class="morning-section-title">🔥 Top 5 — Urgently needed</div>
+    <div id="morning-urgent">
+      <div class="skeleton" style="height:68px;border-radius:14px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:68px;border-radius:14px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:68px;border-radius:14px"></div>
+    </div>
+  </div>
+
+  <!-- Low-stock alerts -->
+  <div class="morning-section">
+    <div class="morning-section-title">⚠️ Low-Stock Alerts — Lager</div>
+    <div id="morning-stock">
+      <div class="skeleton" style="height:52px;border-radius:14px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:52px;border-radius:14px"></div>
+    </div>
+  </div>
+
+  <!-- Prep checklist -->
+  <div class="morning-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="morning-section-title" style="margin-bottom:0">✅ Prep Checklist</div>
+      <div style="display:flex;gap:8px">
+        <button class="refresh-btn" onclick="resetChecklist()" style="padding:4px 10px">↺ Reset</button>
+        <button class="refresh-btn" onclick="addChecklistItem()" style="padding:4px 10px;color:var(--green);border-color:var(--green-brd)">+ Add</button>
+      </div>
+    </div>
+    <div id="morning-checklist" class="checklist"></div>
+  </div>
+</div>
 
  <!-- KDS -->
   <div class="panel active" id="panel-kds">
@@ -1527,8 +1598,8 @@ let allGRs = [];
   
 const ROLE_TABS = {
   Teamleader : ['kds','mep-overview','inventory','deductions'],
-  Küchenchef : ['kds','mep-overview','inventory','recipes','orders','deductions','reports'],
-  Manager    : ['kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
+  Küchenchef : ['morning','kds','mep-overview','inventory','recipes','orders','deductions','reports'],
+  Manager    : ['morning','kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
 };
 const ROLE_READONLY = {
   Teamleader : ['inventory','deductions','mep-overview'],
@@ -1615,6 +1686,7 @@ function switchTab(btn) {
   if (tabId === "deductions")   loadDeductions();
   if (tabId === "reports")      loadReportsTab();
   if (tabId === "mep-overview") loadMepOverview();
+  if (tabId === "morning")      loadMorning();
 }
 
 function applyRoleAccess() {
@@ -4802,8 +4874,237 @@ function buildMenuPdfHtml(m) {
       <span>Kitchen MEP · 212 Nooch Richti</span>
     </div>
   </div>`;
-} 
-  
+}
+
+// ─────────────────────────────────────────────
+// MORNING BRIEFING
+// ─────────────────────────────────────────────
+
+const MORNING_CHECKLIST_DEFAULTS = [
+  "Check fridge & cold chain temps",
+  "Review yesterday's waste log",
+  "Brief team on today's targets",
+  "Confirm incoming deliveries",
+  "Prep stations ready & labelled",
+  "Allergen boards updated",
+  "Cutting boards sanitised",
+  "Date labels checked on all containers",
+];
+
+function _morningChecklistKey() {
+  const d = new Date();
+  return `mep_checklist_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
+}
+
+function _escM(str) {
+  return String(str)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function loadMorning() {
+  const sub = document.getElementById("morning-date-sub");
+  if (sub) {
+    const now  = new Date();
+    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    sub.textContent = `${days[now.getDay()]} · ${now.toLocaleDateString("de-CH")} — Kitchen prep overview`;
+  }
+  _renderMorningUrgent();
+  _renderMorningLowStock();
+  _renderMorningChecklist();
+}
+
+function _renderMorningUrgent() {
+  const el = document.getElementById("morning-urgent");
+  if (!el) return;
+
+  const entries = Object.entries(allProducts).filter(([, p]) => p.tagesziel || p.mepMax);
+  if (!entries.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>No products with targets. Configure them in Admin → Products.</div>`;
+    return;
+  }
+
+  const scored = entries.map(([code, p]) => {
+    const stats     = (window.todayScanStats || {})[code] || {};
+    const available = Math.max(0, (stats.done||0) - (stats.waste||0) - (stats.used||0));
+    const tagesziel = Number(p.tagesziel) || 0;
+    const mepMax    = Number(p.mepMax)    || 0;
+    const targetQty = tagesziel > 0 ? tagesziel : mepMax;
+    const shelfLife = Number(p.shelfLife) || 2;
+
+    // Expired-batch count from today's scans
+    const expiredCount = allScans.filter(s => {
+      if (!s.timestamp || s.code !== code || s.action !== "produce") return false;
+      const ageD = (Date.now() - new Date(s.timestamp).getTime()) / 86400000;
+      return ageD > shelfLife;
+    }).length;
+
+    const deficit = Math.max(0, targetQty - available);
+    const pct     = targetQty > 0 ? Math.min(100, Math.round(available / targetQty * 100)) : 0;
+    // Urgency: big deficit + not started bonus + expired penalty + urgency from short shelf life
+    const urgency = deficit * 2
+      + (targetQty > 0 && available === 0 ? 30 : 0)
+      + expiredCount * 15
+      + (10 / shelfLife);
+
+    return { code, p, available, targetQty, shelfLife, expiredCount, deficit, pct, urgency };
+  });
+
+  const top5 = scored
+    .filter(s => s.deficit > 0 || s.expiredCount > 0)
+    .sort((a, b) => b.urgency - a.urgency)
+    .slice(0, 5);
+
+  if (!top5.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">🎉</div>All daily targets met — kitchen is on track!</div>`;
+    return;
+  }
+
+  el.innerHTML = top5.map(({ code, p, available, targetQty, shelfLife, expiredCount, pct }, i) => {
+    const gnSize   = p.gnSize || "";
+    const barColor = pct < 30 ? "var(--red)" : pct < 70 ? "var(--amber)" : "var(--green)";
+    const pctCls   = pct < 30 ? "red"        : pct < 70 ? "amber"        : "green";
+
+    const badges = [];
+    if (expiredCount > 0)
+      badges.push(`<span class="urgent-badge" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd)">${expiredCount} expired</span>`);
+    if (shelfLife <= 1)
+      badges.push(`<span class="urgent-badge" style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd)">1d shelf</span>`);
+    if (available === 0)
+      badges.push(`<span class="urgent-badge" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd)">Not started</span>`);
+
+    return `
+    <div class="urgent-card">
+      <div class="urgent-rank">${i + 1}</div>
+      <div class="urgent-body">
+        <div class="urgent-name">${_escM(p.name || code)}</div>
+        <div class="urgent-meta">
+          <span>${available}${gnSize ? " "+gnSize : ""} / ${targetQty}${gnSize ? " "+gnSize : ""} done</span>
+          <span style="color:var(--faint)">·</span>
+          <span>Shelf ${shelfLife}d</span>
+          ${badges.join(" ")}
+        </div>
+      </div>
+      <div class="urgent-progress">
+        <span class="urgent-pct ${pctCls}">${pct}%</span>
+        <div class="urgent-bar">
+          <div class="urgent-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function _renderMorningLowStock() {
+  const el = document.getElementById("morning-stock");
+  if (!el) return;
+
+  if (!allInventory.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">📦</div>Inventory not loaded yet. <a href="#" onclick="event.preventDefault();loadInventory().then(()=>_renderMorningLowStock())" style="color:var(--amber)">Load now</a></div>`;
+    return;
+  }
+
+  const lowItems = allInventory
+    .filter(r => {
+      const qty = parseFloat(r.quantity) || 0;
+      const min = parseFloat(r.minimum)  || 0;
+      return min > 0 && qty <= min;
+    })
+    .sort((a, b) => (parseFloat(a.quantity)||0) - (parseFloat(b.quantity)||0));
+
+  if (!lowItems.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">✅</div>All Lager items above minimum — good stock levels.</div>`;
+    return;
+  }
+
+  el.innerHTML = lowItems.map(r => {
+    const qty   = parseFloat(r.quantity) || 0;
+    const min   = parseFloat(r.minimum)  || 0;
+    const isOut = qty <= 0;
+    const cls   = isOut ? "red" : "yellow";
+    const icon  = isOut ? "🚨"  : "⚠️";
+    const label = isOut ? "OUT OF STOCK" : "LOW STOCK";
+    const badgeBg  = isOut ? "var(--red-dim)"   : "var(--amber-dim)";
+    const badgeClr = isOut ? "var(--red)"        : "var(--amber)";
+    const badgeBrd = isOut ? "var(--red-brd)"    : "var(--amber-brd)";
+    return `
+    <div class="mep-alert ${cls}" style="margin-bottom:8px;cursor:default">
+      <span class="mep-alert-icon">${icon}</span>
+      <div class="mep-alert-body">
+        <div class="mep-alert-title">${_escM(r.name || r.code)}</div>
+        <div class="mep-alert-sub">${label} · ${qty} ${r.unit||""} (min: ${min}) · ${_escM(r.lieferant||"—")}</div>
+      </div>
+      <span class="urgent-badge" style="margin-left:auto;flex-shrink:0;background:${badgeBg};color:${badgeClr};border:1px solid ${badgeBrd}">Order!</span>
+    </div>`;
+  }).join("");
+}
+
+function _renderMorningChecklist() {
+  const el = document.getElementById("morning-checklist");
+  if (!el) return;
+
+  const key   = _morningChecklistKey();
+  let   items = JSON.parse(localStorage.getItem(key) || "null");
+  if (!items) {
+    items = MORNING_CHECKLIST_DEFAULTS.map((text, i) => ({ id: i, text, done: false }));
+    localStorage.setItem(key, JSON.stringify(items));
+  }
+
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">📝</div>No tasks. Tap <b>+ Add</b> to create one.</div>`;
+    return;
+  }
+
+  const doneCount = items.filter(it => it.done).length;
+  const pct       = items.length ? Math.round(doneCount / items.length * 100) : 0;
+
+  el.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${doneCount} / ${items.length} tasks completed</div>
+    <div class="morning-progress-bar"><div class="morning-progress-fill" style="width:${pct}%"></div></div>
+    ${items.map((item, idx) => `
+    <div class="check-item ${item.done ? "done" : ""}" onclick="toggleCheck(${idx})">
+      <div class="check-box">${item.done
+        ? `<svg width="12" height="10" viewBox="0 0 12 10"><polyline points="1,5 4.5,8.5 11,1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        : ""}</div>
+      <span class="check-text">${_escM(item.text)}</span>
+      <button onclick="event.stopPropagation();removeCheckItem(${idx})"
+        style="background:none;border:none;color:var(--faint);font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0" title="Remove">×</button>
+    </div>`).join("")}`;
+}
+
+function toggleCheck(idx) {
+  const key   = _morningChecklistKey();
+  const items = JSON.parse(localStorage.getItem(key) || "[]");
+  if (items[idx] !== undefined) items[idx].done = !items[idx].done;
+  localStorage.setItem(key, JSON.stringify(items));
+  _renderMorningChecklist();
+}
+
+function removeCheckItem(idx) {
+  const key   = _morningChecklistKey();
+  const items = JSON.parse(localStorage.getItem(key) || "[]");
+  items.splice(idx, 1);
+  localStorage.setItem(key, JSON.stringify(items));
+  _renderMorningChecklist();
+}
+
+function resetChecklist() {
+  const items = MORNING_CHECKLIST_DEFAULTS.map((text, i) => ({ id: i, text, done: false }));
+  localStorage.setItem(_morningChecklistKey(), JSON.stringify(items));
+  _renderMorningChecklist();
+  showToast("Checklist reset for today", "info");
+}
+
+function addChecklistItem() {
+  const text = window.prompt("New task name:");
+  if (!text || !text.trim()) return;
+  const key   = _morningChecklistKey();
+  const items = JSON.parse(localStorage.getItem(key) || "[]");
+  items.push({ id: Date.now(), text: text.trim(), done: false });
+  localStorage.setItem(key, JSON.stringify(items));
+  _renderMorningChecklist();
+}
+
 </script>
   
 <!-- Edit Modals -->
