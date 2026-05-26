@@ -3947,6 +3947,7 @@ document.addEventListener("click", e => { if (e.target?.id==="manualScanModal") 
 })();
 
 // Apply role first so tabs are visible before any fetch
+_handleStripeReturn();   // must run before tab/data init so plan state is set first
 applyRoleAccess();
 
 // Fire all fetches in parallel — none blocks the others
@@ -3969,10 +3970,15 @@ Promise.allSettled([
   if (saved === "mep-overview") loadMepOverview && loadMepOverview();
 }).catch(e => console.error("Init error:", e));
 
+_initSubscriptionUI();
 setTimeout(() => { loadMenus(); loadGRs(); }, 600);
 
-// Auto-refresh KDS every 60s
-setInterval(() => loadKDS(), 60_000);
+// Auto-refresh KDS every 60s — re-render product grid if new scans arrived
+setInterval(async () => {
+  const prevLen = allScans.length;
+  await loadKDS();
+  if (allScans.length !== prevLen) renderProductGrid && renderProductGrid(Object.entries(allProducts));
+}, 60_000);
 
 let _relType="all";
 function setRelType(){}
@@ -4263,20 +4269,6 @@ function _initSubscriptionUI() {
   } catch(e) {}
 }
 
-_handleStripeReturn();   // must run before initDashboard so plan state is set first
-initDashboard();
-_initSubscriptionUI();
-setTimeout(loadMenus, 800);
-
-setInterval(async () => {
-  const prevLen = allScans.length;
-  await loadKDS();
-  if (allScans.length !== prevLen) renderProductGrid(Object.entries(allProducts));
-}, 60_000);
-
-setInterval(() => {
-  fetch(API + "?action=workers", { cache:"no-store", mode:"no-cors" }).catch(() => {});
-}, 4 * 60 * 1000);
   
 // Mobile dropdown tab switching
 function switchTabMobile(select) {
@@ -4935,7 +4927,7 @@ async function saveEditedInventory() {
   if (!confirm("Remove this ingredient from the recipe?")) return;
   const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
   if (data.error) { alert("Error: "+data.error); return; }
-  await loadRecipes(); renderRecipeList();
+  await loadMenus(); renderMenuList();
 }
 
 // ─────────────────────────────────────────────
