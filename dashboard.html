@@ -2031,7 +2031,7 @@ function switchTab(btn) {
 
   if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
   if (tabId === "orders")       renderOrders();
-  if (tabId === "recipes")      { loadRequirements(); renderRecipeList(); populateRecipeDropdowns(); }
+  if (tabId === "recipes")      { loadRequirements(); renderMenuList(); populateMenuFilters(); }
   if (tabId === "deductions")   loadDeductions();
   if (tabId === "reports")      loadReportsTab();
   if (tabId === "mep-overview") loadMepOverview();
@@ -2145,9 +2145,13 @@ async function submitPin() {
 
   if (matched) {
     cancelPin();
-    sessionStorage.setItem("isAdminUnlocked", "true"); 
-    // Make admin tab visible in nav
-    updateRecipeAddButtons();                          
+
+    // Store the authenticated worker's role so applyRoleAccess() gates tabs correctly
+    const role = matched.role || "Manager";
+    sessionStorage.setItem("dashRole", role);
+    sessionStorage.setItem("isAdminUnlocked", "true");
+    applyRoleAccess();
+    updateRecipeAddButtons();
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
 
@@ -4262,7 +4266,7 @@ function _initSubscriptionUI() {
 _handleStripeReturn();   // must run before initDashboard so plan state is set first
 initDashboard();
 _initSubscriptionUI();
-setTimeout(loadRecipes, 800);
+setTimeout(loadMenus, 800);
 
 setInterval(async () => {
   const prevLen = allScans.length;
