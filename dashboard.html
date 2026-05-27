@@ -8721,8 +8721,13 @@ window.rForceRefresh=async function(){
 window.initRelationsTab=async function(){
   var ov=$('relOverlay');if(!ov)return;
   ov.style.display='flex';
+  // Use getBoundingClientRect so we get the actual visible bottom edge,
+  // not offsetHeight which ignores scroll position and hidden nav state.
   var hdr=document.querySelector('.header'),nav=document.querySelector('.nav');
-  ov.style.top=((hdr&&hdr.offsetHeight||0)+(nav&&nav.offsetHeight||0))+'px';
+  var top=0;
+  if(hdr){top=Math.max(top,hdr.getBoundingClientRect().bottom);}
+  if(nav&&nav.getBoundingClientRect().bottom>top){top=nav.getBoundingClientRect().bottom;}
+  ov.style.top=Math.round(top)+'px';
   if(!rDOMBuilt){ov.innerHTML='<div style="display:flex;align-items:center;justify-content:center;flex:1;color:#4b5563;font-family:DM Mono,monospace;font-size:11px;gap:8px;background:#080a0f"><span style="font-size:24px;opacity:.3">⏳</span> Lade…</div>';}
   await ensureData();
   ov.innerHTML='';
