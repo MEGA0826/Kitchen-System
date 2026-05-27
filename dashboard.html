@@ -539,6 +539,7 @@
   <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
   <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
   <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
+  <button class="tab"        data-tab="relations"    onclick="switchTab(this)"><span class="tab-icon">🔗</span>Relations</button>
   <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
   <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
   <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
@@ -1913,8 +1914,8 @@ let allGRs = [];
   
 const ROLE_TABS = {
   Teamleader : ['kds','mep-overview','inventory','deductions'],
-  Küchenchef : ['morning','kds','mep-overview','inventory','recipes','orders','deductions','reports'],
-  Manager    : ['morning','kds','mep-overview','inventory','products','recipes','orders','deductions','reports','admin'],
+  Küchenchef : ['morning','kds','mep-overview','inventory','recipes','relations','orders','deductions','reports'],
+  Manager    : ['morning','kds','mep-overview','inventory','products','recipes','relations','orders','deductions','reports','admin'],
 };
   
 // Roles that can VIEW recipes but not add/edit
@@ -2032,6 +2033,7 @@ function switchTab(btn) {
   if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
   if (tabId === "orders")       renderOrders();
   if (tabId === "recipes")      { loadRequirements(); renderMenuList(); populateMenuFilters(); }
+  if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
   if (tabId === "deductions")   loadDeductions();
   if (tabId === "reports")      loadReportsTab();
   if (tabId === "mep-overview") loadMepOverview();
