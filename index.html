@@ -1165,6 +1165,13 @@
       width:10px; height:10px; border-radius:50%; flex-shrink:0;
       box-shadow:0 0 0 2px var(--surface);
     }
+    .waste-qty-btn {
+      padding:12px 4px; border-radius:8px; border:1px solid #2a2a2a;
+      background:#141414; color:#888; font-family:'DM Mono',monospace;
+      font-size:14px; font-weight:600; cursor:pointer; text-align:center;
+      transition:all .15s; -webkit-tap-highlight-color:transparent;
+    }
+    .waste-qty-btn.sel { background:var(--red-dim); border-color:var(--red-brd); color:var(--red); }
   </style>
 </head>
 <body>
@@ -1343,6 +1350,24 @@
           <span class="btn-icon">←</span>
           <span class="btn-label" id="undoLabel">Undo (3)</span>
         </button>
+      </div>
+
+      <!-- Inline waste panel: shown after Finish MEP -->
+      <div id="wastePanel" style="display:none;flex-direction:column;gap:8px;padding:10px 0 0;border-top:1px solid #1e1e1e;animation:slideUp .25s ease">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#666">Log any waste?</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <button class="waste-qty-btn" onclick="selectWasteQty(this,0)">0 GN</button>
+          <button class="waste-qty-btn" onclick="selectWasteQty(this,0.5)">½ GN</button>
+          <button class="waste-qty-btn" onclick="selectWasteQty(this,1)">1 GN</button>
+        </div>
+        <div id="wasteReasonWrap" style="display:none;flex-direction:column;gap:6px">
+          <select id="wasteReason" style="width:100%;padding:12px 14px;background:#141414;color:#ccc;border:1px solid #2a2a2a;border-radius:8px;font-family:'DM Mono',monospace;font-size:15px;cursor:pointer">
+            <option value="Spoiled">Spoiled</option>
+            <option value="Over-produced">Over-produced</option>
+            <option value="Dropped">Dropped</option>
+          </select>
+          <button onclick="logWaste()" style="width:100%;padding:11px;background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer">✕ Log Waste</button>
+        </div>
       </div>
 
     </div>
@@ -1749,7 +1774,11 @@ async function send(action) {
     if (data.mepMax !== undefined) updateMepUI(data);
     const successLabels = { produce:"Production started", done:"Batch finished", waste:"Waste recorded", used:"Use recorded" };
     showMsg(successLabels[action] || "OK", "success");
-    startUndo(action);
+    if (action === "done") {
+      showWastePanel();
+    } else {
+      startUndo(action);
+    }
   } catch(err) {
     await queueScan({ code: CURRENT_CODE, worker, action });
     showMsg("Offline - queued for sync", "info");
@@ -2692,6 +2721,57 @@ async function popupSend(action) {
   function closeRoleDrawer() {
     document.getElementById("roleDrawer").classList.remove("open");
     document.getElementById("roleDrawerOverlay").classList.remove("open");
+  }
+
+  // ── INLINE WASTE PANEL ─────────────────────────────────────────────────────
+  let _wastePanelQty = 0;
+
+  function showWastePanel() {
+    const p = document.getElementById("wastePanel");
+    if (!p) return;
+    document.querySelectorAll(".waste-qty-btn").forEach(b => b.classList.remove("sel"));
+    const wrap = document.getElementById("wasteReasonWrap");
+    if (wrap) wrap.style.display = "none";
+    _wastePanelQty = 0;
+    const msg  = document.getElementById("msg");
+    const undo = document.getElementById("btnUndo");
+    if (msg)  msg.className = "feedback-inner";
+    if (undo) undo.style.display = "none";
+    p.style.display = "flex";
+  }
+
+  function hideWastePanel() {
+    const p = document.getElementById("wastePanel");
+    if (p) p.style.display = "none";
+  }
+
+  function selectWasteQty(btn, qty) {
+    document.querySelectorAll(".waste-qty-btn").forEach(b => b.classList.remove("sel"));
+    btn.classList.add("sel");
+    _wastePanelQty = qty;
+    const wrap = document.getElementById("wasteReasonWrap");
+    if (wrap) wrap.style.display = qty > 0 ? "flex" : "none";
+    if (qty === 0) { hideWastePanel(); goToStaffHome(); }
+  }
+
+  async function logWaste() {
+    const worker = getCurrentWorker();
+    const reason = document.getElementById("wasteReason")?.value || "Spoiled";
+    const qty    = _wastePanelQty;
+    if (!worker) { showMsg("Select staff first", "error"); return; }
+    hideWastePanel();
+    showMsg("Logging waste...", "info");
+    const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=waste&qty=${encodeURIComponent(qty)}&reason=${encodeURIComponent(reason)}`;
+    try {
+      if (!navigator.onLine) throw new Error("offline");
+      await fetch(url);
+      showMsg("Waste logged", "success");
+      setTimeout(goToStaffHome, 1200);
+    } catch(err) {
+      await queueScan({ code: CURRENT_CODE, worker, action: "waste", qty, reason });
+      showMsg("Offline — waste queued", "info");
+      setTimeout(goToStaffHome, 1200);
+    }
   }
 
 </script>
