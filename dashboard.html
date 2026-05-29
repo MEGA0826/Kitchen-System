@@ -2138,9 +2138,10 @@ document.addEventListener("click", e => {
 // TAB SWITCHING
 // ─────────────────────────────────────────────
 function switchTab(btn) {
+  if (!btn) return;
   closeMenu();   // ← close + reset icon on every tab click
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t && t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p && p.classList.remove("active"));
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
   if (tabId) { const p = document.getElementById("panel-" + tabId); if (p) p.classList.add("active"); }
@@ -9127,7 +9128,7 @@ window.initRelationsTab=async function(){
 
 // Hide overlay when switching away
 var _origST=window.switchTab;
-window.switchTab=function(btn){_origST.call(this,btn);if(btn.dataset.tab!=='relations'){var ov=$('relOverlay');if(ov)ov.style.display='none';}};
+window.switchTab=function(btn){if(!btn)return;_origST.call(this,btn);if(btn.dataset&&btn.dataset.tab!=='relations'){var ov=$('relOverlay');if(ov)ov.style.display='none';}};
 })();
 </script>
 </body>
