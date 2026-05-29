@@ -171,6 +171,7 @@
     /* PANELS */
     .panel { display: none; animation: fadeIn .25s ease; }
     .panel.active { display: block; }
+    #panel-haccp.active { display: flex; flex-direction: column; gap: 16px; }
     @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
     /* SECTION */
@@ -748,9 +749,12 @@
         <div class="section-title" style="margin-bottom:2px">Recipes</div>
         <div class="section-sub" data-i18n="recipes-sub">Menus & Zutaten</div>
       </div>
-      <button id="btn-add-menu" onclick="guardedAddMenu()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
-      <button id="btn-add-gr" onclick="guardedAddGR()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
-      <button id="btn-add-mep" onclick="guardedAddMEP()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add MEP</button>
+      <div id="recipe-add-btns" style="display:none;flex-wrap:wrap;gap:8px;align-items:center">
+        <button id="btn-add-menu" onclick="guardedAddMenu()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
+        <button id="btn-add-gr" onclick="guardedAddGR()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
+        <button id="btn-add-mep" onclick="guardedAddMEP()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add MEP</button>
+        <button id="btn-add-platte" onclick="guardedAddPlatte()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Platte</button>
+      </div>
     </div>
 
     <!-- Search bar -->
@@ -1054,7 +1058,7 @@
         <div class="form-field">
           <label class="form-label">Art</label>
           <select class="form-input" id="agr-art">
-            <option>Grundrezeptur</option><option>Marinade</option><option>Sauce</option><option>Beilage</option>
+            <option>Grundrezeptur</option><option>Platte</option><option>Marinade</option><option>Sauce</option><option>Beilage</option>
           </select>
         </div>
         <div class="form-field">
@@ -1743,7 +1747,7 @@
 <div class="panel" id="panel-relations"></div>
 
 <!-- ── HACCP PANEL ──────────────────────────────────────────────────────── -->
-<div class="panel" id="haccp" style="padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px">
+<div class="panel" id="panel-haccp" style="padding:20px;overflow-y:auto">
 
   <!-- Zones -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
@@ -2134,12 +2138,13 @@ document.addEventListener("click", e => {
 // TAB SWITCHING
 // ─────────────────────────────────────────────
 function switchTab(btn) {
+  if (!btn) return;
   closeMenu();   // ← close + reset icon on every tab click
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t && t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p && p.classList.remove("active"));
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
-  if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
+  if (tabId) { const p = document.getElementById("panel-" + tabId); if (p) p.classList.add("active"); }
 
   if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
   if (tabId === "orders")       renderOrders();
@@ -2181,6 +2186,7 @@ function applyRoleAccess() {
   }
 
 // Do NOT auto-switch tab here — immediateTabRestore handles active tab);
+  updateRecipeAddButtons();
 }
   
 function requestAdminAccess() {
@@ -6386,26 +6392,25 @@ async function saveMEPFromPopup() {
     // Re-enable gp reference cleanup
   }
 }
-// Admin-guarded wrappers for the 3 add buttons
-function guardedAddMenu() { openMenuPopup(null); }
-function guardedAddGR()   { openAddGRPopup(); }
-function guardedAddMEP()  { openAddMEPPopup(); }
+// Wrappers for the 4 recipe add buttons
+function guardedAddMenu()   { openMenuPopup(null); }
+function guardedAddGR()     { openAddGRPopup(); }
+function guardedAddMEP()    { openAddMEPPopup(); }
+function guardedAddPlatte() { openAddGRPopup("Platte"); }
 
-// Show/hide add buttons based on admin session
+// Show/hide add buttons — visible once admin PIN is unlocked
 function updateRecipeAddButtons() {
-  const isAdmin = sessionStorage.getItem("isAdminUnlocked") === "true";
-  ["btn-add-menu","btn-add-gr","btn-add-mep"].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.style.display = isAdmin ? "flex" : "none";
-  });
+  const isUnlocked = sessionStorage.getItem("isAdminUnlocked") === "true";
+  const container = document.getElementById("recipe-add-btns");
+  if (container) container.style.display = isUnlocked ? "flex" : "none";
 }
-function openAddGRPopup() {
+function openAddGRPopup(art) {
   closeMenu();
   agrZutaten = [];
   ['agr-code','agr-name','agr-rohgewicht','agr-garverlust','agr-zubereitung'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('agr-art').value = 'Grundrezeptur';
+  document.getElementById('agr-art').value = art || 'Grundrezeptur';
   document.getElementById('agr-netto').textContent = '—';
   document.getElementById('agr-eff').textContent = '—';
   document.getElementById('agr-wa').value = '';
@@ -9123,7 +9128,7 @@ window.initRelationsTab=async function(){
 
 // Hide overlay when switching away
 var _origST=window.switchTab;
-window.switchTab=function(btn){_origST.call(this,btn);if(btn.dataset.tab!=='relations'){var ov=$('relOverlay');if(ov)ov.style.display='none';}};
+window.switchTab=function(btn){if(!btn)return;_origST.call(this,btn);if(btn.dataset&&btn.dataset.tab!=='relations'){var ov=$('relOverlay');if(ov)ov.style.display='none';}};
 })();
 </script>
 </body>
