@@ -171,6 +171,7 @@
     /* PANELS */
     .panel { display: none; animation: fadeIn .25s ease; }
     .panel.active { display: block; }
+    #panel-haccp.active { display: flex; flex-direction: column; gap: 16px; }
     @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
     /* SECTION */
@@ -1746,7 +1747,7 @@
 <div class="panel" id="panel-relations"></div>
 
 <!-- ── HACCP PANEL ──────────────────────────────────────────────────────── -->
-<div class="panel" id="panel-haccp" style="padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px">
+<div class="panel" id="panel-haccp" style="padding:20px;overflow-y:auto">
 
   <!-- Zones -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
@@ -2142,7 +2143,7 @@ function switchTab(btn) {
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
-  if (tabId) document.getElementById("panel-" + tabId).classList.add("active");
+  if (tabId) { const p = document.getElementById("panel-" + tabId); if (p) p.classList.add("active"); }
 
   if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
   if (tabId === "orders")       renderOrders();
