@@ -748,9 +748,12 @@
         <div class="section-title" style="margin-bottom:2px">Recipes</div>
         <div class="section-sub" data-i18n="recipes-sub">Menus & Zutaten</div>
       </div>
-      <button id="btn-add-menu" onclick="guardedAddMenu()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
-      <button id="btn-add-gr" onclick="guardedAddGR()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
-      <button id="btn-add-mep" onclick="guardedAddMEP()" style="display:none;align-items:center;gap:8px;padding:10px 18px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add MEP</button>
+      <div id="recipe-add-btns" style="display:none;flex-wrap:wrap;gap:8px;align-items:center">
+        <button id="btn-add-menu" onclick="guardedAddMenu()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Menu</button>
+        <button id="btn-add-gr" onclick="guardedAddGR()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add GR</button>
+        <button id="btn-add-mep" onclick="guardedAddMEP()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add MEP</button>
+        <button id="btn-add-platte" onclick="guardedAddPlatte()" style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">＋ Add Platte</button>
+      </div>
     </div>
 
     <!-- Search bar -->
@@ -1054,7 +1057,7 @@
         <div class="form-field">
           <label class="form-label">Art</label>
           <select class="form-input" id="agr-art">
-            <option>Grundrezeptur</option><option>Marinade</option><option>Sauce</option><option>Beilage</option>
+            <option>Grundrezeptur</option><option>Platte</option><option>Marinade</option><option>Sauce</option><option>Beilage</option>
           </select>
         </div>
         <div class="form-field">
@@ -2181,6 +2184,7 @@ function applyRoleAccess() {
   }
 
 // Do NOT auto-switch tab here — immediateTabRestore handles active tab);
+  updateRecipeAddButtons();
 }
   
 function requestAdminAccess() {
@@ -6386,26 +6390,26 @@ async function saveMEPFromPopup() {
     // Re-enable gp reference cleanup
   }
 }
-// Admin-guarded wrappers for the 3 add buttons
-function guardedAddMenu() { openMenuPopup(null); }
-function guardedAddGR()   { openAddGRPopup(); }
-function guardedAddMEP()  { openAddMEPPopup(); }
+// Wrappers for the 4 recipe add buttons
+function guardedAddMenu()   { openMenuPopup(null); }
+function guardedAddGR()     { openAddGRPopup(); }
+function guardedAddMEP()    { openAddMEPPopup(); }
+function guardedAddPlatte() { openAddGRPopup("Platte"); }
 
-// Show/hide add buttons based on admin session
+// Show/hide add buttons based on role (Küchenchef and Manager can add recipes)
 function updateRecipeAddButtons() {
-  const isAdmin = sessionStorage.getItem("isAdminUnlocked") === "true";
-  ["btn-add-menu","btn-add-gr","btn-add-mep"].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.style.display = isAdmin ? "flex" : "none";
-  });
+  const role = sessionStorage.getItem("dashRole") || "";
+  const canEdit = (role === "Küchenchef" || role === "Manager");
+  const container = document.getElementById("recipe-add-btns");
+  if (container) container.style.display = canEdit ? "flex" : "none";
 }
-function openAddGRPopup() {
+function openAddGRPopup(art) {
   closeMenu();
   agrZutaten = [];
   ['agr-code','agr-name','agr-rohgewicht','agr-garverlust','agr-zubereitung'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('agr-art').value = 'Grundrezeptur';
+  document.getElementById('agr-art').value = art || 'Grundrezeptur';
   document.getElementById('agr-netto').textContent = '—';
   document.getElementById('agr-eff').textContent = '—';
   document.getElementById('agr-wa').value = '';
