@@ -7048,6 +7048,20 @@ function removeMenuImage() {
 // ─────────────────────────────────────────────
 // INGREDIENT PICKER
 // ─────────────────────────────────────────────
+function _ipTypeBtns(active) {
+  return [['rm','RM'],['mep','MEP'],['gr','GR']].map(([id,label]) => {
+    const on = id === (active||'').toLowerCase();
+    return `<button type="button" onclick="setIpMode('${id}')" style="padding:3px 10px;border-radius:6px;border:1px solid;font-size:11px;cursor:pointer;font-family:var(--mono);background:${on?'var(--amber-dim)':'var(--surface)'};color:${on?'var(--amber)':'var(--muted)'};border-color:${on?'var(--amber-brd)':'var(--border2)'}">${label}</button>`;
+  }).join('');
+}
+function setIpMode(mode) {
+  ipMode = mode;
+  ipSelectedItem = null;
+  const d = document.getElementById('ip-detail'); if (d) d.style.display = 'none';
+  const t = document.getElementById('ip-title');  if (t) t.innerHTML = _ipTypeBtns(mode);
+  filterIngredientPicker();
+}
+
 function openIngredientPicker(mode, context, keepEditIdx) {
   closeMenu();
   ipMode    = mode;
