@@ -802,7 +802,7 @@
 
   <!-- ═══ MENU POPUP ═══ -->
   <div id="menuPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;justify-content:center;padding:16px 12px">
-  <div style="background:var(--card,var(--surface));border-radius:18px;max-width:700px;width:100%;max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+  <div style="background:var(--card,var(--surface));border-radius:18px;max-width:700px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
 
     <!-- Header -->
     <div style="background:var(--surface2);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0">
@@ -1040,7 +1040,7 @@
   
 <!-- ═══ ADD GR POPUP ═══ -->
   <div id="addGRPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;justify-content:center;padding:16px 12px">
-  <div style="background:var(--surface);border-radius:18px;max-width:600px;width:100%;max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+  <div style="background:var(--surface);border-radius:18px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
     <div style="background:var(--surface2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0">
       <div style="font-size:15px;font-weight:700;color:var(--green)">＋ Neue Grundrezeptur</div>
       <button onclick="closeAddGRPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
@@ -2144,7 +2144,11 @@ function switchTab(btn) {
   document.querySelectorAll(".panel").forEach(p => p && p.classList.remove("active"));
   btn.classList.add("active");
   const tabId = btn.dataset.tab;
-  if (tabId) { const p = document.getElementById("panel-" + tabId); if (p) p.classList.add("active"); }
+  if (tabId) {
+    const p = document.getElementById("panel-" + tabId);
+    if (p) p.classList.add("active");
+    sessionStorage.setItem("activeTab", tabId);
+  }
 
   if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
   if (tabId === "orders")       renderOrders();
@@ -8124,7 +8128,7 @@ function haccpExportPDF() {
 </div>
   <!-- Add MEP Popup (reuses product form fields) -->
 <div id="addMEPPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;justify-content:center;padding:16px">
-  <div style="background:var(--surface);border-radius:18px;max-width:560px;width:100%;max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+  <div style="background:var(--surface);border-radius:18px;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
     <div style="background:var(--surface2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0">
       <div style="font-size:15px;font-weight:700;color:var(--amber)">＋ Add MEP Product</div>
       <button onclick="closeAddMEPPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
