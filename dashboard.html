@@ -801,8 +801,8 @@
   </div>
 
   <!-- ═══ MENU POPUP ═══ -->
-  <div id="menuPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);overflow-y:auto;padding:16px 12px">
-  <div style="background:var(--card,var(--surface));border-radius:18px;max-width:700px;margin:0 auto;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+  <div id="menuPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;overflow-y:auto;padding:16px 12px">
+  <div style="background:var(--card,var(--surface));border-radius:18px;max-width:700px;width:100%;margin:auto 0;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
 
     <!-- Header -->
     <div style="background:var(--surface2);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
@@ -1039,8 +1039,8 @@
   </div>
   
 <!-- ═══ ADD GR POPUP ═══ -->
-  <div id="addGRPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);overflow-y:auto;padding:16px 12px">
-  <div style="background:var(--surface);border-radius:18px;max-width:600px;margin:0 auto;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+  <div id="addGRPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;overflow-y:auto;padding:16px 12px">
+  <div style="background:var(--surface);border-radius:18px;max-width:600px;width:100%;margin:auto 0;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
     <div style="background:var(--surface2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
       <div style="font-size:15px;font-weight:700;color:var(--green)">＋ Neue Grundrezeptur</div>
       <button onclick="closeAddGRPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
@@ -6291,7 +6291,7 @@ function openAddMEPPopup() {
   if (msg) { msg.textContent = ""; msg.className = "admin-msg"; }
    // Reset computed fields then recalc (fields are empty so shows —)
   const popup = document.getElementById("addMEPPopup");
-  popup.style.cssText = "display:flex;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:16px";
+  popup.style.display = "flex";
 }
 
 function closeAddMEPPopup() {
@@ -6416,7 +6416,7 @@ function openAddGRPopup(art) {
   document.getElementById('agr-wa').value = '';
   document.getElementById('agr-msg').textContent = '';
   renderAgrZutaten();
-  document.getElementById('addGRPopup').style.display = 'block';
+  document.getElementById('addGRPopup').style.display = 'flex';
 }
 
 function closeAddGRPopup() {
@@ -6578,7 +6578,7 @@ function openEditGRPopup(grCode) {
   document.getElementById('agr-code').readOnly     = true;
   calcAgrNetto();
   renderAgrZutaten();
-  document.getElementById('addGRPopup').style.display = 'block';
+  document.getElementById('addGRPopup').style.display = 'flex';
 }
 
 async function deleteGR(grCode, name) {
@@ -6839,7 +6839,7 @@ function openMenuPopup(menuId) {
   calcWaFromZutaten();
   populateMenuFilters();
 
-  popup.style.display = 'block';
+  popup.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
   const viewPopup = document.getElementById('menuViewPopup');
@@ -8123,8 +8123,8 @@ function haccpExportPDF() {
   </div>
 </div>
   <!-- Add MEP Popup (reuses product form fields) -->
-<div id="addMEPPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:16px">
-  <div style="background:var(--surface);border-radius:18px;max-width:560px;width:100%;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+<div id="addMEPPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;overflow-y:auto;padding:16px">
+  <div style="background:var(--surface);border-radius:18px;max-width:560px;width:100%;margin:auto 0;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
     <div style="background:var(--surface2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
       <div style="font-size:15px;font-weight:700;color:var(--amber)">＋ Add MEP Product</div>
       <button onclick="closeAddMEPPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
