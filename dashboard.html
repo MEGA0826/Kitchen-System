@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -847,7 +847,7 @@
   <div style="background:var(--card,var(--surface));border-radius:18px;max-width:700px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
 
     <!-- Header -->
-    <div style="background:var(--surface2);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="background:var(--surface3);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border2);flex-shrink:0">
       <div style="display:flex;align-items:center;gap:12px">
         <div id="mp-logo-preview" onclick="document.getElementById('mp-logo-file').click()" style="width:44px;height:44px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0;cursor:pointer;border:1px dashed var(--border2)" title="Logo hochladen">🍽️</div>
         <input type="file" id="mp-logo-file" accept="image/*" style="display:none" onchange="previewMenuLogo(this)">
@@ -993,7 +993,7 @@
   <!-- ═══ INGREDIENT PICKER POPUP ═══ -->
   <div id="ingredientPickerPopup" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:14px;width:100%;max-width:460px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
-    <div style="background:var(--surface2);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+    <div style="background:var(--surface3);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--border2)">
       <div style="font-size:13px;font-weight:600;color:var(--text)" id="ip-title">Zutat wählen</div>
       <button onclick="closeIngredientPicker()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
     </div>
@@ -1047,7 +1047,7 @@
  <!-- ═══ GR PICKER POPUP ═══ -->
   <div id="grPopup" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:14px;width:100%;max-width:460px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
-    <div style="background:var(--surface2);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+    <div style="background:var(--surface3);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--border2)">
       <div style="font-size:13px;font-weight:600;color:var(--green)">🟢 Grundrezeptur wählen</div>
       <button onclick="closeGrPopup()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
     </div>
@@ -1083,7 +1083,7 @@
 <!-- ═══ ADD GR POPUP ═══ -->
   <div id="addGRPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;justify-content:center;padding:16px 12px">
   <div style="background:var(--surface);border-radius:18px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
-    <div style="background:var(--surface2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="background:var(--surface3);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--border2);flex-shrink:0">
       <div style="font-size:15px;font-weight:700;color:var(--green)">＋ Neue Grundrezeptur</div>
       <button onclick="closeAddGRPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
     </div>
@@ -8443,7 +8443,7 @@ function haccpExportPDF() {
   <!-- Add MEP Popup (reuses product form fields) -->
 <div id="addMEPPopup" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:18px;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
-    <div style="background:var(--surface2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="background:var(--surface3);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--border2);flex-shrink:0">
       <div style="font-size:15px;font-weight:700;color:var(--amber)">＋ Add MEP Product</div>
       <button onclick="closeAddMEPPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
     </div>
@@ -8490,7 +8490,7 @@ function haccpExportPDF() {
 <!-- PDF Quick-Add Modal -->
 <div id="pdfQAModal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.7)">
-    <div style="background:var(--surface2);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1">
+    <div style="background:var(--surface3);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border2);position:sticky;top:0;z-index:1">
       <div style="font-size:13px;font-weight:600;color:var(--text)">＋ Add missing — <span id="pdfQALbl" style="color:var(--amber)">RM</span></div>
       <button onclick="pdfCloseQA()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
     </div>
