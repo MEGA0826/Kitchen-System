@@ -8108,11 +8108,12 @@ function _renderHaccpZones() {
         if (!logs.length) return '';
         const rows = logs.map(e => {
           const col = e.pass==="Pass" ? "var(--green)" : "var(--red)";
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
-            <span style="color:var(--muted)">${e.time}</span>
-            <span style="font-weight:600;color:${col}">${e.temp}°C</span>
-            <span style="color:${col};font-size:11px">${e.pass}</span>
-            ${e.notes?`<span style="color:var(--muted);font-size:11px">${_hEscH(e.notes)}</span>`:''}
+          return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap">
+            <span style="color:var(--muted);min-width:38px">${e.time}</span>
+            <span style="font-weight:600;color:${col};min-width:48px">${e.temp}°C</span>
+            <span style="color:${col};font-size:11px;min-width:32px">${e.pass}</span>
+            ${e.worker?`<span style="color:var(--muted);font-size:11px">👤 ${_hEscH(e.worker)}</span>`:''}
+            ${e.notes?`<span style="color:var(--muted);font-size:11px">· ${_hEscH(e.notes)}</span>`:''}
           </div>`;
         }).join('');
         return `<div style="padding:8px 14px;background:var(--surface2);border-top:1px solid var(--border)">${rows}</div>`;
@@ -8123,6 +8124,11 @@ function _renderHaccpZones() {
             <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px">TEMP (°C)</div>
             <input type="number" id="haccpT_${z.id}" step="0.1" placeholder="${z.minTemp}"
               style="width:90px;padding:9px 10px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:6px;font-family:'DM Mono',monospace;font-size:18px">
+          </div>
+          <div style="min-width:110px">
+            <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px">CHECKED BY</div>
+            <input type="text" id="haccpW_${z.id}" placeholder="Name"
+              style="width:100%;padding:9px 10px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:6px;font-family:'DM Mono',monospace;font-size:13px">
           </div>
           <div style="flex:1;min-width:120px">
             <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px">NOTES (optional)</div>
@@ -8159,7 +8165,8 @@ async function submitHaccpTemp(zoneId, minTemp, maxTemp, zoneName, zoneType) {
   const pass = temp >= minTemp && temp <= maxTemp;
   if (msg) { msg.style.color="var(--muted)"; msg.textContent="Saving…"; }
   try {
-    const worker = _haccpWorker();
+    const workerInp = document.getElementById("haccpW_" + zoneId);
+    const worker = workerInp?.value.trim() || _haccpWorker();
     await get({ action:"saveHACCPTemp", zone:zoneName, zoneType, temp, minTemp, maxTemp, notes:note?.value||"", worker });
     // Add to local state immediately
     const entry = { zone:zoneName, temp, pass: pass?"Pass":"Fail",
@@ -8167,7 +8174,7 @@ async function submitHaccpTemp(zoneId, minTemp, maxTemp, zoneName, zoneType) {
     if (!_haccpTempLogs[zoneName]) _haccpTempLogs[zoneName] = [];
     _haccpTempLogs[zoneName].unshift(entry);
     if (msg) { msg.style.color = pass ? "var(--green)" : "var(--red)"; msg.textContent = pass ? "✓ Pass — logged" : "⚠ FAIL — logged"; }
-    inp.value = ""; if (note) note.value = "";
+    inp.value = ""; if (note) note.value = ""; if (workerInp) workerInp.value = "";
     _renderHaccpZones(); // refresh zone cards to show new log
     setTimeout(() => { const f=document.getElementById("haccpLF_"+zoneId); if(f) f.style.display="none"; if(msg) msg.textContent=""; }, 2800);
   } catch(e) { if (msg) { msg.style.color="var(--red)"; msg.textContent="Error — try again"; } }
