@@ -3637,7 +3637,7 @@ function renderAdminInventory() {
   // Show prompt if nothing selected
   // Show prompt if nothing selected
   if (!q && !cat && !sup) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">${t('inv-sub')}</div>`;
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">${_safeT('inv-sub')}</div>`;
     return;
   }
   let rows = allInventory;
@@ -4724,6 +4724,26 @@ async function openEditProductModal(code) {
 function closeEditProductModal() {
   document.getElementById("editProductModal").classList.remove("active");
   document.getElementById("epf-rm-picker").style.display = "none";
+}
+
+async function deleteProductFromModal() {
+  const code = document.getElementById("epf-code")?.value;
+  if (!code) return;
+  const name = allProducts[code]?.name || code;
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  const btn = document.querySelector("#editProductModal .btn-delete");
+  if (btn) { btn.disabled = true; btn.textContent = "Deleting…"; }
+  try {
+    await adminCall({ action: "deleteProduct", code });
+    closeEditProductModal();
+    await loadProducts();
+    renderAdminProducts();
+  } catch(e) {
+    const msg = document.getElementById("epf-msg");
+    if (msg) { msg.textContent = "Error: " + e.message; msg.className = "admin-msg err"; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🗑 Delete"; }
+  }
 }
 
 // ── EPF RM management ──
@@ -8345,6 +8365,7 @@ function haccpExportPDF() {
     <div class="form-actions">
       <button class="btn-save" onclick="saveEditedProduct()">Save</button>
       <button class="btn-edit" onclick="closeEditProductModal()">Cancel</button>
+      <button class="btn-delete" onclick="deleteProductFromModal()" style="padding:10px 16px;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;margin-left:auto">🗑 Delete</button>
     </div>
   </div>
 </div>
