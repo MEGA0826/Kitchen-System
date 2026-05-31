@@ -1,0 +1,4 @@
+Date,Time,Zone / Location,Product / Item,Temp (°C),Min (°C),Max (°C),Pass / Fail,Action Taken,Checked By
+2026-05-30,19:54,Production,Fridge,3,0,5,Pass,,
+2026-05-30,19:55,Production,Fridge,5,0,5,Pass,,
+2026-05-30,19:55,Production,Fridge,10,0,5,Fail,,

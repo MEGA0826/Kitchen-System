@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import csv; f=open\\('inventory.csv'\\); r=csv.DictReader\\(f\\); rows=list\\(r\\); print\\('Headers:', r.fieldnames\\); print\\('Sample Letzte Bestellung:', [row.get\\('Letzte Bestellung',''\\) for row in rows[:3]]\\)\")",
+      "Bash(python -c ' *)"
+    ]
+  }
+}

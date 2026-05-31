@@ -2006,7 +2006,9 @@ function _mepMaxGN(p) {
 function _mepMaxKg(p) {
   return parseFloat(p.mepMax) || 0;
 }
-const API = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
+const API          = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
+const SB_URL       = "https://clntikfffmjytexvzubq.supabase.co";
+const SB_KEY       = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsbnRpa2ZmZm1qeXRleHZ6dWJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxODQwMzUsImV4cCI6MjA5NTc2MDAzNX0.6aiiiJk0hX1DrbXE1zMSYswwJT1FFkrgunJm9eznIXE";
 
 let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
 let allMepStatus = {};
@@ -2304,14 +2306,145 @@ function cancelPin() {
   closeMenu(); // ← reset hamburger icon
 }
 // ─────────────────────────────────────────────
-// API FETCH  — FIX: was using bare string literal
+// SUPABASE HELPERS
+// ─────────────────────────────────────────────
+const _sbH = {
+  "apikey": SB_KEY,
+  "Authorization": "Bearer " + SB_KEY,
+  "Content-Type": "application/json",
+  "Prefer": "return=representation"
+};
+
+async function sbGet(table, query) {
+  const res = await fetch(SB_URL + "/rest/v1/" + table + "?" + query, { headers: _sbH });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function sbPost(table, body, upsert) {
+  const h = Object.assign({}, _sbH);
+  if (upsert) h["Prefer"] = "resolution=merge-duplicates,return=representation";
+  const res = await fetch(SB_URL + "/rest/v1/" + table, {
+    method: "POST", headers: h, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function sbPatch(table, query, body) {
+  const res = await fetch(SB_URL + "/rest/v1/" + table + "?" + query, {
+    method: "PATCH", headers: _sbH, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function sbDelete(table, query) {
+  const res = await fetch(SB_URL + "/rest/v1/" + table + "?" + query, {
+    method: "DELETE", headers: _sbH
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ─────────────────────────────────────────────
+// SUPABASE ACTION HANDLERS
+// Actions listed here are fully migrated to Supabase.
+// All others fall through to GAS automatically.
+// ─────────────────────────────────────────────
+const _sbActions = {
+
+  // ── Workers ──────────────────────────────
+  allWorkers: async () => {
+    const rows = await sbGet("workers", "aktiv=eq.true&order=name.asc");
+    return rows.map(w => ({ name: w.name, rolle: w.rolle, aktiv: w.aktiv, pin: w.pin }));
+  },
+  saveWorker: async (p) => {
+    await sbPost("workers", { name: p.name, rolle: p.rolle, aktiv: true, pin: p.pin || null }, true);
+    return { status: "ok" };
+  },
+  deleteWorker: async (p) => {
+    await sbPatch("workers", "name=eq." + encodeURIComponent(p.name), { aktiv: false });
+    return { status: "ok" };
+  },
+
+  // ── HACCP Zones ───────────────────────────
+  getHACCPZones: async () => {
+    return sbGet("haccp_zones", "active=eq.true&order=name.asc");
+  },
+  saveHACCPZone: async (p) => {
+    const body = { id: p.id, name: p.name, type: p.type,
+      min_temp: parseFloat(p.minTemp) || 0, max_temp: parseFloat(p.maxTemp) || 5, active: true };
+    await sbPost("haccp_zones", body, true);
+    return { status: "ok" };
+  },
+  deleteHACCPZone: async (p) => {
+    await sbPatch("haccp_zones", "id=eq." + encodeURIComponent(p.id), { active: false });
+    return { status: "ok" };
+  },
+
+  // ── HACCP Tasks ───────────────────────────
+  getHACCPTasks: async () => {
+    return sbGet("haccp_tasks", "active=eq.true&order=sort_order.asc");
+  },
+  saveHACCPTask: async (p) => {
+    const body = { id: p.id, task: p.task, frequency: p.frequency || "Daily",
+      active: true, sort_order: parseInt(p.sortOrder) || 99 };
+    await sbPost("haccp_tasks", body, true);
+    return { status: "ok" };
+  },
+  deleteHACCPTask: async (p) => {
+    await sbPatch("haccp_tasks", "id=eq." + encodeURIComponent(p.id), { active: false });
+    return { status: "ok" };
+  },
+
+  // ── HACCP Checks ──────────────────────────
+  getHACCPChecks: async (p) => {
+    return sbGet("haccp_checks", "check_date=eq." + p.date + "&order=task_id.asc");
+  },
+  saveHACCPCheck: async (p) => {
+    const body = { check_date: p.date, task_id: p.taskId, task: p.task,
+      done: p.done === "true" || p.done === true,
+      worker: p.worker || null, notes: p.notes || null,
+      checked_at: new Date().toISOString() };
+    await sbPost("haccp_checks", body, true);
+    return { status: "ok" };
+  },
+
+  // ── HACCP Temp Logs ───────────────────────
+  saveHACCPTemp: async (p) => {
+    const body = { log_date: p.date, log_time: p.time, zone: p.zone,
+      zone_type: p.zoneType || null, temp: parseFloat(p.temp),
+      min_temp: parseFloat(p.minTemp) || null, max_temp: parseFloat(p.maxTemp) || null,
+      pass_fail: p.passFail || null, notes: p.notes || null, worker: p.worker || null };
+    await sbPost("haccp_temp_logs", body, false);
+    return { status: "ok" };
+  },
+  getHACCPReport: async (p) => {
+    return sbGet("haccp_temp_logs",
+      "log_date=gte." + p.from + "&log_date=lte." + p.to + "&order=log_date.asc,log_time.asc");
+  }
+};
+
+// ─────────────────────────────────────────────
+// API FETCH — routes to Supabase or GAS
 // ─────────────────────────────────────────────
 async function get(params) {
+  const action = params.action || "";
+  if (_sbActions[action]) {
+    try { return await _sbActions[action](params); }
+    catch(e) { console.warn("[SB] " + action + " failed, falling back to GAS:", e); }
+  }
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
 }
 
 async function adminCall(params) {
+  const action = params.action || "";
+  if (_sbActions[action]) {
+    try { return await _sbActions[action](params); }
+    catch(e) { console.warn("[SB] " + action + " failed, falling back to GAS:", e); }
+  }
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
 }
