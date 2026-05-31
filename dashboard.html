@@ -1852,6 +1852,7 @@
         <select id="haccpTaskFreq" style="width:100%;padding:10px 12px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:6px;font-family:'DM Mono',monospace;font-size:14px;cursor:pointer">
           <option value="Daily">Daily</option>
           <option value="Weekly">Weekly (Mondays)</option>
+          <option value="Monthly">Monthly (1st of month)</option>
         </select>
       </div>
     </div>
@@ -8135,8 +8136,13 @@ function _renderHaccpChecklist() {
   const el    = document.getElementById("haccpChecklist");
   const fill  = document.getElementById("haccpCheckFill");
   const tasks = (_haccpCfg.tasks || []).filter(t => t.active !== false);
-  const isMonday = new Date().getDay() === 1;
-  const visible  = tasks.filter(t => t.frequency !== "Weekly" || isMonday);
+  const isMonday  = new Date().getDay() === 1;
+  const isFirstDom = new Date().getDate() === 1;
+  const visible  = tasks.filter(t => {
+    if (t.frequency === "Weekly")  return isMonday;
+    if (t.frequency === "Monthly") return isFirstDom;
+    return true; // Daily + anything else
+  });
   const doneN    = visible.filter(t => _haccpChecks[t.id]?.done).length;
   if (fill) fill.style.width = visible.length ? Math.round(doneN / visible.length * 100) + "%" : "0%";
   if (!el) return;
@@ -8148,7 +8154,10 @@ function _renderHaccpChecklist() {
     const done = !!_haccpChecks[t.id]?.done;
     const who  = _haccpChecks[t.id]?.worker || "";
     const freqBadge = t.frequency === "Weekly"
-      ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:4px;padding:1px 5px;margin-left:6px">Weekly</span>` : "";
+      ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:4px;padding:1px 5px;margin-left:6px">Weekly</span>`
+      : t.frequency === "Monthly"
+      ? `<span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:4px;padding:1px 5px;margin-left:6px">Monthly</span>`
+      : "";
     const whoBadge = who ? `<span style="font-size:11px;color:var(--muted);margin-left:6px">by ${_hEscH(who)}</span>` : "";
     return `<div onclick="toggleHaccpCheck('${t.id}','${_hEscH(t.task)}')"
       style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;-webkit-user-select:none">
