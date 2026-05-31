@@ -2399,7 +2399,7 @@ const _sbActions = {
 
   // ── Products ──────────────────────────────
   allProducts: async () => {
-    const rows = await sbGet("products", "order=name.asc");
+    const rows = await sbGet("products", "active=eq.true&order=name.asc");
     const dict = {};
     rows.forEach(p => {
       dict[p.code] = {
