@@ -2476,7 +2476,8 @@ const _sbActions = {
     };
   },
   saveHACCPZone: async (p) => {
-    const body = { id: p.id, name: p.name, type: p.zoneType || p.type,
+    const id   = p.id || ("z" + Date.now());
+    const body = { id, name: p.name, type: p.zoneType || p.type,
       min_temp: parseFloat(p.minTemp) || 0, max_temp: parseFloat(p.maxTemp) || 5, active: true };
     await sbPost("haccp_zones", body, true);
     return { status: "ok" };
@@ -2488,7 +2489,8 @@ const _sbActions = {
 
   // ── HACCP Tasks ───────────────────────────
   saveHACCPTask: async (p) => {
-    const body = { id: p.id, task: p.task, frequency: p.frequency || "Daily",
+    const id   = p.id || ("t" + Date.now());
+    const body = { id, task: p.task, frequency: p.frequency || "Daily",
       active: true, sort_order: parseInt(p.sortOrder) || 99 };
     await sbPost("haccp_tasks", body, true);
     return { status: "ok" };
