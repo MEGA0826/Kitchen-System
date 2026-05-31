@@ -2372,7 +2372,7 @@ const _sbActions = {
 
   // ── Workers ──────────────────────────────
   allWorkers: async () => {
-    const rows = await sbGet("workers", "aktiv=eq.true&order=name.asc");
+    const rows = await sbGet("workers", "order=name.asc");
     const workers = rows.map(w => ({
       name: w.name, rolle: w.rolle, role: w.rolle,
       aktiv: w.aktiv, active: w.aktiv, pin: w.pin
@@ -3409,12 +3409,17 @@ function renderAdminWorkers() {
   }
   
   list.innerHTML = filtered.map(w => {
-    const name = typeof w === 'object' ? w.name : w;
-    const role = typeof w === 'object' ? (w.role || '') : '';
-    return `<div class="admin-item">
-      <div style="flex:1">
+    const name   = typeof w === 'object' ? w.name : w;
+    const role   = typeof w === 'object' ? (w.role || '') : '';
+    const aktiv  = typeof w === 'object' ? (w.aktiv !== false && w.active !== false) : true;
+    const badge  = aktiv
+      ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);margin-left:6px">Active</span>`
+      : `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--red-dim,rgba(239,68,68,.15));color:var(--red);border:1px solid var(--red-brd,rgba(239,68,68,.3));margin-left:6px">Inactive</span>`;
+    return `<div class="admin-item" style="opacity:${aktiv ? '1' : '0.6'}">
+      <div style="flex:1;display:flex;align-items:center;flex-wrap:wrap;gap:4px">
         <span style="font-size:13px;font-weight:500">${name || '(no name)'}</span>
-        <span style="font-size:11px;color:var(--muted);margin-left:8px">${role || '—'}</span>
+        <span style="font-size:11px;color:var(--muted)">${role || '—'}</span>
+        ${badge}
       </div>
       <button class="btn-edit" onclick="openWorkerEditPopup('${name.replace(/'/g, "\\'")}')">Edit</button>
     </div>`;
