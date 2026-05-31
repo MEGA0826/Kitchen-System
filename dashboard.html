@@ -3375,7 +3375,7 @@ function renderAdminWorkers() {
   }
   
   if (!filtered.length) {
-    list.innerHTML = `<div style="color:var(--muted);font-size:13px">${t('no-data')}</div>`;
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px">${_safeT('no-data')}</div>`;
     return;
   }
   
