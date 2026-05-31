@@ -2368,12 +2368,21 @@ const _sbActions = {
     return { status: "ok" };
   },
 
-  // ── HACCP Zones ───────────────────────────
-  getHACCPZones: async () => {
-    return sbGet("haccp_zones", "active=eq.true&order=name.asc");
+  // ── HACCP Config (zones + tasks combined) ─
+  getHACCPConfig: async () => {
+    const [zones, tasks] = await Promise.all([
+      sbGet("haccp_zones", "active=eq.true&order=name.asc"),
+      sbGet("haccp_tasks", "active=eq.true&order=sort_order.asc")
+    ]);
+    return {
+      zones: zones.map(z => ({ id: z.id, name: z.name, type: z.type,
+        minTemp: z.min_temp, maxTemp: z.max_temp, active: z.active })),
+      tasks: tasks.map(t => ({ id: t.id, task: t.task,
+        frequency: t.frequency, active: t.active, sortOrder: t.sort_order }))
+    };
   },
   saveHACCPZone: async (p) => {
-    const body = { id: p.id, name: p.name, type: p.type,
+    const body = { id: p.id, name: p.name, type: p.zoneType || p.type,
       min_temp: parseFloat(p.minTemp) || 0, max_temp: parseFloat(p.maxTemp) || 5, active: true };
     await sbPost("haccp_zones", body, true);
     return { status: "ok" };
@@ -2384,9 +2393,6 @@ const _sbActions = {
   },
 
   // ── HACCP Tasks ───────────────────────────
-  getHACCPTasks: async () => {
-    return sbGet("haccp_tasks", "active=eq.true&order=sort_order.asc");
-  },
   saveHACCPTask: async (p) => {
     const body = { id: p.id, task: p.task, frequency: p.frequency || "Daily",
       active: true, sort_order: parseInt(p.sortOrder) || 99 };
@@ -2400,7 +2406,9 @@ const _sbActions = {
 
   // ── HACCP Checks ──────────────────────────
   getHACCPChecks: async (p) => {
-    return sbGet("haccp_checks", "check_date=eq." + p.date + "&order=task_id.asc");
+    const rows = await sbGet("haccp_checks", "check_date=eq." + p.date + "&order=task_id.asc");
+    return { checks: rows.map(c => ({ taskId: c.task_id, task: c.task,
+      done: c.done, worker: c.worker, notes: c.notes, checkedAt: c.checked_at })) };
   },
   saveHACCPCheck: async (p) => {
     const body = { check_date: p.date, task_id: p.taskId, task: p.task,
@@ -2413,16 +2421,23 @@ const _sbActions = {
 
   // ── HACCP Temp Logs ───────────────────────
   saveHACCPTemp: async (p) => {
-    const body = { log_date: p.date, log_time: p.time, zone: p.zone,
-      zone_type: p.zoneType || null, temp: parseFloat(p.temp),
+    const now  = new Date();
+    const body = { log_date: now.toLocaleDateString("en-CA"),
+      log_time: now.toTimeString().slice(0,5),
+      zone: p.zone, zone_type: p.zoneType || null,
+      temp: parseFloat(p.temp),
       min_temp: parseFloat(p.minTemp) || null, max_temp: parseFloat(p.maxTemp) || null,
-      pass_fail: p.passFail || null, notes: p.notes || null, worker: p.worker || null };
+      pass_fail: (parseFloat(p.temp) >= parseFloat(p.minTemp) && parseFloat(p.temp) <= parseFloat(p.maxTemp)) ? "Pass" : "Fail",
+      notes: p.notes || null, worker: p.worker || null };
     await sbPost("haccp_temp_logs", body, false);
     return { status: "ok" };
   },
   getHACCPReport: async (p) => {
-    return sbGet("haccp_temp_logs",
+    const rows = await sbGet("haccp_temp_logs",
       "log_date=gte." + p.from + "&log_date=lte." + p.to + "&order=log_date.asc,log_time.asc");
+    return rows.map(r => ({ date: r.log_date, time: r.log_time, zone: r.zone,
+      zoneType: r.zone_type, temp: r.temp, minTemp: r.min_temp, maxTemp: r.max_temp,
+      passFail: r.pass_fail, notes: r.notes, worker: r.worker }));
   }
 };
 
