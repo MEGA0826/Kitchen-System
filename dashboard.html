@@ -3109,6 +3109,15 @@ async function loadProducts() {
     allProducts = (data && !data.error && typeof data === "object" && !Array.isArray(data)) ? data : {};
     try { sessionStorage.setItem("dash_products", JSON.stringify(allProducts)); } catch(e) {}
     populateProductCategories();
+    // Restore last selected category after refresh
+    const savedCat = sessionStorage.getItem("dash_prodCat");
+    if (savedCat) {
+      const sel = document.getElementById("prodCatFilter");
+      if (sel && [...sel.options].some(o => o.value === savedCat)) {
+        sel.value = savedCat;
+        filterProducts();
+      }
+    }
     return allProducts;
   } catch(e) {
     const grid = document.getElementById("product-grid");
@@ -3136,10 +3145,13 @@ function filterProducts() {
   const grid = document.getElementById('product-grid');
   const prompt = document.getElementById('prodPrompt');
   const searchBox = document.getElementById('prod-search');
-  
+
   if (!catSel || !grid || !prompt || !searchBox) return;
-  
+
   const cat = catSel.value;
+  // Persist selected category across refresh
+  if (cat) sessionStorage.setItem("dash_prodCat", cat);
+  else sessionStorage.removeItem("dash_prodCat");
   const search = searchBox.value.toLowerCase();
 
   if (!cat) {
@@ -4736,7 +4748,10 @@ async function deleteProductFromModal() {
   try {
     await adminCall({ action: "deleteProduct", code });
     closeEditProductModal();
-    await loadProducts();
+    // Remove from local allProducts immediately — no refresh needed
+    delete allProducts[code];
+    populateProductCategories();
+    filterProducts();
     renderAdminProducts();
   } catch(e) {
     const msg = document.getElementById("epf-msg");
