@@ -2397,6 +2397,79 @@ const _sbActions = {
     return { status: "ok" };
   },
 
+  // ── Products ──────────────────────────────
+  allProducts: async () => {
+    const rows = await sbGet("products", "order=name.asc");
+    const dict = {};
+    rows.forEach(p => {
+      dict[p.code] = {
+        code: p.code, name: p.name, kategorie: p.kategorie,
+        mepMax: p.mep_max, gnSize: p.gn_size, gnWeight: p.gn_weight,
+        tagesziel: p.tagesziel, shelfLife: p.shelf_life,
+        driveLink: p.drive_photo, notizen: p.notizen,
+        allergene: p.allergene, wa: p.wa,
+        active: p.active, priority: p.priority
+      };
+    });
+    return dict;
+  },
+  saveProduct: async (p) => {
+    const body = {
+      code: p.code, name: p.name,
+      kategorie:  p.kategorie  || null,
+      mep_max:    p.mepMax    !== "" ? parseFloat(p.mepMax)    || null : null,
+      gn_size:    p.gnSize     || null,
+      gn_weight:  p.gnWeight  !== "" ? parseFloat(p.gnWeight)  || null : null,
+      tagesziel:  p.tagesziel !== "" ? parseFloat(p.tagesziel) || null : null,
+      shelf_life: p.shelfLife !== "" ? parseInt(p.shelfLife)   || null : null,
+      drive_photo: p.driveLink || null,
+      wa: p.wa !== "" ? parseFloat(p.wa) || null : null,
+      active: true
+    };
+    await sbPost("products", body, true);
+    return { status: "ok" };
+  },
+  deleteProduct: async (p) => {
+    await sbPatch("products", "code=eq." + encodeURIComponent(p.code), { active: false });
+    return { status: "ok" };
+  },
+
+  // ── Inventory ─────────────────────────────
+  inventory: async () => {
+    const rows = await sbGet("inventory", "order=name.asc");
+    return {
+      inventory: rows.map(r => ({
+        code: r.code, name: r.name, kategorie: r.kategorie,
+        unit: r.unit, quantity: r.quantity,
+        weightUnit: r.weight_unit, kostenUnit: r.kosten_unit,
+        lieferant: r.lieferant, lastOrder: r.last_order,
+        notizen: r.notizen, minimum: r.minimum, maximum: r.maximum
+      }))
+    };
+  },
+  saveInventory: async (p) => {
+    const body = {
+      code:        p.code,
+      name:        p.name        || p.code,
+      kategorie:   p.kategorie   || null,
+      unit:        p.unit        || null,
+      quantity:    p.quantity    !== "" ? parseFloat(p.quantity)    || null : null,
+      weight_unit: p.weightUnit  !== "" ? parseFloat(p.weightUnit)  || null : null,
+      minimum:     p.minimum     !== "" ? parseFloat(p.minimum)     || null : null,
+      maximum:     p.maximum     !== "" ? parseFloat(p.maximum)     || null : null,
+      kosten_unit: p.kostenUnit  !== "" ? parseFloat(p.kostenUnit)  || null : null,
+      lieferant:   p.lieferant   || null,
+      last_order:  p.lastOrder   || null,
+      notizen:     p.notizen     || null
+    };
+    await sbPost("inventory", body, true);
+    return { status: "ok" };
+  },
+  deleteInventory: async (p) => {
+    await sbDelete("inventory", "code=eq." + encodeURIComponent(p.code));
+    return { status: "ok" };
+  },
+
   // ── HACCP Config (zones + tasks combined) ─
   getHACCPConfig: async () => {
     const [zones, tasks] = await Promise.all([
