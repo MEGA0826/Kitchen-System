@@ -538,7 +538,6 @@
 <div class="nav" id="main-nav">
   <button class="tab"        data-tab="morning"      onclick="switchTab(this)"><span class="tab-icon">🌅</span>Morning</button>
   <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
-  <button class="tab"        data-tab="mep-overview" onclick="switchTab(this)"><span class="tab-icon">📋</span>MEP Overview</button>
   <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
   <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
   <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
@@ -671,18 +670,6 @@
   </div>
 
 <!-- MEP OVERVIEW Tab -->
-  <div class="panel" id="panel-mep-overview">
-    <div class="section-title">MEP Overview <span class="section-title-icon">📋</span></div>
-    <div class="section-sub">Current MEP production status for all products</div>
-    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-      <button class="refresh-btn" onclick="loadMepOverview()" style="padding:8px 16px">↺ Refresh</button>
-    </div>
-    <div class="mep-grid" id="mep-overview-grid">
-      <div class="skeleton" style="height:120px;border-radius:14px"></div>
-      <div class="skeleton" style="height:120px;border-radius:14px"></div>
-      <div class="skeleton" style="height:120px;border-radius:14px"></div>
-    </div>
-  </div>
 
 <!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
@@ -2040,14 +2027,14 @@ let allGRs = [];
   
 const ROLE_TABS = {
   Teamleader : ['kds','mep-overview','inventory','deductions'],
-  Küchenchef : ['morning','kds','mep-overview','inventory','recipes','relations','orders','deductions','reports','haccp'],
-  Manager    : ['morning','kds','mep-overview','inventory','products','recipes','relations','orders','deductions','reports','haccp','admin'],
+  Küchenchef : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','haccp'],
+  Manager    : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','haccp','admin'],
 };
-  
+
 // Roles that can VIEW recipes but not add/edit
 const RECIPE_VIEW_ONLY = ['Küchenchef'];
 const ROLE_READONLY = {
-  Teamleader : ['inventory','deductions','mep-overview'],
+  Teamleader : ['inventory','deductions'],
   Küchenchef : ['reports'],
 };
 
@@ -2167,7 +2154,7 @@ function switchTab(btn) {
   if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
   if (tabId === "deductions")   loadDeductions();
   if (tabId === "reports")      loadReportsTab();
-  if (tabId === "mep-overview") loadMepOverview();
+  if (tabId === "products")     { if (!Object.keys(allProducts).length) loadProducts(); else filterProducts(); }
   if (tabId === "morning")      loadMorning();
   if (tabId === "haccp")        loadHaccp();
 }
@@ -3209,11 +3196,30 @@ function renderProductGrid(entries) {
             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'product-thumb-ph',textContent:'🍽'}))">`
       : `<div class="product-thumb-ph">🍽</div>`;
 
+    const targetQty  = p.tagesziel || p.mepMax || 0;
+    const pct        = targetQty > 0 ? Math.min(100, Math.round(avail / targetQty * 100)) : 0;
+    const goalMet    = targetQty > 0 && avail >= targetQty;
+    const overDone   = p.tagesziel > 0 && avail > p.tagesziel;
+    const barColor   = overDone ? "var(--red)" : goalMet ? "var(--green)" : "var(--amber)";
+    const statusTag  = overDone
+      ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(232,96,80,.15);color:var(--red);border:1px solid rgba(232,96,80,.3)">Over target</span>`
+      : goalMet
+      ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd)">✓ Goal met</span>`
+      : avail > 0
+      ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd)">In progress</span>`
+      : `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2)">Not started</span>`;
     const statsHtml = p.mepMax ? `
       <div class="prod-stats">
         <span class="prod-stat green">✅ ${_t('available')}: ${avail}${gnLabel}</span>
         <span class="prod-stat amber">↻ ${_t('produce')}: ${inProg}${gnLabel}</span>
         <span class="prod-stat red">✕ ${_t('waste')}: ${waste}${gnLabel}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+        <div style="flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width .3s"></div>
+        </div>
+        <span style="font-size:10px;color:var(--muted);min-width:30px">${targetQty > 0 ? pct+"%" : ""}</span>
+        ${statusTag}
       </div>` : "";
 
     const _role = sessionStorage.getItem("dashRole") || "";
@@ -4381,7 +4387,7 @@ Promise.allSettled([
   if (saved === "recipes")      { loadMenus(); loadGRs(); loadRequirements(); }
   if (saved === "deductions")   loadDeductions();
   if (saved === "reports")      loadReportsTab();
-  if (saved === "mep-overview") loadMepOverview && loadMepOverview();
+  if (saved === "mep-overview") saved = "products"; // redirect old saved tab
 }).catch(e => console.error("Init error:", e));
 
 _initSubscriptionUI();
