@@ -2383,10 +2383,12 @@ const _sbActions = {
     const rolle = p.rolle || p.role || null;
     const aktiv = p.active === "false" || p.aktiv === false ? false : true;
     const body  = { name: p.name, rolle, aktiv, pin: p.pin || null };
-    if (p.originalName && p.originalName !== p.name) {
+    if (p.originalName) {
+      // Edit existing — always PATCH by original name
       await sbPatch("workers", "name=eq." + encodeURIComponent(p.originalName), body);
     } else {
-      await sbPost("workers", body, true);
+      // New worker — POST (insert)
+      await sbPost("workers", body, false);
     }
     return { status: "ok" };
   },
