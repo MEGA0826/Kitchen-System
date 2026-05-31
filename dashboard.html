@@ -2530,11 +2530,22 @@ const _sbActions = {
     return { status: "ok" };
   },
   getHACCPReport: async (p) => {
+    const from = p.from || p.dateFrom;
+    const to   = p.to   || p.dateTo;
+    if (!from || !to) return { entries: [] };
     const rows = await sbGet("haccp_temp_logs",
-      "log_date=gte." + p.from + "&log_date=lte." + p.to + "&order=log_date.asc,log_time.asc");
-    return rows.map(r => ({ date: r.log_date, time: r.log_time, zone: r.zone,
+      "log_date=gte." + from + "&log_date=lte." + to + "&order=log_date.asc,log_time.asc");
+    const entries = rows.map(r => ({ date: r.log_date, time: r.log_time, zone: r.zone,
       zoneType: r.zone_type, temp: r.temp, minTemp: r.min_temp, maxTemp: r.max_temp,
-      passFail: r.pass_fail, notes: r.notes, worker: r.worker }));
+      pass: r.pass_fail, notes: r.notes, worker: r.worker }));
+    return { entries };
+  },
+  getHACCPTodayLogs: async () => {
+    const today = new Date().toLocaleDateString("en-CA");
+    const rows  = await sbGet("haccp_temp_logs",
+      "log_date=eq." + today + "&order=log_time.desc");
+    return rows.map(r => ({ date: r.log_date, time: r.log_time, zone: r.zone,
+      temp: r.temp, pass: r.pass_fail, notes: r.notes, worker: r.worker }));
   }
 };
 
@@ -8032,8 +8043,9 @@ function addChecklistItem() {
 }
 
 // ── HACCP MODULE ─────────────────────────────────────────────────────────────
-let _haccpCfg     = { zones: [], tasks: [] };
-let _haccpChecks  = {};
+let _haccpCfg      = { zones: [], tasks: [] };
+let _haccpChecks   = {};
+let _haccpTempLogs = {}; // keyed by zone name → array of recent logs
 let _haccpRptFrom = "";
 let _haccpRptTo   = "";
 
@@ -8049,14 +8061,22 @@ async function loadHaccp() {
   const today = new Date().toLocaleDateString("en-CA");
   const el = document.getElementById("haccpCheckDate");
   if (el) el.textContent = new Date().toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long" });
-  const [cfgR, chkR] = await Promise.allSettled([
+  const [cfgR, chkR, logR] = await Promise.allSettled([
     get({ action:"getHACCPConfig" }),
-    get({ action:"getHACCPChecks", date: today })
+    get({ action:"getHACCPChecks", date: today }),
+    get({ action:"getHACCPTodayLogs" })
   ]);
   if (cfgR.status === "fulfilled" && cfgR.value) _haccpCfg = cfgR.value;
   if (chkR.status === "fulfilled" && chkR.value?.checks) {
     _haccpChecks = {};
     chkR.value.checks.forEach(c => { _haccpChecks[c.taskId] = c; });
+  }
+  if (logR.status === "fulfilled" && Array.isArray(logR.value)) {
+    _haccpTempLogs = {};
+    logR.value.forEach(e => {
+      if (!_haccpTempLogs[e.zone]) _haccpTempLogs[e.zone] = [];
+      _haccpTempLogs[e.zone].push(e);
+    });
   }
   _renderHaccpZones();
   _renderHaccpChecklist();
@@ -8083,6 +8103,20 @@ function _renderHaccpZones() {
         <button onclick="openHaccpZoneModal(${JSON.stringify(z).replace(/"/g,'&quot;')})" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:13px;cursor:pointer">✎</button>
         <button onclick="deleteHaccpZone('${z.id}')" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);font-size:13px;cursor:pointer">✕</button>
       </div>
+      ${(() => {
+        const logs = (_haccpTempLogs[z.name]||[]).slice(0,3);
+        if (!logs.length) return '';
+        const rows = logs.map(e => {
+          const col = e.pass==="Pass" ? "var(--green)" : "var(--red)";
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="color:var(--muted)">${e.time}</span>
+            <span style="font-weight:600;color:${col}">${e.temp}°C</span>
+            <span style="color:${col};font-size:11px">${e.pass}</span>
+            ${e.notes?`<span style="color:var(--muted);font-size:11px">${_hEscH(e.notes)}</span>`:''}
+          </div>`;
+        }).join('');
+        return `<div style="padding:8px 14px;background:var(--surface2);border-top:1px solid var(--border)">${rows}</div>`;
+      })()}
       <div id="haccpLF_${z.id}" style="display:none;padding:12px 14px;border-top:1px solid var(--border);background:var(--surface2)">
         <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
           <div>
@@ -8125,9 +8159,16 @@ async function submitHaccpTemp(zoneId, minTemp, maxTemp, zoneName, zoneType) {
   const pass = temp >= minTemp && temp <= maxTemp;
   if (msg) { msg.style.color="var(--muted)"; msg.textContent="Saving…"; }
   try {
-    await get({ action:"saveHACCPTemp", zone:zoneName, zoneType, temp, minTemp, maxTemp, notes:note?.value||"", worker:_haccpWorker() });
+    const worker = _haccpWorker();
+    await get({ action:"saveHACCPTemp", zone:zoneName, zoneType, temp, minTemp, maxTemp, notes:note?.value||"", worker });
+    // Add to local state immediately
+    const entry = { zone:zoneName, temp, pass: pass?"Pass":"Fail",
+      time: new Date().toTimeString().slice(0,5), notes: note?.value||"", worker };
+    if (!_haccpTempLogs[zoneName]) _haccpTempLogs[zoneName] = [];
+    _haccpTempLogs[zoneName].unshift(entry);
     if (msg) { msg.style.color = pass ? "var(--green)" : "var(--red)"; msg.textContent = pass ? "✓ Pass — logged" : "⚠ FAIL — logged"; }
     inp.value = ""; if (note) note.value = "";
+    _renderHaccpZones(); // refresh zone cards to show new log
     setTimeout(() => { const f=document.getElementById("haccpLF_"+zoneId); if(f) f.style.display="none"; if(msg) msg.textContent=""; }, 2800);
   } catch(e) { if (msg) { msg.style.color="var(--red)"; msg.textContent="Error — try again"; } }
 }
