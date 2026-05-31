@@ -8136,13 +8136,9 @@ function _renderHaccpChecklist() {
   const el    = document.getElementById("haccpChecklist");
   const fill  = document.getElementById("haccpCheckFill");
   const tasks = (_haccpCfg.tasks || []).filter(t => t.active !== false);
-  const isMonday  = new Date().getDay() === 1;
+  const isMonday   = new Date().getDay() === 1;
   const isFirstDom = new Date().getDate() === 1;
-  const visible  = tasks.filter(t => {
-    if (t.frequency === "Weekly")  return isMonday;
-    if (t.frequency === "Monthly") return isFirstDom;
-    return true; // Daily + anything else
-  });
+  const visible    = tasks; // always show all tasks
   const doneN    = visible.filter(t => _haccpChecks[t.id]?.done).length;
   if (fill) fill.style.width = visible.length ? Math.round(doneN / visible.length * 100) + "%" : "0%";
   if (!el) return;
@@ -8151,16 +8147,19 @@ function _renderHaccpChecklist() {
     return;
   }
   el.innerHTML = visible.map(t => {
+    const isDue = t.frequency === "Weekly" ? isMonday
+                : t.frequency === "Monthly" ? isFirstDom
+                : true;
     const done = !!_haccpChecks[t.id]?.done;
     const who  = _haccpChecks[t.id]?.worker || "";
     const freqBadge = t.frequency === "Weekly"
-      ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:4px;padding:1px 5px;margin-left:6px">Weekly</span>`
+      ? `<span style="font-size:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-brd);border-radius:4px;padding:1px 5px;margin-left:6px">${isDue?"Weekly":"Next Mon"}</span>`
       : t.frequency === "Monthly"
-      ? `<span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:4px;padding:1px 5px;margin-left:6px">Monthly</span>`
+      ? `<span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:4px;padding:1px 5px;margin-left:6px">${isDue?"Monthly":"Next 1st"}</span>`
       : "";
     const whoBadge = who ? `<span style="font-size:11px;color:var(--muted);margin-left:6px">by ${_hEscH(who)}</span>` : "";
-    return `<div onclick="toggleHaccpCheck('${t.id}','${_hEscH(t.task)}')"
-      style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;-webkit-user-select:none">
+    return `<div onclick="${isDue?`toggleHaccpCheck('${t.id}','${_hEscH(t.task)}')`:'void(0)'}"
+      style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${isDue?'cursor:pointer':'cursor:default;opacity:0.45'};user-select:none;-webkit-user-select:none">
       <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;border:2px solid ${done?"var(--green)":"var(--border2)"};background:${done?"var(--green)":"transparent"};display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;transition:all .15s">${done?"✓":""}</div>
       <div style="flex:1;min-width:0">
         <span style="font-size:14px;color:${done?"var(--muted)":"var(--text)"};text-decoration:${done?"line-through":"none"}">${_hEscH(t.task)}</span>${freqBadge}${whoBadge}
