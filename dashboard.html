@@ -1611,6 +1611,13 @@
               <label class="form-label">PIN (4 digits)</label>
               <input class="form-input" id="editWorkerPin" type="text" inputmode="numeric" maxlength="4" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
             </div>
+            <div class="form-field">
+              <label class="form-label">Aktiv</label>
+              <select class="form-input" id="editWorkerAktiv">
+                <option value="true">✅ Aktiv</option>
+                <option value="false">❌ Inaktiv</option>
+              </select>
+            </div>
           </div>
           <div class="admin-msg" id="editWorkerMsg"></div>
           <div class="form-actions">
@@ -2373,7 +2380,14 @@ const _sbActions = {
     return { workers };
   },
   saveWorker: async (p) => {
-    await sbPost("workers", { name: p.name, rolle: p.rolle, aktiv: true, pin: p.pin || null }, true);
+    const rolle = p.rolle || p.role || null;
+    const aktiv = p.active === "false" || p.aktiv === false ? false : true;
+    const body  = { name: p.name, rolle, aktiv, pin: p.pin || null };
+    if (p.originalName && p.originalName !== p.name) {
+      await sbPatch("workers", "name=eq." + encodeURIComponent(p.originalName), body);
+    } else {
+      await sbPost("workers", body, true);
+    }
     return { status: "ok" };
   },
   deleteWorker: async (p) => {
@@ -3412,10 +3426,12 @@ function openWorkerEditPopup(name) {
   const wRole = typeof w === "object" ? (w.role || "") : "";
   const wPin = typeof w === "object" ? (w.pin || "") : "";
   
+  const wAktiv = typeof w === "object" ? (w.aktiv !== false && w.active !== false) : true;
   document.getElementById('editWorkerOriginalName').value = wName;
   document.getElementById('editWorkerName').value = wName;
   document.getElementById('editWorkerRole').value = wRole;
   document.getElementById('editWorkerPin').value = wPin;
+  document.getElementById('editWorkerAktiv').value = wAktiv ? "true" : "false";
   document.getElementById('editWorkerTitle').textContent = "Edit - " + wName;
   document.getElementById('editWorkerMsg').textContent = "";
   
@@ -3448,13 +3464,14 @@ async function saveWorkerEditModal() {
   if (btn) { btn.disabled = true; btn.textContent = "Saving..."; }
   
   try {
+    const active = document.getElementById('editWorkerAktiv').value;
     const data = await adminCall({
       action: 'saveWorker',
       originalName: originalName,
       name: name,
       role: role,
       pin: pin,
-      active: 'true'
+      active: active
     });
     
     if (data.error) throw new Error(data.error);
