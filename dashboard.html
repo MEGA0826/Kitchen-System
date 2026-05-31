@@ -2357,7 +2357,11 @@ const _sbActions = {
   // ── Workers ──────────────────────────────
   allWorkers: async () => {
     const rows = await sbGet("workers", "aktiv=eq.true&order=name.asc");
-    return rows.map(w => ({ name: w.name, rolle: w.rolle, aktiv: w.aktiv, pin: w.pin }));
+    const workers = rows.map(w => ({
+      name: w.name, rolle: w.rolle, role: w.rolle,
+      aktiv: w.aktiv, active: w.aktiv, pin: w.pin
+    }));
+    return { workers };
   },
   saveWorker: async (p) => {
     await sbPost("workers", { name: p.name, rolle: p.rolle, aktiv: true, pin: p.pin || null }, true);
