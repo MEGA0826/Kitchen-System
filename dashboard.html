@@ -2406,7 +2406,7 @@ const _sbActions = {
         code: p.code, name: p.name, kategorie: p.kategorie,
         mepMax: p.mep_max, gnSize: p.gn_size, gnWeight: p.gn_weight,
         tagesziel: p.tagesziel, shelfLife: p.shelf_life,
-        driveLink: p.drive_photo, notizen: p.notizen,
+        driveLink: p.drive_photo, image: p.drive_photo, notizen: p.notizen,
         allergene: p.allergene, wa: p.wa,
         active: p.active, priority: p.priority
       };
@@ -3659,7 +3659,7 @@ function renderAdminInventory() {
         <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.code}</span>
         <span style="font-size:11px;color:var(--muted);margin-left:6px">${r.quantity??"-"} ${r.unit||""} ${totKg?"· "+totKg:""} ${r.lieferant?"· "+r.lieferant:""}</span>
       </div>
-      <button class="btn-edit" onclick="editInvItem('${r.code}')">${t('edit')}</button>
+      <button class="btn-edit" onclick="editInvItem('${r.code}')">${_safeT('edit')}</button>
     </div>`;
   }).join("");
 }
