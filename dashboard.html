@@ -686,8 +686,50 @@
 
 <!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
-    <div class="section-title"><span data-i18n="inventory">Inventory</span> <span class="section-title-icon">📦</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0"><span data-i18n="inventory">Inventory</span> <span class="section-title-icon">📦</span></div>
+      <button onclick="toggleInvForm()" id="inv-add-btn" style="padding:7px 14px;border-radius:var(--radius-sm);background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer">＋ Add Item</button>
+    </div>
     <div class="section-sub" data-i18n="inv-sub">Select a category or supplier to load items</div>
+
+    <!-- Add / Edit form (collapsed by default) -->
+    <div id="inv-form-wrap" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+      <div class="admin-form-title" id="if-form-title">Add / update stock item</div>
+      <datalist id="dl-inv-cat">
+        <option value="Gemüse"><option value="Trockenwaren"><option value="TK Produkte">
+        <option value="Fleisch"><option value="Fisch"><option value="Milchprodukte">
+        <option value="Früchte"><option value="Gewürze"><option value="Getränke">
+        <option value="Saucen &amp; Öle">
+      </datalist>
+      <datalist id="dl-inv-unit">
+        <option value="kg"><option value="g"><option value="l"><option value="ml">
+        <option value="Stück"><option value="Bund"><option value="Pkg"><option value="Dose">
+      </datalist>
+      <datalist id="dl-unit">
+        <option value="kg"><option value="g"><option value="l"><option value="ml">
+        <option value="pcs"><option value="btl"><option value="box"><option value="bag">
+      </datalist>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label" data-i18n="code">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
+        <div class="form-field"><label class="form-label" data-i18n="name">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from inventory"></div>
+        <div class="form-field"><label class="form-label" data-i18n="category">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse" list="dl-inv-cat"></div>
+        <div class="form-field"><label class="form-label" data-i18n="unit">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l" list="dl-inv-unit"></div>
+        <div class="form-field"><label class="form-label" data-i18n="qty">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
+        <div class="form-field"><label class="form-label" data-i18n="kg">Weight/Unit (kg)</label><input class="form-input" type="number" id="if-weight" placeholder="1" min="0" step="0.01"></div>
+        <div class="form-field"><label class="form-label">Min</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
+        <div class="form-field"><label class="form-label">Max</label><input class="form-input" type="number" id="if-max" placeholder="50" min="0" step="0.1"></div>
+        <div class="form-field"><label class="form-label" data-i18n="price">Kosten/Unit (CHF)</label><input class="form-input" type="number" id="if-kosten" placeholder="2.50" min="0" step="0.01"></div>
+        <div class="form-field"><label class="form-label" data-i18n="supplier">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Kellenberger" list="dl-inv-lieferant"></div>
+        <div class="form-field"><label class="form-label">Last ordered</label><input class="form-input" type="date" id="if-lastorder"></div>
+        <div class="form-field"><label class="form-label" data-i18n="notes">Notes</label><input class="form-input" id="if-notizen" placeholder="e.g. Kühl lagern"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" onclick="saveInvItem()">Save item</button>
+        <button class="btn-edit" onclick="clearInvForm();toggleInvForm(false)" style="display:inline-flex" id="if-cancel">Cancel</button>
+      </div>
+      <div class="admin-msg" id="if-msg"></div>
+    </div>
+
     <div class="inv-controls" style="flex-wrap:wrap;gap:8px">
       <input class="search-input" id="inv-search" type="text" placeholder="Search name / code…" oninput="filterInventory()" autocomplete="off" style="flex:1;min-width:160px">
       <select class="search-input" id="inv-cat-filter" onchange="filterInventory()" style="flex:0 1 160px">
@@ -1628,56 +1670,6 @@
       </div>
     </div>
 
-    <div class="admin-section">
-      <div class="admin-section-title" data-i18n="inventory">Inventory</div>
-      <div class="admin-section-sub" data-i18n="stock">Lager sheet</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <input class="form-input" id="admin-inv-search" placeholder="Search inventory…" oninput="renderAdminInventory()" style="flex:1;min-width:160px">
-        <select class="form-input" id="admin-inv-cat" onchange="renderAdminInventory()" style="flex:0 1 160px">
-          <option value="">All categories</option>
-        </select>
-        <select class="form-input" id="admin-inv-sup" onchange="renderAdminInventory()" style="flex:0 1 160px">
-          <option value="">All suppliers</option>
-        </select>
-      </div>
-      <div class="admin-list" id="admin-inv-list"></div>
-      <div class="admin-form" id="inv-form">
-        <div class="admin-form-title" id="if-form-title">Add / update stock item</div>
-        <datalist id="dl-inv-cat">
-          <option value="Gemüse"><option value="Trockenwaren"><option value="TK Produkte">
-          <option value="Fleisch"><option value="Fisch"><option value="Milchprodukte">
-          <option value="Früchte"><option value="Gewürze"><option value="Getränke">
-          <option value="Saucen &amp; Öle">
-        </datalist>
-        <datalist id="dl-inv-unit">
-          <option value="kg"><option value="g"><option value="l"><option value="ml">
-          <option value="Stück"><option value="Bund"><option value="Pkg"><option value="Dose">
-        </datalist>
-        <datalist id="dl-unit">
-          <option value="kg"><option value="g"><option value="l"><option value="ml">
-          <option value="pcs"><option value="btl"><option value="box"><option value="bag">
-        </datalist>
-        <div class="form-grid">
-          <div class="form-field"><label class="form-label" data-i18n="code">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
-          <div class="form-field"><label class="form-label" data-i18n="name">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from Lager"></div>
-          <div class="form-field"><label class="form-label" data-i18n="category">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse" list="dl-inv-cat"></div>
-          <div class="form-field"><label class="form-label" data-i18n="unit">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l" list="dl-inv-unit"></div>
-          <div class="form-field"><label class="form-label" data-i18n="qty">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
-          <div class="form-field"><label class="form-label" data-i18n="kg">Weight/Unit (kg)</label><input class="form-input" type="number" id="if-weight" placeholder="1" min="0" step="0.01"></div>
-          <div class="form-field"><label class="form-label">Min</label><input class="form-input" type="number" id="if-min" placeholder="3" min="0" step="0.1"></div>
-          <div class="form-field"><label class="form-label">Max</label><input class="form-input" type="number" id="if-max" placeholder="50" min="0" step="0.1"></div>
-          <div class="form-field"><label class="form-label" data-i18n="price">Kosten/Unit (CHF)</label><input class="form-input" type="number" id="if-kosten" placeholder="2.50" min="0" step="0.01"></div>
-          <div class="form-field"><label class="form-label" data-i18n="supplier">Supplier</label><input class="form-input" id="if-lieferant" placeholder="e.g. Transgourmet" list="dl-inv-lieferant"></div>
-          <div class="form-field"><label class="form-label">Last ordered</label><input class="form-input" type="date" id="if-lastorder"></div>
-          <div class="form-field"><label class="form-label" data-i18n="notes">Notes</label><input class="form-input" id="if-notizen" placeholder="e.g. Kühl lagern"></div>
-        </div>
-        <div class="form-actions">
-          <button class="btn-save" onclick="saveInvItem()">Save item</button>
-          <button class="btn-edit" onclick="clearInvForm()" style="display:none" id="if-cancel">Cancel edit</button>
-        </div>
-        <div class="admin-msg" id="if-msg"></div>
-      </div>
-    </div>
 
 
     <!-- ── PDF RECIPE IMPORT ── -->
@@ -3681,9 +3673,10 @@ function editInvItem(code) {
 function clearInvForm() {
   ["if-code","if-name","if-kategorie","if-unit","if-qty","if-weight","if-min","if-max","if-kosten","if-lieferant","if-lastorder","if-notizen"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
-  document.getElementById("if-code").readOnly = false;
-  document.getElementById("if-form-title").textContent = "Add / update stock item";
-  document.getElementById("if-cancel").style.display   = "none";
+  const codeEl = document.getElementById("if-code");
+  if (codeEl) codeEl.readOnly = false;
+  const titleEl = document.getElementById("if-form-title");
+  if (titleEl) titleEl.textContent = "Add / update stock item";
 }
 document.getElementById("if-code")?.addEventListener("blur", () => {
   const code = document.getElementById("if-code").value.trim();
@@ -3700,7 +3693,7 @@ document.getElementById("if-code")?.addEventListener("blur", () => {
 async function saveInvItem() {
   const code = document.getElementById("if-code").value.trim();
   if (!code) { adminMsg("if-msg","Code is required","err"); return; }
-  const btn = document.querySelector("#inv-form .btn-save");
+  const btn = document.querySelector("#inv-form-wrap .btn-save");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
     const data = await adminCall({ action:"saveInventory", code,
@@ -3718,15 +3711,28 @@ async function saveInvItem() {
     if (data.error) throw new Error(data.error);
     adminMsg("if-msg","Saved OK","ok");
     clearInvForm();
+    toggleInvForm(false);
     await loadInventory();
-    renderAdminInventory();
+    filterInventory();
   } catch(e) { adminMsg("if-msg","Error: "+e.message,"err"); }
   finally { if (btn) { btn.disabled = false; btn.textContent = "Save item"; } }
 }
 
+function toggleInvForm(forceState) {
+  const wrap = document.getElementById("inv-form-wrap");
+  const btn  = document.getElementById("inv-add-btn");
+  if (!wrap) return;
+  const open = forceState !== undefined ? forceState : wrap.style.display === "none";
+  wrap.style.display = open ? "block" : "none";
+  if (btn) btn.textContent = open ? "✕ Close" : "＋ Add Item";
+  if (open) {
+    clearInvForm();
+    setTimeout(() => document.getElementById("if-code")?.focus(), 50);
+  }
+}
+
 async function loadAdminTab() {
   renderAdminProducts();
-  renderAdminInventory();
   populateInvDataLists();
   populatePdfMepDatalist();
   try {
