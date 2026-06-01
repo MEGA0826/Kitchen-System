@@ -2540,11 +2540,23 @@ const _sbActions = {
   },
 
   getSalesAnalysis: async () => {
-    const res = await fetch(SB_URL + "/functions/v1/sales-analysis", {
-      headers: { "Authorization": "Bearer " + SB_KEY, "apikey": SB_KEY }
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    const [prodRows, dayRows] = await Promise.all([
+      sbGet("sales_history", "select=product_name,kategorie,total_qty:sum(qty),total_rev:sum(price),total_wa:sum(wa),peak_qty:max(qty)&order=total_qty.desc&limit=2000"),
+      sbGet("sales_history", "select=sale_date,daily_qty:sum(qty)&order=sale_date.asc&limit=5000")
+    ]);
+    const totalDays = dayRows.length;
+    const products = prodRows.map(p => ({
+      name     : p.product_name || "",
+      kategorie: p.kategorie    || "",
+      totalQty : Number(p.total_qty) || 0,
+      totalRev : Number(p.total_rev) || 0,
+      totalWa  : Number(p.total_wa)  || 0,
+      avgDaily : totalDays > 0 ? Math.round((Number(p.total_qty) || 0) / totalDays * 10) / 10 : 0,
+      peakDay  : Number(p.peak_qty)  || 0,
+      fc       : Number(p.total_rev) > 0 ? Math.round((Number(p.total_wa) || 0) / Number(p.total_rev) * 100 * 10) / 10 : 0
+    }));
+    const days = dayRows.map(d => ({ date: d.sale_date, totalQty: Number(d.daily_qty) || 0 }));
+    return { products, days, totalDays };
   }
 };
 
