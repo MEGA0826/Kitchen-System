@@ -6204,10 +6204,9 @@ async function loadSalesAnalysis() {
   const msg = document.getElementById("sales-import-msg");
   if (msg) msg.textContent = "Loading…";
   try {
-    const d = await get({ action: "getSalesAnalysis" });
-    if (d.error) throw new Error(d.error);
+    const d = await _sbActions.getSalesAnalysis();
     if (!d.products || !d.products.length) {
-      if (msg) msg.textContent = "No sales data found in sheet.";
+      if (msg) msg.textContent = "No sales data found.";
       return;
     }
     // Sanitize: ensure all array fields exist before rendering
@@ -6457,7 +6456,10 @@ function exportSalesCSV() {
   const a    = document.createElement("a");
   a.href     = URL.createObjectURL(blob);
   a.download = `sales_${new Date().toLocaleDateString('en-CA')}.csv`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
 }
 
 async function handleSalesCsvPick(input) {
