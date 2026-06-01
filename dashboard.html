@@ -2540,22 +2540,54 @@ const _sbActions = {
   },
 
   getSalesAnalysis: async () => {
-    const [prodRows, dayRows] = await Promise.all([
-      sbGet("sales_history", "select=product_name,kategorie,total_qty:qty.sum(),total_rev:price.sum(),total_wa:wa.sum(),peak_qty:qty.max()&order=total_qty.desc&limit=2000"),
-      sbGet("sales_history", "select=sale_date,daily_qty:qty.sum()&order=sale_date.asc&limit=5000")
-    ]);
-    const totalDays = dayRows.length;
-    const products = prodRows.map(p => ({
-      name     : p.product_name || "",
-      kategorie: p.kategorie    || "",
-      totalQty : Number(p.total_qty) || 0,
-      totalRev : Number(p.total_rev) || 0,
-      totalWa  : Number(p.total_wa)  || 0,
-      avgDaily : totalDays > 0 ? Math.round((Number(p.total_qty) || 0) / totalDays * 10) / 10 : 0,
-      peakDay  : Number(p.peak_qty)  || 0,
-      fc       : Number(p.total_rev) > 0 ? Math.round((Number(p.total_wa) || 0) / Number(p.total_rev) * 100 * 10) / 10 : 0
-    }));
-    const days = dayRows.map(d => ({ date: d.sale_date, totalQty: Number(d.daily_qty) || 0 }));
+    const PAGE = 1000, CONC = 8;
+
+    // Get total row count (Prefer: count=exact returns it in Content-Range header)
+    const hd = Object.assign({}, _sbH, { Prefer: "count=exact" });
+    const countRes = await fetch(SB_URL + "/rest/v1/sales_history?select=qty&limit=1", { headers: hd });
+    if (!countRes.ok) throw new Error(await countRes.text());
+    const total = parseInt((countRes.headers.get("content-range") || "").split("/")[1] || "0", 10);
+    if (!total) return { products: [], days: [], totalDays: 0 };
+
+    // Fetch all pages in batches of CONC parallel requests
+    const numPages = Math.ceil(total / PAGE);
+    const allRows = [];
+    for (let b = 0; b < numPages; b += CONC) {
+      const batch = await Promise.all(
+        Array.from({ length: Math.min(CONC, numPages - b) }, (_, i) =>
+          sbGet("sales_history",
+            `select=sale_date,product_name,kategorie,qty,price,wa&order=sale_date.asc&limit=${PAGE}&offset=${(b + i) * PAGE}`)
+          .catch(() => [])
+        )
+      );
+      allRows.push(...batch.flat());
+    }
+
+    if (!allRows.length) return { products: [], days: [], totalDays: 0 };
+
+    // Client-side aggregation
+    const prodMap = new Map(), dayMap = new Map();
+    for (const r of allRows) {
+      const key = (r.product_name || "") + "\x00" + (r.kategorie || "");
+      if (!prodMap.has(key)) prodMap.set(key, { name: r.product_name || "", kategorie: r.kategorie || "", totalQty: 0, totalRev: 0, totalWa: 0, peakDay: 0 });
+      const p = prodMap.get(key);
+      p.totalQty += Number(r.qty)   || 0;
+      p.totalRev += Number(r.price) || 0;
+      p.totalWa  += Number(r.wa)    || 0;
+      if ((Number(r.qty) || 0) > p.peakDay) p.peakDay = Number(r.qty) || 0;
+
+      if (!dayMap.has(r.sale_date)) dayMap.set(r.sale_date, { date: r.sale_date, totalQty: 0 });
+      dayMap.get(r.sale_date).totalQty += Number(r.qty) || 0;
+    }
+
+    const days = [...dayMap.values()].sort((a, b) => a.date < b.date ? -1 : 1);
+    const totalDays = days.length;
+    const products = [...prodMap.values()].map(p => ({
+      ...p,
+      avgDaily: totalDays ? Math.round(p.totalQty / totalDays * 10) / 10 : 0,
+      fc: p.totalRev ? Math.round(p.totalWa / p.totalRev * 100 * 10) / 10 : 0
+    })).sort((a, b) => b.totalQty - a.totalQty);
+
     return { products, days, totalDays };
   }
 };
@@ -6202,7 +6234,7 @@ function _applyPeriodFilter() {
 
 async function loadSalesAnalysis() {
   const msg = document.getElementById("sales-import-msg");
-  if (msg) msg.textContent = "Loading…";
+  if (msg) msg.textContent = "Loading sales data… (may take a few seconds)";
   try {
     const d = await _sbActions.getSalesAnalysis();
     if (!d.products || !d.products.length) {
