@@ -2541,8 +2541,8 @@ const _sbActions = {
 
   getSalesAnalysis: async () => {
     const [prodRows, dayRows] = await Promise.all([
-      sbGet("sales_history", "select=product_name,kategorie,total_qty:sum(qty),total_rev:sum(price),total_wa:sum(wa),peak_qty:max(qty)&order=total_qty.desc&limit=2000"),
-      sbGet("sales_history", "select=sale_date,daily_qty:sum(qty)&order=sale_date.asc&limit=5000")
+      sbGet("sales_history", "select=product_name,kategorie,total_qty:qty.sum(),total_rev:price.sum(),total_wa:wa.sum(),peak_qty:qty.max()&order=total_qty.desc&limit=2000"),
+      sbGet("sales_history", "select=sale_date,daily_qty:qty.sum()&order=sale_date.asc&limit=5000")
     ]);
     const totalDays = dayRows.length;
     const products = prodRows.map(p => ({
