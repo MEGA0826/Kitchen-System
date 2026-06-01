@@ -545,6 +545,7 @@
   <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
   <button class="tab"        data-tab="reports"      onclick="switchTab(this)"><span class="tab-icon">📊</span>Reports</button>
   <button class="tab"        data-tab="deductions"   onclick="switchTab(this)"><span class="tab-icon">✂️</span>Deductions</button>
+  <button class="tab"        data-tab="sales"        onclick="switchTab(this)"><span class="tab-icon">📈</span>Sales</button>
   <button class="tab"        data-tab="haccp"        onclick="switchTab(this)"><span class="tab-icon">🌡</span>HACCP</button>
   <button class="tab"                                onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
 </div>
@@ -2028,7 +2029,7 @@ let allGRs = [];
 const ROLE_TABS = {
   Teamleader : ['kds','mep-overview','inventory','deductions'],
   Küchenchef : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','haccp'],
-  Manager    : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','haccp','admin'],
+  Manager    : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','sales','haccp','admin'],
 };
 
 // Roles that can VIEW recipes but not add/edit
@@ -2156,6 +2157,7 @@ function switchTab(btn) {
   if (tabId === "reports")      loadReportsTab();
   if (tabId === "products")     { if (!Object.keys(allProducts).length) loadProducts(); else filterProducts(); }
   if (tabId === "morning")      loadMorning();
+  if (tabId === "sales")        initSalesTab();
   if (tabId === "haccp")        loadHaccp();
 }
   
