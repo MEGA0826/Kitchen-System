@@ -2805,16 +2805,22 @@ function buildMepAlerts(products, stats) {
   alertBox.innerHTML = alerts.map((a, idx) => `
     <div class="alert-wrap" id="aw-${idx}">
       <div class="alert-delete-bg">Delete</div>
-      <div class="mep-alert ${a.type}" id="al-${idx}" data-idx="${idx}" onclick="alertClick('${a.code||''}')">
+      <div class="mep-alert ${a.type}" id="al-${idx}" data-idx="${idx}" data-code="${a.code||''}">
         <span class="mep-alert-icon">${a.icon}</span>
         <div class="mep-alert-body">
-          <span class="alert-title" onclick="window.location.href='index.html?code=${a.code}'" style="cursor:pointer;text-decoration:underline">${a.title}</span>
+          <span class="alert-title" data-code="${a.code||''}" style="cursor:pointer;text-decoration:underline">${a.title}</span>
           <span class="mep-alert-sub">${a.sub}</span>
         </div>
         <span style="margin-left:auto;font-size:10px;opacity:.5;flex-shrink:0">tap ›</span>
       </div>
     </div>`).join("");
   initSwipe();
+  alertBox.querySelectorAll('.mep-alert').forEach(el => {
+    el.addEventListener('click', () => alertClick(el.dataset.code));
+  });
+  alertBox.querySelectorAll('.alert-title').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); window.location.href = 'index.html?code=' + el.dataset.code; });
+  });
 }
 
 // ▼ NEW: food keyword → emoji icon map
@@ -3061,7 +3067,7 @@ function renderInventory(rows) {
     const mepStr = p.mepMax ? `${mepAvail}${gnSize?" "+gnSize:""}` : "-";
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${r.code||"-"}</td>
-      <td><button onclick="openEditInventoryModal('${r.code}')" style="padding:2px 7px;border-radius:6px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-family:var(--mono);font-size:11px;cursor:pointer">✏️</button></td>
+      <td><button data-code="${r.code}" class="inv-tbl-edit-btn" style="padding:2px 7px;border-radius:6px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-family:var(--mono);font-size:11px;cursor:pointer">✏️</button></td>
       <td>${r.name||"-"}</td>
       <td style="color:var(--muted);font-size:11px">${r.kategorie||"-"}</td>
       <td style="font-weight:500">${qtyDisplay}${qtyDisplay !== "-" && r.unit ? " "+r.unit : ""}</td>
@@ -3091,6 +3097,9 @@ function renderInventory(rows) {
       </tr></thead>
       <tbody>${trs}</tbody>
     </table></div>`;
+  el.querySelectorAll('.inv-tbl-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditInventoryModal(btn.dataset.code));
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -3381,10 +3390,12 @@ function renderAdminProducts() {
         <div class="admin-item-sub">${code} · Max ${p.mepMax||"-"} ${p.gnSize||""} · Target ${p.tagesziel||"-"} · ${p.gnWeight||"-"} kg/GN · Shelf ${p.shelfLife||2}d</div>
       </div>
       <div class="admin-item-actions">
-        <button class="btn-edit" onclick="editProduct('${code}')">Edit</button>
-        <button class="btn-del"  onclick="delProduct('${code}')">Remove</button>
+        <button class="btn-edit" data-code="${code}">Edit</button>
+        <button class="btn-del"  data-code="${code}">Remove</button>
       </div>
     </div>`).join("");
+  list.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => editProduct(btn.dataset.code)));
+  list.querySelectorAll('.btn-del').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
 
 function editProduct(code) {
@@ -3518,9 +3529,10 @@ function renderAdminWorkers() {
         <span style="font-size:11px;color:var(--muted)">${role || '—'}</span>
         ${badge}
       </div>
-      <button class="btn-edit" onclick="openWorkerEditPopup('${name.replace(/'/g, "\\'")}')">Edit</button>
+      <button class="btn-edit" data-name="${name}">Edit</button>
     </div>`;
   }).join('');
+  list.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => openWorkerEditPopup(btn.dataset.name)));
 }
 function openWorkerEditPopup(name) {
   const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
@@ -3683,9 +3695,10 @@ function renderAdminInventory() {
         <span style="font-size:11px;color:var(--muted);margin-left:8px">${r.code}</span>
         <span style="font-size:11px;color:var(--muted);margin-left:6px">${r.quantity??"-"} ${r.unit||""} ${totKg?"· "+totKg:""} ${r.lieferant?"· "+r.lieferant:""}</span>
       </div>
-      <button class="btn-edit" onclick="editInvItem('${r.code}')">${_safeT('edit')}</button>
+      <button class="btn-edit" data-code="${r.code}">${_safeT('edit')}</button>
     </div>`;
   }).join("");
+  list.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => editInvItem(btn.dataset.code)));
 }
 function editInvItem(code) {
   openEditInventoryModal(code);
@@ -3876,7 +3889,7 @@ function renderOrderCal() {
     const k = _dateKey(d);
     const ev = _calEvents[k] || {};
     const cls = _calDayCls(k, ev, todayKey, true);
-    html += `<div class="order-cal-day other-month ${cls}" onclick="orderCalClick('${k}')">`
+    html += `<div class="order-cal-day other-month ${cls}" data-key="${k}">`
       + `<span class="order-cal-dn">${d.getDate()}</span>`
       + _calDots(ev) + `</div>`;
   }
@@ -3886,7 +3899,7 @@ function renderOrderCal() {
     const k    = _dateKey(date);
     const ev   = _calEvents[k] || {};
     const cls  = _calDayCls(k, ev, todayKey, false);
-    html += `<div class="order-cal-day ${cls}" onclick="orderCalClick('${k}')">`
+    html += `<div class="order-cal-day ${cls}" data-key="${k}">`
       + `<span class="order-cal-dn">${d}</span>`
       + _calDots(ev) + `</div>`;
   }
@@ -3898,12 +3911,15 @@ function renderOrderCal() {
     const k    = _dateKey(date);
     const ev   = _calEvents[k] || {};
     const cls  = _calDayCls(k, ev, todayKey, true);
-    html += `<div class="order-cal-day other-month ${cls}" onclick="orderCalClick('${k}')">`
+    html += `<div class="order-cal-day other-month ${cls}" data-key="${k}">`
       + `<span class="order-cal-dn">${date.getDate()}</span>`
       + _calDots(ev) + `</div>`;
   }
 
   grid.innerHTML = html;
+  grid.querySelectorAll('.order-cal-day').forEach(el => {
+    el.addEventListener('click', () => orderCalClick(el.dataset.key));
+  });
 }
 
 function _calDayCls(k, ev, todayKey, otherMonth) {
@@ -4828,10 +4844,12 @@ function renderEpfRmList(code) {
               ${waPerKgNetto > 0 && garvPct > 0 ? `· <span style="color:var(--amber)">WA ${waPerKgNetto.toFixed(2)} CHF/kg netto</span>` : ''}
             </div>
           </div>
-      <button onclick="editEpfRmRow('${code}','${r.rmCode}')" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
-      <button onclick="deleteEpfRm('${code}','${r.rmCode}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
+      <button data-code="${code}" data-rm="${r.rmCode}" class="epf-rm-edit-btn" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
+      <button data-code="${code}" data-rm="${r.rmCode}" class="epf-rm-del-btn" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
     </div>`;
   }).join("");
+  el.querySelectorAll('.epf-rm-edit-btn').forEach(btn => btn.addEventListener('click', () => editEpfRmRow(btn.dataset.code, btn.dataset.rm)));
+  el.querySelectorAll('.epf-rm-del-btn').forEach(btn => btn.addEventListener('click', () => deleteEpfRm(btn.dataset.code, btn.dataset.rm)));
   // Recalc suggestion after RM changes (but not on initial open — openEditProductModal handles that)
   if (document.getElementById("editProductModal")?.classList.contains("active")) {
     setTimeout(() => calcEpfSuggestion(code), 0);
@@ -5671,7 +5689,7 @@ function renderPdfPreview(mode, parsedMenu) {
             oninput="pdfCodeInput(${i},this.value)"
             placeholder="${suggested}">
           <button type="button" title="Use suggested code"
-            onclick="pdfParsedIngredients[${i}].code='${suggested}';pdfParsedIngredients[${i}]._matched=false;var el=document.getElementById('pdf-code-${i}');if(el){el.value='${suggested}';el.style.borderColor='var(--amber)'}"
+            data-idx="${i}" data-suggested="${suggested}" class="pdf-sug-code-btn"
             style="background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:3px 5px;cursor:pointer;font-size:10px;white-space:nowrap">★</button>
         </div>
         ${dupWarn}
@@ -5707,8 +5725,7 @@ function renderPdfPreview(mode, parsedMenu) {
         oninput="pdfParsedIngredients[${i}].description=this.value"
         placeholder="e.g. fein schneiden">
 
-      <button type="button" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px"
-        onclick="pdfParsedIngredients.splice(${i},1);renderPdfPreview(window._pdfMode)">✕</button>
+      <button type="button" data-idx="${i}" class="pdf-del-row-btn" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);border-radius:var(--radius-sm);padding:4px 6px;cursor:pointer;font-size:13px">✕</button>
     </div>`;
   }).join("");
 
@@ -5720,6 +5737,22 @@ function renderPdfPreview(mode, parsedMenu) {
        </div>` : "";
 
   listEl.innerHTML = menuBanner + dupAlert + header + rows;
+  listEl.querySelectorAll('.pdf-sug-code-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const sug = btn.dataset.suggested;
+      pdfParsedIngredients[idx].code = sug;
+      pdfParsedIngredients[idx]._matched = false;
+      const inp = document.getElementById('pdf-code-' + idx);
+      if (inp) { inp.value = sug; inp.style.borderColor = 'var(--amber)'; }
+    });
+  });
+  listEl.querySelectorAll('.pdf-del-row-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pdfParsedIngredients.splice(parseInt(btn.dataset.idx), 1);
+      renderPdfPreview(window._pdfMode);
+    });
+  });
   preview.style.display = "block";
 }
 
@@ -6197,8 +6230,11 @@ function _buildCategoryPills() {
   const el = document.getElementById("sales-cat-pills");
   if (!el) return;
   const cats = [...new Set(salesData.products.map(p => p.kategorie || "Other").filter(Boolean))].sort();
-  el.innerHTML = `<span class="sales-cat-pill active" onclick="setSalesCat('',this)">All</span>`
-    + cats.map(c => `<span class="sales-cat-pill" onclick="setSalesCat('${c}',this)">${c}</span>`).join("");
+  el.innerHTML = `<span class="sales-cat-pill active" data-cat="">All</span>`
+    + cats.map(c => `<span class="sales-cat-pill" data-cat="${c}">${c}</span>`).join("");
+  el.querySelectorAll('.sales-cat-pill').forEach(pill => {
+    pill.addEventListener('click', () => setSalesCat(pill.dataset.cat, pill));
+  });
 }
 
 function setSalesCat(cat, el) {
@@ -6808,11 +6844,13 @@ function renderMepAddZutaten() {
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
-          <button onclick="editMepAddZutat(${i})" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
-          <button onclick="mepAddZutaten.splice(${i},1);renderMepAddZutaten()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
+          <button data-idx="${i}" class="mep-zutat-edit-btn" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
+          <button data-idx="${i}" class="mep-zutat-del-btn" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
         </div>
       </div>`;
     }).join('');
+    el.querySelectorAll('.mep-zutat-edit-btn').forEach(btn => btn.addEventListener('click', () => editMepAddZutat(parseInt(btn.dataset.idx))));
+    el.querySelectorAll('.mep-zutat-del-btn').forEach(btn => btn.addEventListener('click', () => { mepAddZutaten.splice(parseInt(btn.dataset.idx), 1); renderMepAddZutaten(); }));
   }
   // Update WA total
   const total = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.cost)||0), 0);
@@ -6833,8 +6871,9 @@ function renderAgrZutaten() {
           <div style="font-size:12px;color:var(--text)">${z.name||''}</div>
           <div style="font-size:10px;color:var(--muted)">${z.gewicht?z.gewicht+'kg':''} ${z.cost?'· CHF '+parseFloat(z.cost).toFixed(2):''}</div>
         </div>
-        <button onclick="removeAgrZutat(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
+        <button data-idx="${i}" class="agr-zutat-del-btn" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
       </div>`).join('');
+    el.querySelectorAll('.agr-zutat-del-btn').forEach(btn => btn.addEventListener('click', () => removeAgrZutat(parseInt(btn.dataset.idx))));
   }
   calcAgrWa();
 }
@@ -6978,7 +7017,7 @@ function renderMenuList() {
       ? `<img src="${_mImg}" style="width:100%;height:120px;object-fit:cover;background:var(--surface2);display:block"
            onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=\\'width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3\\'>🍽️</div>')">`
       : `<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">🍽️</div>`;
-    return `<div onclick="openMenuView('${m.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s;min-width:0;word-break:break-word" onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
+    return `<div data-menu-id="${m.id}" class="menu-card-item" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s;min-width:0;word-break:break-word" onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
       ${imgHtml}
       <div style="padding:12px">
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${m.name||'—'}</div>
@@ -6996,6 +7035,9 @@ function renderMenuList() {
       </div>
     </div>`;
   }).join("");
+  el.querySelectorAll('.menu-card-item').forEach(card => {
+    card.addEventListener('click', () => openMenuView(card.dataset.menuId));
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -7055,11 +7097,13 @@ function renderMenuListByCat(cat) {
         <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
         <span style="font-size:11px;color:var(--muted);flex:1">${m.category||""}</span>
         <span class="recipe-wa">WA CHF ${wa.toFixed(2)}</span>
-        <button type="button" class="btn-edit" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="openMenuPopup('${m.id}')">✏️</button>
+        <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0">✏️</button>
       </div>
-      <span class="recipe-item-name" style="font-size:15px;font-weight:600;padding:0 2px" onclick="openMenuView('${m.id}')">${m.name||"—"}</span>
+      <span class="recipe-item-name menu-row-name" data-menu-id="${m.id}" style="font-size:15px;font-weight:600;padding:0 2px;cursor:pointer">${m.name||"—"}</span>
     </div>`;
   }).join("");
+  el.querySelectorAll('.menu-row-edit-btn').forEach(btn => btn.addEventListener('click', () => openMenuPopup(btn.dataset.menuId)));
+  el.querySelectorAll('.menu-row-name').forEach(span => span.addEventListener('click', () => openMenuView(span.dataset.menuId)));
 }
   
 function filterGrDisplay() {
@@ -7097,9 +7141,11 @@ function filterMepDisplay() {
       <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
-      <button type="button" onclick="openEditProductModal('${code}')" class="btn-edit" style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" onclick="delProduct('${code}')" class="btn-del" style="font-size:11px;padding:3px 8px">🗑</button>
+      <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`).join("");
+  el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
+  el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
 // ─────────────────────────────────────────────
 // MENU POPUP — OPEN / CLOSE
@@ -7210,14 +7256,26 @@ function renderMenuZutaten(targetList, targetData) {
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0;margin-top:2px">
-          <button onclick="${isGrTarget?'editGrZutat':'editMenuZutat'}(${i})"
+          <button data-idx="${i}" data-isgr="${isGrTarget}" class="zutat-edit-btn"
             title="${_t('edit-ingredient')}"
             style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
-          <button onclick="${isGrTarget?'removeGrZutat':'removeMenuZutat'}(${i})"
+          <button data-idx="${i}" data-isgr="${isGrTarget}" class="zutat-del-btn"
             style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;padding:0 2px">✕</button>
         </div>
       </div>`;
     }).join('');
+    el.querySelectorAll('.zutat-edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        (btn.dataset.isgr === 'true' ? editGrZutat : editMenuZutat)(idx);
+      });
+    });
+    el.querySelectorAll('.zutat-del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        (btn.dataset.isgr === 'true' ? removeGrZutat : removeMenuZutat)(idx);
+      });
+    });
   }
   if (!targetList) calcWaFromZutaten();
   if (targetList === 'gr-zutaten-list') calcGrPreis && calcGrPreis();
@@ -8005,14 +8063,20 @@ function _renderMorningChecklist() {
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${doneCount} / ${items.length} tasks completed</div>
     <div class="morning-progress-bar"><div class="morning-progress-fill" style="width:${pct}%"></div></div>
     ${items.map((item, idx) => `
-    <div class="check-item ${item.done ? "done" : ""}" onclick="toggleCheck(${idx})">
+    <div class="check-item ${item.done ? "done" : ""}" data-idx="${idx}">
       <div class="check-box">${item.done
         ? `<svg width="12" height="10" viewBox="0 0 12 10"><polyline points="1,5 4.5,8.5 11,1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
         : ""}</div>
       <span class="check-text">${_escM(item.text)}</span>
-      <button onclick="event.stopPropagation();removeCheckItem(${idx})"
+      <button data-idx="${idx}" class="check-remove-btn"
         style="background:none;border:none;color:var(--faint);font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0" title="Remove">×</button>
     </div>`).join("")}`;
+  el.querySelectorAll('.check-item').forEach(div => {
+    div.addEventListener('click', () => toggleCheck(parseInt(div.dataset.idx)));
+  });
+  el.querySelectorAll('.check-remove-btn').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); removeCheckItem(parseInt(btn.dataset.idx)); });
+  });
 }
 
 function toggleCheck(idx) {
@@ -8096,7 +8160,9 @@ function _renderHaccpZones() {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px 0">No zones yet — add your fridges and freezers above.</div>';
     return;
   }
+  window._haccpZoneMap = {};
   el.innerHTML = zones.map(z => {
+    window._haccpZoneMap[z.id] = z;
     const icon = z.type === "Freezer" ? "❄️" : "🧊";
     return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
       <div style="display:flex;align-items:center;gap:10px;padding:11px 14px">
@@ -8105,9 +8171,9 @@ function _renderHaccpZones() {
           <div style="font-size:14px;font-weight:600;color:var(--text)">${_hEscH(z.name)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">${_hEscH(z.type)} · ${z.minTemp}°C → ${z.maxTemp}°C</div>
         </div>
-        <button onclick="toggleHaccpLogForm('${z.id}')" style="padding:6px 12px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer">Log</button>
-        <button onclick="openHaccpZoneModal(${JSON.stringify(z).replace(/"/g,'&quot;')})" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:13px;cursor:pointer">✎</button>
-        <button onclick="deleteHaccpZone('${z.id}')" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);font-size:13px;cursor:pointer">✕</button>
+        <button data-zone-id="${z.id}" class="haccp-zone-log-btn" style="padding:6px 12px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer">Log</button>
+        <button data-zone-id="${z.id}" class="haccp-zone-edit-btn" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:13px;cursor:pointer">✎</button>
+        <button data-zone-id="${z.id}" class="haccp-zone-del-btn" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);font-size:13px;cursor:pointer">✕</button>
       </div>
       ${(() => {
         const logs = (_haccpTempLogs[z.name]||[]).slice(0,3);
@@ -8141,13 +8207,22 @@ function _renderHaccpZones() {
             <input type="text" id="haccpN_${z.id}" placeholder="—"
               style="width:100%;padding:9px 10px;background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:6px;font-family:'DM Mono',monospace;font-size:13px">
           </div>
-          <button onclick="submitHaccpTemp('${z.id}',${z.minTemp},${z.maxTemp},'${_hEscH(z.name)}','${z.type}')"
+          <button data-zone-id="${z.id}" class="haccp-zone-submit-btn"
             style="padding:9px 16px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:6px;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;cursor:pointer">✓ Log</button>
         </div>
         <div id="haccpTM_${z.id}" style="font-size:12px;margin-top:8px;min-height:16px"></div>
       </div>
     </div>`;
   }).join("");
+  el.querySelectorAll('.haccp-zone-log-btn').forEach(btn => btn.addEventListener('click', () => toggleHaccpLogForm(btn.dataset.zoneId)));
+  el.querySelectorAll('.haccp-zone-edit-btn').forEach(btn => btn.addEventListener('click', () => openHaccpZoneModal(window._haccpZoneMap[btn.dataset.zoneId])));
+  el.querySelectorAll('.haccp-zone-del-btn').forEach(btn => btn.addEventListener('click', () => deleteHaccpZone(btn.dataset.zoneId)));
+  el.querySelectorAll('.haccp-zone-submit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const z = window._haccpZoneMap[btn.dataset.zoneId];
+      if (z) submitHaccpTemp(z.id, z.minTemp, z.maxTemp, z.name, z.type);
+    });
+  });
 }
 
 function toggleHaccpLogForm(id) {
@@ -8212,16 +8287,34 @@ function _renderHaccpChecklist() {
       ? `<span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:4px;padding:1px 5px;margin-left:6px">${isDue?"Monthly":"Next 1st"}</span>`
       : "";
     const whoBadge = who ? `<span style="font-size:11px;color:var(--muted);margin-left:6px">by ${_hEscH(who)}</span>` : "";
-    return `<div onclick="${isDue?`toggleHaccpCheck('${t.id}','${_hEscH(t.task)}')`:'void(0)'}"
+    return `<div data-task-id="${t.id}" class="haccp-check-row${isDue?' haccp-check-due':''}"
       style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${isDue?'cursor:pointer':'cursor:default;opacity:0.45'};user-select:none;-webkit-user-select:none">
       <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;border:2px solid ${done?"var(--green)":"var(--border2)"};background:${done?"var(--green)":"transparent"};display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;transition:all .15s">${done?"✓":""}</div>
       <div style="flex:1;min-width:0">
         <span style="font-size:14px;color:${done?"var(--muted)":"var(--text)"};text-decoration:${done?"line-through":"none"}">${_hEscH(t.task)}</span>${freqBadge}${whoBadge}
       </div>
-      <button onclick="event.stopPropagation();openHaccpTaskModal(${JSON.stringify(t).replace(/"/g,'&quot;')})" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 6px">✎</button>
-      <button onclick="event.stopPropagation();deleteHaccpTask('${t.id}')" style="background:none;border:none;color:var(--border2);font-size:14px;cursor:pointer;padding:4px 6px">✕</button>
+      <button data-task-id="${t.id}" class="haccp-task-edit-btn" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 6px">✎</button>
+      <button data-task-id="${t.id}" class="haccp-task-del-btn" style="background:none;border:none;color:var(--border2);font-size:14px;cursor:pointer;padding:4px 6px">✕</button>
     </div>`;
   }).join("");
+  window._haccpTaskMap = {};
+  visible.forEach(t => { window._haccpTaskMap[t.id] = t; });
+  const isDueMap = {};
+  visible.forEach(t => {
+    isDueMap[t.id] = t.frequency === "Weekly" ? isMonday : t.frequency === "Monthly" ? isFirstDom : true;
+  });
+  el.querySelectorAll('.haccp-check-due').forEach(row => {
+    row.addEventListener('click', () => {
+      const t = window._haccpTaskMap[row.dataset.taskId];
+      if (t) toggleHaccpCheck(t.id, t.task);
+    });
+  });
+  el.querySelectorAll('.haccp-task-edit-btn').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); openHaccpTaskModal(window._haccpTaskMap[btn.dataset.taskId]); });
+  });
+  el.querySelectorAll('.haccp-task-del-btn').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); deleteHaccpTask(btn.dataset.taskId); });
+  });
 }
 
 async function toggleHaccpCheck(taskId, taskName) {
