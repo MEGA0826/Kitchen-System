@@ -2869,12 +2869,12 @@ window.chartPeriod = "today";
 
 function getChartScans() {
   const now = Date.now();
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toLocaleDateString('en-CA');
   const p = window.chartPeriod || "today";
   return allScans.filter(s => {
     if (!s.timestamp) return false;
     const ts = new Date(s.timestamp).getTime();
-    if (p === "today")   return new Date(s.timestamp).toISOString().slice(0, 10) === todayStr;
+    if (p === "today")   return new Date(s.timestamp).toLocaleDateString('en-CA') === todayStr;
     if (p === "3days")   return now - ts <= 3  * 86400000;
     if (p === "week")    return now - ts <= 7  * 86400000;
     if (p === "month")   return now - ts <= 30 * 86400000;
@@ -6077,8 +6077,8 @@ function toggleCustomRange(btn) {
     const from  = new Date(today); from.setDate(today.getDate() - 7);
     const toEl   = document.getElementById("sales-date-to");
     const fromEl = document.getElementById("sales-date-from");
-    if (fromEl) fromEl.value = from.toISOString().slice(0,10);
-    if (toEl)   toEl.value   = today.toISOString().slice(0,10);
+    if (fromEl) fromEl.value = from.toLocaleDateString('en-CA');
+    if (toEl)   toEl.value   = today.toLocaleDateString('en-CA');
   }
 }
 
@@ -6396,7 +6396,7 @@ function exportSalesCSV() {
   const blob = new Blob([csv], { type:"text/csv" });
   const a    = document.createElement("a");
   a.href     = URL.createObjectURL(blob);
-  a.download = `sales_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `sales_${new Date().toLocaleDateString('en-CA')}.csv`;
   a.click();
 }
 
