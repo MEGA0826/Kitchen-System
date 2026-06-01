@@ -1289,7 +1289,7 @@
     <div class="chart-wrap" style="margin-bottom:20px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div class="chart-title" style="margin:0">📂 Import sales CSV (Vectron)</div>
-        <button class="export-btn" onclick="exportSalesCSV()">↑ Export CSV</button>
+        <button onclick="exportSalesCSV()" style="padding:9px 16px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap">↑ Export CSV</button>
       </div>
       <!-- Hidden file input — read immediately on change inside same gesture -->
       <input type="file" id="sales-csv-input" accept=".csv,.txt" style="display:none"
@@ -1328,14 +1328,16 @@
     </div>
 
     <!-- Date range filter -->
-    <div class="sales-period-bar">
-      <span style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-right:4px">Period:</span>
-      <button class="sales-period-btn active" data-sp="7"   onclick="setSalesPeriod(7,this)">7 days</button>
-      <button class="sales-period-btn"        data-sp="14"  onclick="setSalesPeriod(14,this)">14 days</button>
-      <button class="sales-period-btn"        data-sp="28"  onclick="setSalesPeriod(28,this)">28 days</button>
-      <button class="sales-period-btn"        data-sp="90"  onclick="setSalesPeriod(90,this)">90 days</button>
-      <button class="sales-period-btn"        data-sp="0"   onclick="setSalesPeriod(0,this)">All time</button>
-      <button class="sales-period-btn"        data-sp="custom" onclick="toggleCustomRange(this)">📅 Custom</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;white-space:nowrap">Period:</span>
+      <select id="sales-period-select" class="search-input" style="flex:0 1 160px;min-width:120px;padding:8px 12px;font-size:12px" onchange="onSalesPeriodSelect(this)">
+        <option value="7" selected>7 days</option>
+        <option value="14">14 days</option>
+        <option value="28">28 days</option>
+        <option value="90">90 days</option>
+        <option value="0">All time</option>
+        <option value="custom">📅 Custom range</option>
+      </select>
     </div>
     <!-- Custom date range picker (hidden by default) -->
     <div id="sales-custom-range" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm)">
@@ -2535,6 +2537,14 @@ const _sbActions = {
       "log_date=eq." + today + "&order=log_time.desc");
     return rows.map(r => ({ date: r.log_date, time: r.log_time, zone: r.zone,
       temp: r.temp, pass: r.pass_fail, notes: r.notes, worker: r.worker }));
+  },
+
+  getSalesAnalysis: async () => {
+    const res = await fetch(SB_URL + "/functions/v1/sales-analysis", {
+      headers: { "Authorization": "Bearer " + SB_KEY, "apikey": SB_KEY }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 
@@ -6082,39 +6092,41 @@ function initSalesTab() {
   if (!salesData.products.length) loadSalesAnalysis();
 }
 
-function setSalesPeriod(days, btn) {
+function onSalesPeriodSelect(sel) {
+  const val = sel.value;
+  if (val === 'custom') {
+    const picker = document.getElementById("sales-custom-range");
+    if (picker) {
+      picker.style.display = "flex";
+      const today = new Date();
+      const from  = new Date(today); from.setDate(today.getDate() - 7);
+      const toEl   = document.getElementById("sales-date-to");
+      const fromEl = document.getElementById("sales-date-from");
+      if (fromEl) fromEl.value = from.toLocaleDateString('en-CA');
+      if (toEl)   toEl.value   = today.toLocaleDateString('en-CA');
+    }
+  } else {
+    setSalesPeriod(val === '0' ? 0 : parseInt(val));
+  }
+}
+
+function setSalesPeriod(days) {
   _salesPeriodDays = days;
   _salesCustomFrom = null;
   _salesCustomTo   = null;
-  document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
   const picker = document.getElementById("sales-custom-range");
-  if (picker && days !== "custom") picker.style.display = "none";
+  if (picker) picker.style.display = "none";
+  const sel = document.getElementById("sales-period-select");
+  if (sel && days !== "custom") sel.value = String(days);
   const label = document.getElementById("sales-period-label");
   if (label) label.textContent = days === 0 ? "all time" : `last ${days} days`;
   _applyPeriodFilter();
 }
 
-function toggleCustomRange(btn) {
-  const picker = document.getElementById("sales-custom-range");
-  if (!picker) return;
-  const isOpen = picker.style.display !== "none";
-  if (isOpen) {
-    picker.style.display = "none";
-    document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
-    const firstBtn = document.querySelector(".sales-period-btn[data-sp='7']");
-    if (firstBtn) { firstBtn.classList.add("active"); setSalesPeriod(7, null); }
-  } else {
-    picker.style.display = "flex";
-    document.querySelectorAll(".sales-period-btn").forEach(b => b.classList.remove("active"));
-    if (btn) btn.classList.add("active");
-    const today = new Date();
-    const from  = new Date(today); from.setDate(today.getDate() - 7);
-    const toEl   = document.getElementById("sales-date-to");
-    const fromEl = document.getElementById("sales-date-from");
-    if (fromEl) fromEl.value = from.toLocaleDateString('en-CA');
-    if (toEl)   toEl.value   = today.toLocaleDateString('en-CA');
-  }
+function toggleCustomRange() {
+  const sel = document.getElementById("sales-period-select");
+  if (sel) sel.value = "7";
+  setSalesPeriod(7);
 }
 
 function applyCustomRange() {
@@ -6180,9 +6192,7 @@ async function loadSalesAnalysis() {
   const msg = document.getElementById("sales-import-msg");
   if (msg) msg.textContent = "Loading…";
   try {
-    // Force fresh — no cache
-    const res = await fetch(API + "?action=getSalesAnalysis&_t=" + Date.now());
-    const d   = await res.json();
+    const d = await get({ action: "getSalesAnalysis" });
     if (d.error) throw new Error(d.error);
     if (!d.products || !d.products.length) {
       if (msg) msg.textContent = "No sales data found in sheet.";
