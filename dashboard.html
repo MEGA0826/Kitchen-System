@@ -5883,9 +5883,9 @@ function _suggestPdfCode(type, idx) {
     return prefix + "001";
   }
 
-  if (type === "MEP") return nextAvailable("MEP", _allMepCodes);
-  if (type === "GR")  return nextAvailable("GR",  _allGrCodes);
-  return                     nextAvailable("RM",  _allRmCodes);
+  if (type === "MEP") return nextAvailable("P-",   _allMepCodes);
+  if (type === "GR")  return nextAvailable("GR-",  _allGrCodes);
+  return                     nextAvailable("RM-",  _allRmCodes);
 }
 
 function _isPdfCodeDuplicate(type, code) {
@@ -5963,17 +5963,17 @@ function pdfCodeInput(i, val) {
 }
 
 function pdfTypePrefix(type) {
-  if (type === "MEP") return "MEP";
-  if (type === "GR")  return "GR";
-  return "RM";
+  if (type === "MEP") return "P-";
+  if (type === "GR")  return "GR-";
+  return "RM-";
 }
 
 function applyPdfTypePrefix(i) {
   const ing    = pdfParsedIngredients[i];
   const prefix = pdfTypePrefix(ing.type || "RM");
   const cur    = ing.code || "";
-  // Strip any existing prefix then apply new one
-  const stripped = cur.replace(/^(MEP|RM|GR)\d*/i, "").replace(/^\D+/, "");
+  // Strip any existing prefix then apply new one (handles P-, RM-, GR-, MEP-)
+  const stripped = cur.replace(/^(MEP-?|RM-?|GR-?|P-?)/i, "").replace(/^\D+/, "");
   const newCode  = stripped ? prefix + stripped : _suggestPdfCode(ing.type || "RM", i);
   ing.code       = newCode;
   ing._matched   = false;
@@ -6170,6 +6170,7 @@ function cancelPdfImport() {
   window._pdfMode      = null;
   document.getElementById("pdf-preview").style.display = "none";
   document.getElementById("pdf-file-input").value      = "";
+  document.getElementById("pdf-file-name").textContent = "";
   document.getElementById("pdf-mep-code").value        = "";
   const saveBtn = document.querySelector("#pdf-preview .btn-save");
   if (saveBtn) saveBtn.style.display = "";
