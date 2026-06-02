@@ -1431,8 +1431,6 @@
           </div>
         </div>
       </div>
-      <!-- Category filter pills -->
-      <div id="sales-cat-pills" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:4px"></div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">
           <thead>
@@ -6288,7 +6286,7 @@ async function loadSalesAnalysis() {
     d.days = Array.isArray(d.days) ? d.days : [];
     salesData = { products: d.products, days: d.days, totalDays: d.totalDays };
     _enrichProducts();
-    _buildCategoryPills();
+
     _applyPeriodFilter();
     if (msg) msg.textContent = `${salesData.products.length} products · ${salesData.totalDays} days · last import OK`;
   } catch(e) {
@@ -6314,22 +6312,8 @@ function _enrichProducts() {
   });
 }
 
-function _buildCategoryPills() {
-  const el = document.getElementById("sales-cat-pills");
-  if (!el) return;
-  const cats = [...new Set(salesData.products.map(p => p.kategorie || "Other").filter(Boolean))].sort();
-  el.innerHTML = `<span class="sales-cat-pill active" data-cat="">All</span>`
-    + cats.map(c => `<span class="sales-cat-pill" data-cat="${c}">${c}</span>`).join("");
-  el.querySelectorAll('.sales-cat-pill').forEach(pill => {
-    pill.addEventListener('click', () => setSalesCat(pill.dataset.cat));
-  });
-}
-
 function setSalesCat(cat) {
   _salesCatFilter = cat;
-  document.querySelectorAll(".sales-cat-pill").forEach(p =>
-    p.classList.toggle("active", p.dataset.cat === cat)
-  );
   filterSalesTable();
 }
 
