@@ -514,6 +514,9 @@
     .sfp-item { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:12px; color:var(--text); user-select:none; }
     .sfp-item:hover { background:var(--surface2); }
     .sfp-item input { accent-color:var(--amber); width:14px; height:14px; cursor:pointer; flex-shrink:0; }
+    #sfp-cats { display:flex; flex-wrap:wrap; gap:3px; padding-bottom:6px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+    .sfp-cat-btn { padding:3px 8px; font-size:10px; font-family:var(--mono); background:var(--surface2); border:1px solid var(--border2); border-radius:4px; color:var(--muted); cursor:pointer; white-space:nowrap; }
+    .sfp-cat-btn.active { background:var(--amber-dim); color:var(--amber); border-color:var(--amber-brd); }
   </style>
 <script src="i18n.js"></script>
 </head>
@@ -1405,8 +1408,10 @@
         <div class="chart-title" style="margin:0">🎯 MEP Production Recommendations</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input id="sales-search" placeholder="🔍 Search product…" oninput="filterSalesTable()"
+            list="sales-search-list" autocomplete="off"
             style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border2);
                    border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px;width:180px">
+          <datalist id="sales-search-list"></datalist>
           <div class="sfp-wrap">
             <button id="item-filter-btn" onclick="toggleItemFilter()"
               style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--muted);font-family:var(--mono);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px">
@@ -1420,6 +1425,7 @@
                   <button onclick="sfpSelectAll(false)" style="padding:2px 8px;font-size:10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">None</button>
                 </div>
               </div>
+              <div id="sfp-cats"></div>
               <div id="sfp-scroll"></div>
             </div>
           </div>
@@ -6158,6 +6164,7 @@ let _cachedCsvText = null;
 let _salesCustomFrom = null;
 let _salesCustomTo   = null;
 let _salesHiddenNames = new Set();
+let _sfpCatFilter = "";
 
 function initSalesTab() {
   if (!salesData.products.length) loadSalesAnalysis();
@@ -6420,6 +6427,15 @@ function _buildTrendHtml(spark) {
 
 function renderSalesTable(products) {
   _salesRows = products || [];
+  // Populate search autocomplete from full dataset
+  const dl = document.getElementById("sales-search-list");
+  if (dl) {
+    const all = salesData.products.length ? salesData.products : _salesRows;
+    dl.innerHTML = [...new Set(all.map(p => p.name).filter(Boolean))]
+      .sort()
+      .map(n => `<option value="${n.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">`)
+      .join("");
+  }
   filterSalesTable();
 }
 
@@ -6518,15 +6534,39 @@ function toggleItemFilter() {
 }
 
 function renderItemFilterPanel() {
-  const scroll = document.getElementById("sfp-scroll");
+  const scroll  = document.getElementById("sfp-scroll");
+  const catsEl  = document.getElementById("sfp-cats");
   if (!scroll) return;
+
   const source = salesData.products.length ? salesData.products : _salesRows;
-  const sorted = [...source].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-  scroll.innerHTML = sorted.map(p => {
-    const checked = !_salesHiddenNames.has(p.name) ? "checked" : "";
-    const esc = p.name.replace(/"/g, "&quot;");
-    return `<label class="sfp-item"><input type="checkbox" ${checked} data-pname="${esc}" onchange="sfpToggle(this)">${p.name}</label>`;
-  }).join("");
+
+  // Category tabs
+  if (catsEl) {
+    const cats = [...new Set(source.map(p => p.kategorie || "Other").filter(Boolean))].sort();
+    catsEl.innerHTML = `<button class="sfp-cat-btn${_sfpCatFilter === "" ? " active" : ""}" data-cat="">All</button>`
+      + cats.map(c => `<button class="sfp-cat-btn${_sfpCatFilter === c ? " active" : ""}" data-cat="${c.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">${c}</button>`).join("");
+    catsEl.querySelectorAll(".sfp-cat-btn").forEach(btn =>
+      btn.addEventListener("click", () => sfpSetCat(btn.dataset.cat))
+    );
+  }
+
+  // Product list (filtered by active category)
+  const visible = _sfpCatFilter
+    ? source.filter(p => (p.kategorie || "Other") === _sfpCatFilter)
+    : source;
+  const sorted = [...visible].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  scroll.innerHTML = sorted.length
+    ? sorted.map(p => {
+        const checked = !_salesHiddenNames.has(p.name) ? "checked" : "";
+        const esc = p.name.replace(/&/g,"&amp;").replace(/"/g, "&quot;");
+        return `<label class="sfp-item"><input type="checkbox" ${checked} data-pname="${esc}" onchange="sfpToggle(this)">${p.name}</label>`;
+      }).join("")
+    : `<div style="font-size:11px;color:var(--muted);padding:6px">No products in this category.</div>`;
+}
+
+function sfpSetCat(cat) {
+  _sfpCatFilter = cat;
+  renderItemFilterPanel();
 }
 
 function sfpToggle(cb) {
