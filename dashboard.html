@@ -1452,8 +1452,34 @@
         </table>
       </div>
     </div>
+
+    <!-- Menu Sales Lookup -->
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <div class="chart-title" style="margin-bottom:12px">🔍 Menu Sales Lookup</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Search a menu item to see total pieces sold — direct orders + contributions from plates/sets via recipes.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+        <input id="msl-search" placeholder="e.g. Crunchy Prawn Roll" list="msl-search-list" autocomplete="off"
+          style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border2);
+                 border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px;min-width:200px;flex:1">
+        <datalist id="msl-search-list"></datalist>
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap">From</span>
+        <input type="date" id="msl-from"
+          style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);
+                 border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px">
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap">To</span>
+        <input type="date" id="msl-to"
+          style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);
+                 border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px">
+        <button onclick="runMenuLookup()"
+          style="padding:7px 16px;background:var(--amber-dim);border:1px solid var(--amber-brd);
+                 border-radius:var(--radius-sm);color:var(--amber);font-family:var(--mono);font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap">
+          Search
+        </button>
+      </div>
+      <div id="msl-result" style="font-size:12px;color:var(--muted)">Enter an item name and press Search.</div>
+    </div>
   </div>
-  
+
   <!-- ADMIN Tab-->
   <div class="panel" id="panel-admin">
 
@@ -6165,6 +6191,7 @@ let _sfpIncludeCats = null; // null = all visible; Set = only these categories v
 
 function initSalesTab() {
   if (!salesData.products.length) loadSalesAnalysis();
+  initMslDates();
 }
 
 function onSalesPeriodSelect(sel) {
@@ -6406,18 +6433,207 @@ function _buildTrendHtml(spark) {
 
 function renderSalesTable(products) {
   _salesRows = products || [];
-  // Populate search autocomplete from full dataset
+  const all = salesData.products.length ? salesData.products : _salesRows;
+  const optHtml = [...new Set(all.map(p => p.name).filter(Boolean))]
+    .sort()
+    .map(n => `<option value="${n.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">`)
+    .join("");
   const dl = document.getElementById("sales-search-list");
-  if (dl) {
-    const all = salesData.products.length ? salesData.products : _salesRows;
-    dl.innerHTML = [...new Set(all.map(p => p.name).filter(Boolean))]
-      .sort()
-      .map(n => `<option value="${n.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">`)
-      .join("");
-  }
+  if (dl) dl.innerHTML = optHtml;
+  const mslDl = document.getElementById("msl-search-list");
+  if (mslDl) mslDl.innerHTML = optHtml;
   filterSalesTable();
 }
 
+// ── Menu Sales Lookup ────────────────────────────────────────────────────────
+function initMslDates() {
+  const toEl   = document.getElementById("msl-to");
+  const fromEl = document.getElementById("msl-from");
+  if (!toEl || !fromEl || toEl.value) return;
+  const today = new Date();
+  const from  = new Date(today); from.setDate(today.getDate() - 6);
+  fromEl.value = from.toLocaleDateString('en-CA');
+  toEl.value   = today.toLocaleDateString('en-CA');
+}
+
+function _mslParseServingSize(name) {
+  const m = (name || "").match(/^(\d+)\s/);
+  return m ? parseInt(m[1], 10) : 1;
+}
+
+async function runMenuLookup() {
+  const term   = (document.getElementById("msl-search")?.value || "").trim();
+  const from   = document.getElementById("msl-from")?.value;
+  const to     = document.getElementById("msl-to")?.value;
+  const result = document.getElementById("msl-result");
+  if (!result) return;
+  if (!term) { result.innerHTML = '<span style="color:var(--red)">Enter an item name to search.</span>'; return; }
+  if (!from || !to) { result.innerHTML = '<span style="color:var(--red)">Select a date range.</span>'; return; }
+
+  result.innerHTML = '<span style="color:var(--muted)">Searching…</span>';
+
+  try {
+    const termLow = term.toLowerCase();
+
+    const rows = await sbGet("sales_history",
+      "select=sale_date,product_name,qty&sale_date=gte." + from + "&sale_date=lte." + to + "&order=product_name.asc&limit=10000");
+
+    const salesMap = new Map();
+    for (const r of rows) {
+      const n = r.product_name || "";
+      salesMap.set(n, (salesMap.get(n) || 0) + (Number(r.qty) || 0));
+    }
+
+    // Products whose name matches the search term
+    const matchEntries = Object.entries(allProducts)
+      .filter(([, p]) => (p.name || "").toLowerCase().includes(termLow));
+    const matchCodes = matchEntries.map(([code]) => code);
+
+    // Direct sales: any salesMap key containing the search term
+    const directLines = [];
+    let directTotal = 0;
+    salesMap.forEach((qty, name) => {
+      if (!name.toLowerCase().includes(termLow)) return;
+      const pcs = _mslParseServingSize(name);
+      const contrib = qty * pcs;
+      directTotal += contrib;
+      directLines.push({ name, qty, pcs, contrib });
+    });
+    directLines.sort((a, b) => b.contrib - a.contrib);
+
+    // Plate contributions via recipes: find recipes where rmCode is one of matchCodes
+    const plateLines = [];
+    let plateTotal = 0;
+    if (matchCodes.length) {
+      const plateRecipes = allRecipes.filter(r => matchCodes.includes(r.rmCode));
+      const plateMap = new Map();
+      for (const r of plateRecipes) {
+        const prev = plateMap.get(r.mepCode);
+        if (prev) { prev.menge += parseFloat(r.menge) || 0; }
+        else { plateMap.set(r.mepCode, { menge: parseFloat(r.menge) || 0, einheit: r.einheit || "pc" }); }
+      }
+      plateMap.forEach((recipe, plateCode) => {
+        const plateName = allProducts[plateCode]?.name || plateCode;
+        let plateSalesQty = 0;
+        salesMap.forEach((qty, name) => {
+          const pCode = Object.keys(allProducts).find(k => allProducts[k].name === name);
+          if (pCode === plateCode || name === plateName) plateSalesQty += qty;
+        });
+        const contrib = Math.round(plateSalesQty * recipe.menge * 10) / 10;
+        plateTotal += contrib;
+        plateLines.push({ plateName, plateCode, plateSalesQty, menge: recipe.menge, einheit: recipe.einheit, contrib });
+      });
+      plateLines.sort((a, b) => b.contrib - a.contrib);
+    }
+
+    const grandTotal = Math.round((directTotal + plateTotal) * 10) / 10;
+
+    // Ingredient requirements — use first matched product code that has a recipe as "mepCode"
+    const mainCode = matchCodes.find(c => allRecipes.some(r => r.mepCode === c)) || matchCodes[0];
+    const ingRecipes = mainCode ? allRecipes.filter(r => r.mepCode === mainCode) : [];
+    const gnSize = mainCode ? (parseFloat(allProducts[mainCode]?.gnSize) || 0) : 0;
+
+    // Build output HTML
+    let html = "";
+
+    // Grand total banner
+    html += `<div style="background:var(--amber-dim);border:1px solid var(--amber-brd);border-radius:var(--radius-sm);padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Total "${term}" — ${from} to ${to}</div>
+        <div style="font-size:24px;font-weight:700;color:var(--amber);line-height:1.2">${grandTotal} <span style="font-size:13px;font-weight:400">pcs</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Direct: ${directTotal} pcs &nbsp;+&nbsp; Plates: ${plateTotal} pcs</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:right">${rows.length} records scanned</div>
+    </div>`;
+
+    // Direct sales table
+    html += `<div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Direct orders — ${directTotal} pcs</div>`;
+    if (directLines.length) {
+      html += `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+        <thead><tr style="border-bottom:1px solid var(--border2);background:var(--surface2)">
+          <th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Product</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Orders sold</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Pcs/order</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Pcs total</th>
+        </tr></thead><tbody>`;
+      directLines.forEach((l, i) => {
+        html += `<tr style="border-bottom:1px solid var(--border);${i%2?"background:var(--surface2)":""}">
+          <td style="padding:5px 8px;font-weight:500">${l.name}</td>
+          <td style="padding:5px 8px;text-align:right">${l.qty}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--muted)">×${l.pcs}</td>
+          <td style="padding:5px 8px;text-align:right;font-weight:600;color:var(--amber)">${l.contrib}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    } else {
+      html += `<div style="padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;color:var(--muted);margin-bottom:14px">No direct sales for "${term}" in this period.</div>`;
+    }
+
+    // Plate contributions table
+    const soldPlates = plateLines.filter(l => l.plateSalesQty > 0);
+    html += `<div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Via plates / sets — ${plateTotal} pcs</div>`;
+    if (!matchCodes.length) {
+      html += `<div style="padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;color:var(--muted);margin-bottom:14px">Product not in Products list. Add it there first to enable recipe-based plate tracking.</div>`;
+    } else if (!plateLines.length) {
+      html += `<div style="padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;color:var(--muted);margin-bottom:14px">No plate recipes link to "${term}" yet. Add recipes in the Recipes tab where this item is an ingredient.</div>`;
+    } else if (!soldPlates.length) {
+      html += `<div style="padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;color:var(--muted);margin-bottom:14px">${plateLines.length} plate recipe(s) found but none had sales in this period.</div>`;
+    } else {
+      html += `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+        <thead><tr style="border-bottom:1px solid var(--border2);background:var(--surface2)">
+          <th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Plate / Set</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Plates sold</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Pcs/plate</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Pcs total</th>
+        </tr></thead><tbody>`;
+      soldPlates.forEach((l, i) => {
+        html += `<tr style="border-bottom:1px solid var(--border);${i%2?"background:var(--surface2)":""}">
+          <td style="padding:5px 8px;font-weight:500">${l.plateName}</td>
+          <td style="padding:5px 8px;text-align:right">${l.plateSalesQty}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--muted)">×${l.menge}</td>
+          <td style="padding:5px 8px;text-align:right;font-weight:600;color:var(--green)">${l.contrib}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+
+    // Ingredient requirements
+    if (grandTotal > 0 && ingRecipes.length) {
+      const gnUnits = gnSize > 0 ? grandTotal / gnSize : grandTotal;
+      const gnLabel = gnSize > 0 ? `${gnUnits.toFixed(1)} GN (${gnSize} pcs/GN)` : `${grandTotal} units`;
+      html += `<div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Ingredients for ${grandTotal} pcs — ${gnLabel}</div>`;
+      html += `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:1px solid var(--border2);background:var(--surface2)">
+          <th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Ingredient</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Per GN</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500;font-size:10px">Total needed</th>
+        </tr></thead><tbody>`;
+      ingRecipes.forEach((r, i) => {
+        const perGN   = parseFloat(r.menge) || 0;
+        const total   = (gnUnits * perGN).toFixed(3);
+        const ingName = allInventory.find(x => x.code === r.rmCode)?.name || r.rmCode;
+        html += `<tr style="border-bottom:1px solid var(--border);${i%2?"background:var(--surface2)":""}">
+          <td style="padding:5px 8px;font-weight:500">${ingName}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--muted)">${perGN} ${r.einheit || "kg"}</td>
+          <td style="padding:5px 8px;text-align:right;font-weight:600;color:var(--green)">${total} ${r.einheit || "kg"}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    } else if (grandTotal > 0 && mainCode && !ingRecipes.length) {
+      html += `<div style="padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;color:var(--muted)">No ingredient recipe for "${allProducts[mainCode]?.name || mainCode}". Add one in the Recipes tab.</div>`;
+    }
+
+    if (!grandTotal && !directLines.length && !soldPlates.length) {
+      html = `<div style="padding:14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--muted);text-align:center">No sales found for "${term}" between ${from} and ${to}.</div>`;
+    }
+
+    result.innerHTML = html;
+  } catch(e) {
+    result.innerHTML = `<span style="color:var(--red)">Error: ${e.message}</span>`;
+  }
+}
+
+// ── Sales table ──────────────────────────────────────────────────────────────
 function filterSalesTable() {
   const q  = (document.getElementById("sales-search")?.value || "").toLowerCase();
   let rows = [..._salesRows].filter(p => p.totalRev > 0 || p.totalQty > 0);
