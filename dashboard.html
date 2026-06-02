@@ -1732,7 +1732,7 @@
             <label class="form-label">PDF File *</label>
             <input type="file" accept="application/pdf" id="pdf-file-input"
   style="font-family:var(--mono);font-size:12px;color:var(--text);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px;width:100%;cursor:pointer"
-  onchange="document.getElementById('pdf-file-name').textContent=this.files[0]?this.files[0].name:''">
+  onchange="_pdfSelectedFile=this.files[0]||null; document.getElementById('pdf-file-name').textContent=_pdfSelectedFile?_pdfSelectedFile.name:''">
 <div id="pdf-file-name" style="margin-top:5px;font-size:11px;color:var(--amber);font-family:var(--mono);word-break:break-all;min-height:16px"></div>
           </div>
         </div>
@@ -5516,6 +5516,7 @@ let _nextMEP     = "";
 let _nextGR      = "";
 let _pdfMenuId   = "";
 let _systemItems = []; // all {type, code, name} for fuzzy matching
+let _pdfSelectedFile = null; // stored at file-select time (mobile: files[] can empty on scroll)
 
 function populatePdfMepDatalist() {
   const dl = document.getElementById("dl-pdf-mep");
@@ -5535,7 +5536,8 @@ async function startPdfImport(mode) {
   const btnM     = document.getElementById("pdf-import-btn-menu");
 
   if (!menuCode) { adminMsg("pdf-msg","Enter Menu Code","err"); return; }
-  if (!fileEl.files.length) { adminMsg("pdf-msg","Select a PDF file","err"); return; }
+  const file = _pdfSelectedFile || fileEl.files[0];
+  if (!file) { adminMsg("pdf-msg","Select a PDF file","err"); return; }
 
   if (btnR) btnR.disabled = true;
   if (btnM) btnM.disabled = true;
@@ -5554,8 +5556,10 @@ async function startPdfImport(mode) {
   _systemItems = itemsData.items    || [];
 
   try {
-    const file     = fileEl.files[0];
-    const arrayBuf = await file.arrayBuffer();
+    const arrayBuf = await (file.arrayBuffer
+      ? file.arrayBuffer()
+      : new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsArrayBuffer(file); }));
+    if (!arrayBuf.byteLength) throw new Error("File is empty or could not be read — try downloading the PDF to your device first");
     const pdfText  = await extractPdfText(arrayBuf);
 
     let ingredients = [];
@@ -5672,7 +5676,9 @@ async function extractPdfText(arrayBuffer) {
   const vp2      = page.getViewport({ scale });
   canvas.width   = vp2.width;
   canvas.height  = vp2.height;
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp2 }).promise;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable — close other tabs and try again");
+  await page.render({ canvasContext: ctx, viewport: vp2 }).promise;
 
   let base64 = canvas.toDataURL("image/jpeg", 0.35).split(",")[1];
   if (base64.length > 80000) {
@@ -5680,8 +5686,11 @@ async function extractPdfText(arrayBuffer) {
     const c2 = document.createElement("canvas");
     c2.width  = Math.round(canvas.width  * ratio);
     c2.height = Math.round(canvas.height * ratio);
-    c2.getContext("2d").drawImage(canvas, 0, 0, c2.width, c2.height);
-    base64 = c2.toDataURL("image/jpeg", 0.35).split(",")[1];
+    const ctx2 = c2.getContext("2d");
+    if (ctx2) {
+      ctx2.drawImage(canvas, 0, 0, c2.width, c2.height);
+      base64 = c2.toDataURL("image/jpeg", 0.35).split(",")[1];
+    }
   }
 return "__VISION__" + base64;
 }
@@ -6168,6 +6177,7 @@ function cancelPdfImport() {
   pdfParsedIngredients = [];
   pdfTargetMepCode     = "";
   window._pdfMode      = null;
+  _pdfSelectedFile     = null;
   document.getElementById("pdf-preview").style.display = "none";
   document.getElementById("pdf-file-input").value      = "";
   document.getElementById("pdf-file-name").textContent = "";
