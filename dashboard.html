@@ -1796,6 +1796,48 @@
       </div>
     </div>
 
+    <!-- ── BATCH PDF IMPORT ── -->
+    <div class="admin-section">
+      <div class="admin-section-title">📂 Batch PDF Import</div>
+      <div class="admin-section-sub">Import a whole folder at once — AI parses each PDF and auto-saves to Recipes</div>
+      <div class="admin-form">
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label">Code Prefix</label>
+            <input class="form-input" id="batch-code-prefix" value="M" placeholder="M" style="max-width:90px">
+          </div>
+          <div class="form-field">
+            <label class="form-label">PDF Files (select all at once) *</label>
+            <input type="file" accept="application/pdf" multiple id="batch-pdf-input"
+              style="font-family:var(--mono);font-size:12px;color:var(--text);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px;width:100%;cursor:pointer"
+              onchange="initBatchFiles(this)">
+            <div id="batch-file-count" style="margin-top:5px;font-size:11px;color:var(--amber);font-family:var(--mono);min-height:16px"></div>
+          </div>
+        </div>
+        <div class="form-actions" style="flex-wrap:wrap;gap:8px">
+          <button class="btn-save" id="batch-import-btn" onclick="startBatchPdfImport()"
+            style="background:var(--blue-dim);color:var(--blue);border-color:var(--blue-brd)">
+            🚀 Start Batch Import
+          </button>
+          <button class="btn-edit" id="batch-stop-btn" onclick="_batchRunning=false" style="display:none">
+            ■ Stop
+          </button>
+        </div>
+        <div class="admin-msg" id="batch-msg"></div>
+
+        <!-- Progress area -->
+        <div id="batch-progress" style="display:none;margin-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="flex:1;background:var(--surface2);border-radius:10px;height:8px;overflow:hidden;border:1px solid var(--border)">
+              <div id="batch-progress-bar" style="height:100%;background:var(--blue);border-radius:10px;width:0%;transition:width 0.3s"></div>
+            </div>
+            <span id="batch-progress-label" style="font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap">0 / 0</span>
+          </div>
+          <div id="batch-item-list" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end panel-admin -->
 <!-- RELATIONS TAB -->
 <div class="panel" id="panel-relations"></div>
@@ -5516,7 +5558,10 @@ let _nextMEP     = "";
 let _nextGR      = "";
 let _pdfMenuId   = "";
 let _systemItems = []; // all {type, code, name} for fuzzy matching
-let _pdfSelectedFile = null; // stored at file-select time (mobile: files[] can empty on scroll)
+let _pdfSelectedFile    = null; // stored at file-select time (mobile: files[] can empty on scroll)
+let _batchSelectedFiles = [];
+let _batchUsedCodes     = [];
+let _batchRunning       = false;
 
 function populatePdfMepDatalist() {
   const dl = document.getElementById("dl-pdf-mep");
@@ -6184,6 +6229,212 @@ function cancelPdfImport() {
   document.getElementById("pdf-mep-code").value        = "";
   const saveBtn = document.querySelector("#pdf-preview .btn-save");
   if (saveBtn) saveBtn.style.display = "";
+}
+
+// ─────────────────────────────────────────────
+// BATCH PDF IMPORT
+// ─────────────────────────────────────────────
+function initBatchFiles(el) {
+  _batchSelectedFiles = Array.from(el.files || [])
+    .filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+  const cnt = document.getElementById('batch-file-count');
+  if (cnt) cnt.textContent = _batchSelectedFiles.length
+    ? _batchSelectedFiles.length + ' file' + (_batchSelectedFiles.length === 1 ? '' : 's') + ' selected'
+    : '';
+}
+
+function _nextBatchMenuCode() {
+  const prefix  = ((document.getElementById('batch-code-prefix')?.value || 'M').trim() || 'M').toUpperCase();
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp('^' + escaped + '-(\\d+)$', 'i');
+  const used = new Set(
+    (allMenus || []).map(m => m.menuCode || m.code || '')
+      .concat(_batchUsedCodes)
+      .filter(c => pattern.test(c))
+      .map(c => parseInt(c.match(pattern)[1], 10))
+  );
+  for (let n = 1; n <= 9999; n++) {
+    if (!used.has(n)) return prefix + '-' + String(n).padStart(3, '0');
+  }
+  return prefix + '-' + Date.now();
+}
+
+function renderBatchProgress() {
+  const el = document.getElementById('batch-item-list');
+  if (!el) return;
+  el.innerHTML = _batchSelectedFiles.map((f, i) =>
+    `<div id="batch-item-${i}" style="display:grid;grid-template-columns:18px 1fr 90px 1fr;gap:8px;align-items:center;padding:5px 8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:11px;font-family:var(--mono)">
+      <span id="batch-icon-${i}" style="color:var(--muted)">·</span>
+      <span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.name}">${f.name.replace(/</g,'&lt;')}</span>
+      <span id="batch-code-${i}" style="color:var(--muted)">—</span>
+      <span id="batch-detail-${i}" style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">pending</span>
+    </div>`
+  ).join('');
+}
+
+function _setBatchItemUI(idx, status, code, detail) {
+  const icon   = document.getElementById('batch-icon-'   + idx);
+  const codeEl = document.getElementById('batch-code-'   + idx);
+  const detEl  = document.getElementById('batch-detail-' + idx);
+  const row    = document.getElementById('batch-item-'   + idx);
+  if (!icon) return;
+  const S = {
+    run: { ic: '⟳', cl: 'var(--amber)', bc: 'var(--amber-brd)', bg: ''                         },
+    ok:  { ic: '✓', cl: 'var(--green)', bc: 'var(--green-brd)', bg: 'rgba(93,202,138,0.05)'    },
+    err: { ic: '✕', cl: 'var(--red)',   bc: 'var(--red-brd)',   bg: ''                         }
+  };
+  const s = S[status] || S.run;
+  icon.textContent = s.ic;
+  icon.style.color = s.cl;
+  if (row)    { row.style.borderColor = s.bc; if (s.bg) row.style.background = s.bg; }
+  if (codeEl && code) { codeEl.textContent = code; codeEl.style.color = s.cl; }
+  if (detEl)  { detEl.textContent = detail || ''; detEl.style.color = status === 'run' ? 'var(--amber)' : s.cl; detEl.title = detail || ''; }
+}
+
+function _updateBatchBar(done, total) {
+  const bar = document.getElementById('batch-progress-bar');
+  const lbl = document.getElementById('batch-progress-label');
+  if (bar) bar.style.width = total ? (done / total * 100).toFixed(0) + '%' : '0%';
+  if (lbl) lbl.textContent = done + ' / ' + total;
+}
+
+async function _processBatchItem(idx) {
+  const file     = _batchSelectedFiles[idx];
+  const filename = file.name.replace(/\.pdf$/i, '');
+
+  _setBatchItemUI(idx, 'run', '', 'Reading PDF…');
+
+  const arrayBuf = await (file.arrayBuffer
+    ? file.arrayBuffer()
+    : new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload  = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsArrayBuffer(file);
+      }));
+  if (!arrayBuf.byteLength) throw new Error('File empty — download the PDF locally first');
+
+  const pdfData = await extractPdfText(arrayBuf);
+  if (!pdfData.startsWith('__VISION__')) throw new Error('PDF render failed');
+
+  const imageData = pdfData.slice(10); // strip "__VISION__"
+  const CHUNK_SIZE = 5000;
+  const sessionId  = 'btch_' + Date.now() + '_' + idx;
+  const total      = Math.ceil(imageData.length / CHUNK_SIZE);
+
+  _setBatchItemUI(idx, 'run', '', 'Uploading…');
+  for (let c = 0; c < total; c++) {
+    const chunk = imageData.substring(c * CHUNK_SIZE, (c + 1) * CHUNK_SIZE);
+    const r = await adminCall({ action: 'storeChunk', sessionId, chunk, idx: c, total });
+    if (r && r.error) throw new Error('Upload: ' + r.error);
+  }
+
+  _setBatchItemUI(idx, 'run', '', 'Parsing with AI…');
+  const vd = await adminCall({ action: 'parsePdfVisionChunked', sessionId });
+  if (!vd)       throw new Error('No response from server');
+  if (vd.error)  throw new Error(vd.error);
+
+  const mi          = vd.menuInfo || {};
+  const ingredients = (vd.ingredients || []).map(ing => ({
+    type    : (ing.type || 'rm').toLowerCase(),
+    code    : ing.code    || '',
+    name    : ing.name    || '',
+    gewicht : parseFloat(ing.quantity) || '',
+    unit    : ing.unit    || '',
+    allergie: ing.allergie || '',
+    cost    : 0
+  }));
+
+  const menuCode = _nextBatchMenuCode();
+  const menuName = mi.name || filename;
+
+  const allergens    = (vd.ingredients || []).map(i => i.allergie).filter(Boolean).join(', ');
+  const allergenLine = (mi.deklaration || allergens)
+    ? '\n\nAllergen: ' + (mi.deklaration || allergens) : '';
+  const zubereitung  = [
+    mi.zubereitung || '',
+    mi.warentraeger ? 'Warenträger: ' + mi.warentraeger : '',
+    allergenLine,
+    mi.produktspezifikation ? '\n\nProdukte Spezifikation:\n' + mi.produktspezifikation : '',
+    mi.naehrwerte   ? '\n\nNährwerte: ' + mi.naehrwerte : ''
+  ].filter(Boolean).join('\n');
+
+  _setBatchItemUI(idx, 'run', menuCode, 'Saving…');
+  const saved = await adminCall({
+    action      : 'saveMenu',
+    menuId      : '',
+    name        : menuName,
+    menuCode,
+    category    : mi.category || '',
+    art         : mi.art      || 'Hauptgang',
+    saison      : 'All Year',
+    zutaten     : JSON.stringify(ingredients),
+    zubereitung,
+    vk          : mi.verkaufspreis || '',
+    gewicht     : mi.gewicht || '',
+    lastUpdate  : new Date().toISOString()
+  });
+  if (saved && saved.error) throw new Error(saved.error);
+
+  _batchUsedCodes.push(menuCode);
+  _setBatchItemUI(idx, 'ok', menuCode, 'saved ✓');
+  return menuCode;
+}
+
+async function startBatchPdfImport() {
+  if (!_batchSelectedFiles.length) {
+    adminMsg('batch-msg', 'Select PDF files first', 'err'); return;
+  }
+  if (_batchRunning) return;
+
+  _batchRunning   = true;
+  _batchUsedCodes = [];
+
+  const btn     = document.getElementById('batch-import-btn');
+  const stopBtn = document.getElementById('batch-stop-btn');
+  const progEl  = document.getElementById('batch-progress');
+
+  if (btn)    btn.disabled       = true;
+  if (stopBtn) stopBtn.style.display = '';
+  if (progEl)  progEl.style.display  = 'block';
+
+  renderBatchProgress();
+  _updateBatchBar(0, _batchSelectedFiles.length);
+
+  let ok = 0, fail = 0;
+
+  for (let i = 0; i < _batchSelectedFiles.length; i++) {
+    if (!_batchRunning) {
+      adminMsg('batch-msg', `Stopped — ${ok} saved so far`, 'err');
+      break;
+    }
+    const row = document.getElementById('batch-item-' + i);
+    if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+    try {
+      await _processBatchItem(i);
+      ok++;
+    } catch(e) {
+      _setBatchItemUI(i, 'err', '', e.message);
+      fail++;
+    }
+    _updateBatchBar(i + 1, _batchSelectedFiles.length);
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  _batchRunning = false;
+  if (btn)    btn.disabled       = false;
+  if (stopBtn) stopBtn.style.display = 'none';
+
+  if (ok > 0) {
+    adminMsg('batch-msg',
+      `✓ ${ok} recipe${ok !== 1 ? 's' : ''} saved${fail ? ' · ' + fail + ' failed' : ''} — check Recipes tab`,
+      'ok');
+    await loadMenus();
+    await loadGRs();
+  } else {
+    adminMsg('batch-msg', `All ${fail} failed — see errors in the list above`, 'err');
+  }
 }
 
 // ─────────────────────────────────────────────
