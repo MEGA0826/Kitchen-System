@@ -6322,14 +6322,15 @@ function _buildCategoryPills() {
   el.innerHTML = `<span class="sales-cat-pill active" data-cat="">All</span>`
     + cats.map(c => `<span class="sales-cat-pill" data-cat="${c}">${c}</span>`).join("");
   el.querySelectorAll('.sales-cat-pill').forEach(pill => {
-    pill.addEventListener('click', () => setSalesCat(pill.dataset.cat, pill));
+    pill.addEventListener('click', () => setSalesCat(pill.dataset.cat));
   });
 }
 
-function setSalesCat(cat, el) {
+function setSalesCat(cat) {
   _salesCatFilter = cat;
-  document.querySelectorAll(".sales-cat-pill").forEach(p => p.classList.remove("active"));
-  if (el) el.classList.add("active");
+  document.querySelectorAll(".sales-cat-pill").forEach(p =>
+    p.classList.toggle("active", p.dataset.cat === cat)
+  );
   filterSalesTable();
 }
 
@@ -6572,13 +6573,16 @@ function _sfpRenderProducts(source, scroll) {
 
 function sfpSetCat(cat) {
   _sfpCatFilter = cat;
-  // Update active class without destroying buttons (keeps them in DOM for event bubbling)
+  // Update active tab in panel
   document.querySelectorAll("#sfp-cats .sfp-cat-btn").forEach(btn =>
     btn.classList.toggle("active", btn.dataset.cat === cat)
   );
+  // Re-render panel product list
   const scroll = document.getElementById("sfp-scroll");
   const source = salesData.products.length ? salesData.products : _salesRows;
   if (scroll) _sfpRenderProducts(source, scroll);
+  // Apply same category filter to the main table immediately
+  setSalesCat(cat);
 }
 
 function sfpToggle(cb) {
