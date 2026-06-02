@@ -508,7 +508,7 @@
     #st-tooltip { position:fixed; z-index:9000; pointer-events:none; background:var(--surface2); border:1px solid var(--border2); color:var(--text); font-size:11px; font-family:var(--mono); padding:7px 11px; border-radius:var(--radius-sm); max-width:230px; line-height:1.6; box-shadow:0 4px 18px rgba(0,0,0,.45); display:none; }
     /* ── item filter panel ── */
     .sfp-wrap { position:relative; }
-    #item-filter-panel { position:absolute; z-index:600; top:calc(100% + 4px); right:0; background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:8px; min-width:210px; max-height:340px; box-shadow:0 4px 20px rgba(0,0,0,.5); display:none; flex-direction:column; gap:4px; }
+    #item-filter-panel { position:fixed; z-index:600; top:50%; left:50%; transform:translate(-50%,-50%); width:300px; max-width:calc(100vw - 24px); max-height:80vh; background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:10px; box-shadow:0 8px 32px rgba(0,0,0,.6); display:none; flex-direction:column; gap:4px; }
     #item-filter-panel.open { display:flex; }
     #sfp-scroll { overflow-y:auto; max-height:240px; display:flex; flex-direction:column; gap:2px; }
     .sfp-item { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:12px; color:var(--text); user-select:none; }
