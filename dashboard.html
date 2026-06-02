@@ -6529,28 +6529,34 @@ function toggleItemFilter() {
   const panel = document.getElementById("item-filter-panel");
   if (!panel) return;
   const opening = !panel.classList.contains("open");
-  if (opening) renderItemFilterPanel();
+  if (opening) {
+    _sfpCatFilter = "";
+    renderItemFilterPanel();
+  }
   panel.classList.toggle("open", opening);
 }
 
 function renderItemFilterPanel() {
-  const scroll  = document.getElementById("sfp-scroll");
-  const catsEl  = document.getElementById("sfp-cats");
+  const scroll = document.getElementById("sfp-scroll");
+  const catsEl = document.getElementById("sfp-cats");
   if (!scroll) return;
 
   const source = salesData.products.length ? salesData.products : _salesRows;
 
-  // Category tabs
+  // Build category tabs (always re-render so active state is correct)
   if (catsEl) {
     const cats = [...new Set(source.map(p => p.kategorie || "Other").filter(Boolean))].sort();
-    catsEl.innerHTML = `<button class="sfp-cat-btn${_sfpCatFilter === "" ? " active" : ""}" data-cat="">All</button>`
-      + cats.map(c => `<button class="sfp-cat-btn${_sfpCatFilter === c ? " active" : ""}" data-cat="${c.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">${c}</button>`).join("");
-    catsEl.querySelectorAll(".sfp-cat-btn").forEach(btn =>
-      btn.addEventListener("click", () => sfpSetCat(btn.dataset.cat))
-    );
+    catsEl.innerHTML = `<button class="sfp-cat-btn active" data-cat="">All</button>`
+      + cats.map(c => `<button class="sfp-cat-btn" data-cat="${c.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">${c}</button>`).join("");
+    catsEl.querySelectorAll(".sfp-cat-btn").forEach(btn => {
+      btn.addEventListener("click", e => { e.stopPropagation(); sfpSetCat(btn.dataset.cat); });
+    });
   }
 
-  // Product list (filtered by active category)
+  _sfpRenderProducts(source, scroll);
+}
+
+function _sfpRenderProducts(source, scroll) {
   const visible = _sfpCatFilter
     ? source.filter(p => (p.kategorie || "Other") === _sfpCatFilter)
     : source;
@@ -6558,7 +6564,7 @@ function renderItemFilterPanel() {
   scroll.innerHTML = sorted.length
     ? sorted.map(p => {
         const checked = !_salesHiddenNames.has(p.name) ? "checked" : "";
-        const esc = p.name.replace(/&/g,"&amp;").replace(/"/g, "&quot;");
+        const esc = p.name.replace(/&/g,"&amp;").replace(/"/g,"&quot;");
         return `<label class="sfp-item"><input type="checkbox" ${checked} data-pname="${esc}" onchange="sfpToggle(this)">${p.name}</label>`;
       }).join("")
     : `<div style="font-size:11px;color:var(--muted);padding:6px">No products in this category.</div>`;
@@ -6566,7 +6572,13 @@ function renderItemFilterPanel() {
 
 function sfpSetCat(cat) {
   _sfpCatFilter = cat;
-  renderItemFilterPanel();
+  // Update active class without destroying buttons (keeps them in DOM for event bubbling)
+  document.querySelectorAll("#sfp-cats .sfp-cat-btn").forEach(btn =>
+    btn.classList.toggle("active", btn.dataset.cat === cat)
+  );
+  const scroll = document.getElementById("sfp-scroll");
+  const source = salesData.products.length ? salesData.products : _salesRows;
+  if (scroll) _sfpRenderProducts(source, scroll);
 }
 
 function sfpToggle(cb) {
@@ -6578,12 +6590,11 @@ function sfpToggle(cb) {
 }
 
 function sfpSelectAll(show) {
+  const source = salesData.products.length ? salesData.products : _salesRows;
   if (show) { _salesHiddenNames.clear(); }
-  else {
-    const source = salesData.products.length ? salesData.products : _salesRows;
-    source.forEach(p => _salesHiddenNames.add(p.name));
-  }
-  renderItemFilterPanel();
+  else      { source.forEach(p => _salesHiddenNames.add(p.name)); }
+  const scroll = document.getElementById("sfp-scroll");
+  if (scroll) _sfpRenderProducts(source, scroll);
   _updateSfpBadge();
   filterSalesTable();
 }
