@@ -6164,7 +6164,6 @@ let _cachedCsvText = null;
 let _salesCustomFrom = null;
 let _salesCustomTo   = null;
 let _salesHiddenNames = new Set();
-let _sfpCatFilter = "";
 
 function initSalesTab() {
   if (!salesData.products.length) loadSalesAnalysis();
@@ -6530,10 +6529,7 @@ function toggleItemFilter() {
   const panel = document.getElementById("item-filter-panel");
   if (!panel) return;
   const opening = !panel.classList.contains("open");
-  if (opening) {
-    _sfpCatFilter = "";
-    renderItemFilterPanel();
-  }
+  if (opening) renderItemFilterPanel();
   panel.classList.toggle("open", opening);
 }
 
@@ -6544,22 +6540,23 @@ function renderItemFilterPanel() {
 
   const source = salesData.products.length ? salesData.products : _salesRows;
 
-  // Build category tabs (always re-render so active state is correct)
+  // Category tabs — active state driven by _salesCatFilter (same as table)
   if (catsEl) {
     const cats = [...new Set(source.map(p => p.kategorie || "Other").filter(Boolean))].sort();
-    catsEl.innerHTML = `<button class="sfp-cat-btn active" data-cat="">All</button>`
-      + cats.map(c => `<button class="sfp-cat-btn" data-cat="${c.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">${c}</button>`).join("");
-    catsEl.querySelectorAll(".sfp-cat-btn").forEach(btn => {
-      btn.addEventListener("click", e => { e.stopPropagation(); sfpSetCat(btn.dataset.cat); });
-    });
+    catsEl.innerHTML = `<button class="sfp-cat-btn${_salesCatFilter === "" ? " active" : ""}" data-cat="">All</button>`
+      + cats.map(c => `<button class="sfp-cat-btn${_salesCatFilter === c ? " active" : ""}" data-cat="${c.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">${c}</button>`).join("");
+    catsEl.querySelectorAll(".sfp-cat-btn").forEach(btn =>
+      btn.addEventListener("click", e => { e.stopPropagation(); sfpSetCat(btn.dataset.cat); })
+    );
   }
 
   _sfpRenderProducts(source, scroll);
 }
 
 function _sfpRenderProducts(source, scroll) {
-  const visible = _sfpCatFilter
-    ? source.filter(p => (p.kategorie || "Other") === _sfpCatFilter)
+  // Product list scoped to the same category as the main table
+  const visible = _salesCatFilter
+    ? source.filter(p => (p.kategorie || "Other") === _salesCatFilter)
     : source;
   const sorted = [...visible].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   scroll.innerHTML = sorted.length
@@ -6572,17 +6569,16 @@ function _sfpRenderProducts(source, scroll) {
 }
 
 function sfpSetCat(cat) {
-  _sfpCatFilter = cat;
-  // Update active tab in panel
+  // Update panel tab active state without destroying buttons
   document.querySelectorAll("#sfp-cats .sfp-cat-btn").forEach(btn =>
     btn.classList.toggle("active", btn.dataset.cat === cat)
   );
-  // Re-render panel product list
+  // setSalesCat writes _salesCatFilter and calls filterSalesTable — instant table update
+  setSalesCat(cat);
+  // Re-render panel product list to match new category
   const scroll = document.getElementById("sfp-scroll");
   const source = salesData.products.length ? salesData.products : _salesRows;
   if (scroll) _sfpRenderProducts(source, scroll);
-  // Apply same category filter to the main table immediately
-  setSalesCat(cat);
 }
 
 function sfpToggle(cb) {
@@ -6595,8 +6591,12 @@ function sfpToggle(cb) {
 
 function sfpSelectAll(show) {
   const source = salesData.products.length ? salesData.products : _salesRows;
-  if (show) { _salesHiddenNames.clear(); }
-  else      { source.forEach(p => _salesHiddenNames.add(p.name)); }
+  // Scope to active category — All/None only affects what is currently visible in the panel
+  const target = _salesCatFilter
+    ? source.filter(p => (p.kategorie || "Other") === _salesCatFilter)
+    : source;
+  if (show) { target.forEach(p => _salesHiddenNames.delete(p.name)); }
+  else      { target.forEach(p => _salesHiddenNames.add(p.name)); }
   const scroll = document.getElementById("sfp-scroll");
   if (scroll) _sfpRenderProducts(source, scroll);
   _updateSfpBadge();
