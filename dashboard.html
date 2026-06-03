@@ -1834,6 +1834,12 @@
             <span id="batch-progress-label" style="font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap">0 / 0</span>
           </div>
           <div id="batch-item-list" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto"></div>
+          <div id="batch-retry-wrap" style="display:none;margin-top:10px">
+            <button class="btn-save" onclick="retryFailedBatch()"
+              style="background:var(--amber-dim);color:var(--amber);border-color:var(--amber-brd)">
+              🔄 Retry Failed
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -6234,6 +6240,30 @@ function cancelPdfImport() {
 // ─────────────────────────────────────────────
 // BATCH PDF IMPORT
 // ─────────────────────────────────────────────
+
+// Retry a GAS/network call up to maxAttempts times, waiting for online first.
+async function _batchRetry(fn, maxAttempts) {
+  maxAttempts = maxAttempts || 4;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Wait until browser reports online (up to 30 s)
+    if (!navigator.onLine) {
+      for (let w = 0; w < 30; w++) {
+        await new Promise(r => setTimeout(r, 1000));
+        if (navigator.onLine) break;
+      }
+      if (!navigator.onLine) throw new Error('No connection after 30 s');
+    }
+    try {
+      return await fn();
+    } catch(e) {
+      const isNetwork = e instanceof TypeError || (e.message || '').includes('fetch');
+      if (!isNetwork || attempt === maxAttempts - 1) throw e;
+      // Exponential back-off: 3 s, 6 s, 12 s
+      await new Promise(r => setTimeout(r, 3000 * Math.pow(2, attempt)));
+    }
+  }
+}
+
 function initBatchFiles(el) {
   _batchSelectedFiles = Array.from(el.files || [])
     .filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
@@ -6325,12 +6355,12 @@ async function _processBatchItem(idx) {
   _setBatchItemUI(idx, 'run', '', 'Uploading…');
   for (let c = 0; c < total; c++) {
     const chunk = imageData.substring(c * CHUNK_SIZE, (c + 1) * CHUNK_SIZE);
-    const r = await adminCall({ action: 'storeChunk', sessionId, chunk, idx: c, total });
+    const r = await _batchRetry(() => adminCall({ action: 'storeChunk', sessionId, chunk, idx: c, total }));
     if (r && r.error) throw new Error('Upload: ' + r.error);
   }
 
   _setBatchItemUI(idx, 'run', '', 'Parsing with AI…');
-  const vd = await adminCall({ action: 'parsePdfVisionChunked', sessionId });
+  const vd = await _batchRetry(() => adminCall({ action: 'parsePdfVisionChunked', sessionId }));
   if (!vd)       throw new Error('No response from server');
   if (vd.error)  throw new Error(vd.error);
 
@@ -6359,8 +6389,11 @@ async function _processBatchItem(idx) {
     mi.naehrwerte   ? '\n\nNährwerte: ' + mi.naehrwerte : ''
   ].filter(Boolean).join('\n');
 
+  // GAS uses GET — cap zubereitung to keep URL under GAS query-string limit
+  const zubereitungSafe = zubereitung.slice(0, 1800);
+
   _setBatchItemUI(idx, 'run', menuCode, 'Saving…');
-  const saved = await adminCall({
+  const saved = await _batchRetry(() => adminCall({
     action      : 'saveMenu',
     menuId      : '',
     name        : menuName,
@@ -6369,11 +6402,11 @@ async function _processBatchItem(idx) {
     art         : mi.art      || 'Hauptgang',
     saison      : 'All Year',
     zutaten     : JSON.stringify(ingredients),
-    zubereitung,
+    zubereitung : zubereitungSafe,
     vk          : mi.verkaufspreis || '',
     gewicht     : mi.gewicht || '',
     lastUpdate  : new Date().toISOString()
-  });
+  }));
   if (saved && saved.error) throw new Error(saved.error);
 
   _batchUsedCodes.push(menuCode);
@@ -6426,14 +6459,68 @@ async function startBatchPdfImport() {
   if (btn)    btn.disabled       = false;
   if (stopBtn) stopBtn.style.display = 'none';
 
+  const retryWrap = document.getElementById('batch-retry-wrap');
+  if (fail > 0 && retryWrap) retryWrap.style.display = '';
+
   if (ok > 0) {
     adminMsg('batch-msg',
-      `✓ ${ok} recipe${ok !== 1 ? 's' : ''} saved${fail ? ' · ' + fail + ' failed' : ''} — check Recipes tab`,
+      `✓ ${ok} recipe${ok !== 1 ? 's' : ''} saved${fail ? ' · ' + fail + ' failed — tap 🔄 Retry Failed' : ''} — check Recipes tab`,
       'ok');
     await loadMenus();
     await loadGRs();
   } else {
-    adminMsg('batch-msg', `All ${fail} failed — see errors in the list above`, 'err');
+    adminMsg('batch-msg', `All ${fail} failed — tap 🔄 Retry Failed when back online`, 'err');
+  }
+}
+
+async function retryFailedBatch() {
+  // Collect indices of failed rows
+  const failedIdxs = _batchSelectedFiles
+    .map((_, i) => {
+      const icon = document.getElementById('batch-icon-' + i);
+      return (icon && icon.textContent === '✕') ? i : -1;
+    })
+    .filter(i => i >= 0);
+
+  if (!failedIdxs.length) return;
+
+  const retryWrap = document.getElementById('batch-retry-wrap');
+  if (retryWrap) retryWrap.style.display = 'none';
+
+  _batchRunning = true;
+  const btn     = document.getElementById('batch-import-btn');
+  const stopBtn = document.getElementById('batch-stop-btn');
+  if (btn)    btn.disabled       = true;
+  if (stopBtn) stopBtn.style.display = '';
+
+  let ok = 0, fail = 0;
+
+  for (const i of failedIdxs) {
+    if (!_batchRunning) break;
+    const row = document.getElementById('batch-item-' + i);
+    if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    try {
+      await _processBatchItem(i);
+      ok++;
+    } catch(e) {
+      _setBatchItemUI(i, 'err', '', e.message);
+      fail++;
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  _batchRunning = false;
+  if (btn)    btn.disabled       = false;
+  if (stopBtn) stopBtn.style.display = 'none';
+  if (fail > 0 && retryWrap) retryWrap.style.display = '';
+
+  if (ok > 0) {
+    adminMsg('batch-msg',
+      `✓ ${ok} more saved${fail ? ' · ' + fail + ' still failing' : ''} — check Recipes tab`, 'ok');
+    await loadMenus();
+    await loadGRs();
+  } else {
+    adminMsg('batch-msg', `Still failing — check your connection`, 'err');
   }
 }
 
