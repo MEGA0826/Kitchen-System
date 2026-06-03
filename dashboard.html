@@ -6464,13 +6464,28 @@ async function startBatchPdfImport() {
 
   if (ok > 0) {
     adminMsg('batch-msg',
-      `✓ ${ok} recipe${ok !== 1 ? 's' : ''} saved${fail ? ' · ' + fail + ' failed — tap 🔄 Retry Failed' : ''} — check Recipes tab`,
+      `✓ ${ok} recipe${ok !== 1 ? 's' : ''} saved${fail ? ' · ' + fail + ' failed — tap 🔄 Retry Failed' : ''} — opening Recipes tab…`,
       'ok');
     await loadMenus();
     await loadGRs();
+    _showBatchResultsInRecipes();
   } else {
     adminMsg('batch-msg', `All ${fail} failed — tap 🔄 Retry Failed when back online`, 'err');
   }
+}
+
+function _showBatchResultsInRecipes() {
+  const prefix = ((document.getElementById('batch-code-prefix')?.value || 'M').trim() || 'M').toUpperCase();
+  const recipesBtn = document.querySelector('.tab[data-tab="recipes"]');
+  if (recipesBtn) switchTab(recipesBtn);
+  // Search by code prefix so the guard is bypassed and only new recipes show
+  const menuSearch = document.getElementById('menu-search');
+  if (menuSearch) menuSearch.value = prefix + '-';
+  const catFilter = document.getElementById('menu-cat-filter');
+  if (catFilter) catFilter.value = '';
+  const artFilter = document.getElementById('menu-art-filter');
+  if (artFilter) artFilter.value = '';
+  renderMenuList();
 }
 
 async function retryFailedBatch() {
@@ -6516,9 +6531,10 @@ async function retryFailedBatch() {
 
   if (ok > 0) {
     adminMsg('batch-msg',
-      `✓ ${ok} more saved${fail ? ' · ' + fail + ' still failing' : ''} — check Recipes tab`, 'ok');
+      `✓ ${ok} more saved${fail ? ' · ' + fail + ' still failing' : ''} — opening Recipes tab…`, 'ok');
     await loadMenus();
     await loadGRs();
+    _showBatchResultsInRecipes();
   } else {
     adminMsg('batch-msg', `Still failing — check your connection`, 'err');
   }
@@ -7775,7 +7791,7 @@ function renderMenuList() {
   }
 
   let list = allMenus;
-  if (q)   list = list.filter(m => (m.name||"").toLowerCase().includes(q) || (m.category||"").toLowerCase().includes(q));
+  if (q)   list = list.filter(m => (m.name||"").toLowerCase().includes(q) || (m.category||"").toLowerCase().includes(q) || (m.menuCode||"").toLowerCase().includes(q));
   if (cat) list = list.filter(m => m.category === cat);
   if (art) list = list.filter(m => m.art === art);
 
