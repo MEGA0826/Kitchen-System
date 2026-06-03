@@ -5462,7 +5462,30 @@ function openEditInventoryModal(code) {
   document.getElementById("eif-notizen").value = r.notizen || "";
   document.getElementById("editInventoryTitle").textContent = "Edit - " + (r.name || code);
   document.getElementById("eif-msg").textContent = "";
+  const kcP = document.getElementById("eif-kc-pieces"); if (kcP) kcP.value = "";
+  const kcE = document.getElementById("eif-kc-each");   if (kcE) kcE.value = "";
+  const kcR = document.getElementById("eif-kc-result"); if (kcR) kcR.textContent = "—";
   document.getElementById("editInventoryModal").classList.add("active");
+  calcEifPer100g();
+}
+function calcKartonWeight() {
+  const pieces = parseFloat(document.getElementById("eif-kc-pieces")?.value) || 0;
+  const each   = parseFloat(document.getElementById("eif-kc-each")?.value)   || 0;
+  const unit   = document.getElementById("eif-kc-unit")?.value || "ml";
+  const el     = document.getElementById("eif-kc-result");
+  if (!el) return;
+  if (pieces <= 0 || each <= 0) { el.textContent = "—"; return; }
+  const toKg = { ml: 0.001, g: 0.001, L: 1, kg: 1 };
+  const totalKg = pieces * each * (toKg[unit] || 0.001);
+  el.textContent = totalKg.toFixed(3) + " kg";
+}
+function applyKartonWeight() {
+  const el = document.getElementById("eif-kc-result");
+  if (!el || el.textContent === "—") return;
+  const kg = parseFloat(el.textContent);
+  if (isNaN(kg)) return;
+  const w = document.getElementById("eif-weight");
+  if (w) { w.value = kg.toFixed(3); calcEifPer100g(); }
 }
 function calcEifPer100g() {
   const kosten     = parseFloat(document.getElementById("eif-kosten")?.value) || 0;
@@ -9504,7 +9527,32 @@ async function haccpExportPDF() {
       <div class="form-field"><label class="form-label">Category</label><input class="form-input" id="eif-kategorie"></div>
       <div class="form-field"><label class="form-label">Unit</label><input class="form-input" id="eif-unit"></div>
       <div class="form-field"><label class="form-label">Quantity</label><input class="form-input" type="number" id="eif-qty" step="0.1"></div>
-      <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="eif-weight" step="0.01" oninput="calcEifPer100g()"></div>
+      <div class="form-field"><label class="form-label">Weight/Unit (kg)</label><input class="form-input" type="number" id="eif-weight" step="0.001" oninput="calcEifPer100g()"></div>
+      <div class="form-field" style="grid-column:1/-1">
+        <label class="form-label">📦 Karton Calculator</label>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <input id="eif-kc-pieces" type="number" min="1" step="1" placeholder="Stück z.B. 6"
+            style="width:110px;padding:7px 10px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:13px"
+            oninput="calcKartonWeight()">
+          <span style="color:var(--muted);font-size:14px;font-weight:600">×</span>
+          <input id="eif-kc-each" type="number" min="0" step="any" placeholder="z.B. 150"
+            style="width:90px;padding:7px 10px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:13px"
+            oninput="calcKartonWeight()">
+          <select id="eif-kc-unit" onchange="calcKartonWeight()"
+            style="padding:7px 8px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:13px">
+            <option value="ml">ml</option>
+            <option value="g">g</option>
+            <option value="L">L</option>
+            <option value="kg">kg</option>
+          </select>
+          <span style="color:var(--muted);font-size:14px">=</span>
+          <span id="eif-kc-result" style="font-size:13px;font-weight:700;color:var(--green);min-width:70px">—</span>
+          <button onclick="applyKartonWeight()"
+            style="padding:7px 14px;border-radius:var(--radius-sm);background:var(--amber-dim,rgba(251,191,36,0.12));color:var(--amber);border:1px solid var(--amber-brd,rgba(251,191,36,0.3));font-size:12px;font-weight:600;cursor:pointer">
+            → Apply Weight
+          </button>
+        </div>
+      </div>
       <div class="form-field"><label class="form-label">Minimum</label><input class="form-input" type="number" id="eif-min"></div>
       <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="eif-max"></div>
       <div class="form-field"><label class="form-label">Cost/Unit (CHF)</label><input class="form-input" type="number" id="eif-kosten" step="0.01" oninput="calcEifPer100g()"></div>
