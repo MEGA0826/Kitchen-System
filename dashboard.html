@@ -8555,6 +8555,7 @@ function confirmGr() {
 async function saveMenuEntry() {
   const name     = document.getElementById('mp-name').value.trim();
   const menuCode = document.getElementById('mp-code').value.trim();
+  const art      = document.getElementById('mp-art').value;
   if (!name)     { adminMsg('mp-msg', 'Menu Name ist erforderlich', 'err'); return; }
   if (!menuCode) { adminMsg('mp-msg', 'Menu Code ist erforderlich', 'err'); return; }
 
@@ -8571,12 +8572,40 @@ async function saveMenuEntry() {
   const imageUrl = document.getElementById('mp-img-el')?.src || '';
   const logoUrl  = '';
 
+  // Migrate to GR sheet when art is Grundrezeptur
+  if (art === 'Grundrezeptur') {
+    try {
+      const grCode      = /^GR-/i.test(menuCode) ? menuCode : _nextBatchCode('GR');
+      const gewicht     = document.getElementById('mp-gewicht').value.trim();
+      const garverlust  = document.getElementById('mp-garverlust').value;
+      const wa          = document.getElementById('mp-wa').value;
+      const zubereitung = document.getElementById('mp-zubereitung').value.trim();
+      const grData = await adminCall({
+        action: 'saveGR', grCode, name, art,
+        rohgewicht: gewicht, garverlust, wa,
+        zutaten: JSON.stringify(menuZutaten), zubereitung
+      });
+      if (grData.error) throw new Error(grData.error);
+      if (editingMenuId) {
+        await adminCall({ action: 'deleteMenu', menuId: editingMenuId });
+      }
+      adminMsg('mp-msg', '✓ Nach GR verschoben', 'ok');
+      await Promise.all([loadMenus(), loadGRs()]);
+      setTimeout(closeMenuPopup, 900);
+    } catch(e) {
+      adminMsg('mp-msg', 'Fehler: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 Speichern';
+    }
+    return;
+  }
+
   const payload = {
     action        : 'saveMenu',
     menuId        : editingMenuId || '',
     name,
     category      : document.getElementById('mp-category').value.trim(),
-    art           : document.getElementById('mp-art').value,
+    art,
     saison        : document.getElementById('mp-saison').value,
     gewicht       : document.getElementById('mp-gewicht').value.trim(),
     menuCode      : document.getElementById('mp-code').value.trim(),
