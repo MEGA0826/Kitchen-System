@@ -2448,7 +2448,8 @@ async function sbDelete(table, query) {
     method: "DELETE", headers: _sbH
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
 }
 
 // ─────────────────────────────────────────────
