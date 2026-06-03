@@ -5529,6 +5529,7 @@ function closeEditInventoryModal() {
     loadInventory().catch(() => {});
   } catch(e) {
     adminMsg("eif-msg", "Error: " + e.message, "err");
+  } finally {
     if (btn) { btn.disabled = false; btn.textContent = "🗑 Delete"; }
   }
 }
