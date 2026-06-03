@@ -6273,12 +6273,19 @@ function initBatchFiles(el) {
     : '';
 }
 
-function _nextBatchMenuCode() {
-  const prefix  = ((document.getElementById('batch-code-prefix')?.value || 'M').trim() || 'M').toUpperCase();
+function _nextBatchMenuCode() { return _nextBatchCode(); }
+
+function _nextBatchCode(typePrefix) {
+  const prefix  = (typePrefix || ((document.getElementById('batch-code-prefix')?.value || 'M').trim() || 'M')).toUpperCase();
   const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp('^' + escaped + '-(\\d+)$', 'i');
+  // Check appropriate system list for each prefix type
+  const systemCodes =
+    prefix === 'GR' ? (allGRs   || []).map(g => g.grCode || g.code || '') :
+    prefix === 'P'  ? (Object.keys(allProducts || {}))                     :
+                      (allMenus || []).map(m => m.menuCode || m.code || '');
   const used = new Set(
-    (allMenus || []).map(m => m.menuCode || m.code || '')
+    systemCodes
       .concat(_batchUsedCodes)
       .filter(c => pattern.test(c))
       .map(c => parseInt(c.match(pattern)[1], 10))
@@ -6375,8 +6382,9 @@ async function _processBatchItem(idx) {
     cost    : 0
   }));
 
-  const menuCode = _nextBatchMenuCode();
-  const menuName = mi.name || filename;
+  const menuName      = mi.name || filename;
+  const detectedArt   = (mi.art || '').trim();
+  const isGR          = /grundrezeptur/i.test(detectedArt) || detectedArt.toUpperCase() === 'GR';
 
   const allergens    = (vd.ingredients || []).map(i => i.allergie).filter(Boolean).join(', ');
   const allergenLine = (mi.deklaration || allergens)
@@ -6388,30 +6396,66 @@ async function _processBatchItem(idx) {
     mi.produktspezifikation ? '\n\nProdukte Spezifikation:\n' + mi.produktspezifikation : '',
     mi.naehrwerte   ? '\n\nNährwerte: ' + mi.naehrwerte : ''
   ].filter(Boolean).join('\n');
-
   // GAS uses GET — cap zubereitung to keep URL under GAS query-string limit
   const zubereitungSafe = zubereitung.slice(0, 1800);
 
-  _setBatchItemUI(idx, 'run', menuCode, 'Saving…');
-  const saved = await _batchRetry(() => adminCall({
-    action      : 'saveMenu',
-    menuId      : '',
-    name        : menuName,
-    menuCode,
-    category    : mi.category || '',
-    art         : mi.art      || 'Hauptgang',
-    saison      : 'All Year',
-    zutaten     : JSON.stringify(ingredients),
-    zubereitung : zubereitungSafe,
-    vk          : mi.verkaufspreis || '',
-    gewicht     : mi.gewicht || '',
-    lastUpdate  : new Date().toISOString()
-  }));
-  if (saved && saved.error) throw new Error(saved.error);
+  let savedCode;
 
-  _batchUsedCodes.push(menuCode);
-  _setBatchItemUI(idx, 'ok', menuCode, 'saved ✓');
-  return menuCode;
+  if (isGR) {
+    // ── Save as Grundrezeptur ──────────────────────────────────────────────
+    const grCode = _nextBatchCode('GR');
+    _setBatchItemUI(idx, 'run', grCode, 'Saving as GR…');
+    const saved = await _batchRetry(() => adminCall({
+      action      : 'saveGR',
+      grCode,
+      name        : menuName,
+      art         : detectedArt || 'Grundrezeptur',
+      rohgewicht  : parseFloat(mi.gewicht) || 0,
+      garverlust  : 0,
+      wa          : 0,
+      zutaten     : JSON.stringify(ingredients),
+      zubereitung : zubereitungSafe
+    }));
+    if (saved && saved.error) throw new Error(saved.error);
+    savedCode = grCode;
+    _setBatchItemUI(idx, 'ok', grCode, 'saved as GR ✓');
+
+  } else {
+    // ── Save as Menu (Hauptgang / Starter / etc.) ──────────────────────────
+    const menuCode = _nextBatchCode();
+    _setBatchItemUI(idx, 'run', menuCode, 'Saving…');
+    const saved = await _batchRetry(() => adminCall({
+      action      : 'saveMenu',
+      menuId      : '',
+      name        : menuName,
+      menuCode,
+      category    : mi.category || '',
+      art         : detectedArt || 'Hauptgang',
+      saison      : 'All Year',
+      zutaten     : JSON.stringify(ingredients),
+      zubereitung : zubereitungSafe,
+      vk          : mi.verkaufspreis || '',
+      gewicht     : mi.gewicht || '',
+      lastUpdate  : new Date().toISOString()
+    }));
+    if (saved && saved.error) throw new Error(saved.error);
+    savedCode = menuCode;
+    _setBatchItemUI(idx, 'ok', menuCode, 'saved ✓');
+  }
+
+  _batchUsedCodes.push(savedCode);
+
+  // ── Create any new RM/MEP/GR ingredient items that don't exist yet ────────
+  const newIngredients = (vd.ingredients || []).filter(i => !i._matched && i.code);
+  if (newIngredients.length) {
+    await _batchRetry(() => adminCall({
+      action      : 'importParsedRecipe',
+      mepCode     : savedCode,
+      ingredients : JSON.stringify(newIngredients)
+    })).catch(e => console.warn('[batch] importParsedRecipe:', e.message));
+  }
+
+  return savedCode;
 }
 
 async function startBatchPdfImport() {
