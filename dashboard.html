@@ -7886,8 +7886,8 @@ function renderMenuList() {
     const artBadge = m.art ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue)">${m.art}</span>` : '';
     const catBadge = m.category ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber)">${m.category}</span>` : '';
     return `<div data-menu-id="${m.id}" class="menu-card-item"
-      style="padding:9px 12px;border-radius:8px;background:var(--surface3);cursor:pointer;border:1px solid var(--border2);display:flex;align-items:center;gap:8px;flex-wrap:wrap"
-      onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border2)'">
+      style="padding:9px 12px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"
+      onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
       <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
       <span style="font-size:10px;color:var(--muted)">${m.menuCode||''}</span>
       ${artBadge}${catBadge}
