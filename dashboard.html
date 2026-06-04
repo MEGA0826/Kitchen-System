@@ -7884,13 +7884,7 @@ function renderMenuList() {
     const fc = (m.wa && m.vk && parseFloat(m.vk)>0)
       ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '—';
     const fcColor = (fc !== '—' && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
-    const _mImg = toDirectImg(m.imageUrl || "");
-    const imgHtml = _mImg
-      ? `<img src="${_mImg}" style="width:100%;height:120px;object-fit:cover;background:var(--surface2);display:block"
-           onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=\\'width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3\\'>🍽️</div>')">`
-      : `<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">🍽️</div>`;
     return `<div data-menu-id="${m.id}" class="menu-card-item" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s;min-width:0;word-break:break-word" onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-      ${imgHtml}
       <div style="padding:12px">
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${m.name||'—'}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
