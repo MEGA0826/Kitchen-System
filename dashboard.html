@@ -7878,27 +7878,21 @@ function renderMenuList() {
     el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">Keine Menus gefunden.</div>`;
     return;
   }
-  el.style.gridTemplateColumns = "";
+  el.style.gridTemplateColumns = "1fr";
   el.innerHTML = list.map(m => {
-    const zutaten = (() => { try { return JSON.parse(m.zutaten||'[]'); } catch(e) { return []; } })();
     const fc = (m.wa && m.vk && parseFloat(m.vk)>0)
-      ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '—';
-    const fcColor = (fc !== '—' && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
-    return `<div data-menu-id="${m.id}" class="menu-card-item" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s;min-width:0;word-break:break-word" onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="padding:12px">
-        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${m.name||'—'}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-          ${m.category ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--amber-dim);color:var(--amber)">${m.category}</span>` : ''}
-          ${m.art      ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--blue-dim);color:var(--blue)">${m.art}</span>` : ''}
-          ${m.saison   ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--surface2);color:var(--muted)">${m.saison}</span>` : ''}
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
-          <span>WA: <strong style="color:var(--amber)">CHF ${parseFloat(m.wa||0).toFixed(2)}</strong></span>
-          <span>VK: <strong style="color:var(--text)">CHF ${parseFloat(m.vk||0).toFixed(2)}</strong></span>
-          <span>FC: <strong style="color:${fcColor}">${fc}</strong></span>
-        </div>
-        <div style="font-size:10px;color:var(--faint);margin-top:4px">${zutaten.length} Zutat${zutaten.length!==1?'en':''} · ${m.gewicht||'—'}</div>
-      </div>
+      ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '';
+    const fcColor = (fc && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
+    const artBadge = m.art ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue)">${m.art}</span>` : '';
+    const catBadge = m.category ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber)">${m.category}</span>` : '';
+    return `<div data-menu-id="${m.id}" class="menu-card-item"
+      style="padding:9px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;border:1px solid transparent;display:flex;align-items:center;gap:8px;flex-wrap:wrap"
+      onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
+      <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
+      <span style="font-size:10px;color:var(--muted)">${m.menuCode||''}</span>
+      ${artBadge}${catBadge}
+      ${m.wa ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(m.wa).toFixed(2)}</span>` : ''}
+      ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
     </div>`;
   }).join("");
   el.querySelectorAll('.menu-card-item').forEach(card => {
