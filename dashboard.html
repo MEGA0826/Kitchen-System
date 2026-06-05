@@ -7670,11 +7670,12 @@ function editMepAddZutat(i) {
   if (!z) return;
   _ipEditIdx = i;
   openIngredientPicker(z.type || 'rm', 'mep-add', true);
-  ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
+  const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
+  ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
   setTimeout(() => {
     const titleEl = document.getElementById('ip-title');
     if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
-    document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
+    document.getElementById('ip-selected-name').textContent = r.name + ' (' + r.code + ')';
     document.getElementById('ip-detail').style.display      = 'block';
     document.getElementById('ip-gewicht').value             = z.gewicht     || '';
     document.getElementById('ip-allergie').value            = z.allergie    || '';
@@ -8208,11 +8209,12 @@ function editMenuZutat(i) {
   if (!z) return;
   _ipEditIdx = i;
   openIngredientPicker(z.type || 'rm', 'menu', true);
-  ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
+  const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
+  ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
   setTimeout(() => {
     const titleEl = document.getElementById('ip-title');
     if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
-    document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
+    document.getElementById('ip-selected-name').textContent = r.name + ' (' + r.code + ')';
     document.getElementById('ip-detail').style.display      = 'block';
     document.getElementById('ip-gewicht').value             = z.gewicht     || '';
     document.getElementById('ip-allergie').value            = z.allergie    || '';
@@ -8230,11 +8232,12 @@ function editGrZutat(i) {
   if (!z) return;
   _ipEditIdx = i;
   openIngredientPicker(z.type || 'rm', 'agr', true);
-  ipSelectedItem = { code: z.code, name: z.name, unitCost: z.unitCost || 0 };
+  const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
+  ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
   setTimeout(() => {
     const titleEl = document.getElementById('ip-title');
     if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
-    document.getElementById('ip-selected-name').textContent = z.name + ' (' + z.code + ')';
+    document.getElementById('ip-selected-name').textContent = r.name + ' (' + r.code + ')';
     document.getElementById('ip-detail').style.display      = 'block';
     document.getElementById('ip-gewicht').value             = z.gewicht     || '';
     document.getElementById('ip-allergie').value            = z.allergie    || '';
@@ -8364,6 +8367,7 @@ function filterIngredientPicker() {
 }
 
 function selectIngredientItem(code, name, unit, unitCost) {
+  const prevWeight = document.getElementById('ip-gewicht')?.value || '';
   // For RM: always re-read fresh unitCost from allInventory in case it was 0 in template
   let resolvedCost = parseFloat(unitCost) || 0;
   if (ipMode === 'rm' || ipMode === 'RM') {
@@ -8385,11 +8389,29 @@ function selectIngredientItem(code, name, unit, unitCost) {
   ipSelectedItem = { code, name, unit, unitCost: resolvedCost };
   document.getElementById('ip-selected-name').textContent = name + ' (' + code + ')';
   document.getElementById('ip-detail').style.display = 'block';
-  document.getElementById('ip-gewicht').value = '';
+  document.getElementById('ip-gewicht').value = prevWeight; // preserve weight the user already entered
   const gEl = document.getElementById('ip-garverlust');
   if (gEl) gEl.value = '';
   document.getElementById('ip-cost-display').textContent = '—';
-  document.getElementById('ip-gewicht').focus();
+  if (prevWeight) calcIpCost();
+  else document.getElementById('ip-gewicht').focus();
+}
+
+// Resolve fresh RM cost from inventory; fuzzy-match by name if code not found or cost is 0
+function _resolveRmCost(z) {
+  const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9äöüß]/gi, '');
+  let inv = allInventory ? allInventory.find(x => x.code === (z.code || '')) : null;
+  if (!inv || !(parseFloat(inv.kostenUnit) > 0)) {
+    const q = norm(z.name);
+    if (q.length >= 3 && allInventory) {
+      inv = allInventory.find(r => norm(r.name) === q)
+        || allInventory.find(r => { const n = norm(r.name); return n.length >= 3 && (n.includes(q) || q.includes(n)); })
+        || null;
+    }
+  }
+  if (!inv) return { code: z.code || '', name: z.name || '', unit: z.unit || '', unitCost: z.unitCost || 0 };
+  const _wu = parseFloat(inv.weightUnit) || 1;
+  return { code: inv.code, name: inv.name, unit: inv.unit || z.unit || '', unitCost: (parseFloat(inv.kostenUnit) || 0) / _wu };
 }
 
 function calcIpCost() {
