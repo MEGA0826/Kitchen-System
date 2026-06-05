@@ -7883,15 +7883,15 @@ function renderMenuList() {
     const fc = (m.wa && m.vk && parseFloat(m.vk)>0)
       ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '';
     const fcColor = (fc && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
-    const artBadge = m.art ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue)">${m.art}</span>` : '';
-    const catBadge = m.category ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber)">${m.category}</span>` : '';
+    const artCode = (m.art || 'M').substring(0,2).toUpperCase();
     return `<div data-menu-id="${m.id}" class="menu-card-item"
-      style="padding:9px 12px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"
+      style="padding:8px 12px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;gap:8px;margin-bottom:5px"
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-      <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
-      <span style="font-size:10px;color:var(--muted)">${m.menuCode||''}</span>
-      ${artBadge}${catBadge}
-      ${m.wa ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(m.wa).toFixed(2)}</span>` : ''}
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">${artCode}</span>
+      <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
+      <span style="font-size:11px;color:var(--muted)">${m.menuCode||''}</span>
+      ${m.category ? `<span style="font-size:11px;color:var(--muted)">${m.category}</span>` : ''}
+      ${m.wa ? `<span style="font-size:11px;color:var(--amber)">CHF ${parseFloat(m.wa).toFixed(2)}</span>` : ''}
       ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
     </div>`;
   }).join("");
