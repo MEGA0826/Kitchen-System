@@ -7660,11 +7660,14 @@ function calcAgrNetto() {
 }
 
 function calcAgrWa() {
-  const total = agrZutaten.reduce((s,z) => s+(parseFloat(z.cost)||0), 0);
-  const waEl = document.getElementById('agr-wa');
+  const totalWa  = agrZutaten.reduce((s,z) => s+(parseFloat(z.cost)   ||0), 0);
+  const totalKg  = agrZutaten.reduce((s,z) => s+(parseFloat(z.gewicht)||0), 0);
+  const waEl  = document.getElementById('agr-wa');
   const totEl = document.getElementById('agr-wa-total');
-  if (waEl) waEl.value = total.toFixed(2);
-  if (totEl) totEl.textContent = 'CHF ' + total.toFixed(2);
+  const rohEl = document.getElementById('agr-rohgewicht');
+  if (waEl)  waEl.value = totalWa.toFixed(2);
+  if (totEl) totEl.textContent = 'CHF ' + totalWa.toFixed(2);
+  if (rohEl && agrZutaten.length) rohEl.value = totalKg.toFixed(3);
   calcAgrNetto();
 }
 
@@ -7718,10 +7721,13 @@ function renderMepAddZutaten() {
     el.querySelectorAll('.mep-zutat-edit-btn').forEach(btn => btn.addEventListener('click', () => editMepAddZutat(parseInt(btn.dataset.idx))));
     el.querySelectorAll('.mep-zutat-del-btn').forEach(btn => btn.addEventListener('click', () => { mepAddZutaten.splice(parseInt(btn.dataset.idx), 1); renderMepAddZutaten(); }));
   }
-  // Update WA total
-  const total = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.cost)||0), 0);
-  const waEl  = document.getElementById('mep-add-wa-total');
+  // Update WA total and auto-fill GN weight from total ingredient weight
+  const total    = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.cost)   ||0), 0);
+  const totalKg  = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.gewicht)||0), 0);
+  const waEl     = document.getElementById('mep-add-wa-total');
+  const gnWtEl   = document.getElementById('mep-gnweight');
   if (waEl) waEl.textContent = 'CHF ' + total.toFixed(2);
+  if (gnWtEl && mepAddZutaten.length) gnWtEl.value = totalKg.toFixed(3);
 }
 
 function renderAgrZutaten() {
@@ -8152,12 +8158,17 @@ function renderMenuZutaten(targetList, targetData) {
 }
 
 function calcWaFromZutaten() {
-  const total = menuZutaten.reduce((s, z) => s + (parseFloat(z.cost) || 0), 0);
-  const waEl  = document.getElementById('mp-wa');
-  const totEl = document.getElementById('mp-wa-total');
-  if (waEl)  waEl.value = total.toFixed(2);
-  if (totEl) totEl.textContent = 'CHF ' + total.toFixed(2);
+  const totalWa = menuZutaten.reduce((s, z) => s + (parseFloat(z.cost)   || 0), 0);
+  const totalKg = menuZutaten.reduce((s, z) => s + (parseFloat(z.gewicht)|| 0), 0);
+  const waEl    = document.getElementById('mp-wa');
+  const totEl   = document.getElementById('mp-wa-total');
+  const rohEl   = document.getElementById('mp-gewicht');
+  if (waEl)  waEl.value = totalWa.toFixed(2);
+  if (totEl) totEl.textContent = 'CHF ' + totalWa.toFixed(2);
+  // mp-gewicht is in grams (placeholder "1000g"), ingredients are in kg
+  if (rohEl && menuZutaten.length) rohEl.value = Math.round(totalKg * 1000);
   calcFC();
+  calcGarverlust();
 }
   
 function calcGarverlust() {
