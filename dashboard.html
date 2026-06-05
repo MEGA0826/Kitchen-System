@@ -2126,6 +2126,7 @@ let ipSelectedItem = null;
 let _ipMepWaPerGN = 0;
 let _ipEditIdx    = -1;  // index of zutat being edited, -1 = new add
 let editingMenuId = null;
+let editingGRCode = null;
 let _viewingMenu  = null;
 let _grSelectedItem = null;
 let agrZutaten    = [];
@@ -7626,6 +7627,7 @@ function updateRecipeAddButtons() {
   if (container) container.style.display = isUnlocked ? "flex" : "none";
 }
 function openAddGRPopup(art) {
+  editingGRCode = null;
   closeMenu();
   agrZutaten = [];
   ['agr-code','agr-name','agr-rohgewicht','agr-garverlust','agr-zubereitung'].forEach(id => {
@@ -7641,6 +7643,7 @@ function openAddGRPopup(art) {
 }
 
 function closeAddGRPopup() {
+  editingGRCode = null;
   document.getElementById('addGRPopup').style.display = 'none';
   document.getElementById('agr-code').readOnly = false;
 }
@@ -7776,6 +7779,11 @@ async function saveGREntry() {
   const verl  = parseFloat(document.getElementById('agr-garverlust').value) || 0;
   const wa    = parseFloat(document.getElementById('agr-wa').value) || 0;
   try {
+    // GAS saveGR always creates a new row — delete existing entry first when editing
+    if (editingGRCode) {
+      const del = await get({ action: 'deleteGR', grCode: editingGRCode });
+      if (del.error) throw new Error('Delete old GR failed: ' + del.error);
+    }
     const data = await get({
       action       : 'saveGR',
       grCode       : code,
@@ -7800,6 +7808,7 @@ async function saveGREntry() {
 function openEditGRPopup(grCode) {
   const g = allGRs.find(x => x.grCode === grCode);
   if (!g) return;
+  editingGRCode = grCode;
   agrZutaten = [];
   try { agrZutaten = JSON.parse(g.zutaten || '[]'); } catch(e) {}
   document.getElementById('agr-code').value        = g.grCode || '';
