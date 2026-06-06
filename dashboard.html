@@ -6189,7 +6189,15 @@ async function confirmPdfImport() {
     if (saved.error) throw new Error(saved.error);
 
     // Also save new RM/MEP/GR items that don't exist yet in system
-    const toSave = pdfParsedIngredients.filter(ing => !ing._matched);
+    // De-duplicate by code to prevent double-saves when AI returns same code twice
+    const seen = new Set();
+    const toSave = pdfParsedIngredients.filter(ing => {
+      if (ing._matched) return false;
+      const key = (ing.type||'rm').toLowerCase() + ':' + (ing.code||'');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     if (toSave.length) {
       const data = await adminCall({
         action      : "importParsedRecipe",
@@ -6197,6 +6205,13 @@ async function confirmPdfImport() {
         ingredients : JSON.stringify(toSave)
       });
       if (data.error) console.warn("importParsedRecipe:", data.error);
+      // Update local code lists so a second import in this session won't re-save
+      toSave.forEach(ing => {
+        const t = (ing.type||'rm').toLowerCase();
+        if (t === 'gr'  && ing.code) { _allGrCodes  = [...(_allGrCodes ||[]), ing.code]; if (window.allGRs) window.allGRs.push({ grCode:ing.code, name:ing.name||ing.code, art:'Grundrezeptur', zutaten:'[]', wa:0 }); }
+        if (t === 'rm'  && ing.code)   _allRmCodes  = [...(_allRmCodes ||[]), ing.code];
+        if (t === 'mep' && ing.code)   _allMepCodes = [...(_allMepCodes||[]), ing.code];
+      });
     }
 
     const savedCount   = toSave.length;
