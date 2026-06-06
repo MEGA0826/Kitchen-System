@@ -9860,7 +9860,11 @@ function pdfQASelectRM(code, name) {
     if (data && data.error) throw new Error(data.error);
     if (t==='rm')  _allRmCodes  = (_allRmCodes  ||[]).concat([code]);
     if (t==='mep') _allMepCodes = (_allMepCodes ||[]).concat([code]);
-    if (t==='gr')  _allGrCodes  = (_allGrCodes  ||[]).concat([code]);
+    if (t==='gr') {
+      _allGrCodes = (_allGrCodes||[]).concat([code]);
+      if (window.allGRs) window.allGRs.push({ grCode: code, name: name, art: 'Grundrezeptur', zutaten: '[]', wa: 0 });
+    }
+    if (t==='menu') loadMenus().catch(() => {});
     if (_systemItems) _systemItems.push({ type:t, code, name });
     if (document.getElementById('pdfqa-alsoadd').checked) {
       pdfParsedIngredients.push({
