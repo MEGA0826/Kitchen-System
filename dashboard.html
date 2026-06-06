@@ -4926,7 +4926,14 @@ async function openEditProductModal(code) {
   setTxt("editProductTitle", "Edit — " + (p.name || code));
 
   renderEpfRmList(code);
-  setTimeout(() => { calcEpfMaxGN(); calcEpfSuggestion(code); }, 0);
+  setTimeout(() => {
+    calcEpfMaxGN();
+    calcEpfSuggestion(code);
+    // Auto-load sales data if not yet loaded so suggestion shows without visiting Sales tab
+    if (!salesData.products.length) {
+      loadSalesAnalysis().then(() => calcEpfSuggestion(code)).catch(() => {});
+    }
+  }, 0);
 }
 
 function closeEditProductModal() {
@@ -5016,7 +5023,10 @@ function autoFillMepMaxFromSales() {
   const hintEl  = document.getElementById("epf-sales-hint");
 
   if (!salesData?.products?.length) {
-    if (hintEl) hintEl.textContent = "⚠ Import sales CSV first";
+    if (hintEl) hintEl.textContent = "⏳ Loading sales data…";
+    loadSalesAnalysis().then(() => autoFillMepMaxFromSales()).catch(() => {
+      if (hintEl) hintEl.textContent = "⚠ Could not load sales data";
+    });
     return;
   }
 
