@@ -6198,17 +6198,28 @@ async function confirmPdfImport() {
       seen.add(key);
       return true;
     });
-    if (toSave.length) {
+
+    // GR items must go via saveGR action (importParsedRecipe only handles RM/MEP)
+    const grItems  = toSave.filter(ing => (ing.type||'').toLowerCase() === 'gr' && ing.code);
+    const rmItems  = toSave.filter(ing => (ing.type||'').toLowerCase() !== 'gr');
+
+    for (const ing of grItems) {
+      try {
+        await adminCall({ action:'saveGR', grCode:ing.code, name:ing.name||ing.code, art:'Grundrezeptur', zutaten:'[]' });
+        _allGrCodes = [...(_allGrCodes||[]), ing.code];
+        if (window.allGRs) window.allGRs.push({ grCode:ing.code, name:ing.name||ing.code, art:'Grundrezeptur', zutaten:'[]', wa:0 });
+      } catch(e) { console.warn('saveGR failed for', ing.code, e); }
+    }
+
+    if (rmItems.length) {
       const data = await adminCall({
         action      : "importParsedRecipe",
         mepCode     : pdfTargetMepCode,
-        ingredients : JSON.stringify(toSave)
+        ingredients : JSON.stringify(rmItems)
       });
       if (data.error) console.warn("importParsedRecipe:", data.error);
-      // Update local code lists so a second import in this session won't re-save
-      toSave.forEach(ing => {
+      rmItems.forEach(ing => {
         const t = (ing.type||'rm').toLowerCase();
-        if (t === 'gr'  && ing.code) { _allGrCodes  = [...(_allGrCodes ||[]), ing.code]; if (window.allGRs) window.allGRs.push({ grCode:ing.code, name:ing.name||ing.code, art:'Grundrezeptur', zutaten:'[]', wa:0 }); }
         if (t === 'rm'  && ing.code)   _allRmCodes  = [...(_allRmCodes ||[]), ing.code];
         if (t === 'mep' && ing.code)   _allMepCodes = [...(_allMepCodes||[]), ing.code];
       });
