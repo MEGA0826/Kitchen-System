@@ -7936,9 +7936,9 @@ function setRecipeCat(cat) {
 
   // If menus not loaded yet, load first then render
   if (!allMenus.length) {
-    loadMenus().then(() => renderMenuListByCat(cat));
+    loadMenus().then(() => cat ? renderMenuListByCat(cat) : renderMenuList());
   } else {
-    renderMenuListByCat(cat);
+    cat ? renderMenuListByCat(cat) : renderMenuList();
   }
 }
 
