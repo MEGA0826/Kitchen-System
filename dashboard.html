@@ -825,13 +825,19 @@
     </div>
 
     <!-- GR + MEP search -->
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      <input class="search-input" id="gr-filter-search" type="text"
-  placeholder="🔍 GR suchen…" data-i18n-placeholder="search-gr" oninput="filterGrDisplay()"
-        style="flex:1;min-width:140px">
-      <input class="search-input" id="mep-filter-search" type="text"
-  placeholder="🔍 MEP Product suchen…" data-i18n-placeholder="search-mep" oninput="filterMepDisplay()"
-        style="flex:1;min-width:140px">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="search-input" id="gr-filter-search" type="text"
+          placeholder="🔍 GR suchen…" data-i18n-placeholder="search-gr" oninput="filterGrDisplay()"
+          style="flex:1;min-width:140px">
+        <button type="button" onclick="showAllGRs()" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">Show All</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="search-input" id="mep-filter-search" type="text"
+          placeholder="🔍 MEP Product suchen…" data-i18n-placeholder="search-mep" oninput="filterMepDisplay()"
+          style="flex:1;min-width:140px">
+        <button type="button" onclick="showAllMEPs()" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">Show All</button>
+      </div>
     </div>
     <div id="gr-search-results" style="margin-bottom:12px"></div>
     <div id="mep-search-results" style="margin-bottom:12px"></div>
@@ -7927,6 +7933,72 @@ function filterMepDisplay() {
       <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`).join("");
+  el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
+  el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
+}
+
+function showAllGRs() {
+  const inp = document.getElementById('gr-filter-search');
+  if (inp) inp.value = '';
+  const el = document.getElementById('gr-search-results');
+  if (!el) return;
+  const seenCodes = new Set();
+  const combined = [];
+  (allGRs||[]).forEach(g => {
+    const code = g.grCode||g.id||'';
+    if (code) seenCodes.add(code.toLowerCase());
+    combined.push({ code, name:g.name||'', wa:g.wa||0, source:'gr', id:null });
+  });
+  (allMenus||[]).forEach(m => {
+    if ((m.art||')') !== 'Grundrezeptur') return;
+    const code = m.menuCode||m.code||'';
+    if (seenCodes.has(code.toLowerCase())) return;
+    combined.push({ code, name:m.name||'', wa:m.wa||0, source:'menu', id:m.id });
+  });
+  combined.sort((a,b) => a.name.localeCompare(b.name));
+  if (!combined.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR vorhanden.</div>`; return; }
+  el.innerHTML = combined.map(g => {
+    const sc = g.code.replace(/"/g,'&quot;'), sn = g.name.replace(/"/g,'&quot;');
+    const editH = g.source==='menu'
+      ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${sc}"`
+      : `class="btn-edit gr-edit-btn" data-code="${sc}"`;
+    const delH = g.source==='menu'
+      ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${sn}"`
+      : `class="btn-del gr-del-btn" data-code="${sc}" data-name="${sn}"`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
+      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
+      <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => btn.addEventListener('click', () => {
+    if (btn.dataset.menuId) openMenuPopup(btn.dataset.menuId); else openEditGRPopup(btn.dataset.code);
+  }));
+  el.querySelectorAll('.menu-gr-del-btn').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm(`"${btn.dataset.name}" wirklich löschen?`)) return;
+    try { const d = await adminCall({action:'deleteMenu',menuId:btn.dataset.menuId}); if(d&&d.error) throw new Error(d.error); await loadMenus(); showAllGRs(); } catch(e){ alert('Fehler: '+e.message); }
+  }));
+}
+
+function showAllMEPs() {
+  const inp = document.getElementById('mep-filter-search');
+  if (inp) inp.value = '';
+  const el = document.getElementById('mep-search-results');
+  if (!el) return;
+  const results = Object.entries(allProducts).sort(([,a],[,b]) => (a.name||'').localeCompare(b.name||''));
+  if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Kein MEP vorhanden.</div>`; return; }
+  el.innerHTML = results.map(([code,p]) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+      <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+    </div>`).join('');
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
