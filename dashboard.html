@@ -7813,8 +7813,13 @@ function filterGrDisplay() {
   if (!el) return;
   if (!q) { el.innerHTML = ""; return; }
   const results = allGRs.filter(g => (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q));
+  // Name-starts-with-query first, then alphabetical
+  results.sort((a, b) => {
+    const an = (a.name||"").toLowerCase(), bn = (b.name||"").toLowerCase();
+    return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1) || an.localeCompare(bn);
+  });
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
-el.innerHTML = results.slice(0,10).map(g => {
+el.innerHTML = results.slice(0,20).map(g => {
     const safeCode = (g.grCode||'').replace(/"/g,'&quot;');
     const safeName = (g.name||g.grCode||'').replace(/"/g,'&quot;');
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
@@ -7835,8 +7840,12 @@ function filterMepDisplay() {
   if (!q) { el.innerHTML = ""; return; }
   const results = Object.entries(allProducts).filter(([code, p]) =>
     (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q));
+  results.sort(([ac, ap], [bc, bp]) => {
+    const an = (ap.name||"").toLowerCase(), bn = (bp.name||"").toLowerCase();
+    return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1) || an.localeCompare(bn);
+  });
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Kein MEP Produkt gefunden.</div>`; return; }
-  el.innerHTML = results.slice(0,10).map(([code, p]) => `
+  el.innerHTML = results.slice(0,20).map(([code, p]) => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
       <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
