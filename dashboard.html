@@ -7827,20 +7827,25 @@ function filterGrDisplay() {
   const el = document.getElementById("gr-search-results");
   if (!el) return;
   if (!q) { el.innerHTML = ""; return; }
-  const results = allGRs.filter(g => (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q));
+  const results = allGRs.filter(g => {
+    const code = (g.grCode||g.id||"").toLowerCase();
+    const name = (g.name||"").toLowerCase();
+    return name.includes(q) || code.includes(q);
+  });
   // Name-starts-with-query first, then alphabetical
   results.sort((a, b) => {
     const an = (a.name||"").toLowerCase(), bn = (b.name||"").toLowerCase();
     return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1) || an.localeCompare(bn);
   });
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
-el.innerHTML = results.slice(0,20).map(g => {
-    const safeCode = (g.grCode||'').replace(/"/g,'&quot;');
-    const safeName = (g.name||g.grCode||'').replace(/"/g,'&quot;');
+  const limit = q.length <= 3 ? results.length : 20;
+el.innerHTML = results.slice(0, limit).map(g => {
+    const safeCode = (g.grCode||g.id||'').replace(/"/g,'&quot;');
+    const safeName = (g.name||g.grCode||g.id||'').replace(/"/g,'&quot;');
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
-      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.grCode||""}</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode||g.id}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.grCode||g.id||""}</span>
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
       <button type="button" class="btn-edit gr-edit-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}" style="font-size:11px;padding:3px 8px">🗑</button>
