@@ -261,8 +261,9 @@
     .search-input::placeholder { color: var(--faint); }
     .search-input:focus { outline: none; border-color: var(--amber); }
     .inv-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #panel-inventory .inv-table-wrap { max-height: calc(100vh - 300px); overflow-y: auto; }
     .inv-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
-    .inv-table th { background: var(--surface2); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; }
+    .inv-table th { background: var(--surface2); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; position: sticky; top: 0; z-index: 1; }
     .inv-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .inv-table tr:last-child td { border-bottom: none; }
     .inv-table tr:hover td { background: var(--surface2); }
@@ -824,13 +825,19 @@
     </div>
 
     <!-- GR + MEP search -->
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      <input class="search-input" id="gr-filter-search" type="text"
-  placeholder="🔍 GR suchen…" data-i18n-placeholder="search-gr" oninput="filterGrDisplay()"
-        style="flex:1;min-width:140px">
-      <input class="search-input" id="mep-filter-search" type="text"
-  placeholder="🔍 MEP Product suchen…" data-i18n-placeholder="search-mep" oninput="filterMepDisplay()"
-        style="flex:1;min-width:140px">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="search-input" id="gr-filter-search" type="text"
+          placeholder="🔍 GR suchen…" data-i18n-placeholder="search-gr" oninput="filterGrDisplay()"
+          style="flex:1;min-width:140px">
+        <button type="button" onclick="showAllGRs()" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">Show All</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="search-input" id="mep-filter-search" type="text"
+          placeholder="🔍 MEP Product suchen…" data-i18n-placeholder="search-mep" oninput="filterMepDisplay()"
+          style="flex:1;min-width:140px">
+        <button type="button" onclick="showAllMEPs()" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">Show All</button>
+      </div>
     </div>
     <div id="gr-search-results" style="margin-bottom:12px"></div>
     <div id="mep-search-results" style="margin-bottom:12px"></div>
@@ -4934,7 +4941,14 @@ async function openEditProductModal(code) {
   setTxt("editProductTitle", "Edit — " + (p.name || code));
 
   renderEpfRmList(code);
-  setTimeout(() => { calcEpfMaxGN(); calcEpfSuggestion(code); }, 0);
+  setTimeout(() => {
+    calcEpfMaxGN();
+    calcEpfSuggestion(code);
+    // Auto-load sales data if not yet loaded so suggestion shows without visiting Sales tab
+    if (!salesData.products.length) {
+      loadSalesAnalysis().then(() => calcEpfSuggestion(code)).catch(() => {});
+    }
+  }, 0);
 }
 
 function closeEditProductModal() {
@@ -5024,7 +5038,10 @@ function autoFillMepMaxFromSales() {
   const hintEl  = document.getElementById("epf-sales-hint");
 
   if (!salesData?.products?.length) {
-    if (hintEl) hintEl.textContent = "⚠ Import sales CSV first";
+    if (hintEl) hintEl.textContent = "⏳ Loading sales data…";
+    loadSalesAnalysis().then(() => autoFillMepMaxFromSales()).catch(() => {
+      if (hintEl) hintEl.textContent = "⚠ Could not load sales data";
+    });
     return;
   }
 
@@ -6210,14 +6227,40 @@ async function confirmPdfImport() {
     if (saved.error) throw new Error(saved.error);
 
     // Also save new RM/MEP/GR items that don't exist yet in system
-    const toSave = pdfParsedIngredients.filter(ing => !ing._matched);
-    if (toSave.length) {
+    // De-duplicate by code to prevent double-saves when AI returns same code twice
+    const seen = new Set();
+    const toSave = pdfParsedIngredients.filter(ing => {
+      if (ing._matched) return false;
+      const key = (ing.type||'rm').toLowerCase() + ':' + (ing.code||'');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // GR items must go via saveGR action (importParsedRecipe only handles RM/MEP)
+    const grItems  = toSave.filter(ing => (ing.type||'').toLowerCase() === 'gr' && ing.code);
+    const rmItems  = toSave.filter(ing => (ing.type||'').toLowerCase() !== 'gr');
+
+    for (const ing of grItems) {
+      try {
+        await adminCall({ action:'saveGR', grCode:ing.code, name:ing.name||ing.code, art:'Grundrezeptur', zutaten:'[]' });
+        _allGrCodes = [...(_allGrCodes||[]), ing.code];
+        if (window.allGRs) window.allGRs.push({ grCode:ing.code, name:ing.name||ing.code, art:'Grundrezeptur', zutaten:'[]', wa:0 });
+      } catch(e) { console.warn('saveGR failed for', ing.code, e); }
+    }
+
+    if (rmItems.length) {
       const data = await adminCall({
         action      : "importParsedRecipe",
         mepCode     : pdfTargetMepCode,
-        ingredients : JSON.stringify(toSave)
+        ingredients : JSON.stringify(rmItems)
       });
       if (data.error) console.warn("importParsedRecipe:", data.error);
+      rmItems.forEach(ing => {
+        const t = (ing.type||'rm').toLowerCase();
+        if (t === 'rm'  && ing.code)   _allRmCodes  = [...(_allRmCodes ||[]), ing.code];
+        if (t === 'mep' && ing.code)   _allMepCodes = [...(_allMepCodes||[]), ing.code];
+      });
     }
 
     const savedCount   = toSave.length;
@@ -7987,20 +8030,72 @@ function filterGrDisplay() {
   const el = document.getElementById("gr-search-results");
   if (!el) return;
   if (!q) { el.innerHTML = ""; return; }
-  const results = allGRs.filter(g => (g.name||"").toLowerCase().includes(q) || (g.grCode||"").toLowerCase().includes(q));
+
+  // Merge GR sheet + Menus sheet (art=Grundrezeptur) — some GRs live in Menus after batch import
+  const seenCodes = new Set();
+  const combined = [];
+  (allGRs || []).forEach(g => {
+    const code = g.grCode || g.id || '';
+    if (code) seenCodes.add(code.toLowerCase());
+    combined.push({ code, name: g.name || '', wa: g.wa || 0, source: 'gr', id: null });
+  });
+  (allMenus || []).forEach(m => {
+    if ((m.art || '') !== 'Grundrezeptur') return;
+    const code = m.menuCode || m.code || '';
+    if (seenCodes.has(code.toLowerCase())) return; // already in GR sheet
+    combined.push({ code, name: m.name || '', wa: m.wa || 0, source: 'menu', id: m.id });
+  });
+
+  const results = combined.filter(g => {
+    const c = g.code.toLowerCase(), n = g.name.toLowerCase();
+    return n.includes(q) || c.includes(q);
+  });
+
+  // Name-starts-with-query first, then alphabetical
+  results.sort((a, b) => {
+    const an = a.name.toLowerCase(), bn = b.name.toLowerCase();
+    return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1) || an.localeCompare(bn);
+  });
+
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
-el.innerHTML = results.slice(0,10).map(g => {
-    const safeCode = (g.grCode||'').replace(/"/g,'&quot;');
-    const safeName = (g.name||g.grCode||'').replace(/"/g,'&quot;');
+  const limit = q.length <= 3 ? results.length : 20;
+  el.innerHTML = results.slice(0, limit).map(g => {
+    const safeCode = g.code.replace(/"/g,'&quot;');
+    const safeName = g.name.replace(/"/g,'&quot;');
+    const editHandler = g.source === 'menu'
+      ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${safeCode}"`
+      : `class="btn-edit gr-edit-btn" data-code="${safeCode}"`;
+    const delHandler = g.source === 'menu'
+      ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${safeName}"`
+      : `class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}"`;
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
-      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.grCode||""}</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
-      <button type="button" class="btn-edit gr-edit-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}" style="font-size:11px;padding:3px 8px">🗑</button>
+      <button type="button" ${editHandler} style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" ${delHandler} style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
   }).join("");
+
+  // Wire up edit/delete for menu-sheet GRs
+  el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.menuId) openMenuPopup(btn.dataset.menuId);
+      else openEditGRPopup(btn.dataset.code);
+    });
+  });
+  el.querySelectorAll('.menu-gr-del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`"${btn.dataset.name}" wirklich löschen?`)) return;
+      try {
+        const d = await adminCall({ action:'deleteMenu', menuId: btn.dataset.menuId });
+        if (d && d.error) throw new Error(d.error);
+        await loadMenus();
+        filterGrDisplay();
+      } catch(e) { alert('Fehler: ' + e.message); }
+    });
+  });
 }
 
 function filterMepDisplay() {
@@ -8010,8 +8105,12 @@ function filterMepDisplay() {
   if (!q) { el.innerHTML = ""; return; }
   const results = Object.entries(allProducts).filter(([code, p]) =>
     (p.name||"").toLowerCase().includes(q) || code.toLowerCase().includes(q));
+  results.sort(([ac, ap], [bc, bp]) => {
+    const an = (ap.name||"").toLowerCase(), bn = (bp.name||"").toLowerCase();
+    return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1) || an.localeCompare(bn);
+  });
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Kein MEP Produkt gefunden.</div>`; return; }
-  el.innerHTML = results.slice(0,10).map(([code, p]) => `
+  el.innerHTML = results.slice(0,20).map(([code, p]) => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
       <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
@@ -8020,6 +8119,72 @@ function filterMepDisplay() {
       <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`).join("");
+  el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
+  el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
+}
+
+function showAllGRs() {
+  const inp = document.getElementById('gr-filter-search');
+  if (inp) inp.value = '';
+  const el = document.getElementById('gr-search-results');
+  if (!el) return;
+  const seenCodes = new Set();
+  const combined = [];
+  (allGRs||[]).forEach(g => {
+    const code = g.grCode||g.id||'';
+    if (code) seenCodes.add(code.toLowerCase());
+    combined.push({ code, name:g.name||'', wa:g.wa||0, source:'gr', id:null });
+  });
+  (allMenus||[]).forEach(m => {
+    if ((m.art||')') !== 'Grundrezeptur') return;
+    const code = m.menuCode||m.code||'';
+    if (seenCodes.has(code.toLowerCase())) return;
+    combined.push({ code, name:m.name||'', wa:m.wa||0, source:'menu', id:m.id });
+  });
+  combined.sort((a,b) => a.name.localeCompare(b.name));
+  if (!combined.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR vorhanden.</div>`; return; }
+  el.innerHTML = combined.map(g => {
+    const sc = g.code.replace(/"/g,'&quot;'), sn = g.name.replace(/"/g,'&quot;');
+    const editH = g.source==='menu'
+      ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${sc}"`
+      : `class="btn-edit gr-edit-btn" data-code="${sc}"`;
+    const delH = g.source==='menu'
+      ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${sn}"`
+      : `class="btn-del gr-del-btn" data-code="${sc}" data-name="${sn}"`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
+      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
+      <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => btn.addEventListener('click', () => {
+    if (btn.dataset.menuId) openMenuPopup(btn.dataset.menuId); else openEditGRPopup(btn.dataset.code);
+  }));
+  el.querySelectorAll('.menu-gr-del-btn').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm(`"${btn.dataset.name}" wirklich löschen?`)) return;
+    try { const d = await adminCall({action:'deleteMenu',menuId:btn.dataset.menuId}); if(d&&d.error) throw new Error(d.error); await loadMenus(); showAllGRs(); } catch(e){ alert('Fehler: '+e.message); }
+  }));
+}
+
+function showAllMEPs() {
+  const inp = document.getElementById('mep-filter-search');
+  if (inp) inp.value = '';
+  const el = document.getElementById('mep-search-results');
+  if (!el) return;
+  const results = Object.entries(allProducts).sort(([,a],[,b]) => (a.name||'').localeCompare(b.name||''));
+  if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Kein MEP vorhanden.</div>`; return; }
+  el.innerHTML = results.map(([code,p]) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+      <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+    </div>`).join('');
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
@@ -10115,7 +10280,11 @@ function pdfQASelectRM(code, name) {
     if (data && data.error) throw new Error(data.error);
     if (t==='rm')  _allRmCodes  = (_allRmCodes  ||[]).concat([code]);
     if (t==='mep') _allMepCodes = (_allMepCodes ||[]).concat([code]);
-    if (t==='gr')  _allGrCodes  = (_allGrCodes  ||[]).concat([code]);
+    if (t==='gr') {
+      _allGrCodes = (_allGrCodes||[]).concat([code]);
+      if (window.allGRs) window.allGRs.push({ grCode: code, name: name, art: 'Grundrezeptur', zutaten: '[]', wa: 0 });
+    }
+    if (t==='menu') loadMenus().catch(() => {});
     if (_systemItems) _systemItems.push({ type:t, code, name });
     if (document.getElementById('pdfqa-alsoadd').checked) {
       pdfParsedIngredients.push({
