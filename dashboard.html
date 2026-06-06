@@ -7838,30 +7838,72 @@ function filterGrDisplay() {
   const el = document.getElementById("gr-search-results");
   if (!el) return;
   if (!q) { el.innerHTML = ""; return; }
-  const results = allGRs.filter(g => {
-    const code = (g.grCode||g.id||"").toLowerCase();
-    const name = (g.name||"").toLowerCase();
-    return name.includes(q) || code.includes(q);
+
+  // Merge GR sheet + Menus sheet (art=Grundrezeptur) — some GRs live in Menus after batch import
+  const seenCodes = new Set();
+  const combined = [];
+  (allGRs || []).forEach(g => {
+    const code = g.grCode || g.id || '';
+    if (code) seenCodes.add(code.toLowerCase());
+    combined.push({ code, name: g.name || '', wa: g.wa || 0, source: 'gr', id: null });
   });
+  (allMenus || []).forEach(m => {
+    if ((m.art || '') !== 'Grundrezeptur') return;
+    const code = m.menuCode || m.code || '';
+    if (seenCodes.has(code.toLowerCase())) return; // already in GR sheet
+    combined.push({ code, name: m.name || '', wa: m.wa || 0, source: 'menu', id: m.id });
+  });
+
+  const results = combined.filter(g => {
+    const c = g.code.toLowerCase(), n = g.name.toLowerCase();
+    return n.includes(q) || c.includes(q);
+  });
+
   // Name-starts-with-query first, then alphabetical
   results.sort((a, b) => {
-    const an = (a.name||"").toLowerCase(), bn = (b.name||"").toLowerCase();
+    const an = a.name.toLowerCase(), bn = b.name.toLowerCase();
     return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1) || an.localeCompare(bn);
   });
+
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
   const limit = q.length <= 3 ? results.length : 20;
-el.innerHTML = results.slice(0, limit).map(g => {
-    const safeCode = (g.grCode||g.id||'').replace(/"/g,'&quot;');
-    const safeName = (g.name||g.grCode||g.id||'').replace(/"/g,'&quot;');
+  el.innerHTML = results.slice(0, limit).map(g => {
+    const safeCode = g.code.replace(/"/g,'&quot;');
+    const safeName = g.name.replace(/"/g,'&quot;');
+    const editHandler = g.source === 'menu'
+      ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${safeCode}"`
+      : `class="btn-edit gr-edit-btn" data-code="${safeCode}"`;
+    const delHandler = g.source === 'menu'
+      ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${safeName}"`
+      : `class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}"`;
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
-      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.grCode||g.id}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.grCode||g.id||""}</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
-      <button type="button" class="btn-edit gr-edit-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}" style="font-size:11px;padding:3px 8px">🗑</button>
+      <button type="button" ${editHandler} style="font-size:11px;padding:3px 8px">✏️</button>
+      <button type="button" ${delHandler} style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
   }).join("");
+
+  // Wire up edit/delete for menu-sheet GRs
+  el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.menuId) openMenuPopup(btn.dataset.menuId);
+      else openEditGRPopup(btn.dataset.code);
+    });
+  });
+  el.querySelectorAll('.menu-gr-del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`"${btn.dataset.name}" wirklich löschen?`)) return;
+      try {
+        const d = await adminCall({ action:'deleteMenu', menuId: btn.dataset.menuId });
+        if (d && d.error) throw new Error(d.error);
+        await loadMenus();
+        filterGrDisplay();
+      } catch(e) { alert('Fehler: ' + e.message); }
+    });
+  });
 }
 
 function filterMepDisplay() {
