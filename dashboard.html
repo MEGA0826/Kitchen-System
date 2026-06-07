@@ -3916,6 +3916,9 @@ async function saveInvItem() {
     toggleInvForm(false);
     await loadInventory();
     filterInventory();
+    try { _refreshGrList(); } catch(e) {}
+    try { _refreshMepList(); } catch(e) {}
+    try { renderMenuListByCat(); } catch(e) {}
   } catch(e) { adminMsg("if-msg","Error: "+e.message,"err"); }
   finally { if (btn) { btn.disabled = false; btn.textContent = "Save item"; } }
 }
@@ -5580,6 +5583,9 @@ async function saveEditedInventory() {
     await loadInventory();
     try { renderAdminInventory(); } catch(e) {}
     try { filterInventory(); } catch(e) {}
+    try { _refreshGrList(); } catch(e) {}
+    try { _refreshMepList(); } catch(e) {}
+    try { renderMenuListByCat(); } catch(e) {}
   } catch(e) {
     adminMsg("eif-msg", "Error: " + e.message, "err");
   } finally {
@@ -7874,6 +7880,34 @@ function openEditGRPopup(grCode) {
   document.getElementById('addGRPopup').style.display = 'flex';
 }
 
+// Compute live WA from current allInventory prices (RM lookups; GR/MEP fall back to stored unitCost)
+function _calcLiveWA(zutatenStr) {
+  if (!allInventory || !allInventory.length) return null;
+  try {
+    const zs = JSON.parse(typeof zutatenStr === 'string' ? (zutatenStr||'[]') : '[]');
+    if (!zs.length) return null;
+    let total = 0;
+    for (const z of zs) {
+      const gw = parseFloat(z.gewicht) || 0;
+      if (!gw) continue;
+      const t = (z.type||'rm').toLowerCase();
+      if (t === 'rm') {
+        const inv = allInventory.find(i => i.code === (z.code||''));
+        if (inv) {
+          const wu = parseFloat(inv.weightUnit) || 1;
+          const ku = parseFloat(inv.kostenUnit) || 0;
+          total += gw * (ku / wu);
+        } else {
+          total += gw * (parseFloat(z.unitCost) || 0);
+        }
+      } else {
+        total += gw * (parseFloat(z.unitCost) || 0);
+      }
+    }
+    return total;
+  } catch(e) { return null; }
+}
+
 function _refreshGrList() {
   const q = (document.getElementById('gr-filter-search')?.value || '').trim();
   if (q) filterGrDisplay(); else showAllGRs();
@@ -7948,8 +7982,9 @@ function renderMenuList() {
   }
   el.style.gridTemplateColumns = "1fr";
   el.innerHTML = list.map(m => {
-    const fc = (m.wa && m.vk && parseFloat(m.vk)>0)
-      ? ((parseFloat(m.wa)/parseFloat(m.vk))*100).toFixed(1)+'%' : '';
+    const liveWa = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
+    const fc = (liveWa > 0 && parseFloat(m.vk)>0)
+      ? ((liveWa/parseFloat(m.vk))*100).toFixed(1)+'%' : '';
     const fcColor = (fc && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
     const artCode = (m.art || 'M').substring(0,2).toUpperCase();
     return `<div data-menu-id="${m.id}" class="menu-card-item"
@@ -7959,7 +7994,7 @@ function renderMenuList() {
       <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
       <span style="font-size:11px;color:var(--muted)">${m.menuCode||''}</span>
       ${m.category ? `<span style="font-size:11px;color:var(--muted)">${m.category}</span>` : ''}
-      ${m.wa ? `<span style="font-size:11px;color:var(--amber)">CHF ${parseFloat(m.wa).toFixed(2)}</span>` : ''}
+      ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber)">CHF ${liveWa.toFixed(2)}</span>` : ''}
       ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
     </div>`;
   }).join("");
@@ -8013,7 +8048,7 @@ function renderMenuListByCat(cat) {
   // Render compact one-line rows instead of cards
   el.style.gridTemplateColumns = "1fr";
   el.innerHTML = list.map(m => {
-    const wa  = parseFloat(m.wa||0);
+    const wa  = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
     const vk  = parseFloat(m.vk||0);
     const fc  = vk > 0 ? ((wa/vk)*100).toFixed(1)+"%" : "—";
     const fcColor = (fc !== "—" && parseFloat(fc) > 33) ? "var(--red)" : "var(--green)";
@@ -8046,13 +8081,13 @@ function filterGrDisplay() {
   (allGRs || []).forEach(g => {
     const code = g.grCode || g.id || '';
     if (code) seenCodes.add(code.toLowerCase());
-    combined.push({ code, name: g.name || '', wa: g.wa || 0, source: 'gr', id: null });
+    combined.push({ code, name: g.name || '', wa: g.wa || 0, zutaten: g.zutaten || '[]', source: 'gr', id: null });
   });
   (allMenus || []).forEach(m => {
     if ((m.art || '') !== 'Grundrezeptur') return;
     const code = m.menuCode || m.code || '';
     if (seenCodes.has(code.toLowerCase())) return; // already in GR sheet
-    combined.push({ code, name: m.name || '', wa: m.wa || 0, source: 'menu', id: m.id });
+    combined.push({ code, name: m.name || '', wa: m.wa || 0, zutaten: m.zutaten || '[]', source: 'menu', id: m.id });
   });
 
   const results = combined.filter(g => {
@@ -8071,6 +8106,7 @@ function filterGrDisplay() {
   el.innerHTML = results.slice(0, limit).map(g => {
     const safeCode = g.code.replace(/"/g,'&quot;');
     const safeName = g.name.replace(/"/g,'&quot;');
+    const liveWa = (_calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0)).toFixed(2);
     const editHandler = g.source === 'menu'
       ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${safeCode}"`
       : `class="btn-edit gr-edit-btn" data-code="${safeCode}"`;
@@ -8081,7 +8117,7 @@ function filterGrDisplay() {
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
       <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
-      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
+      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
       <button type="button" ${editHandler} style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" ${delHandler} style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
@@ -8142,18 +8178,19 @@ function showAllGRs() {
   (allGRs||[]).forEach(g => {
     const code = g.grCode||g.id||'';
     if (code) seenCodes.add(code.toLowerCase());
-    combined.push({ code, name:g.name||'', wa:g.wa||0, source:'gr', id:null });
+    combined.push({ code, name:g.name||'', wa:g.wa||0, zutaten:g.zutaten||'[]', source:'gr', id:null });
   });
   (allMenus||[]).forEach(m => {
-    if ((m.art||')') !== 'Grundrezeptur') return;
+    if ((m.art||'') !== 'Grundrezeptur') return;
     const code = m.menuCode||m.code||'';
     if (seenCodes.has(code.toLowerCase())) return;
-    combined.push({ code, name:m.name||'', wa:m.wa||0, source:'menu', id:m.id });
+    combined.push({ code, name:m.name||'', wa:m.wa||0, zutaten:m.zutaten||'[]', source:'menu', id:m.id });
   });
   combined.sort((a,b) => a.name.localeCompare(b.name));
   if (!combined.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR vorhanden.</div>`; return; }
   el.innerHTML = combined.map(g => {
     const sc = g.code.replace(/"/g,'&quot;'), sn = g.name.replace(/"/g,'&quot;');
+    const liveWa = (_calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0)).toFixed(2);
     const editH = g.source==='menu'
       ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${sc}"`
       : `class="btn-edit gr-edit-btn" data-code="${sc}"`;
@@ -8164,7 +8201,7 @@ function showAllGRs() {
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
       <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
-      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${parseFloat(g.wa||0).toFixed(2)}</span>
+      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
       <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
