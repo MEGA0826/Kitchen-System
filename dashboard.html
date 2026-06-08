@@ -7967,7 +7967,7 @@ async function saveGREntry() {
   }
 }
 function openEditGRPopup(grCode) {
-  const g = allGRs.find(x => x.grCode === grCode);
+  const g = allGRs.find(x => (x.grCode||x.id) === grCode);
   if (!g) return;
   editingGRCode = grCode;
   agrZutaten = [];
@@ -8243,7 +8243,8 @@ function filterGrDisplay() {
   const combined = [];
   (allGRs || []).forEach(g => {
     const code = g.grCode || g.id || '';
-    if (code) seenCodes.add(code.toLowerCase());
+    if (!code || seenCodes.has(code.toLowerCase())) return; // dedupe within allGRs too
+    seenCodes.add(code.toLowerCase());
     combined.push({ code, name: g.name || '', wa: g.wa || 0, zutaten: g.zutaten || '[]', source: 'gr', id: null });
   });
   (allMenus || []).forEach(m => {
@@ -8357,7 +8358,8 @@ function showAllGRs() {
   const combined = [];
   (allGRs||[]).forEach(g => {
     const code = g.grCode||g.id||'';
-    if (code) seenCodes.add(code.toLowerCase());
+    if (!code || seenCodes.has(code.toLowerCase())) return; // dedupe within allGRs too
+    seenCodes.add(code.toLowerCase());
     combined.push({ code, name:g.name||'', wa:g.wa||0, zutaten:g.zutaten||'[]', source:'gr', id:null });
   });
   (allMenus||[]).forEach(m => {
