@@ -7763,6 +7763,8 @@ function copyMenu(menuId) {
   document.getElementById('menuPopup').style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
+
+function calcAgrNetto() {
   const roh   = parseFloat(document.getElementById('agr-rohgewicht').value) || 0;
   const verl  = parseFloat(document.getElementById('agr-garverlust').value) || 0;
   const netto = roh * (1 - verl / 100);
