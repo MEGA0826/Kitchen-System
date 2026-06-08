@@ -8558,7 +8558,7 @@ async function _uploadMenuImage(file) {
   const path = `menu-${Date.now()}.${ext}`;
   const res  = await fetch(`${SB_URL}/storage/v1/object/menu-images/${path}`, {
     method : 'POST',
-    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'x-upsert': 'true', 'Content-Type': file.type || 'image/jpeg' },
+    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'apikey': SB_KEY, 'x-upsert': 'true', 'Content-Type': file.type || 'image/jpeg' },
     body   : file
   });
   if (!res.ok) {
