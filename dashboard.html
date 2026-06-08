@@ -7704,7 +7704,65 @@ function closeAddGRPopup() {
   document.getElementById('addGRPopup').style.display = 'none';
 }
 
-function calcAgrNetto() {
+// ── Copy helpers — open "create new" popup pre-filled from source item ────────
+function copyGR(grCode) {
+  const g = allGRs.find(x => (x.grCode||x.id) === grCode);
+  if (!g) return;
+  editingGRCode = null;
+  try { agrZutaten = JSON.parse(g.zutaten || '[]'); } catch(e) { agrZutaten = []; }
+  const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setV('agr-code',        grCode + '-2');
+  setV('agr-name',        'Copy of ' + (g.name || grCode));
+  setV('agr-art',         g.art || 'Grundrezeptur');
+  setV('agr-rohgewicht',  g.rohgewicht || '');
+  setV('agr-garverlust',  g.garverlust || '');
+  setV('agr-zubereitung', g.zubereitung || '');
+  setV('agr-wa',          g.wa || '');
+  document.getElementById('agr-msg').textContent = '';
+  calcAgrNetto(); renderAgrZutaten();
+  document.getElementById('addGRPopup').style.display = 'flex';
+}
+
+function copyMEP(code) {
+  const p = allProducts[code]; if (!p) return;
+  openAddMEPPopup();
+  const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setV('mep-code',      code + '-2');
+  setV('mep-name',      'Copy of ' + (p.name || code));
+  setV('mep-kategorie', p.kategorie || '');
+  setV('mep-mepmax',    p.mepMax    || '');
+  setV('mep-gnsize',    p.gnSize    || '');
+  setV('mep-gnweight',  p.gnWeight  || '');
+  setV('mep-tagesziel', p.tagesziel || '');
+  setV('mep-shelf',     p.shelfLife || '');
+  setV('mep-drive',     p.image     || '');
+}
+
+function copyMenu(menuId) {
+  const m = allMenus.find(x => x.id === menuId); if (!m) return;
+  editingMenuId = null;
+  try { menuZutaten = JSON.parse(m.zutaten || '[]'); } catch(e) { menuZutaten = []; }
+  const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  const setD = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v; };
+  setV('mp-name',        'Copy of ' + (m.name || ''));
+  setV('mp-code',        (m.menuCode || '') + '-2');
+  setV('mp-category',    m.category    || '');
+  setV('mp-art',         m.art         || '');
+  setV('mp-saison',      m.saison      || 'All Year');
+  setV('mp-gewicht',     m.gewicht     || '');
+  setV('mp-garverlust',  m.garverlust  || '');
+  setV('mp-vk',          m.vk          || '');
+  setV('mp-zubereitung', m.zubereitung || '');
+  setV('mp-wa',          '');
+  document.getElementById('mp-popup-title').textContent = 'Menu kopieren';
+  document.getElementById('mp-msg').textContent = '';
+  setD('mp-img-preview', 'none'); setD('mp-drive-url', 'none');
+  _menuImgFile = null;
+  const fcEl = document.getElementById('mp-fc'); if (fcEl) { fcEl.textContent = '—'; fcEl.style.color = 'var(--amber)'; }
+  renderMenuZutaten(); calcWaFromZutaten();
+  document.getElementById('menuPopup').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
   const roh   = parseFloat(document.getElementById('agr-rohgewicht').value) || 0;
   const verl  = parseFloat(document.getElementById('agr-garverlust').value) || 0;
   const netto = roh * (1 - verl / 100);
@@ -8025,6 +8083,8 @@ function renderMenuList() {
       ${m.category ? `<span style="font-size:11px;color:var(--muted)">${m.category}</span>` : ''}
       ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber)">CHF ${liveWa.toFixed(2)}</span>` : ''}
       ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
+      <button type="button" class="menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
+      <button type="button" class="menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
     </div>`;
   }).join("");
   el.querySelectorAll('.menu-card-item').forEach(card => {
@@ -8089,11 +8149,13 @@ function renderMenuListByCat(cat) {
         <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
         <span style="font-size:11px;color:var(--muted);flex:1">${m.category||""}</span>
         <span class="recipe-wa">WA CHF ${wa.toFixed(2)}</span>
+        <button type="button" class="btn-copy menu-row-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren">📋</button>
         <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0">✏️</button>
       </div>
       <span class="recipe-item-name menu-row-name" data-menu-id="${m.id}" style="font-size:15px;font-weight:600;padding:0 2px;cursor:pointer">${m.name||"—"}</span>
     </div>`;
   }).join("");
+  el.querySelectorAll('.menu-row-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMenu(btn.dataset.menuId)));
   el.querySelectorAll('.menu-row-edit-btn').forEach(btn => btn.addEventListener('click', () => openMenuPopup(btn.dataset.menuId)));
   el.querySelectorAll('.menu-row-name').forEach(span => span.addEventListener('click', () => openMenuView(span.dataset.menuId)));
 }
@@ -8147,11 +8209,13 @@ function filterGrDisplay() {
       <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
+      <button type="button" class="btn-copy gr-copy-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
       <button type="button" ${editHandler} style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" ${delHandler} style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
   }).join("");
 
+  el.querySelectorAll('.gr-copy-btn').forEach(btn => btn.addEventListener('click', () => copyGR(btn.dataset.code)));
   // Wire up edit/delete for menu-sheet GRs
   el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -8197,10 +8261,12 @@ function filterMepDisplay() {
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
       ${costStr}
+      <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
       <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
   }).join("");
+  el.querySelectorAll('.mep-prod-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMEP(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
@@ -8239,10 +8305,12 @@ function showAllGRs() {
       <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
       <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
+      <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
       <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
   }).join('');
+  el.querySelectorAll('.gr-copy-btn').forEach(btn => btn.addEventListener('click', () => copyGR(btn.dataset.code)));
   el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => btn.addEventListener('click', () => {
     if (btn.dataset.menuId) openMenuPopup(btn.dataset.menuId); else openEditGRPopup(btn.dataset.code);
   }));
@@ -8272,10 +8340,12 @@ function showAllMEPs() {
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
       ${costStr}
+      <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
       <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
     </div>`;
   }).join('');
+  el.querySelectorAll('.mep-prod-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMEP(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
