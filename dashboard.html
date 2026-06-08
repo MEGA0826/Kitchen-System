@@ -339,6 +339,8 @@
     .btn-edit:hover { color: var(--amber); border-color: var(--amber-brd); }
     .btn-del { background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm); padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer; transition: color .15s, border-color .15s; }
     .btn-del:hover { color: var(--red); border-color: var(--red-brd); }
+    .btn-copy { background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm); padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer; transition: color .15s, border-color .15s; }
+    .btn-copy:hover { color: var(--green); border-color: var(--green-brd); }
     .admin-msg { font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); display: none; margin-top: 8px; }
     .admin-msg.ok  { display: block; background: var(--green-dim); color: var(--green); border: 1px solid var(--green-brd); }
     .admin-msg.err { display: block; background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-brd); }
@@ -8085,8 +8087,8 @@ function renderMenuList() {
       ${m.category ? `<span style="font-size:11px;color:var(--muted)">${m.category}</span>` : ''}
       ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber)">CHF ${liveWa.toFixed(2)}</span>` : ''}
       ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
-      <button type="button" class="menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
-      <button type="button" class="menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
+      <button type="button" class="btn-copy menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
+      <button type="button" class="btn-edit menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
     </div>`;
   }).join("");
   el.querySelectorAll('.menu-card-item').forEach(card => {
