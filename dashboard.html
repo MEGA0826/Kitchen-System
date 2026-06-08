@@ -7699,7 +7699,6 @@ function openAddGRPopup(art) {
 function closeAddGRPopup() {
   editingGRCode = null;
   document.getElementById('addGRPopup').style.display = 'none';
-  document.getElementById('agr-code').readOnly = false;
 }
 
 function calcAgrNetto() {
@@ -7825,13 +7824,20 @@ async function saveGREntry() {
   if (!code) { adminMsg('agr-msg','GR Code erforderlich','err'); return; }
   if (!name) { adminMsg('agr-msg','GR Name erforderlich','err'); return; }
 
-  // Duplicate protection — skip check when editing (code field is readOnly)
-  const isEditing = document.getElementById('agr-code').readOnly;
+  // Duplicate protection — skip check when editing unchanged code
+  const isEditing = !!editingGRCode;
   if (!isEditing) {
     const dupCode = allGRs.find(g => (g.grCode||'').toLowerCase() === code.toLowerCase());
     const dupName = allGRs.find(g => (g.name||'').toLowerCase() === name.toLowerCase());
     if (dupCode) { adminMsg('agr-msg', `⚠ GR Code "${code}" already exists`, 'err'); return; }
     if (dupName) { adminMsg('agr-msg', `⚠ GR name "${name}" already exists`, 'err'); return; }
+  } else {
+    // Editing: block only if new code belongs to a different existing GR
+    const codeChanged = code.toLowerCase() !== (editingGRCode||'').toLowerCase();
+    if (codeChanged) {
+      const dupCode = allGRs.find(g => (g.grCode||'').toLowerCase() === code.toLowerCase());
+      if (dupCode) { adminMsg('agr-msg', `⚠ GR Code "${code}" already exists`, 'err'); return; }
+    }
   }
   const btn = document.getElementById('agr-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
@@ -7879,7 +7885,6 @@ function openEditGRPopup(grCode) {
   document.getElementById('agr-zubereitung').value = g.zubereitung || '';
   document.getElementById('agr-wa').value          = g.wa || '';
   document.getElementById('agr-msg').textContent   = '';
-  document.getElementById('agr-code').readOnly     = true;
   calcAgrNetto();
   renderAgrZutaten();
   document.getElementById('addGRPopup').style.display = 'flex';
