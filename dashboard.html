@@ -831,12 +831,14 @@
           placeholder="🔍 GR suchen…" data-i18n-placeholder="search-gr" oninput="filterGrDisplay()"
           style="flex:1;min-width:140px">
         <button type="button" onclick="showAllGRs()" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">Show All</button>
+        <button type="button" onclick="document.getElementById('gr-filter-search').value='';document.getElementById('gr-search-results').innerHTML='';" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">✕ Clear</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <input class="search-input" id="mep-filter-search" type="text"
           placeholder="🔍 MEP Product suchen…" data-i18n-placeholder="search-mep" oninput="filterMepDisplay()"
           style="flex:1;min-width:140px">
         <button type="button" onclick="showAllMEPs()" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">Show All</button>
+        <button type="button" onclick="document.getElementById('mep-filter-search').value='';document.getElementById('mep-search-results').innerHTML='';" style="padding:8px 12px;border-radius:var(--radius-sm);background:var(--red-dim);color:var(--red);border:1px solid var(--red-brd);font-size:11px;white-space:nowrap;cursor:pointer;font-family:var(--mono)">✕ Clear</button>
       </div>
     </div>
     <div id="gr-search-results" style="margin-bottom:12px"></div>
