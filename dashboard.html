@@ -2269,7 +2269,7 @@ function switchTab(btn) {
   if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
   if (tabId === "deductions")   loadDeductions();
   if (tabId === "reports")      loadReportsTab();
-  if (tabId === "products")     { if (!Object.keys(allProducts).length) loadProducts(); else filterProducts(); }
+  if (tabId === "products")     { if (!Object.keys(allProducts).length) loadProducts(); else filterProducts(); if (!allRecipes.length) get({ action:"getRecipes" }).then(d => { if (Array.isArray(d.recipes)) { allRecipes = d.recipes; filterProducts(); } }).catch(() => {}); }
   if (tabId === "morning")      loadMorning();
   if (tabId === "sales")        initSalesTab();
   if (tabId === "haccp")        loadHaccp();
@@ -3407,6 +3407,10 @@ function renderProductGrid(entries) {
       ? `<button data-editcode="${code}" onclick="event.stopPropagation();openEditProductModal(this.dataset.editcode)"
            style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:var(--mono);vertical-align:middle;margin-left:6px;flex-shrink:0">✏️</button>`
       : '';
+    const mepWa = _calcMepWA(code);
+    const costTag = mepWa
+      ? `<span style="font-size:10px;color:var(--amber);font-family:var(--mono);margin-top:2px;display:block">${mepWa.gnWeightKg > 0 ? 'CHF '+(mepWa.waPerGN/mepWa.gnWeightKg/10).toFixed(2)+'/100g' : 'CHF '+mepWa.waPerGN.toFixed(2)+'/GN'}</span>`
+      : '';
     return `<div class="product-card" data-code="${code}" onclick="openProductModal(this.dataset.code)">
       ${img}
       <div class="product-body">
@@ -3414,6 +3418,7 @@ function renderProductGrid(entries) {
           <span>${p.name || code}</span>${editBtn}
         </div>
         <div class="product-code-card">CODE · ${code}</div>
+        ${costTag}
         ${statsHtml}
       </div>
     </div>`;
