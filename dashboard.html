@@ -2265,7 +2265,7 @@ function switchTab(btn) {
 
   if (tabId === "admin")        { loadAdminTab(); loadArchiveStats(); }
   if (tabId === "orders")       renderOrders();
-  if (tabId === "recipes")      { loadRequirements(); renderMenuList(); populateMenuFilters(); }
+  if (tabId === "recipes")      { loadRequirements(); renderMenuList(); populateMenuFilters(); if (!allRecipes.length) get({ action:"getRecipes" }).then(d => { if (Array.isArray(d.recipes)) { allRecipes = d.recipes; _refreshMepList(); } }).catch(() => {}); }
   if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
   if (tabId === "deductions")   loadDeductions();
   if (tabId === "reports")      loadReportsTab();
@@ -7908,6 +7908,22 @@ function _calcLiveWA(zutatenStr) {
   } catch(e) { return null; }
 }
 
+// Compute live WA for a MEP product from allRecipes + allInventory
+// Returns { waPerGN, gnWeightKg } or null if no recipes / no cost found
+function _calcMepWA(code) {
+  const rms = (allRecipes || []).filter(r => r.mepCode === code);
+  if (!rms.length) return null;
+  let waPerGN = 0;
+  rms.forEach(r => {
+    const inv = (allInventory || []).find(x => x.code === r.rmCode) || {};
+    const wu = parseFloat(inv.weightUnit) || 1;
+    waPerGN += (parseFloat(r.menge) || 0) * ((parseFloat(inv.kostenUnit) || 0) / wu);
+  });
+  if (!waPerGN) return null;
+  const gnWeightKg = parseFloat((allProducts[code] || {}).gnWeight) || 0;
+  return { waPerGN, gnWeightKg };
+}
+
 function _refreshGrList() {
   const q = (document.getElementById('gr-filter-search')?.value || '').trim();
   if (q) filterGrDisplay(); else showAllGRs();
@@ -8155,15 +8171,23 @@ function filterMepDisplay() {
     return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1) || an.localeCompare(bn);
   });
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Kein MEP Produkt gefunden.</div>`; return; }
-  el.innerHTML = results.slice(0,20).map(([code, p]) => `
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+  el.innerHTML = results.slice(0,20).map(([code, p]) => {
+    const wa = _calcMepWA(code);
+    const costStr = wa
+      ? (wa.gnWeightKg > 0
+          ? `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${(wa.waPerGN/wa.gnWeightKg/10).toFixed(2)}/100g</span>`
+          : `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${wa.waPerGN.toFixed(2)}/GN</span>`)
+      : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
       <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+      ${costStr}
       <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
-    </div>`).join("");
+    </div>`;
+  }).join("");
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
@@ -8222,15 +8246,23 @@ function showAllMEPs() {
   if (!el) return;
   const results = Object.entries(allProducts).sort(([,a],[,b]) => (a.name||'').localeCompare(b.name||''));
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Kein MEP vorhanden.</div>`; return; }
-  el.innerHTML = results.map(([code,p]) => `
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+  el.innerHTML = results.map(([code,p]) => {
+    const wa = _calcMepWA(code);
+    const costStr = wa
+      ? (wa.gnWeightKg > 0
+          ? `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${(wa.waPerGN/wa.gnWeightKg/10).toFixed(2)}/100g</span>`
+          : `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${wa.waPerGN.toFixed(2)}/GN</span>`)
+      : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
       <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
       <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+      ${costStr}
       <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
       <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
 }
