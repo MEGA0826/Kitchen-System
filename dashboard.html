@@ -2135,6 +2135,7 @@ let ipMode        = 'rm';
 let ipContext     = 'menu';
 let ipSelectedItem = null;
 let _ipMepWaPerGN = 0;
+const EU_ALLERGENS = ['Gluten','Krebstiere','Eier','Fisch','Erdnüsse','Soja','Milch','Nüsse','Sellerie','Senf','Sesam','SO₂/Sulfite','Lupinen','Weichtiere'];
 let _ipEditIdx    = -1;  // index of zutat being edited, -1 = new add
 let editingMenuId = null;
 let editingGRCode = null;
@@ -2545,7 +2546,8 @@ const _sbActions = {
         unit: r.unit, quantity: r.quantity,
         weightUnit: r.weight_unit, kostenUnit: r.kosten_unit,
         lieferant: r.lieferant, lastOrder: r.last_order,
-        notizen: r.notizen, minimum: r.minimum, maximum: r.maximum
+        notizen: r.notizen, minimum: r.minimum, maximum: r.maximum,
+        allergen: r.allergen
       }))
     };
   },
@@ -2562,7 +2564,8 @@ const _sbActions = {
       kosten_unit: p.kostenUnit  !== "" ? parseFloat(p.kostenUnit)  || null : null,
       lieferant:   p.lieferant   || null,
       last_order:  p.lastOrder   || null,
-      notizen:     p.notizen     || null
+      notizen:     p.notizen     || null,
+      allergen:    p.allergen    || null
     };
     await sbPost("inventory", body, true);
     return { status: "ok" };
@@ -5492,6 +5495,7 @@ function openEditInventoryModal(code) {
   document.getElementById("eif-lieferant").value = r.lieferant || "";
   document.getElementById("eif-lastorder").value = r.lastOrder || "";
   document.getElementById("eif-notizen").value = r.notizen || "";
+  _renderEifAllergenChips(r.allergen || '');
   document.getElementById("editInventoryTitle").textContent = "Edit - " + (r.name || code);
   document.getElementById("eif-msg").textContent = "";
   const kcP = document.getElementById("eif-kc-pieces"); if (kcP) kcP.value = "";
@@ -5535,6 +5539,31 @@ function calcEifPer100g() {
   } else {
     el.textContent = "—";
   }
+}
+function _renderEifAllergenChips(val) {
+  const active = new Set((val||'').split(',').map(s=>s.trim()).filter(Boolean));
+  const el = document.getElementById('eif-allergen-chips');
+  if (!el) return;
+  el.innerHTML = EU_ALLERGENS.map(a => {
+    const on = active.has(a);
+    return `<button type="button" data-allergen="${a}" data-on="${on?'1':'0'}" onclick="_toggleEifAllergen(this)"
+      style="padding:3px 10px;border-radius:20px;font-size:11px;cursor:pointer;font-weight:600;transition:all .15s;
+      ${on?'background:rgba(239,68,68,0.12);border:1px solid var(--red);color:var(--red)':'background:var(--surface3);border:1px solid var(--border2);color:var(--muted)'}">${a}</button>`;
+  }).join('');
+}
+function _toggleEifAllergen(btn) {
+  const on = btn.dataset.on === '1';
+  btn.dataset.on = on ? '0' : '1';
+  if (on) {
+    btn.style.background = 'var(--surface3)'; btn.style.borderColor = 'var(--border2)'; btn.style.color = 'var(--muted)';
+  } else {
+    btn.style.background = 'rgba(239,68,68,0.12)'; btn.style.borderColor = 'var(--red)'; btn.style.color = 'var(--red)';
+  }
+}
+function _getEifAllergenValue() {
+  const el = document.getElementById('eif-allergen-chips');
+  if (!el) return '';
+  return [...el.querySelectorAll('button[data-on="1"]')].map(b => b.dataset.allergen).join(',');
 }
 function closeEditInventoryModal() {
   document.getElementById("editInventoryModal").classList.remove("active");
@@ -5585,7 +5614,8 @@ async function saveEditedInventory() {
       kostenUnit: document.getElementById("eif-kosten").value,
       lieferant: document.getElementById("eif-lieferant").value.trim(),
       lastOrder: document.getElementById("eif-lastorder").value,
-      notizen: document.getElementById("eif-notizen").value.trim()
+      notizen: document.getElementById("eif-notizen").value.trim(),
+      allergen: _getEifAllergenValue()
     });
     if (data.error) throw new Error(data.error);
     adminMsg("eif-msg", "Saved OK", "ok");
@@ -7999,6 +8029,36 @@ function _calcMepWA(code) {
   return { waPerGN, gnWeightKg };
 }
 
+// Returns array of allergen label strings for all RM-type zutaten in a recipe/menu
+function _calcAllergens(zutatenStr) {
+  try {
+    const zs = JSON.parse(typeof zutatenStr === 'string' ? (zutatenStr||'[]') : '[]');
+    const seen = new Set();
+    for (const z of zs) {
+      const t = (z.type||'rm').toLowerCase();
+      let val = '';
+      if (t === 'rm') {
+        const inv = (allInventory||[]).find(i => i.code === (z.code||''));
+        val = inv?.allergen || z.allergie || '';
+      } else {
+        val = z.allergie || '';
+      }
+      (val||'').split(',').forEach(a => { const tr = a.trim(); if (tr) seen.add(tr); });
+    }
+    return [...seen];
+  } catch(e) { return []; }
+}
+// Returns allergen array for a MEP product from allRecipes
+function _calcMepAllergens(code) {
+  const rms = (allRecipes||[]).filter(r => r.mepCode === code);
+  const seen = new Set();
+  rms.forEach(r => {
+    const inv = (allInventory||[]).find(x => x.code === r.rmCode);
+    (inv?.allergen||'').split(',').forEach(a => { const tr = a.trim(); if (tr) seen.add(tr); });
+  });
+  return [...seen];
+}
+
 function _refreshGrList() {
   const q = (document.getElementById('gr-filter-search')?.value || '').trim();
   if (q) filterGrDisplay(); else showAllGRs();
@@ -8078,17 +8138,22 @@ function renderMenuList() {
       ? ((liveWa/parseFloat(m.vk))*100).toFixed(1)+'%' : '';
     const fcColor = (fc && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
     const artCode = (m.art || 'M').substring(0,2).toUpperCase();
+    const allergens = _calcAllergens(m.zutaten);
+    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
     return `<div data-menu-id="${m.id}" class="menu-card-item"
-      style="padding:8px 12px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;gap:8px;margin-bottom:5px"
+      style="padding:8px 12px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;flex-direction:column;gap:4px;margin-bottom:5px"
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">${artCode}</span>
-      <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
-      <span style="font-size:11px;color:var(--muted)">${m.menuCode||''}</span>
-      ${m.category ? `<span style="font-size:11px;color:var(--muted)">${m.category}</span>` : ''}
-      ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber)">CHF ${liveWa.toFixed(2)}</span>` : ''}
-      ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
-      <button type="button" class="btn-copy menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
-      <button type="button" class="btn-edit menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">${artCode}</span>
+        <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
+        <span style="font-size:11px;color:var(--muted)">${m.menuCode||''}</span>
+        ${m.category ? `<span style="font-size:11px;color:var(--muted)">${m.category}</span>` : ''}
+        ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber)">CHF ${liveWa.toFixed(2)}</span>` : ''}
+        ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
+        <button type="button" class="btn-copy menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
+        <button type="button" class="btn-edit menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
+      </div>
+      ${allergenBadge ? `<div>${allergenBadge}</div>` : ''}
     </div>`;
   }).join("");
   el.querySelectorAll('.menu-card-item').forEach(card => {
@@ -8148,6 +8213,8 @@ function renderMenuListByCat(cat) {
     const artColor = { Hauptgang:"var(--amber)", MEP:"var(--blue)", Grundrezeptur:"var(--green)", Vorspeise:"var(--blue)", Dessert:"var(--red)", Snack:"var(--muted)", Beilage:"var(--muted)", Sauce:"var(--green)" };
     const artBg    = { Hauptgang:"var(--amber-dim)", MEP:"var(--blue-dim)", Grundrezeptur:"var(--green-dim)", Vorspeise:"var(--blue-dim)", Dessert:"var(--red-dim)", Snack:"var(--gray-dim)", Beilage:"var(--gray-dim)", Sauce:"var(--green-dim)" };
     const art = m.art || "Menu";
+    const allergens = _calcAllergens(m.zutaten);
+    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
     return `<div class="recipe-item-row" style="flex-direction:column;align-items:flex-start;gap:4px">
       <div style="display:flex;align-items:center;gap:8px;width:100%">
         <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
@@ -8157,6 +8224,7 @@ function renderMenuListByCat(cat) {
         <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0">✏️</button>
       </div>
       <span class="recipe-item-name menu-row-name" data-menu-id="${m.id}" style="font-size:15px;font-weight:600;padding:0 2px;cursor:pointer">${m.name||"—"}</span>
+      ${allergenBadge}
     </div>`;
   }).join("");
   el.querySelectorAll('.menu-row-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMenu(btn.dataset.menuId)));
@@ -8202,20 +8270,25 @@ function filterGrDisplay() {
     const safeCode = g.code.replace(/"/g,'&quot;');
     const safeName = g.name.replace(/"/g,'&quot;');
     const liveWa = (_calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0)).toFixed(2);
+    const allergens = _calcAllergens(g.zutaten);
+    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
     const editHandler = g.source === 'menu'
       ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${safeCode}"`
       : `class="btn-edit gr-edit-btn" data-code="${safeCode}"`;
     const delHandler = g.source === 'menu'
       ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${safeName}"`
       : `class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}"`;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
-      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
-      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
-      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
-      <button type="button" class="btn-copy gr-copy-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
-      <button type="button" ${editHandler} style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" ${delHandler} style="font-size:11px;padding:3px 8px">🗑</button>
+    return `<div style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
+        <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
+        <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
+        <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
+        <button type="button" class="btn-copy gr-copy-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
+        <button type="button" ${editHandler} style="font-size:11px;padding:3px 8px">✏️</button>
+        <button type="button" ${delHandler} style="font-size:11px;padding:3px 8px">🗑</button>
+      </div>
+      ${allergenBadge ? `<div style="padding-left:4px">${allergenBadge}</div>` : ''}
     </div>`;
   }).join("");
 
@@ -8298,20 +8371,25 @@ function showAllGRs() {
   el.innerHTML = combined.map(g => {
     const sc = g.code.replace(/"/g,'&quot;'), sn = g.name.replace(/"/g,'&quot;');
     const liveWa = (_calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0)).toFixed(2);
+    const allergens = _calcAllergens(g.zutaten);
+    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
     const editH = g.source==='menu'
       ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${sc}"`
       : `class="btn-edit gr-edit-btn" data-code="${sc}"`;
     const delH = g.source==='menu'
       ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${sn}"`
       : `class="btn-del gr-del-btn" data-code="${sc}" data-name="${sn}"`;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
-      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
-      <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
-      <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
-      <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
-      <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
+    return `<div style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
+        <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
+        <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
+        <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
+        <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
+        <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
+        <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
+      </div>
+      ${allergenBadge ? `<div style="padding-left:4px">${allergenBadge}</div>` : ''}
     </div>`;
   }).join('');
   el.querySelectorAll('.gr-copy-btn').forEach(btn => btn.addEventListener('click', () => copyGR(btn.dataset.code)));
@@ -8338,15 +8416,20 @@ function showAllMEPs() {
           ? `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${(wa.waPerGN/wa.gnWeightKg/10).toFixed(2)}/100g</span>`
           : `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${wa.waPerGN.toFixed(2)}/GN</span>`)
       : '';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
-      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
-      <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
-      ${costStr}
-      <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
-      <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+    const allergens = _calcMepAllergens(code);
+    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
+    return `<div style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
+        <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
+        <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
+        <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+        ${costStr}
+        <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
+        <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
+        <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+      </div>
+      ${allergenBadge ? `<div style="padding-left:4px">${allergenBadge}</div>` : ''}
     </div>`;
   }).join('');
   el.querySelectorAll('.mep-prod-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMEP(btn.dataset.code)));
@@ -8763,6 +8846,12 @@ function selectIngredientItem(code, name, unit, unitCost) {
   const gEl = document.getElementById('ip-garverlust');
   if (gEl) gEl.value = '';
   document.getElementById('ip-cost-display').textContent = '—';
+  // Auto-populate allergen from inventory when RM selected
+  if (ipMode === 'rm' || ipMode === 'RM') {
+    const _invA = (allInventory||[]).find(x => x.code === code);
+    const allerEl = document.getElementById('ip-allergie');
+    if (allerEl) allerEl.value = _invA?.allergen || '';
+  }
   if (prevWeight) calcIpCost();
   else document.getElementById('ip-gewicht').focus();
 }
@@ -9964,6 +10053,10 @@ async function haccpExportPDF() {
       <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="eif-lieferant"></div>
       <div class="form-field"><label class="form-label">Last Order</label><input class="form-input" type="date" id="eif-lastorder"></div>
       <div class="form-field"><label class="form-label">Notes</label><textarea class="form-input" id="eif-notizen" rows="2"></textarea></div>
+      <div class="form-field" style="grid-column:1/-1">
+        <label class="form-label">⚠️ Allergene (EU 14)</label>
+        <div id="eif-allergen-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px"></div>
+      </div>
     </div>
     <div class="admin-msg" id="eif-msg"></div>
     <div class="form-actions">
