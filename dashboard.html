@@ -2194,7 +2194,8 @@ function toDirectImg(url) {
   if (!url) return "";
   const m = url.match(/\/d\/([\w-]+)/);
   if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
-  return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return "";
 }
   
 // ─────────────────────────────────────────────
@@ -8316,6 +8317,7 @@ function openMenuPopup(menuId) {
 
   setDisp('mp-img-preview', 'none');
   setDisp('mp-drive-url',   'none');
+  _menuImgFile = null;
 
   const logo = document.getElementById('mp-logo-preview');
   if (logo) logo.innerHTML = '🍽️';
@@ -8538,14 +8540,32 @@ function previewMenuLogo(input) {
   reader.readAsDataURL(file);
 }
 
+let _menuImgFile = null;
+
 function previewMenuImg(input) {
   const file = input.files[0]; if (!file) return;
+  _menuImgFile = file;
   const reader = new FileReader();
   reader.onload = e => {
     document.getElementById('mp-img-el').src = e.target.result;
     document.getElementById('mp-img-preview').style.display = 'block';
   };
   reader.readAsDataURL(file);
+}
+
+async function _uploadMenuImage(file) {
+  const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `menu-${Date.now()}.${ext}`;
+  const res  = await fetch(`${SB_URL}/storage/v1/object/menu-images/${path}`, {
+    method : 'POST',
+    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'x-upsert': 'true', 'Content-Type': file.type || 'image/jpeg' },
+    body   : file
+  });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.status);
+    throw new Error('Bild-Upload fehlgeschlagen: ' + msg);
+  }
+  return `${SB_URL}/storage/v1/object/public/menu-images/${path}`;
 }
 
 function loadDriveImg(url) {
@@ -8559,6 +8579,7 @@ function removeMenuImage() {
   document.getElementById('mp-img-preview').style.display = 'none';
   document.getElementById('mp-drive-url').value = '';
   document.getElementById('mp-img-file').value = '';
+  _menuImgFile = null;
 }
 // ─────────────────────────────────────────────
 // INGREDIENT PICKER
@@ -8889,7 +8910,19 @@ async function saveMenuEntry() {
   const btn = document.getElementById('mp-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
 
-  const imageUrl = document.getElementById('mp-img-el')?.src || '';
+  let imageUrl = document.getElementById('mp-img-el')?.src || '';
+  // Upload local file to Supabase Storage; GAS GET URL cannot carry base64
+  if (imageUrl.startsWith('data:') && _menuImgFile) {
+    adminMsg('mp-msg', '📤 Bild wird hochgeladen…', '');
+    try {
+      imageUrl = await _uploadMenuImage(_menuImgFile);
+      _menuImgFile = null;
+    } catch(e) {
+      adminMsg('mp-msg', e.message + ' — Supabase Storage bucket "menu-images" muss existieren.', 'err');
+      btn.disabled = false; btn.textContent = '💾 Speichern';
+      return;
+    }
+  }
   const logoUrl  = '';
 
   // Migrate to GR sheet when art is Grundrezeptur

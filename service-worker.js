@@ -1,8 +1,8 @@
-// Kitchen MEP — Service Worker v65
+// Kitchen MEP — Service Worker v66
 // Strategy: cache-first for static assets, network-first for API calls
 
-const CACHE_STATIC = "mep-static-v65";
-const CACHE_API    = "mep-api-v65";
+const CACHE_STATIC = "mep-static-v66";
+const CACHE_API    = "mep-api-v66";
 
 const PRECACHE = [
   "/Kitchen-System/index.html",
