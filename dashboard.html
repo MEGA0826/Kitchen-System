@@ -8052,6 +8052,12 @@ function _calcAllergens(zutatenStr) {
       if (t === 'rm') {
         const inv = (allInventory||[]).find(i => i.code === (z.code||''));
         val = inv?.allergen || z.allergie || '';
+      } else if (t === 'menu') {
+        // Recurse into menu's own zutaten for allergens
+        const m = (allMenus||[]).find(x => (x.menuCode||x.id) === (z.code||''));
+        const nested = m ? _calcAllergens(m.zutaten) : [];
+        nested.forEach(a => seen.add(a));
+        val = z.allergie || '';
       } else {
         val = z.allergie || '';
       }
@@ -8536,8 +8542,8 @@ function renderMenuZutaten(targetList, targetData) {
   const el         = document.getElementById(listId);
   if (!el) return;
   const isGrTarget = listId === 'gr-zutaten-list';
-  const typeColors = { mep:'var(--amber)', rm:'var(--blue)', gr:'var(--green)' };
-  const typeBg     = { mep:'var(--amber-dim)', rm:'var(--blue-dim)', gr:'var(--green-dim)' };
+  const typeColors = { mep:'var(--amber)', rm:'var(--blue)', gr:'var(--green)', menu:'#a855f7' };
+  const typeBg     = { mep:'var(--amber-dim)', rm:'var(--blue-dim)', gr:'var(--green-dim)', menu:'rgba(168,85,247,.15)' };
   if (!data.length) {
     const _t = (typeof t === 'function') ? t : (k => k);
     el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">${_t('no-ingredients')}</div>`;
@@ -8756,9 +8762,15 @@ function removeMenuImage() {
 // INGREDIENT PICKER
 // ─────────────────────────────────────────────
 function _ipTypeBtns(active) {
-  return [['rm','RM'],['mep','MEP'],['gr','GR']].map(([id,label]) => {
+  const types = [
+    {id:'rm',   label:'RM',   c:'var(--blue)',  bg:'var(--blue-dim)',       brd:'var(--blue-brd)'},
+    {id:'mep',  label:'MEP',  c:'var(--amber)', bg:'var(--amber-dim)',      brd:'var(--amber-brd)'},
+    {id:'gr',   label:'GR',   c:'var(--green)', bg:'var(--green-dim)',      brd:'var(--green-brd)'},
+    {id:'menu', label:'Menu', c:'#a855f7',      bg:'rgba(168,85,247,.15)',  brd:'rgba(168,85,247,.4)'},
+  ];
+  return types.map(({id, label, c, bg, brd}) => {
     const on = id === (active||'').toLowerCase();
-    return `<button type="button" onclick="setIpMode('${id}')" style="padding:3px 10px;border-radius:6px;border:1px solid;font-size:11px;cursor:pointer;font-family:var(--mono);background:${on?'var(--amber-dim)':'var(--surface)'};color:${on?'var(--amber)':'var(--muted)'};border-color:${on?'var(--amber-brd)':'var(--border2)'}">${label}</button>`;
+    return `<button type="button" onclick="setIpMode('${id}')" style="padding:3px 10px;border-radius:6px;border:1px solid ${on?brd:'var(--border2)'};font-size:11px;cursor:pointer;font-family:var(--mono);background:${on?bg:'var(--surface)'};color:${on?c:'var(--muted)'}">${label}</button>`;
   }).join('');
 }
 function setIpMode(mode) {
@@ -8814,6 +8826,13 @@ function filterIngredientPicker() {
         })
     : ipMode === 'gr'
     ? (allGRs || []).map(g => ({ code: g.grCode||g.id, name: g.name||g.grCode, unitCost: parseFloat(g.wa)||0 }))
+    : ipMode === 'menu'
+    ? (allMenus || [])
+        .filter(m => (m.art||'') !== 'Grundrezeptur')
+        .map(m => {
+          const wa = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
+          return { code: m.menuCode||m.id||'', name: m.name||'', _art: m.art||'', unitCost: wa || 0 };
+        })
     : allInventory.filter(r => r.code)
         .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit||'kg', unitCost: parseFloat(r.kostenUnit||r.kosten||0)||0 }));
   const filtered = q ? items.filter(i => (i.name||'').toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q)) : items;
@@ -8827,6 +8846,7 @@ function filterIngredientPicker() {
       style="padding:8px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);border:1px solid transparent"
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-weight:500">${i.name}</span>
+      ${i._art ? `<span style="font-size:10px;color:#a855f7;background:rgba(168,85,247,.12);border-radius:4px;padding:1px 5px;margin-left:5px">${i._art}</span>` : ''}
       <span style="font-size:10px;color:var(--muted);margin-left:6px">${i.code}</span>
       ${i.unitCost ? `<span style="font-size:10px;color:var(--amber);margin-left:4px">CHF ${parseFloat(i.unitCost).toFixed(2)}${ipMode==='rm'||ipMode==='RM' ? '/'+( i.unit||'unit') : ipMode==='mep'||ipMode==='MEP' ? '/GN' : ''}</span>` : ''}
     </div>`;
@@ -8906,6 +8926,8 @@ function calcIpCost() {
  } else if (ipSelectedItem.unitCost > 0) {
     if (ipMode === 'mep' || ipMode === 'MEP') {
       costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /GN (enter qty)`;
+    } else if (ipMode === 'menu') {
+      costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} WA (enter portions, 1=full)`;
     } else {
       costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /kg`;
     }
