@@ -2282,7 +2282,7 @@ function switchTab(btn) {
     const grR = document.getElementById('gr-search-results');  if (grR) grR.innerHTML = '';
     const mepR = document.getElementById('mep-search-results'); if (mepR) mepR.innerHTML = '';
     loadRequirements(); renderMenuList(); populateMenuFilters();
-    if (!allRecipes.length) get({ action:"getRecipes" }).then(d => { if (Array.isArray(d.recipes)) { allRecipes = d.recipes; _refreshMepList(); } }).catch(() => {});
+    if (!allRecipes.length) get({ action:"getRecipes" }).then(d => { if (Array.isArray(d.recipes)) allRecipes = d.recipes; }).catch(() => {});
   }
   if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
   if (tabId === "deductions")   loadDeductions();
