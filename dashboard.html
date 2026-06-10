@@ -926,7 +926,9 @@
         <label class="form-label" style="margin-bottom:6px;display:block">📸 Menu Bild</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input type="file" id="mp-img-file" accept="image/*" style="display:none" onchange="previewMenuImg(this)">
+          <input type="file" id="mp-img-file-cam" accept="image/*" capture="environment" style="display:none" onchange="previewMenuImg(this)">
           <button onclick="document.getElementById('mp-img-file').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">💻 Computer</button>
+          <button onclick="document.getElementById('mp-img-file-cam').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">📷 Kamera</button>
           <button onclick="document.getElementById('mp-drive-url').style.display=document.getElementById('mp-drive-url').style.display==='none'?'block':'none'" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">☁️ Drive URL</button>
         </div>
         <input id="mp-drive-url" class="form-input" placeholder="Bild-URL einfügen…" style="margin-top:8px;display:none" oninput="loadDriveImg(this.value)">
@@ -1157,6 +1159,20 @@
       <div class="form-field">
         <label class="form-label">📋 Zubereitung</label>
         <textarea class="form-input" id="agr-zubereitung" rows="3" style="resize:vertical" placeholder="Zubereitungsschritte…"></textarea>
+      </div>
+
+      <div>
+        <label class="form-label">📸 Bild</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+          <input type="file" id="agr-img-file" accept="image/*" style="display:none" onchange="previewAgrImg(this)">
+          <input type="file" id="agr-img-file-cam" accept="image/*" capture="environment" style="display:none" onchange="previewAgrImg(this)">
+          <button type="button" onclick="document.getElementById('agr-img-file').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">💻 Computer</button>
+          <button type="button" onclick="document.getElementById('agr-img-file-cam').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">📷 Kamera</button>
+        </div>
+        <div id="agr-img-preview" style="margin-top:8px;display:none;position:relative">
+          <img id="agr-img-el" src="" style="max-width:100%;max-height:160px;border-radius:10px;object-fit:cover">
+          <button type="button" onclick="removeAgrImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;line-height:1">✕</button>
+        </div>
       </div>
 
       <div style="display:flex;gap:10px;justify-content:flex-end">
@@ -2559,7 +2575,8 @@ const _sbActions = {
         weightUnit: r.weight_unit, kostenUnit: r.kosten_unit,
         lieferant: r.lieferant, lastOrder: r.last_order,
         notizen: r.notizen, minimum: r.minimum, maximum: r.maximum,
-        allergen: r.allergen
+        allergen: r.allergen,
+        image: r.image
       }))
     };
   },
@@ -2577,7 +2594,8 @@ const _sbActions = {
       lieferant:   p.lieferant   || null,
       last_order:  p.lastOrder   || null,
       notizen:     p.notizen     || null,
-      allergen:    p.allergen    || null
+      allergen:    p.allergen    || null,
+      image:       p.image       || null
     };
     await sbPost("inventory", body, true);
     return { status: "ok" };
@@ -4964,7 +4982,14 @@ async function openEditProductModal(code) {
   setVal("epf-gnweight",  p.gnWeight  != null ? p.gnWeight  : "");
   setVal("epf-tagesziel", p.tagesziel != null ? p.tagesziel : "");
   setVal("epf-shelf",     p.shelfLife != null ? p.shelfLife : "");
-  setVal("epf-drive",     p.image || p.driveLink || p.photoLink || "");
+  const _epfImgUrl = p.image || p.driveLink || p.photoLink || "";
+  setVal("epf-drive", _epfImgUrl);
+  _epfImgFile = null;
+  const _epfImgElLoad = document.getElementById('epf-img-el');
+  const _epfImgPrevLoad = document.getElementById('epf-img-preview');
+  if (_epfImgElLoad) _epfImgElLoad.src = _epfImgUrl;
+  if (_epfImgPrevLoad) _epfImgPrevLoad.style.display = _epfImgUrl ? 'block' : 'none';
+  ['epf-img-file','epf-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
 
   setTxt("editProductTitle", "Edit — " + (p.name || code));
 
@@ -5414,6 +5439,13 @@ async function saveEditedProduct() {
   const btn = document.querySelector("#editProductModal .btn-save");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
+    let _epfSaveImg = document.getElementById('epf-img-el')?.src || '';
+    if (_epfSaveImg.startsWith('data:') && _epfImgFile) {
+      adminMsg('epf-msg', '📤 Bild wird hochgeladen…', '');
+      try { _epfSaveImg = await _uploadItemImage(_epfImgFile, 'mep'); _epfImgFile = null; }
+      catch(e) { adminMsg('epf-msg', e.message, 'err'); if (btn) { btn.disabled = false; btn.textContent = 'Save'; } return; }
+    }
+    if (!_epfSaveImg.startsWith('http')) _epfSaveImg = v("epf-drive");
     const mepMax    = v("epf-mepmax");
     const gnWeight  = v("epf-gnweight");
     const tagesziel = v("epf-tagesziel");
@@ -5427,7 +5459,7 @@ async function saveEditedProduct() {
       gnWeight  : gnWeight  === "" ? "" : Number(gnWeight),
       tagesziel : tagesziel === "" ? "" : Number(tagesziel),
       shelfLife : shelf     === "" ? "" : Number(shelf),
-      driveLink : v("epf-drive"),
+      driveLink : _epfSaveImg,
     };
     const data = await adminCall(payload);
     if (!data) throw new Error("No response from server");
@@ -5508,6 +5540,12 @@ function openEditInventoryModal(code) {
   document.getElementById("eif-lastorder").value = r.lastOrder || "";
   document.getElementById("eif-notizen").value = r.notizen || "";
   _renderEifAllergenChips(r.allergen || '');
+  _eifImgFile = null;
+  const _eifImgEl = document.getElementById('eif-img-el');
+  const _eifImgPrev = document.getElementById('eif-img-preview');
+  if (_eifImgEl) _eifImgEl.src = r.image || '';
+  if (_eifImgPrev) _eifImgPrev.style.display = r.image ? 'block' : 'none';
+  ['eif-img-file','eif-img-file-cam'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById("editInventoryTitle").textContent = "Edit - " + (r.name || code);
   document.getElementById("eif-msg").textContent = "";
   const kcP = document.getElementById("eif-kc-pieces"); if (kcP) kcP.value = "";
@@ -5551,6 +5589,23 @@ function calcEifPer100g() {
   } else {
     el.textContent = "—";
   }
+}
+let _eifImgFile = null;
+function previewEifImg(input) {
+  const file = input.files[0]; if (!file) return;
+  _eifImgFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('eif-img-el').src = e.target.result;
+    document.getElementById('eif-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function removeEifImage() {
+  const el = document.getElementById('eif-img-el'); if (el) el.src = '';
+  document.getElementById('eif-img-preview').style.display = 'none';
+  ['eif-img-file','eif-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
+  _eifImgFile = null;
 }
 function _renderEifAllergenChips(val) {
   const active = new Set((val||'').split(',').map(s=>s.trim()).filter(Boolean));
@@ -5613,6 +5668,13 @@ async function saveEditedInventory() {
   btn.disabled = true;
   btn.textContent = "Saving…";
   try {
+    let _eifSaveImg = document.getElementById('eif-img-el')?.src || '';
+    if (_eifSaveImg.startsWith('data:') && _eifImgFile) {
+      adminMsg('eif-msg', '📤 Bild wird hochgeladen…', '');
+      try { _eifSaveImg = await _uploadItemImage(_eifImgFile, 'rm'); _eifImgFile = null; }
+      catch(e) { adminMsg('eif-msg', e.message, 'err'); btn.disabled = false; btn.textContent = 'Save'; return; }
+    }
+    if (!_eifSaveImg.startsWith('http')) _eifSaveImg = '';
     const data = await adminCall({
       action: "saveInventory",
       code,
@@ -5627,7 +5689,8 @@ async function saveEditedInventory() {
       lieferant: document.getElementById("eif-lieferant").value.trim(),
       lastOrder: document.getElementById("eif-lastorder").value,
       notizen: document.getElementById("eif-notizen").value.trim(),
-      allergen: _getEifAllergenValue()
+      allergen: _getEifAllergenValue(),
+      image: _eifSaveImg || undefined
     });
     if (data.error) throw new Error(data.error);
     adminMsg("eif-msg", "Saved OK", "ok");
@@ -7596,6 +7659,10 @@ async function loadRequirements() {
     const data = await get({ action: "getGRs" });
     if (data.error) throw new Error(data.error);
     allGRs = Array.isArray(data.grs) ? data.grs : [];
+    try {
+      const grImgs = JSON.parse(localStorage.getItem('grImages')||'{}');
+      allGRs.forEach(g => { const key = g.grCode||g.id||''; if (grImgs[key]) g.image = grImgs[key]; });
+    } catch(e) {}
   } catch(e) { console.error("loadGRs:", e); allGRs = []; }
 }
 
@@ -7608,6 +7675,10 @@ function openAddMEPPopup() {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
+  _mepImgFile = null;
+  const mepImgEl = document.getElementById('mep-img-el'); if (mepImgEl) mepImgEl.src = '';
+  const mepImgPrev = document.getElementById('mep-img-preview'); if (mepImgPrev) mepImgPrev.style.display = 'none';
+  ['mep-img-file','mep-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
   mepAddZutaten = [];
   renderMepAddZutaten();
   const msg = document.getElementById("mep-msg");
@@ -7676,6 +7747,13 @@ async function saveMEPFromPopup() {
   const btn = popup?.querySelector("button[onclick='saveMEPFromPopup()']");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
+    let _mepSaveImg = document.getElementById('mep-img-el')?.src || '';
+    if (_mepSaveImg.startsWith('data:') && _mepImgFile) {
+      adminMsg('mep-msg', '📤 Bild wird hochgeladen…', '');
+      try { _mepSaveImg = await _uploadItemImage(_mepImgFile, 'mep'); _mepImgFile = null; }
+      catch(e) { adminMsg('mep-msg', e.message, 'err'); if (btn) { btn.disabled = false; btn.textContent = '💾 Save MEP'; } return; }
+    }
+    if (!_mepSaveImg.startsWith('http')) _mepSaveImg = (gp("mep-drive")?.value || "").trim();
     const mepMax    = (gp("mep-mepmax")?.value    || "").trim();
     const gnWeight  = (gp("mep-gnweight")?.value   || "").trim();
     const tagesziel = (gp("mep-tagesziel")?.value  || "").trim();
@@ -7689,7 +7767,7 @@ async function saveMEPFromPopup() {
       gnWeight   : gnWeight  === "" ? "" : Number(gnWeight),
       tagesziel  : tagesziel === "" ? "" : Number(tagesziel),
       shelfLife  : shelf     === "" ? "" : Number(shelf),
-      driveLink  : (gp("mep-drive")?.value || "").trim(),
+      driveLink  : _mepSaveImg,
     };
     const data = await adminCall(payload);
     if (data.error) throw new Error(data.error);
@@ -7715,6 +7793,75 @@ async function saveMEPFromPopup() {
     // Re-enable gp reference cleanup
   }
 }
+// ── MEP popup image helpers ───────────────────────────────────────────────────
+let _mepImgFile = null;
+function previewMepImg(input) {
+  const file = input.files[0]; if (!file) return;
+  _mepImgFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('mep-img-el').src = e.target.result;
+    document.getElementById('mep-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function removeMepImage() {
+  const el = document.getElementById('mep-img-el'); if (el) el.src = '';
+  document.getElementById('mep-img-preview').style.display = 'none';
+  ['mep-img-file','mep-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
+  const drv = document.getElementById('mep-drive'); if (drv) drv.value = '';
+  _mepImgFile = null;
+}
+function loadMepDriveImg(url) {
+  if (!url) return;
+  document.getElementById('mep-img-el').src = url;
+  document.getElementById('mep-img-preview').style.display = 'block';
+}
+
+// ── editProductModal image helpers ────────────────────────────────────────────
+let _epfImgFile = null;
+function previewEpfImg(input) {
+  const file = input.files[0]; if (!file) return;
+  _epfImgFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('epf-img-el').src = e.target.result;
+    document.getElementById('epf-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function removeEpfImage() {
+  const el = document.getElementById('epf-img-el'); if (el) el.src = '';
+  document.getElementById('epf-img-preview').style.display = 'none';
+  ['epf-img-file','epf-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
+  const drv = document.getElementById('epf-drive'); if (drv) drv.value = '';
+  _epfImgFile = null;
+}
+function loadEpfDriveImg(url) {
+  if (!url) return;
+  document.getElementById('epf-img-el').src = url;
+  document.getElementById('epf-img-preview').style.display = 'block';
+}
+
+// ── GR popup image helpers ────────────────────────────────────────────────────
+let _agrImgFile = null;
+function previewAgrImg(input) {
+  const file = input.files[0]; if (!file) return;
+  _agrImgFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('agr-img-el').src = e.target.result;
+    document.getElementById('agr-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function removeAgrImage() {
+  const el = document.getElementById('agr-img-el'); if (el) el.src = '';
+  document.getElementById('agr-img-preview').style.display = 'none';
+  ['agr-img-file','agr-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
+  _agrImgFile = null;
+}
+
 // Wrappers for the 4 recipe add buttons
 function guardedAddMenu()   { openMenuPopup(null); }
 function guardedAddGR()     { openAddGRPopup(); }
@@ -7739,6 +7886,10 @@ function openAddGRPopup(art) {
   document.getElementById('agr-eff').textContent = '—';
   document.getElementById('agr-wa').value = '';
   document.getElementById('agr-msg').textContent = '';
+  _agrImgFile = null;
+  const agrImgEl = document.getElementById('agr-img-el'); if (agrImgEl) agrImgEl.src = '';
+  const agrImgPrev = document.getElementById('agr-img-preview'); if (agrImgPrev) agrImgPrev.style.display = 'none';
+  ['agr-img-file','agr-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
   renderAgrZutaten();
   document.getElementById('addGRPopup').style.display = 'flex';
 }
@@ -7780,6 +7931,11 @@ function copyMEP(code) {
   setV('mep-tagesziel', p.tagesziel || '');
   setV('mep-shelf',     p.shelfLife || '');
   setV('mep-drive',     p.image     || '');
+  _mepImgFile = null;
+  const _mepCopyImgEl = document.getElementById('mep-img-el');
+  const _mepCopyImgPrev = document.getElementById('mep-img-preview');
+  if (_mepCopyImgEl) _mepCopyImgEl.src = p.image || '';
+  if (_mepCopyImgPrev) _mepCopyImgPrev.style.display = p.image ? 'block' : 'none';
 }
 
 function copyMenu(menuId) {
@@ -7952,6 +8108,13 @@ async function saveGREntry() {
   const verl  = parseFloat(document.getElementById('agr-garverlust').value) || 0;
   const wa    = parseFloat(document.getElementById('agr-wa').value) || 0;
   try {
+    let _agrSaveImg = document.getElementById('agr-img-el')?.src || '';
+    if (_agrSaveImg.startsWith('data:') && _agrImgFile) {
+      adminMsg('agr-msg', '📤 Bild wird hochgeladen…', '');
+      try { _agrSaveImg = await _uploadItemImage(_agrImgFile, 'gr'); _agrImgFile = null; }
+      catch(e) { adminMsg('agr-msg', e.message, 'err'); btn.disabled = false; btn.textContent = '💾 Speichern'; return; }
+    }
+    if (!_agrSaveImg.startsWith('http')) _agrSaveImg = '';
     // GAS saveGR always creates a new row — delete existing entry first when editing
     if (editingGRCode) {
       const del = await get({ action: 'deleteGR', grCode: editingGRCode });
@@ -7969,6 +8132,13 @@ async function saveGREntry() {
       zubereitung  : document.getElementById('agr-zubereitung').value.trim()
     });
     if (data.error) throw new Error(data.error);
+    if (_agrSaveImg) {
+      try {
+        const grImgs = JSON.parse(localStorage.getItem('grImages')||'{}');
+        grImgs[code] = _agrSaveImg;
+        localStorage.setItem('grImages', JSON.stringify(grImgs));
+      } catch(e) {}
+    }
     adminMsg('agr-msg','✓ GR gespeichert','ok');
     await loadGRs();
     setTimeout(closeAddGRPopup, 900);
@@ -7992,6 +8162,11 @@ function openEditGRPopup(grCode) {
   document.getElementById('agr-zubereitung').value = g.zubereitung || '';
   document.getElementById('agr-wa').value          = g.wa || '';
   document.getElementById('agr-msg').textContent   = '';
+  _agrImgFile = null;
+  const _agrImgUrl = g.image || '';
+  const agrImgEl = document.getElementById('agr-img-el'); if (agrImgEl) agrImgEl.src = _agrImgUrl;
+  const agrImgPrev = document.getElementById('agr-img-preview'); if (agrImgPrev) agrImgPrev.style.display = _agrImgUrl ? 'block' : 'none';
+  ['agr-img-file','agr-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
   calcAgrNetto();
   renderAgrZutaten();
   document.getElementById('addGRPopup').style.display = 'flex';
@@ -8728,6 +8903,21 @@ function previewMenuImg(input) {
     document.getElementById('mp-img-preview').style.display = 'block';
   };
   reader.readAsDataURL(file);
+}
+
+async function _uploadItemImage(file, prefix) {
+  const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${prefix}-${Date.now()}.${ext}`;
+  const res  = await fetch(`${SB_URL}/storage/v1/object/menu-images/${path}`, {
+    method : 'POST',
+    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'apikey': SB_KEY, 'x-upsert': 'true', 'Content-Type': file.type || 'image/jpeg' },
+    body   : file
+  });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.status);
+    throw new Error('Bild-Upload fehlgeschlagen: ' + msg);
+  }
+  return `${SB_URL}/storage/v1/object/public/menu-images/${path}`;
 }
 
 async function _uploadMenuImage(file) {
@@ -9962,7 +10152,20 @@ async function haccpExportPDF() {
       <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="epf-gnweight" placeholder="4" min="0" step="0.1" oninput="calcEpfMaxGN()"></div>
       <div class="form-field"><label class="form-label">Daily Target (GN)</label><input class="form-input" type="number" id="epf-tagesziel" placeholder="3" min="0" step="1" oninput="calcEpfSuggestion(_epfCurrentCode)"></div>
       <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="epf-shelf" placeholder="2" min="1"></div>
-      <div class="form-field" style="grid-column:1/-1"><label class="form-label">📸 Drive Photo Link</label><input class="form-input" id="epf-drive" placeholder="Paste Google Drive share link"></div>
+      <div class="form-field" style="grid-column:1/-1">
+        <label class="form-label">📸 Bild</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="file" id="epf-img-file" accept="image/*" style="display:none" onchange="previewEpfImg(this)">
+          <input type="file" id="epf-img-file-cam" accept="image/*" capture="environment" style="display:none" onchange="previewEpfImg(this)">
+          <button type="button" onclick="document.getElementById('epf-img-file').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">💻 Computer</button>
+          <button type="button" onclick="document.getElementById('epf-img-file-cam').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">📷 Kamera</button>
+          <input id="epf-drive" class="form-input" placeholder="oder URL einfügen" style="flex:1;min-width:160px" oninput="loadEpfDriveImg(this.value)">
+        </div>
+        <div id="epf-img-preview" style="margin-top:8px;display:none;position:relative">
+          <img id="epf-img-el" src="" style="max-width:100%;max-height:160px;border-radius:10px;object-fit:cover">
+          <button type="button" onclick="removeEpfImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;line-height:1">✕</button>
+        </div>
+      </div>
     </div>
      <!-- Sales suggestion + total weight -->
     <div id="epf-suggestion" style="padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border2);margin-bottom:12px;font-size:12px;min-height:40px"></div>
@@ -10093,6 +10296,19 @@ async function haccpExportPDF() {
         <label class="form-label">⚠️ Allergene (EU 14)</label>
         <div id="eif-allergen-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px"></div>
       </div>
+      <div class="form-field" style="grid-column:1/-1">
+        <label class="form-label">📸 Bild</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="file" id="eif-img-file" accept="image/*" style="display:none" onchange="previewEifImg(this)">
+          <input type="file" id="eif-img-file-cam" accept="image/*" capture="environment" style="display:none" onchange="previewEifImg(this)">
+          <button type="button" onclick="document.getElementById('eif-img-file').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">💻 Computer</button>
+          <button type="button" onclick="document.getElementById('eif-img-file-cam').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">📷 Kamera</button>
+        </div>
+        <div id="eif-img-preview" style="margin-top:8px;display:none;position:relative">
+          <img id="eif-img-el" src="" style="max-width:100%;max-height:160px;border-radius:10px;object-fit:cover">
+          <button type="button" onclick="removeEifImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;line-height:1">✕</button>
+        </div>
+      </div>
     </div>
     <div class="admin-msg" id="eif-msg"></div>
     <div class="form-actions">
@@ -10119,7 +10335,20 @@ async function haccpExportPDF() {
         <div class="form-field"><label class="form-label">GN Weight (kg)</label><input class="form-input" type="number" id="mep-gnweight" placeholder="4" min="0" step="0.1"></div>
         <div class="form-field"><label class="form-label">Daily Target</label><input class="form-input" type="number" id="mep-tagesziel" placeholder="3" min="0"></div>
         <div class="form-field"><label class="form-label">Shelf Life (days)</label><input class="form-input" type="number" id="mep-shelf" placeholder="2" min="1"></div>
-        <div class="form-field"><label class="form-label">Drive Photo Link</label><input class="form-input" id="mep-drive" placeholder="paste Google Drive link"></div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label class="form-label">📸 Bild</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="file" id="mep-img-file" accept="image/*" style="display:none" onchange="previewMepImg(this)">
+            <input type="file" id="mep-img-file-cam" accept="image/*" capture="environment" style="display:none" onchange="previewMepImg(this)">
+            <button type="button" onclick="document.getElementById('mep-img-file').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">💻 Computer</button>
+            <button type="button" onclick="document.getElementById('mep-img-file-cam').click()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);font-size:12px;cursor:pointer">📷 Kamera</button>
+            <input id="mep-drive" class="form-input" placeholder="oder URL einfügen" style="flex:1;min-width:160px" oninput="loadMepDriveImg(this.value)">
+          </div>
+          <div id="mep-img-preview" style="margin-top:8px;display:none;position:relative">
+            <img id="mep-img-el" src="" style="max-width:100%;max-height:160px;border-radius:10px;object-fit:cover">
+            <button type="button" onclick="removeMepImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;line-height:1">✕</button>
+          </div>
+        </div>
       </div>
       <!-- RM Ingredients -->
       <div>
