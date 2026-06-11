@@ -709,6 +709,7 @@
         <option value="kg"><option value="g"><option value="l"><option value="ml">
         <option value="Stück"><option value="Bund"><option value="Pkg"><option value="Dose">
       </datalist>
+      <datalist id="dl-inv-lieferant"></datalist>
       <datalist id="dl-unit">
         <option value="kg"><option value="g"><option value="l"><option value="ml">
         <option value="pcs"><option value="btl"><option value="box"><option value="bag">
@@ -10312,7 +10313,7 @@ async function haccpExportPDF() {
       <div class="form-field"><label class="form-label">Maximum</label><input class="form-input" type="number" id="eif-max"></div>
       <div class="form-field"><label class="form-label">Cost/Unit (CHF)</label><input class="form-input" type="number" id="eif-kosten" step="0.01" oninput="calcEifPer100g()"></div>
       <div class="form-field"><label class="form-label">CHF / 100g (auto)</label><div id="eif-per100g" style="padding:9px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--amber)">—</div></div>
-      <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="eif-lieferant"></div>
+      <div class="form-field"><label class="form-label">Supplier</label><input class="form-input" id="eif-lieferant" list="dl-inv-lieferant"></div>
       <div class="form-field"><label class="form-label">Last Order</label><input class="form-input" type="date" id="eif-lastorder"></div>
       <div class="form-field"><label class="form-label">Notes</label><textarea class="form-input" id="eif-notizen" rows="2"></textarea></div>
       <div class="form-field" style="grid-column:1/-1">
