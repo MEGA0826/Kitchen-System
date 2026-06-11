@@ -8192,6 +8192,15 @@ function _calcLiveWA(zutatenStr) {
         } else {
           total += gw * (parseFloat(z.unitCost) || 0);
         }
+      } else if (t === 'gr') {
+        const g = (allGRs||[]).find(x => (x.grCode||x.id) === z.code);
+        if (g) {
+          const grWaTotal = _calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0);
+          const netto = parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100));
+          total += gw * (netto > 0 ? grWaTotal / netto : grWaTotal);
+        } else {
+          total += gw * (parseFloat(z.unitCost)||0);
+        }
       } else {
         total += gw * (parseFloat(z.unitCost) || 0);
       }
@@ -9017,7 +9026,12 @@ function filterIngredientPicker() {
           return { code, name: p.name, unitCost: waPerGN, _isPerGN: true };
         })
     : ipMode === 'gr'
-    ? (allGRs || []).map(g => ({ code: g.grCode||g.id, name: g.name||g.grCode, unitCost: parseFloat(g.wa)||0 }))
+    ? (allGRs || []).map(g => {
+        const waTotal = parseFloat(g.wa) || 0;
+        const netto = parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100));
+        const unitCost = (netto > 0 && waTotal > 0) ? waTotal / netto : waTotal;
+        return { code: g.grCode||g.id, name: g.name||g.grCode, unitCost, _grNetto: netto, _grWa: waTotal };
+      })
     : ipMode === 'menu'
     ? (allMenus || [])
         .filter(m => (m.art||'') !== 'Grundrezeptur')
@@ -9120,6 +9134,13 @@ function calcIpCost() {
       costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /GN (enter qty)`;
     } else if (ipMode === 'menu') {
       costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} WA (enter portions, 1=full)`;
+    } else if (ipMode === 'gr') {
+      const netto = ipSelectedItem._grNetto || 0;
+      const portionCost = ipSelectedItem._grWa || (ipSelectedItem.unitCost * netto);
+      const hint = netto > 0
+        ? `CHF ${ipSelectedItem.unitCost.toFixed(3)}/kg — 1 Portion = ${(netto*1000).toFixed(0)}g = CHF ${portionCost.toFixed(2)}`
+        : `CHF ${ipSelectedItem.unitCost.toFixed(3)} /kg`;
+      costEl.textContent = hint;
     } else {
       costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /kg`;
     }
