@@ -8330,23 +8330,22 @@ function renderMenuList() {
     const fc = (liveWa > 0 && parseFloat(m.vk)>0)
       ? ((liveWa/parseFloat(m.vk))*100).toFixed(1)+'%' : '';
     const fcColor = (fc && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
-    const artCode = (m.art || 'M').substring(0,2).toUpperCase();
+    const artColor = { Hauptgang:'var(--amber)', MEP:'var(--blue)', Grundrezeptur:'var(--green)', Vorspeise:'var(--blue)', Dessert:'var(--red)', Snack:'var(--muted)', Beilage:'var(--muted)', Sauce:'var(--green)' };
+    const artBg    = { Hauptgang:'var(--amber-dim)', MEP:'var(--blue-dim)', Grundrezeptur:'var(--green-dim)', Vorspeise:'var(--blue-dim)', Dessert:'var(--red-dim)', Snack:'var(--gray-dim)', Beilage:'var(--gray-dim)', Sauce:'var(--green-dim)' };
+    const art = m.art || 'Menu';
     const allergens = _calcAllergens(m.zutaten);
-    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
+    const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0">⚠️ ${allergens.join(' · ')}</span>` : '';
     return `<div data-menu-id="${m.id}" class="menu-card-item"
-      style="padding:8px 12px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;flex-direction:column;gap:4px;margin-bottom:5px"
+      style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;gap:8px;margin-bottom:4px;overflow:hidden"
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">${artCode}</span>
-        <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
-        <span style="font-size:11px;color:var(--muted)">${m.menuCode||''}</span>
-        ${m.category ? `<span style="font-size:11px;color:var(--muted)">${m.category}</span>` : ''}
-        ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber)">CHF ${liveWa.toFixed(2)}</span>` : ''}
-        ${fc   ? `<span style="font-size:10px;color:${fcColor}">FC ${fc}</span>` : ''}
-        <button type="button" class="btn-copy menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
-        <button type="button" class="btn-edit menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
-      </div>
-      ${allergenBadge ? `<div>${allergenBadge}</div>` : ''}
+      <span class="recipe-type-badge" style="background:${artBg[art]||'var(--gray-dim)'};color:${artColor[art]||'var(--muted)'};flex-shrink:0">${art}</span>
+      <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
+      <span style="font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.category||''}</span>
+      ${allergenStr}
+      ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap;flex-shrink:0">CHF ${liveWa.toFixed(2)}</span>` : ''}
+      ${fc ? `<span style="font-size:10px;color:${fcColor};flex-shrink:0">FC ${fc}</span>` : ''}
+      <button type="button" class="btn-copy menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
+      <button type="button" class="btn-edit menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
     </div>`;
   }).join("");
   el.querySelectorAll('.menu-card-item').forEach(card => {
