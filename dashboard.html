@@ -8389,8 +8389,8 @@ function _renderMenuRow(m) {
   return `<div data-menu-id="${m.id}" class="menu-card-item"
     style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;flex-wrap:nowrap;gap:8px;margin-bottom:4px;overflow:hidden;min-height:36px"
     onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-    <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"};flex-shrink:0;white-space:nowrap">${art}</span>
     <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||"—"}</span>
+    <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"};flex-shrink:0;white-space:nowrap">${art}</span>
     <span style="font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.category||""}</span>
     ${allergenStr}
     ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap;flex-shrink:0">CHF ${wa.toFixed(2)}</span>` : ""}
