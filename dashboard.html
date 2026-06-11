@@ -8212,7 +8212,7 @@ function _calcLiveWA(zutatenStr) {
       } else if (t === 'gr') {
         const g = (allGRs||[]).find(x => (x.grCode||x.id) === z.code);
         if (g) {
-          const grWaTotal = _calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0);
+          const grWaTotal = parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0);
           const netto = parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100));
           total += gw * (netto > 0 ? grWaTotal / netto : grWaTotal);
         } else {
@@ -8221,7 +8221,7 @@ function _calcLiveWA(zutatenStr) {
       } else if (t === 'menu') {
         const m = (allMenus||[]).find(x => (x.menuCode||x.id) === z.code);
         if (m) {
-          const menuWa = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
+          const menuWa = parseFloat(m.wa||0) || (_calcLiveWA(m.zutaten) ?? 0);
           const nettoKg = _calcMenuNettoKg(m.zutaten);
           total += gw * (nettoKg > 0 ? menuWa / nettoKg : menuWa);
         } else {
@@ -8412,7 +8412,7 @@ function renderMenuListByCat(cat) {
 }
 
 function _renderMenuRow(m) {
-  const wa  = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
+  const wa  = parseFloat(m.wa||0) || (_calcLiveWA(m.zutaten) ?? 0);
   const vk  = parseFloat(m.vk||0);
   const fc  = (wa > 0 && vk > 0) ? ((wa/vk)*100).toFixed(1)+"%" : "";
   const fcColor = (fc && parseFloat(fc) > 33) ? "var(--red)" : "var(--green)";
@@ -8500,7 +8500,7 @@ function filterGrDisplay() {
   el.innerHTML = results.slice(0, limit).map(g => {
     const safeCode = g.code.replace(/"/g,'&quot;');
     const safeName = g.name.replace(/"/g,'&quot;');
-    const liveWa = (_calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0)).toFixed(2);
+    const liveWa = (parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0)).toFixed(2);
     const allergens = _calcAllergens(g.zutaten);
     const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
     const editHandler = g.source === 'menu'
@@ -8602,7 +8602,7 @@ function showAllGRs() {
   if (!combined.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR vorhanden.</div>`; return; }
   el.innerHTML = combined.map(g => {
     const sc = g.code.replace(/"/g,'&quot;'), sn = g.name.replace(/"/g,'&quot;');
-    const liveWa = (_calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0)).toFixed(2);
+    const liveWa = (parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0)).toFixed(2);
     const allergens = _calcAllergens(g.zutaten);
     const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
     const editH = g.source==='menu'
@@ -9066,7 +9066,7 @@ function filterIngredientPicker() {
     ? (allMenus || [])
         .filter(m => (m.art||'') !== 'Grundrezeptur')
         .map(m => {
-          const wa = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
+          const wa = parseFloat(m.wa||0) || (_calcLiveWA(m.zutaten) ?? 0);
           const nettoKg = _calcMenuNettoKg(m.zutaten);
           const unitCost = (nettoKg > 0 && wa > 0) ? wa / nettoKg : wa;
           return { code: m.menuCode||m.id||'', name: m.name||'', _art: m.art||'', unitCost, _menuNetto: nettoKg, _menuWa: wa };
