@@ -1018,9 +1018,13 @@
       <div id="ip-detail" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
         <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px" id="ip-selected-name"></div>
         <div class="form-grid">
+          <div class="form-field" id="ip-portions-wrap" style="display:none">
+            <label class="form-label" id="ip-portions-label">Portions</label>
+            <input class="form-input" id="ip-portions" type="number" min="0.1" step="0.5" placeholder="1" oninput="calcIpPortionWeight()">
+          </div>
           <div class="form-field">
-            <label class="form-label">Gewicht (kg) *</label>
-            <input class="form-input" id="ip-gewicht" type="number" min="0" step="0.001" placeholder="0.090" oninput="calcIpCost()">
+            <label class="form-label" id="ip-gewicht-label">Gewicht (kg) *</label>
+            <input class="form-input" id="ip-gewicht" type="number" min="0" step="0.001" placeholder="0.090" oninput="_updateIpPortions();calcIpCost()">
           </div>
           <div class="form-field">
             <label class="form-label">Kosten (auto CHF)</label>
@@ -5926,10 +5930,10 @@ document.addEventListener('click', function(e) {
   if (epfRow) { selectEpfRm(epfRow.dataset.code, epfRow.dataset.name, epfRow.dataset.unit); return; }
   // Ingredient picker rows (MEP/RM)
   const ingRow = e.target.closest('.ing-pick-row');
-  if (ingRow) { selectIngredientItem(ingRow.dataset.code, ingRow.dataset.name, ingRow.dataset.unit, ingRow.dataset.cost); return; }
+  if (ingRow) { selectIngredientItem(ingRow.dataset.code, ingRow.dataset.name, ingRow.dataset.unit, ingRow.dataset.cost, parseFloat(ingRow.dataset.netto)||0, parseFloat(ingRow.dataset.wa)||0); return; }
   // GR picker rows
   const grRow = e.target.closest('.gr-pick-row');
-  if (grRow) { selectIngredientItem(grRow.dataset.code, grRow.dataset.name, grRow.dataset.unit, grRow.dataset.cost); return; }
+  if (grRow) { selectIngredientItem(grRow.dataset.code, grRow.dataset.name, grRow.dataset.unit, grRow.dataset.cost, parseFloat(grRow.dataset.netto)||0, parseFloat(grRow.dataset.wa)||0); return; }
 });
 function debouncedPdfPreview() {
   clearTimeout(_pdfRenderTimer);
@@ -8999,8 +9003,10 @@ function _ipTypeBtns(active) {
 function setIpMode(mode) {
   ipMode = mode;
   ipSelectedItem = null;
-  const d = document.getElementById('ip-detail'); if (d) d.style.display = 'none';
-  const t = document.getElementById('ip-title');  if (t) t.innerHTML = _ipTypeBtns(mode);
+  const d = document.getElementById('ip-detail');       if (d)  d.style.display = 'none';
+  const t = document.getElementById('ip-title');        if (t)  t.innerHTML = _ipTypeBtns(mode);
+  const pw = document.getElementById('ip-portions-wrap'); if (pw) pw.style.display = 'none';
+  const p  = document.getElementById('ip-portions');     if (p)  p.value = '';
   filterIngredientPicker();
 }
 
@@ -9023,6 +9029,8 @@ function openIngredientPicker(mode, context, keepEditIdx) {
   const _ipChf  = document.getElementById('ip-chf-netto');  if (_ipChf)  _ipChf.textContent = '—';
   const ipD = document.getElementById('ip-is-deko');
   if (ipD) ipD.checked = false;
+  const _ipPW = document.getElementById('ip-portions-wrap'); if (_ipPW) _ipPW.style.display = 'none';
+  const _ipP  = document.getElementById('ip-portions');      if (_ipP)  _ipP.value = '';
   document.getElementById('ingredientPickerPopup').style.display = 'flex';
   filterIngredientPicker();
 }
@@ -9072,7 +9080,7 @@ function filterIngredientPicker() {
     const sc = (i.code||'').replace(/"/g,'&quot;');
     const sn = (i.name||'').replace(/"/g,'&quot;');
     const su = (i.unit||'').replace(/"/g,'&quot;');
-    return `<div class="ing-pick-row" data-code="${sc}" data-name="${sn}" data-unit="${su}" data-cost="${i.unitCost||0}" data-pergn="${i._isPerGN?'1':'0'}"
+    return `<div class="ing-pick-row" data-code="${sc}" data-name="${sn}" data-unit="${su}" data-cost="${i.unitCost||0}" data-pergn="${i._isPerGN?'1':'0'}" data-netto="${i._grNetto||i._menuNetto||0}" data-wa="${i._grWa||i._menuWa||0}"
       style="padding:8px 12px;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);border:1px solid transparent"
       onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='transparent'">
       <span style="font-weight:500">${i.name}</span>
@@ -9083,15 +9091,14 @@ function filterIngredientPicker() {
   }).join('');
 }
 
-function selectIngredientItem(code, name, unit, unitCost) {
+function selectIngredientItem(code, name, unit, unitCost, _itemNetto, _itemWa) {
   const prevWeight = document.getElementById('ip-gewicht')?.value || '';
   // For RM: always re-read fresh unitCost from allInventory in case it was 0 in template
   let resolvedCost = parseFloat(unitCost) || 0;
   if (ipMode === 'rm' || ipMode === 'RM') {
     const inv = allInventory.find(x => x.code === code);
     if (inv) { const _wu = parseFloat(inv.weightUnit) || 1; resolvedCost = (parseFloat(inv.kostenUnit || inv.kosten || 0) || 0) / _wu; }
-} else if (ipMode === 'mep' || ipMode === 'MEP') {
-    // waPerGN = CHF per GN, computed from RM recipes — no gnWeight needed
+  } else if (ipMode === 'mep' || ipMode === 'MEP') {
     const mepProd = allProducts[code] || {};
     let waPerGN = 0;
     allRecipes.filter(r => r.mepCode === code).forEach(r => {
@@ -9101,22 +9108,35 @@ function selectIngredientItem(code, name, unit, unitCost) {
     });
     if (!waPerGN) waPerGN = parseFloat(mepProd.wa || 0);
     _ipMepWaPerGN = waPerGN;
-    resolvedCost = waPerGN; // CHF/GN — qty field = number of GN
+    resolvedCost = waPerGN;
   }
-  ipSelectedItem = { code, name, unit, unitCost: resolvedCost };
+  const nettoKg = parseFloat(_itemNetto) || 0;
+  const waTotal = parseFloat(_itemWa)   || 0;
+  ipSelectedItem = { code, name, unit, unitCost: resolvedCost, _itemNetto: nettoKg, _itemWa: waTotal };
+
   document.getElementById('ip-selected-name').textContent = name + ' (' + code + ')';
   document.getElementById('ip-detail').style.display = 'block';
-  document.getElementById('ip-gewicht').value = prevWeight; // preserve weight the user already entered
+  document.getElementById('ip-cost-display').textContent = '—';
   const gEl = document.getElementById('ip-garverlust');
   if (gEl) gEl.value = '';
-  document.getElementById('ip-cost-display').textContent = '—';
-  // Auto-populate allergen from inventory when RM selected
+
+  // Show Portions field for gr/menu with known netto weight
+  const usePortions = (ipMode === 'gr' || ipMode === 'menu') && nettoKg > 0;
+  const portWrap = document.getElementById('ip-portions-wrap');
+  const portEl   = document.getElementById('ip-portions');
+  const portLbl  = document.getElementById('ip-portions-label');
+  if (portWrap) portWrap.style.display = usePortions ? '' : 'none';
+  if (portEl)   portEl.value = '';
+  if (portLbl && usePortions) portLbl.textContent = `Portions (1 = ${(nettoKg*1000).toFixed(0)}g)`;
+
+  document.getElementById('ip-gewicht').value = prevWeight;
   if (ipMode === 'rm' || ipMode === 'RM') {
     const _invA = (allInventory||[]).find(x => x.code === code);
     const allerEl = document.getElementById('ip-allergie');
     if (allerEl) allerEl.value = _invA?.allergen || '';
   }
   if (prevWeight) calcIpCost();
+  else if (usePortions && portEl) portEl.focus();
   else document.getElementById('ip-gewicht').focus();
 }
 
@@ -9135,6 +9155,25 @@ function _resolveRmCost(z) {
   if (!inv) return { code: z.code || '', name: z.name || '', unit: z.unit || '', unitCost: z.unitCost || 0 };
   const _wu = parseFloat(inv.weightUnit) || 1;
   return { code: inv.code, name: inv.name, unit: inv.unit || z.unit || '', unitCost: (parseFloat(inv.kostenUnit) || 0) / _wu };
+}
+
+// Portions → weight (called when user types in Portions field)
+function calcIpPortionWeight() {
+  if (!ipSelectedItem) return;
+  const portions = parseFloat(document.getElementById('ip-portions').value) || 0;
+  const netto = ipSelectedItem._itemNetto || 0;
+  if (portions > 0 && netto > 0) {
+    document.getElementById('ip-gewicht').value = (portions * netto).toFixed(4);
+  }
+  calcIpCost();
+}
+// Weight → portions (called when user edits the weight field directly)
+function _updateIpPortions() {
+  if (!ipSelectedItem) return;
+  const netto = ipSelectedItem._itemNetto || 0;
+  const gw    = parseFloat(document.getElementById('ip-gewicht').value) || 0;
+  const portEl = document.getElementById('ip-portions');
+  if (portEl && netto > 0 && gw > 0) portEl.value = +(gw / netto).toFixed(3);
 }
 
 function calcIpCost() {
