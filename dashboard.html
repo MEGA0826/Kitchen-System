@@ -8325,32 +8325,8 @@ function renderMenuList() {
     return;
   }
   el.style.gridTemplateColumns = "1fr";
-  el.innerHTML = list.map(m => {
-    const liveWa = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
-    const fc = (liveWa > 0 && parseFloat(m.vk)>0)
-      ? ((liveWa/parseFloat(m.vk))*100).toFixed(1)+'%' : '';
-    const fcColor = (fc && parseFloat(fc) > 33) ? 'var(--red)' : 'var(--green)';
-    const artColor = { Hauptgang:'var(--amber)', MEP:'var(--blue)', Grundrezeptur:'var(--green)', Vorspeise:'var(--blue)', Dessert:'var(--red)', Snack:'var(--muted)', Beilage:'var(--muted)', Sauce:'var(--green)' };
-    const artBg    = { Hauptgang:'var(--amber-dim)', MEP:'var(--blue-dim)', Grundrezeptur:'var(--green-dim)', Vorspeise:'var(--blue-dim)', Dessert:'var(--red-dim)', Snack:'var(--gray-dim)', Beilage:'var(--gray-dim)', Sauce:'var(--green-dim)' };
-    const art = m.art || 'Menu';
-    const allergens = _calcAllergens(m.zutaten);
-    const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0">⚠️ ${allergens.join(' · ')}</span>` : '';
-    return `<div data-menu-id="${m.id}" class="menu-card-item"
-      style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;gap:8px;margin-bottom:4px;overflow:hidden"
-      onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-      <span class="recipe-type-badge" style="background:${artBg[art]||'var(--gray-dim)'};color:${artColor[art]||'var(--muted)'};flex-shrink:0">${art}</span>
-      <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||'—'}</span>
-      <span style="font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.category||''}</span>
-      ${allergenStr}
-      ${liveWa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap;flex-shrink:0">CHF ${liveWa.toFixed(2)}</span>` : ''}
-      ${fc ? `<span style="font-size:10px;color:${fcColor};flex-shrink:0">FC ${fc}</span>` : ''}
-      <button type="button" class="btn-copy menu-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
-      <button type="button" class="btn-edit menu-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
-    </div>`;
-  }).join("");
-  el.querySelectorAll('.menu-card-item').forEach(card => {
-    card.addEventListener('click', () => openMenuView(card.dataset.menuId));
-  });
+  el.innerHTML = list.map(m => _renderMenuRow(m)).join("");
+  _bindMenuRowEvents(el);
 }
 
 // ─────────────────────────────────────────────
@@ -8395,33 +8371,60 @@ function renderMenuListByCat(cat) {
     return;
   }
 
-  // Render compact one-line rows instead of cards
   el.style.gridTemplateColumns = "1fr";
-  el.innerHTML = list.map(m => {
-    const wa  = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
-    const vk  = parseFloat(m.vk||0);
-    const fc  = vk > 0 ? ((wa/vk)*100).toFixed(1)+"%" : "—";
-    const fcColor = (fc !== "—" && parseFloat(fc) > 33) ? "var(--red)" : "var(--green)";
-    const artColor = { Hauptgang:"var(--amber)", MEP:"var(--blue)", Grundrezeptur:"var(--green)", Vorspeise:"var(--blue)", Dessert:"var(--red)", Snack:"var(--muted)", Beilage:"var(--muted)", Sauce:"var(--green)" };
-    const artBg    = { Hauptgang:"var(--amber-dim)", MEP:"var(--blue-dim)", Grundrezeptur:"var(--green-dim)", Vorspeise:"var(--blue-dim)", Dessert:"var(--red-dim)", Snack:"var(--gray-dim)", Beilage:"var(--gray-dim)", Sauce:"var(--green-dim)" };
-    const art = m.art || "Menu";
-    const allergens = _calcAllergens(m.zutaten);
-    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
-    return `<div class="recipe-item-row" style="flex-direction:column;align-items:flex-start;gap:4px">
-      <div style="display:flex;align-items:center;gap:8px;width:100%">
-        <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"}">${art}</span>
-        <span style="font-size:11px;color:var(--muted);flex:1">${m.category||""}</span>
-        <span class="recipe-wa">WA CHF ${wa.toFixed(2)}</span>
-        <button type="button" class="btn-copy menu-row-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren">📋</button>
-        <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0">✏️</button>
-      </div>
-      <span class="recipe-item-name menu-row-name" data-menu-id="${m.id}" style="font-size:15px;font-weight:600;padding:0 2px;cursor:pointer">${m.name||"—"}</span>
-      ${allergenBadge}
-    </div>`;
-  }).join("");
-  el.querySelectorAll('.menu-row-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMenu(btn.dataset.menuId)));
-  el.querySelectorAll('.menu-row-edit-btn').forEach(btn => btn.addEventListener('click', () => openMenuPopup(btn.dataset.menuId)));
-  el.querySelectorAll('.menu-row-name').forEach(span => span.addEventListener('click', () => openMenuView(span.dataset.menuId)));
+  el.innerHTML = list.map(m => _renderMenuRow(m)).join("");
+  _bindMenuRowEvents(el);
+}
+
+function _renderMenuRow(m) {
+  const wa  = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
+  const vk  = parseFloat(m.vk||0);
+  const fc  = (wa > 0 && vk > 0) ? ((wa/vk)*100).toFixed(1)+"%" : "";
+  const fcColor = (fc && parseFloat(fc) > 33) ? "var(--red)" : "var(--green)";
+  const artColor = { Hauptgang:"var(--amber)", MEP:"var(--blue)", Grundrezeptur:"var(--green)", Vorspeise:"var(--blue)", Dessert:"var(--red)", Snack:"var(--muted)", Beilage:"var(--muted)", Sauce:"var(--green)" };
+  const artBg    = { Hauptgang:"var(--amber-dim)", MEP:"var(--blue-dim)", Grundrezeptur:"var(--green-dim)", Vorspeise:"var(--blue-dim)", Dessert:"var(--red-dim)", Snack:"var(--gray-dim)", Beilage:"var(--gray-dim)", Sauce:"var(--green-dim)" };
+  const art = m.art || "Menu";
+  const allergens = _calcAllergens(m.zutaten);
+  const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${allergens.join(', ')}">⚠️ ${allergens.join(' · ')}</span>` : '';
+  return `<div data-menu-id="${m.id}" class="menu-card-item"
+    style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;flex-wrap:nowrap;gap:8px;margin-bottom:4px;overflow:hidden;min-height:36px"
+    onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
+    <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"};flex-shrink:0;white-space:nowrap">${art}</span>
+    <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||"—"}</span>
+    <span style="font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.category||""}</span>
+    ${allergenStr}
+    ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap;flex-shrink:0">CHF ${wa.toFixed(2)}</span>` : ""}
+    ${fc     ? `<span style="font-size:10px;color:${fcColor};white-space:nowrap;flex-shrink:0">FC ${fc}</span>` : ""}
+    <button type="button" class="btn-copy menu-row-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
+    <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
+  </div>`;
+}
+
+function _bindMenuRowEvents(el) {
+  el.querySelectorAll('.menu-card-item,.menu-row-name').forEach(card => {
+    card.addEventListener('click', () => openMenuView(card.dataset.menuId));
+  });
+}
+
+function renderMenuListByCat(cat) {
+  const el = document.getElementById("menu-list-grid");
+  if (!el) return;
+
+  let list = allMenus;
+  if (cat) list = list.filter(m =>
+    (m.category||"").toLowerCase().includes(cat.toLowerCase()) ||
+    (m.art||"").toLowerCase().includes(cat.toLowerCase()) ||
+    (m.name||"").toLowerCase().includes(cat.toLowerCase())
+  );
+
+  if (!list.length) {
+    el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">No menus found for "${cat}".</div>`;
+    return;
+  }
+
+  el.style.gridTemplateColumns = "1fr";
+  el.innerHTML = list.map(m => _renderMenuRow(m)).join("");
+  _bindMenuRowEvents(el);
 }
   
 function filterGrDisplay() {
