@@ -8173,6 +8173,18 @@ function openEditGRPopup(grCode) {
   document.getElementById('addGRPopup').style.display = 'flex';
 }
 
+// Returns total netto output weight (kg) for a recipe from its ingredient list
+function _calcMenuNettoKg(zutatenStr) {
+  try {
+    const zs = JSON.parse(typeof zutatenStr === 'string' ? (zutatenStr||'[]') : '[]');
+    return zs.reduce((sum, z) => {
+      const gw = parseFloat(z.gewicht)||0;
+      const garl = parseFloat(z.garverlust)||0;
+      return sum + gw * (1 - garl/100);
+    }, 0);
+  } catch(e) { return 0; }
+}
+
 // Compute live WA from current allInventory prices (RM lookups; GR/MEP fall back to stored unitCost)
 function _calcLiveWA(zutatenStr) {
   if (!allInventory || !allInventory.length) return null;
@@ -8199,6 +8211,15 @@ function _calcLiveWA(zutatenStr) {
           const grWaTotal = _calcLiveWA(g.zutaten) ?? parseFloat(g.wa||0);
           const netto = parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100));
           total += gw * (netto > 0 ? grWaTotal / netto : grWaTotal);
+        } else {
+          total += gw * (parseFloat(z.unitCost)||0);
+        }
+      } else if (t === 'menu') {
+        const m = (allMenus||[]).find(x => (x.menuCode||x.id) === z.code);
+        if (m) {
+          const menuWa = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
+          const nettoKg = _calcMenuNettoKg(m.zutaten);
+          total += gw * (nettoKg > 0 ? menuWa / nettoKg : menuWa);
         } else {
           total += gw * (parseFloat(z.unitCost)||0);
         }
@@ -9038,7 +9059,9 @@ function filterIngredientPicker() {
         .filter(m => (m.art||'') !== 'Grundrezeptur')
         .map(m => {
           const wa = _calcLiveWA(m.zutaten) ?? parseFloat(m.wa||0);
-          return { code: m.menuCode||m.id||'', name: m.name||'', _art: m.art||'', unitCost: wa || 0 };
+          const nettoKg = _calcMenuNettoKg(m.zutaten);
+          const unitCost = (nettoKg > 0 && wa > 0) ? wa / nettoKg : wa;
+          return { code: m.menuCode||m.id||'', name: m.name||'', _art: m.art||'', unitCost, _menuNetto: nettoKg, _menuWa: wa };
         })
     : allInventory.filter(r => r.code)
         .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit||'kg', unitCost: parseFloat(r.kostenUnit||r.kosten||0)||0 }));
@@ -9134,7 +9157,11 @@ function calcIpCost() {
     if (ipMode === 'mep' || ipMode === 'MEP') {
       costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} /GN (enter qty)`;
     } else if (ipMode === 'menu') {
-      costEl.textContent = `CHF ${ipSelectedItem.unitCost.toFixed(3)} WA (enter portions, 1=full)`;
+      const _mNetto = ipSelectedItem._menuNetto || 0;
+      const _mWa    = ipSelectedItem._menuWa    || 0;
+      costEl.textContent = _mNetto > 0
+        ? `CHF ${ipSelectedItem.unitCost.toFixed(3)}/kg — 1 Portion = ${(_mNetto*1000).toFixed(0)}g = CHF ${_mWa.toFixed(2)}`
+        : `CHF ${ipSelectedItem.unitCost.toFixed(3)} /portion`;
     } else if (ipMode === 'gr') {
       const netto = ipSelectedItem._grNetto || 0;
       const portionCost = ipSelectedItem._grWa || (ipSelectedItem.unitCost * netto);
