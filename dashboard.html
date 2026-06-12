@@ -1207,7 +1207,7 @@
         <button onclick="editCurrentMenu()" style="padding:7px 14px;border-radius:8px;background:#1a1a16;color:var(--amber);border:1px solid var(--amber-brd);font-size:12px;cursor:pointer">✏️ Bearbeiten</button>
         <button onclick="printCurrentMenu()" style="padding:7px 14px;border-radius:8px;background:#1a1a16;color:var(--blue);border:1px solid var(--blue-brd);font-size:12px;cursor:pointer">🖨 Drucken</button>
         <button onclick="deleteCurrentMenu()" style="padding:7px 14px;border-radius:8px;background:#1a1a16;color:var(--red);border:1px solid var(--red-brd);font-size:12px;cursor:pointer">🗑 Löschen</button>
-        <button onclick="document.getElementById('menuViewPopup').style.display='none'" style="padding:7px 12px;border-radius:8px;background:#1a1a16;color:#888;border:1px solid rgba(255,255,255,0.1);font-size:12px;cursor:pointer">✕</button>
+        <button onclick="closeMenuView()" style="padding:7px 12px;border-radius:8px;background:#1a1a16;color:#888;border:1px solid rgba(255,255,255,0.1);font-size:12px;cursor:pointer">✕</button>
       </div>
     </div>
     <div id="menuViewSheet" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)"></div>
@@ -2158,6 +2158,36 @@ let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
 let allMepStatus = {};
 let allWorkersAdmin = [];
 let allRecipes = [];
+
+// ── Popup back-button management (History API) ───────────────────────────────
+let _popupDepth = 0, _backNavActive = false;
+function _onPopupOpen() { _popupDepth++; history.pushState({ popup: true }, ''); }
+function _onPopupClose() {
+  if (_popupDepth <= 0) return;
+  _popupDepth--;
+  if (!_backNavActive) history.back();
+}
+function _closeTopmostPopup() {
+  const vis  = id => { const e = document.getElementById(id); return e && e.style.display && e.style.display !== 'none'; };
+  const cls  = id => { const e = document.getElementById(id); return e && e.classList.contains('active'); };
+  if (vis('ingredientPickerPopup')) { closeIngredientPicker();   return; }
+  if (vis('addGRPopup'))            { closeAddGRPopup();         return; }
+  if (vis('menuPopup'))             { closeMenuPopup();          return; }
+  if (vis('addMEPPopup'))           { closeAddMEPPopup();        return; }
+  if (vis('grPopup'))               { closeGrPopup();            return; }
+  if (vis('menuViewPopup'))         { closeMenuView();           return; }
+  if (cls('editProductModal'))      { closeEditProductModal();   return; }
+  if (cls('editInventoryModal'))    { closeEditInventoryModal(); return; }
+  if (cls('product-detail-modal'))  { closeProductModal();       return; }
+  if (vis('manualScanModal'))       { closeManualScan();         return; }
+}
+window.addEventListener('popstate', e => {
+  if (e.state?.popup) { _backNavActive = true; _closeTopmostPopup(); _backNavActive = false; }
+});
+function closeMenuView() {
+  const v = document.getElementById('menuViewPopup'); if (v) v.style.display = 'none';
+  _onPopupClose();
+}
 let _msAction = "";
 let allMenus      = [];
 let menuZutaten   = [];
@@ -3510,13 +3540,15 @@ function openProductModal(code) {
       };
     }
   }
-  
+
   modal.classList.add("active");
+  _onPopupOpen();
 }
 
 function closeProductModal() {
   const modal = document.getElementById("product-detail-modal");
   if (modal) modal.classList.remove("active");
+  _onPopupClose();
 }
 
 // ─────────────────────────────────────────────
@@ -4542,11 +4574,13 @@ get({ action: "allWorkers" }).then(d => {
   document.querySelectorAll(".ms-action-btn").forEach(b => { b.style.background="var(--surface)"; b.style.color="var(--muted)"; b.style.borderColor="var(--border2)"; });
   const modal = document.getElementById("manualScanModal");
   modal.style.display = "flex"; modal.style.alignItems = "flex-end"; modal.style.justifyContent = "center";
+  _onPopupOpen();
 }
 function closeManualScan() {
   const m = document.getElementById("manualScanModal");
   if (m) m.style.display = "none";
   _msAction = "";
+  _onPopupClose();
 }
 function setManualAction(action) {
   _msAction = action;
@@ -4957,6 +4991,7 @@ async function openEditProductModal(code) {
   if (!_epm) return;
 
   _epm.classList.add("active");
+  _onPopupOpen();
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -5021,6 +5056,7 @@ async function openEditProductModal(code) {
 function closeEditProductModal() {
   document.getElementById("editProductModal").classList.remove("active");
   document.getElementById("epf-rm-picker").style.display = "none";
+  _onPopupClose();
 }
 
 async function deleteProductFromModal() {
@@ -5566,6 +5602,7 @@ function openEditInventoryModal(code) {
   const kcE = document.getElementById("eif-kc-each");   if (kcE) kcE.value = "";
   const kcR = document.getElementById("eif-kc-result"); if (kcR) kcR.textContent = "—";
   document.getElementById("editInventoryModal").classList.add("active");
+  _onPopupOpen();
   calcEifPer100g();
 }
 function calcKartonWeight() {
@@ -5649,6 +5686,7 @@ function _getEifAllergenValue() {
 function closeEditInventoryModal() {
   document.getElementById("editInventoryModal").classList.remove("active");
   setTimeout(() => calcEifPer100g(), 0);
+  _onPopupClose();
 }
 
   async function deleteInventoryItem(code) {
@@ -7700,10 +7738,12 @@ function openAddMEPPopup() {
    // Reset computed fields then recalc (fields are empty so shows —)
   const popup = document.getElementById("addMEPPopup");
   popup.style.display = "flex";
+  _onPopupOpen();
 }
 
 function closeAddMEPPopup() {
   document.getElementById("addMEPPopup").style.display = "none";
+  _onPopupClose();
 }
 
 function calcMepTotalWeight() {
@@ -7906,11 +7946,13 @@ function openAddGRPopup(art) {
   ['agr-img-file','agr-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
   renderAgrZutaten();
   document.getElementById('addGRPopup').style.display = 'flex';
+  _onPopupOpen();
 }
 
 function closeAddGRPopup() {
   editingGRCode = null;
   document.getElementById('addGRPopup').style.display = 'none';
+  _onPopupClose();
 }
 
 // ── Copy helpers — open "create new" popup pre-filled from source item ────────
@@ -7930,6 +7972,7 @@ function copyGR(grCode) {
   document.getElementById('agr-msg').textContent = '';
   calcAgrNetto(); renderAgrZutaten();
   document.getElementById('addGRPopup').style.display = 'flex';
+  _onPopupOpen();
 }
 
 function copyMEP(code) {
@@ -7976,6 +8019,7 @@ function copyMenu(menuId) {
   renderMenuZutaten(); calcWaFromZutaten();
   document.getElementById('menuPopup').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  _onPopupOpen();
 }
 
 function calcAgrNetto() {
@@ -8184,6 +8228,7 @@ function openEditGRPopup(grCode) {
   calcAgrNetto();
   renderAgrZutaten();
   document.getElementById('addGRPopup').style.display = 'flex';
+  _onPopupOpen();
 }
 
 // Returns total netto output weight (kg) for a recipe from its ingredient list
@@ -8431,16 +8476,22 @@ function _renderMenuRow(m) {
   const allergens = _calcAllergens(m.zutaten);
   const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${allergens.join(', ')}">⚠️ ${allergens.join(' · ')}</span>` : '';
   return `<div data-menu-id="${m.id}" class="menu-card-item"
-    style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;flex-wrap:nowrap;gap:8px;margin-bottom:4px;overflow:hidden;min-height:36px"
+    style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);margin-bottom:4px"
     onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
-    <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name||"—"}</span>
-    <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"};flex-shrink:0;white-space:nowrap">${art}</span>
-    <span style="font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.category||""}</span>
-    ${allergenStr}
-    ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap;flex-shrink:0">CHF ${wa.toFixed(2)}</span>` : ""}
-    ${fc     ? `<span style="font-size:10px;color:${fcColor};white-space:nowrap;flex-shrink:0">FC ${fc}</span>` : ""}
-    <button type="button" class="btn-copy menu-row-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
-    <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+      <span style="font-size:13px;font-weight:500;word-break:break-word">${m.name||"—"}</span>
+      <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"};flex-shrink:0;white-space:nowrap;margin-left:auto">${art}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap">${m.category||""}</span>
+      ${allergenStr}
+      ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap">CHF ${wa.toFixed(2)}</span>` : ""}
+      ${fc     ? `<span style="font-size:10px;color:${fcColor};white-space:nowrap">FC ${fc}</span>` : ""}
+      <div style="margin-left:auto;display:flex;gap:4px;flex-shrink:0">
+        <button type="button" class="btn-copy menu-row-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
+        <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -8458,16 +8509,22 @@ function _renderGrRow(g) {
   const delH = g.source === 'menu'
     ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${sn}"`
     : `class="btn-del gr-del-btn" data-code="${sc}" data-name="${sn}"`;
-  return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;min-width:0;overflow:hidden">
-    <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700;flex-shrink:0">GR</span>
-    <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.name||g.code}</span>
-    ${allergenStr}
-    <span style="font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap">${g.code}</span>
-    ${wStr ? `<span style="font-size:11px;color:var(--green);flex-shrink:0;white-space:nowrap">${wStr}</span>` : ''}
-    ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);flex-shrink:0;white-space:nowrap">CHF ${wa.toFixed(2)}</span>` : ''}
-    <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren">📋</button>
-    <button type="button" ${editH} style="font-size:11px;padding:3px 8px;flex-shrink:0">✏️</button>
-    <button type="button" ${delH} style="font-size:11px;padding:3px 8px;flex-shrink:0">🗑</button>
+  return `<div style="padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700;flex-shrink:0">GR</span>
+      <span style="font-size:13px;font-weight:500;word-break:break-word">${g.name||g.code}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      ${allergenStr}
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap">${g.code}</span>
+      ${wStr ? `<span style="font-size:11px;color:var(--green);white-space:nowrap">${wStr}</span>` : ''}
+      ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap">CHF ${wa.toFixed(2)}</span>` : ''}
+      <div style="margin-left:auto;display:flex;gap:4px;flex-shrink:0">
+        <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
+        <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
+        <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -8577,15 +8634,21 @@ function filterMepDisplay() {
           ? `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${(wa.waPerGN/wa.gnWeightKg/10).toFixed(2)}/100g</span>`
           : `<span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${wa.waPerGN.toFixed(2)}/GN</span>`)
       : '';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
-      <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
-      <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
-      <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
-      ${costStr}
-      <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
-      <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
-      <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+    return `<div style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">MEP</span>
+        <span style="font-size:13px;font-weight:500;word-break:break-word">${p.name||code}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap">${code}</span>
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+        ${costStr}
+        <div style="margin-left:auto;display:flex;gap:4px;flex-shrink:0">
+          <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
+          <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
+          <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+        </div>
+      </div>
     </div>`;
   }).join("");
   el.querySelectorAll('.mep-prod-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMEP(btn.dataset.code)));
@@ -8643,18 +8706,22 @@ function showAllMEPs() {
       : '';
     const allergens = _calcMepAllergens(code);
     const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
-    return `<div style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700">MEP</span>
-        <span style="font-size:13px;font-weight:500;flex:1">${p.name||code}</span>
-        <span style="font-size:11px;color:var(--muted);margin-right:4px">${code}</span>
-        <span style="font-size:11px;color:var(--muted);margin-right:8px">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
-        ${costStr}
-        <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
-        <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
-        <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+    return `<div style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">MEP</span>
+        <span style="font-size:13px;font-weight:500;word-break:break-word">${p.name||code}</span>
       </div>
-      ${allergenBadge ? `<div style="padding-left:4px">${allergenBadge}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap">${code}</span>
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap">Max ${p.mepMax||"-"} · Target ${p.tagesziel||"-"}</span>
+        ${costStr}
+        ${allergenBadge}
+        <div style="margin-left:auto;display:flex;gap:4px;flex-shrink:0">
+          <button type="button" data-code="${code}" class="btn-copy mep-prod-copy-btn" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
+          <button type="button" data-code="${code}" class="btn-edit mep-prod-edit-btn" style="font-size:11px;padding:3px 8px">✏️</button>
+          <button type="button" data-code="${code}" class="btn-del mep-prod-del-btn" style="font-size:11px;padding:3px 8px">🗑</button>
+        </div>
+      </div>
     </div>`;
   }).join('');
   el.querySelectorAll('.mep-prod-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMEP(btn.dataset.code)));
@@ -8736,6 +8803,7 @@ function closeMenuPopup() {
   document.body.style.overflow = '';
   editingMenuId = null;
   closeMenu(); // ← reset hamburger icon
+  _onPopupClose();
 }
 
 // ─────────────────────────────────────────────
@@ -9032,12 +9100,14 @@ function openIngredientPicker(mode, context, keepEditIdx) {
   const _ipPcN = document.getElementById('ip-pieces-need');  if (_ipPcN)  _ipPcN.value = '';
   const _ipPcT = document.getElementById('ip-pieces-total'); if (_ipPcT) _ipPcT.value = '';
   document.getElementById('ingredientPickerPopup').style.display = 'flex';
+  _onPopupOpen();
   filterIngredientPicker();
 }
 
 function closeIngredientPicker() {
   document.getElementById('ingredientPickerPopup').style.display = 'none';
   _ipEditIdx = -1;
+  _onPopupClose();
 }
 
 function filterIngredientPicker() {
@@ -9311,11 +9381,13 @@ function openGrPopup() {
   document.getElementById('gr-cost-display').textContent = '—';
   const popup = document.getElementById('grPopup');
   popup.style.display = 'flex';
+  _onPopupOpen();
   loadGRs().then(() => filterGrPicker());
 }
 
 function closeGrPopup() {
   document.getElementById('grPopup').style.display = 'none';
+  _onPopupClose();
 }
 
 function filterGrPicker() {
@@ -9490,6 +9562,7 @@ function openMenuView(menuId) {
   document.getElementById('mvp-title').textContent = _viewingMenu.name || 'Menu';
   document.getElementById('menuViewSheet').innerHTML = buildMenuPdfHtml(_viewingMenu);
   document.getElementById('menuViewPopup').style.display = 'block';
+  _onPopupOpen();
 }
 
 function editCurrentMenu() {
