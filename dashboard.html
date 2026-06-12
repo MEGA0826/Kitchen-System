@@ -8501,6 +8501,7 @@ function _renderMenuRow(m) {
       <div style="margin-left:auto;display:flex;gap:4px;flex-shrink:0">
         <button type="button" class="btn-copy menu-row-copy-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px" title="Kopieren" onclick="event.stopPropagation();copyMenu(this.dataset.menuId)">📋</button>
         <button type="button" class="btn-edit menu-row-edit-btn" data-menu-id="${m.id}" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();openMenuPopup(this.dataset.menuId)">✏️</button>
+        <button type="button" class="btn-del menu-row-del-btn" data-menu-id="${m.id}" data-name="${(m.name||'').replace(/"/g,'&quot;')}" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation()">🗑</button>
       </div>
     </div>
   </div>`;
@@ -8542,6 +8543,16 @@ function _renderGrRow(g) {
 function _bindMenuRowEvents(el) {
   el.querySelectorAll('.menu-card-item,.menu-row-name').forEach(card => {
     card.addEventListener('click', () => openMenuView(card.dataset.menuId));
+  });
+  el.querySelectorAll('.menu-row-del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`"${btn.dataset.name}" wirklich löschen?`)) return;
+      try {
+        const d = await adminCall({ action:'deleteMenu', menuId: btn.dataset.menuId });
+        if (d && d.error) throw new Error(d.error);
+        await loadMenus();
+      } catch(e) { alert('Fehler: ' + e.message); }
+    });
   });
 }
 
