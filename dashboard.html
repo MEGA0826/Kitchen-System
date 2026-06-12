@@ -8213,7 +8213,7 @@ function _calcLiveWA(zutatenStr) {
         const g = (allGRs||[]).find(x => (x.grCode||x.id) === z.code);
         if (g) {
           const grWaTotal = parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0);
-          const netto = parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100));
+          const netto = _calcMenuNettoKg(g.zutaten) || (parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100)));
           total += gw * (netto > 0 ? grWaTotal / netto : grWaTotal);
         } else {
           total += gw * (parseFloat(z.unitCost)||0);
@@ -8439,7 +8439,7 @@ function _renderGrRow(g) {
   const sc  = (g.code||'').replace(/"/g,'&quot;');
   const sn  = (g.name||'').replace(/"/g,'&quot;');
   const wa  = parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0);
-  const nk  = parseFloat(g.nettoKg||0) || _calcMenuNettoKg(g.zutaten);
+  const nk  = _calcMenuNettoKg(g.zutaten) || parseFloat(g.nettoKg||0);
   const wStr = nk > 0 ? (nk >= 1 ? nk.toFixed(2)+'kg' : (nk*1000).toFixed(0)+'g') : '';
   const allergens = _calcAllergens(g.zutaten);
   const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="${allergens.join(', ')}">⚠️ ${allergens.join(' · ')}</span>` : '';
@@ -9042,7 +9042,7 @@ function filterIngredientPicker() {
     : ipMode === 'gr'
     ? (allGRs || []).map(g => {
         const waTotal = parseFloat(g.wa) || 0;
-        const netto = parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100));
+        const netto = _calcMenuNettoKg(g.zutaten) || (parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100)));
         const unitCost = (netto > 0 && waTotal > 0) ? waTotal / netto : waTotal;
         return { code: g.grCode||g.id, name: g.name||g.grCode, unitCost, _grNetto: netto, _grWa: waTotal };
       })
