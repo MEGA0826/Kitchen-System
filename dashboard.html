@@ -8454,7 +8454,7 @@ function _renderGrRow(g) {
     <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.name||g.code}</span>
     ${allergenStr}
     <span style="font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap">${g.code}</span>
-    ${wStr ? `<span style="font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap">${wStr}</span>` : ''}
+    ${wStr ? `<span style="font-size:11px;color:var(--green);flex-shrink:0;white-space:nowrap">${wStr}</span>` : ''}
     ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);flex-shrink:0;white-space:nowrap">CHF ${wa.toFixed(2)}</span>` : ''}
     <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren">📋</button>
     <button type="button" ${editH} style="font-size:11px;padding:3px 8px;flex-shrink:0">✏️</button>
