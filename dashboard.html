@@ -1022,6 +1022,15 @@
             <label class="form-label" id="ip-portions-label">Portions</label>
             <input class="form-input" id="ip-portions" type="number" min="0.1" step="0.5" placeholder="1" oninput="calcIpPortionWeight()">
           </div>
+          <div class="form-field" id="ip-pieces-wrap" style="display:none">
+            <label class="form-label">✂️ Stücke</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="form-input" id="ip-pieces-need" type="number" min="1" step="1" placeholder="4" style="width:64px;flex-shrink:0" oninput="calcIpPieces()">
+              <span style="font-size:12px;color:var(--muted);white-space:nowrap">von</span>
+              <input class="form-input" id="ip-pieces-total" type="number" min="1" step="1" placeholder="8" style="width:64px;flex-shrink:0" oninput="calcIpPieces()">
+              <span style="font-size:11px;color:var(--muted);white-space:nowrap">Stk/Portion</span>
+            </div>
+          </div>
           <div class="form-field">
             <label class="form-label" id="ip-gewicht-label">Gewicht (kg) *</label>
             <input class="form-input" id="ip-gewicht" type="number" min="0" step="0.001" placeholder="0.090" oninput="_updateIpPortions();calcIpCost()">
@@ -8746,10 +8755,11 @@ function renderMenuZutaten(targetList, targetData) {
   } else {
     el.innerHTML = data.map((z, i) => {
       const _t      = (typeof t === 'function') ? t : (k => k);
-      const garvStr = z.garverlust ? `🔥${z.garverlust}% ${_t('cooking-loss')}` : '';
-      const waStr   = z.waTotal    ? `${_t('wa-total')}: ${parseFloat(z.waTotal).toFixed(3)}kg` : '';
-      const chfStr  = z.chfKgNetto ? `${_t('chf-kg-netto')}: CHF ${parseFloat(z.chfKgNetto).toFixed(2)}` : '';
-      const extras  = [garvStr, waStr, chfStr].filter(Boolean).join(' · ');
+      const garvStr   = z.garverlust ? `🔥${z.garverlust}% ${_t('cooking-loss')}` : '';
+      const waStr     = z.waTotal    ? `${_t('wa-total')}: ${parseFloat(z.waTotal).toFixed(3)}kg` : '';
+      const chfStr    = z.chfKgNetto ? `${_t('chf-kg-netto')}: CHF ${parseFloat(z.chfKgNetto).toFixed(2)}` : '';
+      const piecesStr = (z.pieces > 0 && z.piecesTotal > 0) ? `✂️ ${z.pieces}/${z.piecesTotal} Stk` : '';
+      const extras  = [piecesStr, garvStr, waStr, chfStr].filter(Boolean).join(' · ');
       return `<div style="display:flex;align-items:flex-start;gap:7px;padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:3px">
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${typeBg[z.type]||'var(--surface)'};color:${typeColors[z.type]||'var(--text)'};font-weight:700;flex-shrink:0;margin-top:2px">${(z.type||'RM').toUpperCase()}</span>
         <div style="flex:1;min-width:0">
@@ -8991,6 +9001,9 @@ function setIpMode(mode) {
   const t = document.getElementById('ip-title');        if (t)  t.innerHTML = _ipTypeBtns(mode);
   const pw = document.getElementById('ip-portions-wrap'); if (pw) pw.style.display = 'none';
   const p  = document.getElementById('ip-portions');     if (p)  p.value = '';
+  const pcw = document.getElementById('ip-pieces-wrap'); if (pcw) pcw.style.display = 'none';
+  const pcn = document.getElementById('ip-pieces-need');  if (pcn)  pcn.value = '';
+  const pct = document.getElementById('ip-pieces-total'); if (pct) pct.value = '';
   filterIngredientPicker();
 }
 
@@ -9015,6 +9028,9 @@ function openIngredientPicker(mode, context, keepEditIdx) {
   if (ipD) ipD.checked = false;
   const _ipPW = document.getElementById('ip-portions-wrap'); if (_ipPW) _ipPW.style.display = 'none';
   const _ipP  = document.getElementById('ip-portions');      if (_ipP)  _ipP.value = '';
+  const _ipPcW = document.getElementById('ip-pieces-wrap'); if (_ipPcW) _ipPcW.style.display = 'none';
+  const _ipPcN = document.getElementById('ip-pieces-need');  if (_ipPcN)  _ipPcN.value = '';
+  const _ipPcT = document.getElementById('ip-pieces-total'); if (_ipPcT) _ipPcT.value = '';
   document.getElementById('ingredientPickerPopup').style.display = 'flex';
   filterIngredientPicker();
 }
@@ -9112,6 +9128,10 @@ function selectIngredientItem(code, name, unit, unitCost, _itemNetto, _itemWa) {
   if (portWrap) portWrap.style.display = usePortions ? '' : 'none';
   if (portEl)   portEl.value = '';
   if (portLbl && usePortions) portLbl.textContent = `Portions (1 = ${(nettoKg*1000).toFixed(0)}g)`;
+  const pcWrap = document.getElementById('ip-pieces-wrap');
+  if (pcWrap) pcWrap.style.display = usePortions ? '' : 'none';
+  const pcNeed  = document.getElementById('ip-pieces-need');  if (pcNeed)  pcNeed.value = '';
+  const pcTotal = document.getElementById('ip-pieces-total'); if (pcTotal) pcTotal.value = '';
 
   document.getElementById('ip-gewicht').value = prevWeight;
   if (ipMode === 'rm' || ipMode === 'RM') {
@@ -9142,6 +9162,16 @@ function _resolveRmCost(z) {
 }
 
 // Portions → weight (called when user types in Portions field)
+function calcIpPieces() {
+  const need  = parseFloat(document.getElementById('ip-pieces-need').value)  || 0;
+  const total = parseFloat(document.getElementById('ip-pieces-total').value) || 0;
+  if (need > 0 && total > 0) {
+    const portEl = document.getElementById('ip-portions');
+    if (portEl) portEl.value = +(need / total).toFixed(4);
+    calcIpPortionWeight();
+  }
+}
+
 function calcIpPortionWeight() {
   if (!ipSelectedItem) return;
   const portions = parseFloat(document.getElementById('ip-portions').value) || 0;
@@ -9245,7 +9275,9 @@ function confirmIngredient() {
     cost,
     allergie    : document.getElementById('ip-allergie').value,
     zubereitung : document.getElementById('ip-zubereitung-note').value,
-    isDeko      : document.getElementById('ip-is-deko')?.checked || false
+    isDeko      : document.getElementById('ip-is-deko')?.checked || false,
+    pieces      : parseFloat(document.getElementById('ip-pieces-need')?.value)  || 0,
+    piecesTotal : parseFloat(document.getElementById('ip-pieces-total')?.value) || 0
   };
   if (ipContext === 'agr') {
     if (_ipEditIdx >= 0) agrZutaten.splice(_ipEditIdx, 1, zutat);
