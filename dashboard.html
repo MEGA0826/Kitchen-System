@@ -1045,10 +1045,14 @@
             <label class="form-label">Zubereitung / Notiz</label>
             <input class="form-input" id="ip-zubereitung-note" placeholder="z.B. fein schneiden">
           </div>
-          <div class="form-field" style="grid-column:1/-1">
+          <div class="form-field" style="grid-column:1/-1;display:flex;gap:20px;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
               <input type="checkbox" id="ip-is-deko" style="width:14px;height:14px;accent-color:var(--green)">
               🌿 Dekoration (garnish group)
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="ip-is-topping" style="width:14px;height:14px;accent-color:var(--amber)">
+              🍯 Topping
             </label>
           </div>
         </div>
@@ -8732,13 +8736,19 @@ function renderMenuZutaten(targetList, targetData) {
       return `<div style="display:flex;align-items:flex-start;gap:7px;padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:3px">
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${typeBg[z.type]||'var(--surface)'};color:${typeColors[z.type]||'var(--text)'};font-weight:700;flex-shrink:0;margin-top:2px">${(z.type||'RM').toUpperCase()}</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:var(--text);font-weight:500">${z.name||''}${z.isDeko ? ' <span style="font-size:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🌿 deko</span>' : ''}</div>
+          <div style="font-size:12px;color:var(--text);font-weight:500">${z.name||''}${z.isDeko ? ' <span style="font-size:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🌿 deko</span>' : ''}${z.isTopping ? ' <span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🍯 topping</span>' : ''}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.6">
             ${z.gewicht ? `<span>${z.gewicht}kg</span>` : ''}
             ${z.cost    ? `<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>` : ''}
             ${extras    ? `<span style="color:var(--blue)"> · ${extras}</span>` : ''}
             ${z.allergie? `<span style="color:var(--red)"> · ⚠️ ${_t('allergie')}: ${z.allergie}</span>` : ''}
           </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+          <button data-idx="${i}" data-isgr="${isGrTarget}" class="zutat-up-btn"
+            style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:1px 6px;cursor:pointer;font-size:11px;line-height:1">▲</button>
+          <button data-idx="${i}" data-isgr="${isGrTarget}" class="zutat-dn-btn"
+            style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:1px 6px;cursor:pointer;font-size:11px;line-height:1">▼</button>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0;margin-top:2px">
           <button data-idx="${i}" data-isgr="${isGrTarget}" class="zutat-edit-btn"
@@ -8760,6 +8770,12 @@ function renderMenuZutaten(targetList, targetData) {
         const idx = parseInt(btn.dataset.idx);
         (btn.dataset.isgr === 'true' ? removeGrZutat : removeMenuZutat)(idx);
       });
+    });
+    el.querySelectorAll('.zutat-up-btn').forEach(btn => {
+      btn.addEventListener('click', () => moveMenuZutat(parseInt(btn.dataset.idx), -1, btn.dataset.isgr === 'true'));
+    });
+    el.querySelectorAll('.zutat-dn-btn').forEach(btn => {
+      btn.addEventListener('click', () => moveMenuZutat(parseInt(btn.dataset.idx),  1, btn.dataset.isgr === 'true'));
     });
   }
   if (!targetList) calcWaFromZutaten();
@@ -8833,6 +8849,15 @@ function removeMenuZutat(i) {
   renderMenuZutaten();
 }
 
+function moveMenuZutat(i, dir, isGr) {
+  const arr = isGr ? agrZutaten : menuZutaten;
+  const j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  if (isGr) renderMenuZutaten('gr-zutaten-list', agrZutaten);
+  else renderMenuZutaten();
+}
+
 function editMenuZutat(i) {
   const z = menuZutaten[i];
   if (!z) return;
@@ -8852,6 +8877,8 @@ function editMenuZutat(i) {
     if (ipG) ipG.value = z.garverlust || '';
     const ipD = document.getElementById('ip-is-deko');
     if (ipD) ipD.checked = z.isDeko || false;
+    const ipT = document.getElementById('ip-is-topping');
+    if (ipT) ipT.checked = z.isTopping || false;
     calcIpCost(); calcIpWA();
   }, 80);
 }
@@ -8875,6 +8902,8 @@ function editGrZutat(i) {
     if (ipG) ipG.value = z.garverlust || '';
     const ipD = document.getElementById('ip-is-deko');
     if (ipD) ipD.checked = z.isDeko || false;
+    const ipT = document.getElementById('ip-is-topping');
+    if (ipT) ipT.checked = z.isTopping || false;
     calcIpCost(); calcIpWA();
   }, 80);
 }
@@ -8990,6 +9019,13 @@ function openIngredientPicker(mode, context, keepEditIdx) {
   const _ipChf  = document.getElementById('ip-chf-netto');  if (_ipChf)  _ipChf.textContent = '—';
   const ipD = document.getElementById('ip-is-deko');
   if (ipD) ipD.checked = false;
+  const ipT2 = document.getElementById('ip-is-topping');
+  if (ipT2) ipT2.checked = false;
+  const _ipPW = document.getElementById('ip-portions-wrap'); if (_ipPW) _ipPW.style.display = 'none';
+  const _ipP  = document.getElementById('ip-portions');      if (_ipP)  _ipP.value = '';
+  const _ipPcW = document.getElementById('ip-pieces-wrap'); if (_ipPcW) _ipPcW.style.display = 'none';
+  const _ipPcN = document.getElementById('ip-pieces-need');  if (_ipPcN)  _ipPcN.value = '';
+  const _ipPcT = document.getElementById('ip-pieces-total'); if (_ipPcT) _ipPcT.value = '';
   document.getElementById('ingredientPickerPopup').style.display = 'flex';
   filterIngredientPicker();
 }
@@ -9171,7 +9207,10 @@ function confirmIngredient() {
     cost,
     allergie    : document.getElementById('ip-allergie').value,
     zubereitung : document.getElementById('ip-zubereitung-note').value,
-    isDeko      : document.getElementById('ip-is-deko')?.checked || false
+    isDeko      : document.getElementById('ip-is-deko')?.checked    || false,
+    isTopping   : document.getElementById('ip-is-topping')?.checked || false,
+    pieces      : parseFloat(document.getElementById('ip-pieces-need')?.value)  || 0,
+    piecesTotal : parseFloat(document.getElementById('ip-pieces-total')?.value) || 0
   };
   if (ipContext === 'agr') {
     if (_ipEditIdx >= 0) agrZutaten.splice(_ipEditIdx, 1, zutat);
@@ -9473,6 +9512,10 @@ function buildMenuPdfHtml(m) {
     ${zutaten.some(z=>z.isDeko)?`<div style="padding:12px 20px;border-bottom:1px solid #eee;background:#fafaf8">
       <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;margin-bottom:4px">🌿 Dekoration</div>
       <div style="font-size:11px;color:#444">${zutaten.filter(z=>z.isDeko).map(z=>`${z.name}${z.gewicht?' ('+z.gewicht+'kg)':''}`).join(', ')}</div>
+    </div>`:''}
+    ${zutaten.some(z=>z.isTopping)?`<div style="padding:12px 20px;border-bottom:1px solid #eee;background:#fef9f0">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;margin-bottom:4px">🍯 Topping</div>
+      <div style="font-size:11px;color:#444">${zutaten.filter(z=>z.isTopping).map(z=>`${z.name}${z.gewicht?' ('+z.gewicht+'kg)':''}`).join(', ')}</div>
     </div>`:''}
     ${m.zubereitung?`<div style="padding:16px 20px;border-bottom:1px solid #eee">
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zubereitung</div>
