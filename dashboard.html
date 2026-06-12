@@ -911,6 +911,7 @@
             <option>Snack</option>
             <option>MEP</option>
             <option>Grundrezeptur</option>
+            <option>Plate</option>
           </select>
         </div>
         <div class="form-field">
@@ -8480,8 +8481,8 @@ function _renderMenuRow(m) {
   const vk  = parseFloat(m.vk||0);
   const fc  = (wa > 0 && vk > 0) ? ((wa/vk)*100).toFixed(1)+"%" : "";
   const fcColor = (fc && parseFloat(fc) > 33) ? "var(--red)" : "var(--green)";
-  const artColor = { Hauptgang:"var(--amber)", MEP:"var(--blue)", Grundrezeptur:"var(--green)", Vorspeise:"var(--blue)", Dessert:"var(--red)", Snack:"var(--muted)", Beilage:"var(--muted)", Sauce:"var(--green)" };
-  const artBg    = { Hauptgang:"var(--amber-dim)", MEP:"var(--blue-dim)", Grundrezeptur:"var(--green-dim)", Vorspeise:"var(--blue-dim)", Dessert:"var(--red-dim)", Snack:"var(--gray-dim)", Beilage:"var(--gray-dim)", Sauce:"var(--green-dim)" };
+  const artColor = { Hauptgang:"var(--amber)", MEP:"var(--blue)", Grundrezeptur:"var(--green)", Vorspeise:"var(--blue)", Dessert:"var(--red)", Snack:"var(--muted)", Beilage:"var(--muted)", Sauce:"var(--green)", Plate:"#f97316" };
+  const artBg    = { Hauptgang:"var(--amber-dim)", MEP:"var(--blue-dim)", Grundrezeptur:"var(--green-dim)", Vorspeise:"var(--blue-dim)", Dessert:"var(--red-dim)", Snack:"var(--gray-dim)", Beilage:"var(--gray-dim)", Sauce:"var(--green-dim)", Plate:"rgba(249,115,22,0.13)" };
   const art = m.art || "Menu";
   const allergens = _calcAllergens(m.zutaten);
   const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${allergens.join(', ')}">⚠️ ${allergens.join(' · ')}</span>` : '';
@@ -11132,7 +11133,7 @@ function rBuild(q){
   (window.allInventory||[]).forEach(function(r){if(r.code&&((r.name||'').toLowerCase().includes(q)||r.code.toLowerCase().includes(q)))matched.add('rm:'+r.code);});
   Object.entries(window.allProducts||{}).forEach(function(e){var c=e[0],p=e[1];if(p&&p.name&&p.name!=='(deleted)'&&(p.name.toLowerCase().includes(q)||c.toLowerCase().includes(q)))matched.add('mep:'+c);});
   (window.allGRs||[]).forEach(function(g){var gc=g.grCode||g.id;if((g.name||'').toLowerCase().includes(q)||gc.toLowerCase().includes(q))matched.add('gr:'+gc);});
-  (window.allMenus||[]).forEach(function(m){var mc=m.menuCode||m.id;if((m.name||'').toLowerCase().includes(q)||mc.toLowerCase().includes(q))matched.add('menu:'+mc);});
+  (window.allMenus||[]).forEach(function(m){var mc=m.menuCode||m.id;if((m.name||'').toLowerCase().includes(q)||mc.toLowerCase().includes(q))matched.add((m.art==='Plate'?'plate':'menu')+':'+mc);});
   allPlates.forEach(function(p){if((p.name||'').toLowerCase().includes(q)||(p.code||'').toLowerCase().includes(q))matched.add('plate:'+p.code);});
 
   if(!matched.size){rShowNoResults();return;}
@@ -11143,16 +11144,16 @@ function rBuild(q){
     if(type==='rm'){
       (window.allRecipes||[]).filter(function(r){return r.rmCode===code;}).forEach(function(r){relevant.add('mep:'+r.mepCode);});
       (window.allGRs||[]).forEach(function(g){if(pZ(g.zutaten).some(function(z){return z.code===code;}))relevant.add('gr:'+(g.grCode||g.id));});
-      (window.allMenus||[]).forEach(function(m){if(pZ(m.zutaten).some(function(z){return z.code===code;}))relevant.add('menu:'+(m.menuCode||m.id));});
+      (window.allMenus||[]).forEach(function(m){if(pZ(m.zutaten).some(function(z){return z.code===code;})){var mc=m.menuCode||m.id;relevant.add((m.art==='Plate'?'plate':'menu')+':'+mc);}});
     }
     if(type==='mep'){
       (window.allRecipes||[]).filter(function(r){return r.mepCode===code;}).forEach(function(r){relevant.add('rm:'+r.rmCode);});
       (window.allGRs||[]).forEach(function(g){if(pZ(g.zutaten).some(function(z){return z.type==='mep'&&z.code===code;}))relevant.add('gr:'+(g.grCode||g.id));});
-      (window.allMenus||[]).forEach(function(m){if(pZ(m.zutaten).some(function(z){return z.type==='mep'&&z.code===code;}))relevant.add('menu:'+(m.menuCode||m.id));});
+      (window.allMenus||[]).forEach(function(m){if(pZ(m.zutaten).some(function(z){return z.type==='mep'&&z.code===code;})){var mc=m.menuCode||m.id;relevant.add((m.art==='Plate'?'plate':'menu')+':'+mc);}});
     }
     if(type==='gr'){
       pZ((window.allGRs||[]).find(function(g){return g.grCode===code||g.id===code;})?.zutaten).forEach(function(z){relevant.add((z.type||'rm')+':'+z.code);});
-      (window.allMenus||[]).forEach(function(m){if(pZ(m.zutaten).some(function(z){return z.type==='gr'&&z.code===code;}))relevant.add('menu:'+(m.menuCode||m.id));});
+      (window.allMenus||[]).forEach(function(m){if(pZ(m.zutaten).some(function(z){return z.type==='gr'&&z.code===code;})){var mc=m.menuCode||m.id;relevant.add((m.art==='Plate'?'plate':'menu')+':'+mc);}});
     }
     if(type==='menu'){
       pZ((window.allMenus||[]).find(function(m){return m.menuCode===code||m.id===code;})?.zutaten).forEach(function(z){relevant.add((z.type||'rm')+':'+z.code);});
@@ -11160,6 +11161,8 @@ function rBuild(q){
     if(type==='plate'){
       var pl=allPlates.find(function(p){return p.code===code;});
       if(pl)(pl.items||[]).forEach(function(i){relevant.add((i.type||'menu')+':'+i.code);});
+      var pm=(window.allMenus||[]).find(function(m){return (m.menuCode||m.id)===code&&m.art==='Plate';});
+      if(pm)pZ(pm.zutaten).forEach(function(z){if(z.code)relevant.add((z.type||'rm')+':'+z.code);});
     }
   });
 
@@ -11171,20 +11174,20 @@ function rBuild(q){
     else if(type==='mep'){name=((window.allProducts||{})[code]||{}).name||code;}
     else if(type==='gr'){var g=(window.allGRs||[]).find(function(g){return g.grCode===code||g.id===code;});name=g?g.name||code:code;}
     else if(type==='menu'){var m=(window.allMenus||[]).find(function(m){return m.menuCode===code||m.id===code;});name=m?m.name||code:code;}
-    else if(type==='plate'){var p=allPlates.find(function(p){return p.code===code;});name=p?p.name||code:code;}
+    else if(type==='plate'){var p=allPlates.find(function(p){return p.code===code;});if(!p){var pm2=(window.allMenus||[]).find(function(m){return (m.menuCode||m.id)===code&&m.art==='Plate';});if(pm2)p={name:pm2.name};}name=p?p.name||code:code;}
     var n=addN(type,code,name);
     n.isMatch=matched.has(rid);
     if(type==='mep'){n.data={type:'mep',zutaten:(window.allRecipes||[]).filter(function(r){return r.mepCode===code;}).map(function(r){var inv=(window.allInventory||[]).find(function(x){return x.code===r.rmCode;})||{};return{type:'rm',code:r.rmCode,name:inv.name||r.rmCode,gewicht:parseFloat(r.menge)||0};})};} 
     else if(type==='gr'){n.data=(window.allGRs||[]).find(function(g){return g.grCode===code||g.id===code;})||null;}
     else if(type==='menu'){n.data=(window.allMenus||[]).find(function(m){return m.menuCode===code||m.id===code;})||null;}
-    else if(type==='plate'){n.data=allPlates.find(function(p){return p.code===code;})||null;}
+    else if(type==='plate'){n.data=allPlates.find(function(p){return p.code===code;})||(window.allMenus||[]).find(function(m){return (m.menuCode||m.id)===code&&m.art==='Plate';})||null;}
   });
 
   // edges
   function addE(fi,ti,w,st){if(rNM[fi]&&rNM[ti])rE.push({from:fi,to:ti,weight:w,srcType:st});}
   (window.allRecipes||[]).forEach(function(r){addE('rm:'+r.rmCode,'mep:'+r.mepCode,parseFloat(r.menge)||0,'rm');});
   (window.allGRs||[]).forEach(function(g){var ti='gr:'+(g.grCode||g.id);pZ(g.zutaten).forEach(function(z){if(z.code)addE((z.type||'rm')+':'+z.code,ti,parseFloat(z.gewicht)||0,z.type||'rm');});});
-  (window.allMenus||[]).forEach(function(m){var ti='menu:'+(m.menuCode||m.id);pZ(m.zutaten).forEach(function(z){if(z.code)addE((z.type||'rm')+':'+z.code,ti,parseFloat(z.gewicht)||0,z.type||'rm');});});
+  (window.allMenus||[]).forEach(function(m){var ti=(m.art==='Plate'?'plate':'menu')+':'+(m.menuCode||m.id);pZ(m.zutaten).forEach(function(z){if(z.code)addE((z.type||'rm')+':'+z.code,ti,parseFloat(z.gewicht)||0,z.type||'rm');});});
   allPlates.forEach(function(p){var ti='plate:'+p.code;(p.items||[]).forEach(function(i){if(i.code)addE((i.type||'menu')+':'+i.code,ti,parseFloat(i.gewicht)||0,i.type||'menu');});});
 
   var ci={};rN.forEach(function(n){if(ci[n.col]===undefined)ci[n.col]=0;n.row=ci[n.col]++;n._x=CX[n.col];n._y=CT+n.row*RG;});
