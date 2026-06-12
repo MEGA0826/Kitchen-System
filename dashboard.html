@@ -8435,6 +8435,33 @@ function _renderMenuRow(m) {
   </div>`;
 }
 
+function _renderGrRow(g) {
+  const sc  = (g.code||'').replace(/"/g,'&quot;');
+  const sn  = (g.name||'').replace(/"/g,'&quot;');
+  const wa  = parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0);
+  const nk  = parseFloat(g.nettoKg||0) || _calcMenuNettoKg(g.zutaten);
+  const wStr = nk > 0 ? (nk >= 1 ? nk.toFixed(2)+'kg' : (nk*1000).toFixed(0)+'g') : '';
+  const allergens = _calcAllergens(g.zutaten);
+  const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="${allergens.join(', ')}">⚠️ ${allergens.join(' · ')}</span>` : '';
+  const editH = g.source === 'menu'
+    ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${sc}"`
+    : `class="btn-edit gr-edit-btn" data-code="${sc}"`;
+  const delH = g.source === 'menu'
+    ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${sn}"`
+    : `class="btn-del gr-del-btn" data-code="${sc}" data-name="${sn}"`;
+  return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;min-width:0;overflow:hidden">
+    <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700;flex-shrink:0">GR</span>
+    <span style="font-size:13px;font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.name||g.code}</span>
+    ${allergenStr}
+    <span style="font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap">${g.code}</span>
+    ${wStr ? `<span style="font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap">${wStr}</span>` : ''}
+    ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);flex-shrink:0;white-space:nowrap">CHF ${wa.toFixed(2)}</span>` : ''}
+    <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px;flex-shrink:0" title="Kopieren">📋</button>
+    <button type="button" ${editH} style="font-size:11px;padding:3px 8px;flex-shrink:0">✏️</button>
+    <button type="button" ${delH} style="font-size:11px;padding:3px 8px;flex-shrink:0">🗑</button>
+  </div>`;
+}
+
 function _bindMenuRowEvents(el) {
   el.querySelectorAll('.menu-card-item,.menu-row-name').forEach(card => {
     card.addEventListener('click', () => openMenuView(card.dataset.menuId));
@@ -8475,13 +8502,15 @@ function filterGrDisplay() {
     const code = g.grCode || g.id || '';
     if (!code || seenCodes.has(code.toLowerCase())) return; // dedupe within allGRs too
     seenCodes.add(code.toLowerCase());
-    combined.push({ code, name: g.name || '', wa: g.wa || 0, zutaten: g.zutaten || '[]', source: 'gr', id: null });
+    const nettoKg = parseFloat(g.rohgewicht||0) * (1 - parseFloat(g.garverlust||0)/100);
+    combined.push({ code, name: g.name || '', wa: g.wa || 0, zutaten: g.zutaten || '[]', source: 'gr', id: null, nettoKg });
   });
   (allMenus || []).forEach(m => {
     if ((m.art || '') !== 'Grundrezeptur') return;
     const code = m.menuCode || m.code || '';
     if (seenCodes.has(code.toLowerCase())) return; // already in GR sheet
-    combined.push({ code, name: m.name || '', wa: m.wa || 0, zutaten: m.zutaten || '[]', source: 'menu', id: m.id });
+    const nettoKg = _calcMenuNettoKg(m.zutaten || '[]');
+    combined.push({ code, name: m.name || '', wa: m.wa || 0, zutaten: m.zutaten || '[]', source: 'menu', id: m.id, nettoKg });
   });
 
   const results = combined.filter(g => {
@@ -8497,31 +8526,7 @@ function filterGrDisplay() {
 
   if (!results.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR gefunden.</div>`; return; }
   const limit = q.length <= 3 ? results.length : 20;
-  el.innerHTML = results.slice(0, limit).map(g => {
-    const safeCode = g.code.replace(/"/g,'&quot;');
-    const safeName = g.name.replace(/"/g,'&quot;');
-    const liveWa = (parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0)).toFixed(2);
-    const allergens = _calcAllergens(g.zutaten);
-    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
-    const editHandler = g.source === 'menu'
-      ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${safeCode}"`
-      : `class="btn-edit gr-edit-btn" data-code="${safeCode}"`;
-    const delHandler = g.source === 'menu'
-      ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${safeName}"`
-      : `class="btn-del gr-del-btn" data-code="${safeCode}" data-name="${safeName}"`;
-    return `<div style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
-        <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
-        <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
-        <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
-        <button type="button" class="btn-copy gr-copy-btn" data-code="${safeCode}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
-        <button type="button" ${editHandler} style="font-size:11px;padding:3px 8px">✏️</button>
-        <button type="button" ${delHandler} style="font-size:11px;padding:3px 8px">🗑</button>
-      </div>
-      ${allergenBadge ? `<div style="padding-left:4px">${allergenBadge}</div>` : ''}
-    </div>`;
-  }).join("");
+  el.innerHTML = results.slice(0, limit).map(g => _renderGrRow(g)).join("");
 
   el.querySelectorAll('.gr-copy-btn').forEach(btn => btn.addEventListener('click', () => copyGR(btn.dataset.code)));
   // Wire up edit/delete for menu-sheet GRs
@@ -8590,40 +8595,19 @@ function showAllGRs() {
     const code = g.grCode||g.id||'';
     if (!code || seenCodes.has(code.toLowerCase())) return; // dedupe within allGRs too
     seenCodes.add(code.toLowerCase());
-    combined.push({ code, name:g.name||'', wa:g.wa||0, zutaten:g.zutaten||'[]', source:'gr', id:null });
+    const nettoKg = parseFloat(g.rohgewicht||0) * (1 - parseFloat(g.garverlust||0)/100);
+    combined.push({ code, name:g.name||'', wa:g.wa||0, zutaten:g.zutaten||'[]', source:'gr', id:null, nettoKg });
   });
   (allMenus||[]).forEach(m => {
     if ((m.art||'') !== 'Grundrezeptur') return;
     const code = m.menuCode||m.code||'';
     if (seenCodes.has(code.toLowerCase())) return;
-    combined.push({ code, name:m.name||'', wa:m.wa||0, zutaten:m.zutaten||'[]', source:'menu', id:m.id });
+    const nettoKg = _calcMenuNettoKg(m.zutaten || '[]');
+    combined.push({ code, name:m.name||'', wa:m.wa||0, zutaten:m.zutaten||'[]', source:'menu', id:m.id, nettoKg });
   });
   combined.sort((a,b) => a.name.localeCompare(b.name));
   if (!combined.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR vorhanden.</div>`; return; }
-  el.innerHTML = combined.map(g => {
-    const sc = g.code.replace(/"/g,'&quot;'), sn = g.name.replace(/"/g,'&quot;');
-    const liveWa = (parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0)).toFixed(2);
-    const allergens = _calcAllergens(g.zutaten);
-    const allergenBadge = allergens.length ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap">⚠️ ${allergens.join(' · ')}</span>` : '';
-    const editH = g.source==='menu'
-      ? `class="btn-edit menu-gr-edit-btn" data-menu-id="${g.id||''}" data-code="${sc}"`
-      : `class="btn-edit gr-edit-btn" data-code="${sc}"`;
-    const delH = g.source==='menu'
-      ? `class="btn-del menu-gr-del-btn" data-menu-id="${g.id||''}" data-name="${sn}"`
-      : `class="btn-del gr-del-btn" data-code="${sc}" data-name="${sn}"`;
-    return `<div style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700">GR</span>
-        <span style="font-size:13px;font-weight:500;flex:1">${g.name||g.code}</span>
-        <span style="font-size:11px;color:var(--muted);margin-right:4px">${g.code}</span>
-        <span style="font-size:11px;color:var(--amber);margin-right:8px">CHF ${liveWa}</span>
-        <button type="button" class="btn-copy gr-copy-btn" data-code="${sc}" style="font-size:11px;padding:3px 8px" title="Kopieren">📋</button>
-        <button type="button" ${editH} style="font-size:11px;padding:3px 8px">✏️</button>
-        <button type="button" ${delH} style="font-size:11px;padding:3px 8px">🗑</button>
-      </div>
-      ${allergenBadge ? `<div style="padding-left:4px">${allergenBadge}</div>` : ''}
-    </div>`;
-  }).join('');
+  el.innerHTML = combined.map(g => _renderGrRow(g)).join('');
   el.querySelectorAll('.gr-copy-btn').forEach(btn => btn.addEventListener('click', () => copyGR(btn.dataset.code)));
   el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => btn.addEventListener('click', () => {
     if (btn.dataset.menuId) openMenuPopup(btn.dataset.menuId); else openEditGRPopup(btn.dataset.code);
