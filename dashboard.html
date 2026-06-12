@@ -2160,12 +2160,12 @@ let allWorkersAdmin = [];
 let allRecipes = [];
 
 // ── Popup back-button management (History API) ───────────────────────────────
-let _popupDepth = 0, _backNavActive = false;
+let _popupDepth = 0, _backNavActive = false, _programmaticBack = false;
 function _onPopupOpen() { _popupDepth++; history.pushState({ popup: true }, ''); }
 function _onPopupClose() {
   if (_popupDepth <= 0) return;
   _popupDepth--;
-  if (!_backNavActive) history.back();
+  if (!_backNavActive) { _programmaticBack = true; history.back(); }
 }
 function _closeTopmostPopup() {
   const vis  = id => { const e = document.getElementById(id); return e && e.style.display && e.style.display !== 'none'; };
@@ -2182,7 +2182,13 @@ function _closeTopmostPopup() {
   if (vis('manualScanModal'))       { closeManualScan();         return; }
 }
 window.addEventListener('popstate', e => {
-  if (e.state?.popup) { _backNavActive = true; _closeTopmostPopup(); _backNavActive = false; }
+  if (_programmaticBack) { _programmaticBack = false; return; }
+  if (_popupDepth > 0) {
+    _backNavActive = true;
+    _closeTopmostPopup();
+    _backNavActive = false;
+    if (_popupDepth > 0) history.pushState({ popup: true }, '');
+  }
 });
 function closeMenuView() {
   const v = document.getElementById('menuViewPopup'); if (v) v.style.display = 'none';
