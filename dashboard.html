@@ -6840,15 +6840,13 @@ function _buildBumSearchItems() {
 }
 
 function _showBatchUnmatchedReview() {
-  _bumResolved   = {};
+  _bumResolved    = {};
   _bumSearchItems = _buildBumSearchItems();
 
-  // Compute suggestions for each unmatched row now that search items are ready
   _batchUnmatched.forEach(item => {
     item.suggestions = _findTopSuggestions(item.ingName, 3);
   });
 
-  // Group by savedCode for display
   const groups = {};
   _batchUnmatched.forEach(item => {
     if (!groups[item.savedCode]) groups[item.savedCode] = { menuName: item.menuName, isGR: item.isGR, items: [] };
@@ -6861,30 +6859,33 @@ function _showBatchUnmatchedReview() {
     return `<span style="font-size:9px;padding:1px 5px;border-radius:9px;background:${c}22;color:${c};border:1px solid ${c}44;font-weight:700">${(t||'rm').toUpperCase()}</span>`;
   };
 
+  const enc = v => (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+
   const groupsHtml = Object.entries(groups).map(([code, grp]) => {
     const rowsHtml = grp.items.map(item => {
       const pillsHtml = item.suggestions.map(s =>
-        `<button type="button" onclick="bumSelect(${item.rowId},${JSON.stringify(s.code)},${JSON.stringify(s.name)},${JSON.stringify(s.type)})"
-          style="font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;color:var(--text);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis">
-          ${typePill(s.type)} ${s.code} · ${(s.name||'').replace(/</g,'&lt;')}
+        `<button type="button" class="bum-select-btn"
+          data-row-id="${item.rowId}" data-code="${enc(s.code)}" data-name="${enc(s.name)}" data-type="${enc(s.type)}"
+          style="font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;color:var(--text);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">
+          ${typePill(s.type)} ${enc(s.code)} · ${(s.name||'').replace(/</g,'&lt;')}
         </button>`
       ).join('');
       return `<div id="bum-row-${item.rowId}" style="padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div>
             <span style="font-size:12px;font-weight:600;color:var(--text)">${(item.ingName||'').replace(/</g,'&lt;')}</span>
-            <span style="font-size:10px;color:var(--muted);margin-left:8px">AI: ${(item.ingCode||'—')}</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:8px">AI: ${(item.ingCode||'—').replace(/</g,'&lt;')}</span>
           </div>
           <span id="bum-status-${item.rowId}" style="font-size:10px;color:var(--muted);white-space:nowrap">not matched</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
           ${pillsHtml}
-          <button type="button" onclick="bumSkip(${item.rowId})"
+          <button type="button" class="bum-skip-btn" data-row-id="${item.rowId}"
             style="font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:none;cursor:pointer;color:var(--muted)">Skip</button>
         </div>
         <div style="margin-top:7px">
-          <input type="text" id="bum-search-${item.rowId}" placeholder="Search system…"
-            oninput="bumSearchFilter(${item.rowId},this.value)"
+          <input type="text" id="bum-search-${item.rowId}" class="bum-search-input" data-row-id="${item.rowId}"
+            placeholder="Search system…"
             style="width:100%;box-sizing:border-box;font-size:11px;padding:5px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3);color:var(--text)">
           <div id="bum-results-${item.rowId}" style="display:none;max-height:120px;overflow-y:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface1)"></div>
         </div>
@@ -6910,17 +6911,35 @@ function _showBatchUnmatchedReview() {
           <div style="font-size:15px;font-weight:700;color:var(--text)">🔍 ${total} Unmatched Ingredient${total !== 1 ? 's' : ''}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px">Select the correct system item, or Skip to keep the AI assignment</div>
         </div>
-        <button type="button" onclick="closeBatchUnmatched()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px;flex-shrink:0">✕</button>
+        <button type="button" class="bum-close-btn" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px;flex-shrink:0">✕</button>
       </div>
       <div style="overflow-y:auto;max-height:65vh;padding:16px 20px">${groupsHtml}</div>
       <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
-        <button type="button" onclick="closeBatchUnmatched()"
+        <button type="button" class="bum-close-btn"
           style="padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:12px">Skip All & Close</button>
-        <button type="button" id="bum-apply-btn" onclick="applyBatchMatches()"
+        <button type="button" id="bum-apply-btn"
           style="padding:8px 18px;border-radius:var(--radius-sm);border:1px solid var(--green-brd);background:var(--green-dim);color:var(--green);cursor:pointer;font-size:12px;font-weight:600">Apply & Re-save</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  _bumBindEvents(overlay);
+}
+
+function _bumBindEvents(overlay) {
+  overlay.addEventListener('click', e => {
+    const selBtn = e.target.closest('.bum-select-btn');
+    if (selBtn) { bumSelect(+selBtn.dataset.rowId, selBtn.dataset.code, selBtn.dataset.name, selBtn.dataset.type); return; }
+    const skipBtn = e.target.closest('.bum-skip-btn');
+    if (skipBtn) { bumSkip(+skipBtn.dataset.rowId); return; }
+    const resRow = e.target.closest('.bum-result-row');
+    if (resRow) { bumSelect(+resRow.dataset.rowId, resRow.dataset.code, resRow.dataset.name, resRow.dataset.type); return; }
+    const closeBtn = e.target.closest('.bum-close-btn');
+    if (closeBtn) { closeBatchUnmatched(); return; }
+    if (e.target.id === 'bum-apply-btn' || e.target.closest('#bum-apply-btn')) { applyBatchMatches(); return; }
+  });
+  overlay.querySelectorAll('.bum-search-input').forEach(inp => {
+    inp.addEventListener('input', () => bumSearchFilter(+inp.dataset.rowId, inp.value));
+  });
 }
 
 function bumSelect(rowId, code, name, type) {
@@ -6960,11 +6979,12 @@ function bumSearchFilter(rowId, query) {
     resultsEl.innerHTML = '<div style="padding:8px 10px;font-size:11px;color:var(--muted)">No results</div>';
     return;
   }
+  const enc = v => (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   resultsEl.style.display = 'block';
   resultsEl.innerHTML = matches.map(m =>
-    `<div onclick="bumSelect(${rowId},${JSON.stringify(m.code)},${JSON.stringify(m.name)},${JSON.stringify(m.type)})"
-      style="padding:7px 10px;font-size:11px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center"
-      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+    `<div class="bum-result-row" data-row-id="${rowId}"
+      data-code="${enc(m.code)}" data-name="${enc(m.name)}" data-type="${enc(m.type)}"
+      style="padding:7px 10px;font-size:11px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center">
       <span style="font-size:9px;color:var(--muted);min-width:28px">${(m.type||'').toUpperCase()}</span>
       <span style="color:var(--amber);min-width:60px">${(m.code||'').replace(/</g,'&lt;')}</span>
       <span style="color:var(--text)">${(m.name||'').replace(/</g,'&lt;')}</span>
