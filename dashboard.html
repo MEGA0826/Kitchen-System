@@ -8197,7 +8197,7 @@ async function saveGREntry() {
       rohgewicht   : roh,
       garverlust   : verl,
       wa,
-      zutaten      : JSON.stringify(agrZutaten),
+      zutaten      : JSON.stringify(_slimZutaten(agrZutaten)),
       zubereitung  : document.getElementById('agr-zubereitung').value.trim()
     });
     if (data.error) throw new Error(data.error);
@@ -9510,6 +9510,24 @@ function confirmGr() {
 // ─────────────────────────────────────────────
 // SAVE MENU
 // ─────────────────────────────────────────────
+function _slimZutaten(arr) {
+  return (arr || []).map(z => {
+    const s = { type: z.type, code: z.code, name: z.name };
+    if (z.gewicht)      s.gewicht    = z.gewicht;
+    if (z.unitCost)     s.unitCost   = z.unitCost;
+    if (z.cost)         s.cost       = z.cost;
+    if (z.allergie)     s.allergie   = z.allergie;
+    if (z.zubereitung)  s.zubereitung = z.zubereitung;
+    if (z.isDeko)       s.isDeko     = true;
+    if (z.isTopping)    s.isTopping  = true;
+    if (z.pieces)       s.pieces     = z.pieces;
+    if (z.piecesTotal)  s.piecesTotal = z.piecesTotal;
+    if (z.garverlust)   s.garverlust  = z.garverlust;
+    if (z.rohGewicht)   s.rohGewicht  = z.rohGewicht;
+    return s;
+  });
+}
+
 async function saveMenuEntry() {
   const name     = document.getElementById('mp-name').value.trim();
   const menuCode = document.getElementById('mp-code').value.trim();
@@ -9553,7 +9571,7 @@ async function saveMenuEntry() {
       const grData = await adminCall({
         action: 'saveGR', grCode, name, art,
         rohgewicht: gewicht, garverlust, wa,
-        zutaten: JSON.stringify(menuZutaten), zubereitung
+        zutaten: JSON.stringify(_slimZutaten(menuZutaten)), zubereitung
       });
       if (grData.error) throw new Error(grData.error);
       if (editingMenuId) {
@@ -9583,7 +9601,7 @@ async function saveMenuEntry() {
     wa            : document.getElementById('mp-wa').value,
     vk            : document.getElementById('mp-vk').value,
     zubereitung   : document.getElementById('mp-zubereitung').value.trim(),
-    zutaten       : JSON.stringify(menuZutaten),
+    zutaten       : JSON.stringify(_slimZutaten(menuZutaten)),
     imageUrl      : imageUrl || '',
     logoUrl,
     lastUpdate    : new Date().toISOString()
@@ -11108,7 +11126,7 @@ var rQ='',rSel=null,rTx={x:20,y:20,scale:1},rPan=false,rPS={x:0,y:0};
 var rCM=[],rView='diagram',rDOMBuilt=false;
 
 function loadPlates(){try{return JSON.parse(localStorage.getItem('rt_plates')||'[]');}catch(e){return[];}}
-function savePlates(a){try{localStorage.setItem('rt_plates',JSON.stringify(a));}catch(e){}}
+function savePlates(a){try{localStorage.setItem('rt_plates',JSON.stringify(a));}catch(e){alert('Plate save failed (storage full?): '+e.message);}}
 var allPlates=loadPlates();
 var rPlateItems=[],rEditPlateCode=null;
 
