@@ -6349,30 +6349,17 @@ async function confirmPdfImport() {
   try {
     const mode = window._pdfMode || 'recipes';
 
-    // Build zutaten array — resolve cost from inventory for matched items
-    const zutaten = pdfParsedIngredients.map(ing => {
-      let cost = 0;
-      const qty = parseFloat(ing.quantity) || 0;
-      if (ing._matched && ing.code) {
-        const inv = (allInventory || []).find(x => x.code === ing.code);
-        if (inv) {
-          const wu = parseFloat(inv.weightUnit) || 1;
-          const pricePerKg = (parseFloat(inv.kostenUnit) || 0) / wu;
-          cost = qty * pricePerKg;
-        }
-      }
-      // fallback: use warenaufwand from PDF parse if available
-      if (!cost && ing.warenaufwand) cost = parseFloat(ing.warenaufwand) || 0;
-      return {
-        type     : (ing.type || "rm").toLowerCase(),
-        code     : ing.code  || "",
-        name     : ing.name  || "",
-        gewicht  : qty || "",
-        unit     : ing.unit  || "",
-        allergie : ing.allergie || "",
-        cost     : +cost.toFixed(3)
-      };
-    });;
+    // Build zutaten array — resolve cost + unitCost from live inventory/GRs/products
+    const rawZutaten = pdfParsedIngredients.map(ing => ({
+      type     : (ing.type || "rm").toLowerCase(),
+      code     : ing.code  || "",
+      name     : ing.name  || "",
+      gewicht  : parseFloat(ing.quantity) || "",
+      unit     : ing.unit  || "",
+      allergie : ing.allergie || "",
+      cost     : parseFloat(ing.warenaufwand) || 0
+    }));
+    const { enriched: zutaten, waTotal: computedWa } = _enrichZutaten(rawZutaten);
 
     // Build full zubereitung from parsed PDF + allergen declaration
     const mi = window._pdfMenuInfo || {};
@@ -6399,9 +6386,9 @@ async function confirmPdfImport() {
       category    : pdfMenuCat,
       art         : pdfMenuArt,
       saison      : "All Year",
-      zutaten     : JSON.stringify(zutaten),
+      zutaten     : JSON.stringify(_slimZutaten(zutaten)),
       zubereitung : zubereitungLine,
-      wa          : mi.warenaufwand || "",
+      wa          : computedWa || mi.warenaufwand || "",
       vk          : pdfMenuVk || mi.verkaufspreis || "",
       gewicht     : mi.gewicht || "",
       lastUpdate  : new Date().toISOString()
@@ -6627,8 +6614,8 @@ async function _processBatchItem(idx) {
   if (!vd)       throw new Error('No response from server');
   if (vd.error)  throw new Error(vd.error);
 
-  const mi          = vd.menuInfo || {};
-  const ingredients = (vd.ingredients || []).map(ing => ({
+  const mi           = vd.menuInfo || {};
+  const rawIngredients = (vd.ingredients || []).map(ing => ({
     type    : (ing.type || 'rm').toLowerCase(),
     code    : ing.code    || '',
     name    : ing.name    || '',
@@ -6637,6 +6624,7 @@ async function _processBatchItem(idx) {
     allergie: ing.allergie || '',
     cost    : 0
   }));
+  const { enriched: ingredients, waTotal: computedWa } = _enrichZutaten(rawIngredients);
 
   const menuName      = mi.name || filename;
   const detectedArt   = (mi.art || '').trim();
@@ -6669,8 +6657,9 @@ async function _processBatchItem(idx) {
       rohgewicht  : parseFloat(mi.gewicht) || 0,
       garverlust  : 0,
       wa          : 0,
-      zutaten     : JSON.stringify(ingredients),
-      zubereitung : zubereitungSafe
+      zutaten     : JSON.stringify(_slimZutaten(ingredients)),
+      zubereitung : zubereitungSafe,
+      wa          : computedWa || 0
     }));
     if (saved && saved.error) throw new Error(saved.error);
     savedCode = grCode;
@@ -6688,8 +6677,9 @@ async function _processBatchItem(idx) {
       category    : mi.category || '',
       art         : detectedArt || 'Hauptgang',
       saison      : 'All Year',
-      zutaten     : JSON.stringify(ingredients),
+      zutaten     : JSON.stringify(_slimZutaten(ingredients)),
       zubereitung : zubereitungSafe,
+      wa          : computedWa || 0,
       vk          : mi.verkaufspreis || '',
       gewicht     : mi.gewicht || '',
       lastUpdate  : new Date().toISOString()
@@ -9534,6 +9524,50 @@ function _slimZutaten(arr) {
     if (z.rohGewicht)   s.rohGewicht  = z.rohGewicht;
     return s;
   });
+}
+
+// Enrich zutaten with live unit costs from inventory/GRs/products.
+// Returns { enriched: Array, waTotal: number }
+function _enrichZutaten(arr) {
+  let waTotal = 0;
+  const enriched = (arr || []).map(z => {
+    const gw = parseFloat(z.gewicht) || 0;
+    const t  = (z.type || 'rm').toLowerCase();
+    let unitCost = parseFloat(z.unitCost) || 0;
+
+    if (t === 'rm') {
+      const inv = (allInventory||[]).find(i => i.code === (z.code||''));
+      if (inv) {
+        const wu = parseFloat(inv.weightUnit) || 1;
+        unitCost = (parseFloat(inv.kostenUnit) || 0) / wu;
+      }
+    } else if (t === 'gr') {
+      const gr = (allGRs||[]).find(g => (g.grCode||g.id) === (z.code||''));
+      if (gr) {
+        const grWa    = parseFloat(gr.wa||0) || (_calcLiveWA(gr.zutaten) ?? 0);
+        const netto   = _calcMenuNettoKg(gr.zutaten) || parseFloat(gr.rohgewicht||0);
+        unitCost = netto > 0 ? grWa / netto : 0;
+      }
+    } else if (t === 'mep') {
+      const mep = _calcMepWA(z.code||'');
+      if (mep && mep.waPerGN) {
+        const gnW = mep.gnWeightKg || 1;
+        unitCost = gnW > 0 ? mep.waPerGN / gnW : 0;
+      }
+    } else if (t === 'menu') {
+      const m = (allMenus||[]).find(x => (x.menuCode||x.id) === (z.code||''));
+      if (m) {
+        const mWa   = parseFloat(m.wa||0) || (_calcLiveWA(m.zutaten) ?? 0);
+        const mNetto = _calcMenuNettoKg(m.zutaten);
+        unitCost = mNetto > 0 ? mWa / mNetto : 0;
+      }
+    }
+
+    const cost = gw > 0 && unitCost > 0 ? +(gw * unitCost).toFixed(3) : (parseFloat(z.cost) || 0);
+    waTotal += cost;
+    return { ...z, unitCost: unitCost || z.unitCost || 0, cost };
+  });
+  return { enriched, waTotal: +waTotal.toFixed(2) };
 }
 
 async function saveMenuEntry() {
