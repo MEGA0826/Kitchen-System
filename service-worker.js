@@ -1,8 +1,8 @@
-// Kitchen MEP — Service Worker v92
+// Kitchen MEP — Service Worker v93
 // Strategy: cache-first for static assets, network-first for API calls
 
-const CACHE_STATIC = "mep-static-v92";
-const CACHE_API    = "mep-api-v92";
+const CACHE_STATIC = "mep-static-v93";
+const CACHE_API    = "mep-api-v93";
 
 // Actions that involve slow AI processing — use a 90-second timeout
 const SLOW_ACTIONS = new Set(["parsePdfVisionChunked", "parseMenuPdf", "parseRecipePdf"]);

@@ -8324,22 +8324,27 @@ function _calcAllergens(zutatenStr) {
   try {
     const zs = JSON.parse(typeof zutatenStr === 'string' ? (zutatenStr||'[]') : '[]');
     const seen = new Set();
+    const add  = v => (v||'').split(',').forEach(a => { const t = a.trim(); if (t) seen.add(t); });
     for (const z of zs) {
       const t = (z.type||'rm').toLowerCase();
-      let val = '';
       if (t === 'rm') {
         const inv = (allInventory||[]).find(i => i.code === (z.code||''));
-        val = inv?.allergen || z.allergie || '';
+        add(inv?.allergen || z.allergie || '');
+      } else if (t === 'gr') {
+        const gr = (allGRs||[]).find(g => (g.grCode||g.id) === (z.code||''));
+        if (gr) _calcAllergens(gr.zutaten).forEach(a => seen.add(a));
+        else    add(z.allergie || '');
+      } else if (t === 'mep') {
+        const nested = _calcMepAllergens(z.code||'');
+        if (nested.length) nested.forEach(a => seen.add(a));
+        else add(z.allergie || '');
       } else if (t === 'menu') {
-        // Recurse into menu's own zutaten for allergens
         const m = (allMenus||[]).find(x => (x.menuCode||x.id) === (z.code||''));
-        const nested = m ? _calcAllergens(m.zutaten) : [];
-        nested.forEach(a => seen.add(a));
-        val = z.allergie || '';
+        if (m) _calcAllergens(m.zutaten).forEach(a => seen.add(a));
+        else   add(z.allergie || '');
       } else {
-        val = z.allergie || '';
+        add(z.allergie || '');
       }
-      (val||'').split(',').forEach(a => { const tr = a.trim(); if (tr) seen.add(tr); });
     }
     return [...seen];
   } catch(e) { return []; }
