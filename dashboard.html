@@ -6507,9 +6507,12 @@ async function _batchRetry(fn, maxAttempts) {
       if (!navigator.onLine) throw new Error('No connection after 30 s');
     }
     try {
-      return await fn();
+      const result = await fn();
+      // Treat SW offline stub as a network error so we retry
+      if (result && result.error === 'offline') throw new TypeError('SW offline fallback — will retry');
+      return result;
     } catch(e) {
-      const isNetwork = e instanceof TypeError || (e.message || '').includes('fetch');
+      const isNetwork = e instanceof TypeError || (e.message || '').includes('fetch') || (e.message || '').includes('offline');
       if (!isNetwork || attempt === maxAttempts - 1) throw e;
       // Exponential back-off: 3 s, 6 s, 12 s
       await new Promise(r => setTimeout(r, 3000 * Math.pow(2, attempt)));

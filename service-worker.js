@@ -1,8 +1,13 @@
-// Kitchen MEP — Service Worker v91
+// Kitchen MEP — Service Worker v92
 // Strategy: cache-first for static assets, network-first for API calls
 
-const CACHE_STATIC = "mep-static-v91";
-const CACHE_API    = "mep-api-v91";
+const CACHE_STATIC = "mep-static-v92";
+const CACHE_API    = "mep-api-v92";
+
+// Actions that involve slow AI processing — use a 90-second timeout
+const SLOW_ACTIONS = new Set(["parsePdfVisionChunked", "parseMenuPdf", "parseRecipePdf"]);
+// Actions that are transient (chunk upload) — never cache, no fallback needed
+const NOCACHE_ACTIONS = new Set(["storeChunk"]);
 
 const PRECACHE = [
   "/Kitchen-System/index.html",
@@ -44,7 +49,15 @@ self.addEventListener("fetch", e => {
 
   // Google Apps Script API → network-first with API cache fallback (5 min TTL)
   if (url.hostname.includes("script.google.com")) {
-    e.respondWith(networkFirstWithCache(e.request, CACHE_API, 300));
+    const action = url.searchParams.get("action") || "";
+    // Transient chunk uploads — pass through directly, no caching
+    if (NOCACHE_ACTIONS.has(action)) {
+      e.respondWith(fetch(e.request));
+      return;
+    }
+    // Slow AI actions get a 90-second timeout; regular calls get 8 seconds
+    const timeoutMs = SLOW_ACTIONS.has(action) ? 90000 : 8000;
+    e.respondWith(networkFirstWithCache(e.request, CACHE_API, 300, timeoutMs));
     return;
   }
 
@@ -84,10 +97,11 @@ async function staleWhileRevalidate(request, cacheName) {
   return cached || fetchPromise;
 }
 
-async function networkFirstWithCache(request, cacheName, maxAgeSeconds) {
+async function networkFirstWithCache(request, cacheName, maxAgeSeconds, timeoutMs) {
+  timeoutMs = timeoutMs || 8000;
   const cache = await caches.open(cacheName);
   try {
-    const response = await fetch(request, { signal: AbortSignal.timeout(8000) });
+    const response = await fetch(request, { signal: AbortSignal.timeout(timeoutMs) });
     if (response.ok) {
       const toCache = response.clone();
       // Store with timestamp header for TTL checking
