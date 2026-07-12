@@ -1,13 +1,27 @@
-// Kitchen MEP — Service Worker v95
-// Strategy: cache-first for static assets, network-first for API calls
+// Kitchen MEP — Service Worker v96
+// Strategy: cache-first for static assets, network-first for API READS.
+// API writes are never intercepted: serving a cached response for a write
+// (e.g. a repeated produce/waste scan URL) would report success without
+// anything being saved.
 
-const CACHE_STATIC = "mep-static-v95";
-const CACHE_API    = "mep-api-v95";
+const CACHE_STATIC = "mep-static-v96";
+const CACHE_API    = "mep-api-v96";
 
 // Actions that involve slow AI processing — use a 90-second timeout
 const SLOW_ACTIONS = new Set(["parsePdfVisionChunked", "parseMenuPdf", "parseRecipePdf"]);
 // Actions that are transient (chunk upload) — never cache, no fallback needed
 const NOCACHE_ACTIONS = new Set(["storeChunk"]);
+// GAS READ actions — the only ones allowed to fall back to the API cache.
+// Any action not listed here (all writes) bypasses the service worker.
+const READ_ACTIONS = new Set([
+  "scans", "archivedScans", "allProducts", "getProductsExtended", "getAllCodes",
+  "inventory", "workers", "allWorkers", "getRolePINs",
+  "getMenus", "getGRs", "getRecipes", "getDeductions",
+  "getHACCPConfig", "getHACCPChecks", "getHACCPReport", "getHACCPTodayLogs",
+  "getMepOverview", "getMepStock", "mepStatus", "getRequirements",
+  "getSalesAnalysis", "archiveStats", "getArchiveStats", "reportPreview",
+  "getAllItemsForMatching", "parsePdfVision"
+]);
 
 const PRECACHE = [
   "/Kitchen-System/index.html",
@@ -47,7 +61,10 @@ self.addEventListener("fetch", e => {
   // Skip non-GET and cross-origin except Google Fonts
   if (e.request.method !== "GET") return;
 
-  // Google Apps Script API → network-first with API cache fallback (5 min TTL)
+  // Google Apps Script API → reads: network-first with cache fallback (5 min TTL).
+  // Writes (any action not in READ/SLOW/NOCACHE sets) are NOT intercepted —
+  // they hit the network directly and fail loudly instead of being answered
+  // from a stale cached response.
   if (url.hostname.includes("script.google.com")) {
     const action = url.searchParams.get("action") || "";
     // Transient chunk uploads — pass through directly, no caching
@@ -55,9 +72,11 @@ self.addEventListener("fetch", e => {
       e.respondWith(fetch(e.request));
       return;
     }
-    // Slow AI actions get a 90-second timeout; regular calls get 8 seconds
-    const timeoutMs = SLOW_ACTIONS.has(action) ? 90000 : 8000;
-    e.respondWith(networkFirstWithCache(e.request, CACHE_API, 300, timeoutMs));
+    if (READ_ACTIONS.has(action) || SLOW_ACTIONS.has(action)) {
+      // Slow AI actions get a 90-second timeout; regular calls get 8 seconds
+      const timeoutMs = SLOW_ACTIONS.has(action) ? 90000 : 8000;
+      e.respondWith(networkFirstWithCache(e.request, CACHE_API, 300, timeoutMs));
+    }
     return;
   }
 

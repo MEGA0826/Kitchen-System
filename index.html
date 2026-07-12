@@ -1384,6 +1384,21 @@
 </div>
 <script>
  const API_URL = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
+ const SB_URL  = "https://clntikfffmjytexvzubq.supabase.co";
+ const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsbnRpa2ZmZm1qeXRleHZ6dWJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxODQwMzUsImV4cCI6MjA5NTc2MDAzNX0.6aiiiJk0hX1DrbXE1zMSYswwJT1FFkrgunJm9eznIXE";
+
+  // Server-side PIN check — PINs never reach the browser. Returns
+  // {name, rolle} for a valid active PIN, null for a wrong one.
+  async function sbVerifyPin(pin) {
+    const res = await fetch(SB_URL + "/rest/v1/rpc/verify_pin", {
+      method: "POST",
+      headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_pin: String(pin) })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    return rows.length ? rows[0] : null;
+  }
 
   let PRODUCT_MAP = {};
   let CURRENT_CODE = "";
@@ -2560,19 +2575,29 @@ function setLangAndWorker(lang) {
 async function checkRolePin() {
     if (_rolePinEntry.length < 4) return;
 
-    // Load workers on demand if not yet available
-    if (!window._homeWorkerList || window._homeWorkerList.length === 0) {
-      document.getElementById("rolePinMsg").textContent = "Checking…";
-      await loadHomeWorkers();
-    }
-
-    const workers = window._homeWorkerList || [];
+    document.getElementById("rolePinMsg").textContent = "Checking…";
     const pin = _rolePinEntry;
+    let matched = null;
 
-    const matched = _pendingRole === 'Admin'
-      ? workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "")
-      : workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "" &&
-          (w.role === _pendingRole || w.role?.toLowerCase() === _pendingRole?.toLowerCase()));
+    try {
+      // Server-side verification (returns null on wrong PIN — no fallback then)
+      const w = await sbVerifyPin(pin);
+      if (w && (_pendingRole === 'Admin' ||
+                (w.rolle || '').toLowerCase() === (_pendingRole || '').toLowerCase())) {
+        matched = w;
+      }
+    } catch (e) {
+      // Supabase unreachable — legacy client-side compare.
+      // Only effective while the GAS backend still returns pins; harmless after.
+      if (!window._homeWorkerList || window._homeWorkerList.length === 0) {
+        await loadHomeWorkers();
+      }
+      const workers = window._homeWorkerList || [];
+      matched = _pendingRole === 'Admin'
+        ? workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "")
+        : workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "" &&
+            (w.role === _pendingRole || w.role?.toLowerCase() === _pendingRole?.toLowerCase()));
+    }
 
     if (matched) {
       document.getElementById("rolePinMsg").textContent = "";

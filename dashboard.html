@@ -1743,7 +1743,7 @@
             </div>
             <div class="form-field">
               <label class="form-label">PIN (4 digits)</label>
-              <input class="form-input" id="editWorkerPin" type="text" inputmode="numeric" maxlength="4" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
+              <input class="form-input" id="editWorkerPin" type="text" inputmode="numeric" maxlength="4" placeholder="Leave blank to keep" style="letter-spacing:6px;font-size:18px;font-family:var(--mono)">
             </div>
             <div class="form-field">
               <label class="form-label">Aktiv</label>
@@ -2451,24 +2451,31 @@ async function submitPin() {
     return;
   }
 
-  if (!allWorkersAdmin.length) {
-    msg.style.color = "var(--muted)";
-    msg.textContent = "Loading...";
+  msg.style.color = "var(--muted)";
+  msg.textContent = "Checking...";
+
+  let matched = null;
+  try {
+    matched = await sbVerifyPin(pin); // null = wrong PIN
+  } catch (e) {
+    // Supabase unreachable — legacy fallback against the worker list.
+    // Only effective while the GAS backend still returns pins; harmless after.
     try {
-      const data = await get({ action: "allWorkers" });
-      allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
-      msg.textContent = "";
-    } catch(e) {
+      if (!allWorkersAdmin.length) {
+        const data = await get({ action: "allWorkers" });
+        allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
+      }
+      matched = allWorkersAdmin.find(w =>
+        typeof w === "object" && w.pin && String(w.pin) === String(pin) && w.active !== false
+      ) || null;
+    } catch (e2) {
       msg.style.color = "var(--red)";
       msg.textContent = "Network error";
       document.getElementById("pinInput").value = "";
       return;
     }
   }
-
-  const matched = allWorkersAdmin.find(w =>
-    typeof w === "object" && w.pin && String(w.pin) === String(pin) && w.active !== false
-  );
+  msg.textContent = "";
 
   if (matched) {
     cancelPin();
@@ -2522,22 +2529,35 @@ async function sbGet(table, query) {
   return res.json();
 }
 
-async function sbPost(table, body, upsert) {
+async function sbPost(table, body, upsert, minimal) {
   const h = Object.assign({}, _sbH);
   if (upsert) h["Prefer"] = "resolution=merge-duplicates,return=representation";
+  if (minimal) h["Prefer"] = h["Prefer"].replace("return=representation", "return=minimal");
   const res = await fetch(SB_URL + "/rest/v1/" + table, {
     method: "POST", headers: h, body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return minimal ? {} : res.json();
 }
 
-async function sbPatch(table, query, body) {
+async function sbPatch(table, query, body, minimal) {
+  const h = Object.assign({}, _sbH);
+  if (minimal) h["Prefer"] = "return=minimal";
   const res = await fetch(SB_URL + "/rest/v1/" + table + "?" + query, {
-    method: "PATCH", headers: _sbH, body: JSON.stringify(body)
+    method: "PATCH", headers: h, body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return minimal ? {} : res.json();
+}
+
+// Server-side PIN check — PINs never reach the browser.
+async function sbVerifyPin(pin) {
+  const res = await fetch(SB_URL + "/rest/v1/rpc/verify_pin", {
+    method: "POST", headers: _sbH, body: JSON.stringify({ p_pin: String(pin) })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows.length ? { name: rows[0].name, role: rows[0].rolle, rolle: rows[0].rolle } : null;
 }
 
 async function sbDelete(table, query) {
@@ -2557,29 +2577,37 @@ async function sbDelete(table, query) {
 const _sbActions = {
 
   // ── Workers ──────────────────────────────
+  // Explicit column list — anon has no SELECT on workers.pin anymore.
   allWorkers: async () => {
-    const rows = await sbGet("workers", "order=name.asc");
+    const rows = await sbGet("workers", "select=name,rolle,aktiv&order=name.asc");
     const workers = rows.map(w => ({
       name: w.name, rolle: w.rolle, role: w.rolle,
-      aktiv: w.aktiv, active: w.aktiv, pin: w.pin
+      aktiv: w.aktiv, active: w.aktiv
     }));
     return { workers };
+  },
+  verifyPin: async (p) => {
+    const worker = await sbVerifyPin(p.pin);
+    return { worker };
   },
   saveWorker: async (p) => {
     const rolle = p.rolle || p.role || null;
     const aktiv = p.active === "false" || p.aktiv === false ? false : true;
-    const body  = { name: p.name, rolle, aktiv, pin: p.pin || null };
+    const body  = { name: p.name, rolle, aktiv };
+    // Empty pin = keep current PIN (the edit form can no longer prefill it).
+    if (p.pin) body.pin = String(p.pin);
     if (p.originalName) {
-      // Edit existing — always PATCH by original name
-      await sbPatch("workers", "name=eq." + encodeURIComponent(p.originalName), body);
+      // Edit existing — always PATCH by original name; minimal return since
+      // representation would need SELECT on pin.
+      await sbPatch("workers", "name=eq." + encodeURIComponent(p.originalName), body, true);
     } else {
       // New worker — POST (insert)
-      await sbPost("workers", body, false);
+      await sbPost("workers", body, false, true);
     }
     return { status: "ok" };
   },
   deleteWorker: async (p) => {
-    await sbPatch("workers", "name=eq." + encodeURIComponent(p.name), { aktiv: false });
+    await sbPatch("workers", "name=eq." + encodeURIComponent(p.name), { aktiv: false }, true);
     return { status: "ok" };
   },
 
@@ -4670,7 +4698,7 @@ Promise.allSettled([
   }).catch(() => {})
 ]).then(() => {
   // Re-render active tab content after data arrives
-  const saved = sessionStorage.getItem("activeTab") || "kds";
+  let saved = sessionStorage.getItem("activeTab") || "kds";
   if (saved === "kds")          { /* already loaded above */ }
   if (saved === "inventory")    filterInventory && filterInventory();
   if (saved === "orders")       renderOrders();
@@ -5350,7 +5378,8 @@ function editEpfRmRow(mepCode, rmCode) {
   const inv = allInventory.find(x => x.code === rmCode) || {};
   if (!r) return;
   // Pre-select in picker
-  _epfRmSelected = { code: rmCode, name: inv.name || rmCode, unit: r.einheit || "kg", unitCost: parseFloat(inv.kostenUnit || 0) };
+  _epfRmSelected = { code: rmCode, name: inv.name || rmCode, unit: r.einheit || "kg",
+    unitCost: (parseFloat(inv.kostenUnit || 0)) / (parseFloat(inv.weightUnit) || 1) }; // CHF/kg = kostenUnit / weightUnit
   openEpfRmPicker();
   setTimeout(() => {
     // Fill search so user sees the item
@@ -5412,14 +5441,15 @@ function filterEpfRmSearch() {
       onmouseout="this.style.background='';this.style.borderColor='transparent'">
       <span style="font-weight:500;flex:1">${r.name||r.code}</span>
       <span style="font-size:10px;color:var(--muted)">${r.code}</span>
-      ${r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${parseFloat(r.kostenUnit).toFixed(2)}/kg</span>` : ""}
+      ${r.kostenUnit ? `<span style="font-size:10px;color:var(--amber)">CHF ${((parseFloat(r.kostenUnit) || 0) / (parseFloat(r.weightUnit) || 1)).toFixed(2)}/kg</span>` : ""}
     </div>`;
   }).join("");
 }
 
 function selectEpfRm(code, name, unit) {
   const inv = allInventory.find(x => x.code === code);
-  _epfRmSelected = { code, name, unit, unitCost: parseFloat(inv?.kostenUnit || 0) };
+  _epfRmSelected = { code, name, unit,
+    unitCost: (parseFloat(inv?.kostenUnit || 0)) / (parseFloat(inv?.weightUnit) || 1) }; // CHF/kg = kostenUnit / weightUnit
   document.getElementById("epf-rm-selected-name").textContent = `✓ ${name} (${code})`;
   document.getElementById("epf-rm-detail").style.display = "block";
   document.getElementById("epf-rm-unit").value = unit || "kg";
@@ -10835,7 +10865,7 @@ async function haccpExportPDF() {
     <div class="form-grid">
       <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="ewf-name" readonly></div>
       <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="ewf-role"></div>
-      <div class="form-field"><label class="form-label">PIN (4 digits)</label><input class="form-input" id="ewf-pin" type="text" inputmode="numeric" maxlength="4"></div>
+      <div class="form-field"><label class="form-label">PIN (4 digits)</label><input class="form-input" id="ewf-pin" type="text" inputmode="numeric" maxlength="4" placeholder="Leave blank to keep"></div>
       <div class="form-field" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ewf-active"><label class="form-label" style="margin:0">Active</label></div>
     </div>
     <div class="admin-msg" id="ewf-msg"></div>
