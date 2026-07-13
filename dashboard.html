@@ -2562,8 +2562,39 @@ async function sbDelete(table, query) {
 }
 
 // ─────────────────────────────────────────────
+// ADMIN GATEWAY (Edge Function) — all WRITES go here.
+// The anon key is read-only; writes require a token issued only after a
+// correct PIN, and are performed server-side with the service-role key.
+// ─────────────────────────────────────────────
+const GW_URL   = SB_URL + "/functions/v1/admin-gateway";
+const GW_TOKEN = "mep_gwt"; // sessionStorage key
+
+async function gwPost(body) {
+  const res = await fetch(GW_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SB_KEY, Authorization: "Bearer " + SB_KEY },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// PIN login → { ok, worker, token }. Stores the write token on success.
+async function gwLogin(pin) {
+  const r = await gwPost({ action: "login", pin: String(pin) });
+  if (r && r.token) { try { sessionStorage.setItem(GW_TOKEN, r.token); } catch (e) {} }
+  return r;
+}
+
+// Perform a write action through the gateway with the stored token.
+async function gwWrite(action, params) {
+  const token = sessionStorage.getItem(GW_TOKEN) || "";
+  return gwPost(Object.assign({ action, token }, params));
+}
+
+// ─────────────────────────────────────────────
 // SUPABASE ACTION HANDLERS
-// Actions listed here are fully migrated to Supabase.
+// Reads use the anon key directly; writes are delegated to the gateway.
 // All others fall through to GAS automatically.
 // ─────────────────────────────────────────────
 const _sbActions = {
@@ -2579,29 +2610,12 @@ const _sbActions = {
     return { workers };
   },
   verifyPin: async (p) => {
-    const worker = await sbVerifyPin(p.pin);
-    return { worker };
+    // Gateway login: verifies PIN server-side AND issues the write token.
+    const r = await gwLogin(p.pin);
+    return { worker: r && r.ok ? r.worker : null };
   },
-  saveWorker: async (p) => {
-    const rolle = p.rolle || p.role || null;
-    const aktiv = p.active === "false" || p.aktiv === false ? false : true;
-    const body  = { name: p.name, rolle, aktiv };
-    // Empty pin = keep current PIN (the edit form can no longer prefill it).
-    if (p.pin) body.pin = String(p.pin);
-    if (p.originalName) {
-      // Edit existing — always PATCH by original name; minimal return since
-      // representation would need SELECT on pin.
-      await sbPatch("workers", "name=eq." + encodeURIComponent(p.originalName), body, true);
-    } else {
-      // New worker — POST (insert)
-      await sbPost("workers", body, false, true);
-    }
-    return { status: "ok" };
-  },
-  deleteWorker: async (p) => {
-    await sbPatch("workers", "name=eq." + encodeURIComponent(p.name), { aktiv: false }, true);
-    return { status: "ok" };
-  },
+  saveWorker:   (p) => gwWrite("saveWorker", p),
+  deleteWorker: (p) => gwWrite("deleteWorker", p),
 
   // ── Products ──────────────────────────────
   allProducts: async () => {
@@ -2619,26 +2633,8 @@ const _sbActions = {
     });
     return dict;
   },
-  saveProduct: async (p) => {
-    const body = {
-      code: p.code, name: p.name,
-      kategorie:  p.kategorie  || null,
-      mep_max:    p.mepMax    !== "" ? parseFloat(p.mepMax)    || null : null,
-      gn_size:    p.gnSize     || null,
-      gn_weight:  p.gnWeight  !== "" ? parseFloat(p.gnWeight)  || null : null,
-      tagesziel:  p.tagesziel !== "" ? parseFloat(p.tagesziel) || null : null,
-      shelf_life: p.shelfLife !== "" ? parseInt(p.shelfLife)   || null : null,
-      drive_photo: p.driveLink || null,
-      wa: p.wa !== "" ? parseFloat(p.wa) || null : null,
-      active: true
-    };
-    await sbPost("products", body, true);
-    return { status: "ok" };
-  },
-  deleteProduct: async (p) => {
-    await sbPatch("products", "code=eq." + encodeURIComponent(p.code), { active: false });
-    return { status: "ok" };
-  },
+  saveProduct:   (p) => gwWrite("saveProduct", p),
+  deleteProduct: (p) => gwWrite("deleteProduct", p),
 
   // ── Inventory ─────────────────────────────
   inventory: async () => {
@@ -2655,30 +2651,8 @@ const _sbActions = {
       }))
     };
   },
-  saveInventory: async (p) => {
-    const body = {
-      code:        p.code,
-      name:        p.name        || p.code,
-      kategorie:   p.kategorie   || null,
-      unit:        p.unit        || null,
-      quantity:    p.quantity    !== "" ? parseFloat(p.quantity)    || null : null,
-      weight_unit: p.weightUnit  !== "" ? parseFloat(p.weightUnit)  || null : null,
-      minimum:     p.minimum     !== "" ? parseFloat(p.minimum)     || null : null,
-      maximum:     p.maximum     !== "" ? parseFloat(p.maximum)     || null : null,
-      kosten_unit: p.kostenUnit  !== "" ? parseFloat(p.kostenUnit)  || null : null,
-      lieferant:   p.lieferant   || null,
-      last_order:  p.lastOrder   || null,
-      notizen:     p.notizen     || null,
-      allergen:    p.allergen    || null,
-      image:       p.image       || null
-    };
-    await sbPost("inventory", body, true);
-    return { status: "ok" };
-  },
-  deleteInventory: async (p) => {
-    await sbDelete("inventory", "code=eq." + encodeURIComponent(p.code));
-    return { status: "ok" };
-  },
+  saveInventory:   (p) => gwWrite("saveInventory", p),
+  deleteInventory: (p) => gwWrite("deleteInventory", p),
 
   // ── HACCP Config (zones + tasks combined) ─
   getHACCPConfig: async () => {
@@ -2693,30 +2667,12 @@ const _sbActions = {
         frequency: t.frequency, active: t.active, sortOrder: t.sort_order }))
     };
   },
-  saveHACCPZone: async (p) => {
-    const id   = p.id || ("z" + Date.now());
-    const body = { id, name: p.name, type: p.zoneType || p.type,
-      min_temp: parseFloat(p.minTemp) || 0, max_temp: parseFloat(p.maxTemp) || 5, active: true };
-    await sbPost("haccp_zones", body, true);
-    return { status: "ok" };
-  },
-  deleteHACCPZone: async (p) => {
-    await sbPatch("haccp_zones", "id=eq." + encodeURIComponent(p.id), { active: false });
-    return { status: "ok" };
-  },
+  saveHACCPZone:   (p) => gwWrite("saveHACCPZone", p),
+  deleteHACCPZone: (p) => gwWrite("deleteHACCPZone", p),
 
   // ── HACCP Tasks ───────────────────────────
-  saveHACCPTask: async (p) => {
-    const id   = p.id || ("t" + Date.now());
-    const body = { id, task: p.task, frequency: p.frequency || "Daily",
-      active: true, sort_order: parseInt(p.sortOrder) || 99 };
-    await sbPost("haccp_tasks", body, true);
-    return { status: "ok" };
-  },
-  deleteHACCPTask: async (p) => {
-    await sbPatch("haccp_tasks", "id=eq." + encodeURIComponent(p.id), { active: false });
-    return { status: "ok" };
-  },
+  saveHACCPTask:   (p) => gwWrite("saveHACCPTask", p),
+  deleteHACCPTask: (p) => gwWrite("deleteHACCPTask", p),
 
   // ── HACCP Checks ──────────────────────────
   getHACCPChecks: async (p) => {
@@ -2724,28 +2680,10 @@ const _sbActions = {
     return { checks: rows.map(c => ({ taskId: c.task_id, task: c.task,
       done: c.done, worker: c.worker, notes: c.notes, checkedAt: c.checked_at })) };
   },
-  saveHACCPCheck: async (p) => {
-    const body = { check_date: p.date, task_id: p.taskId, task: p.task,
-      done: p.done === "true" || p.done === true,
-      worker: p.worker || null, notes: p.notes || null,
-      checked_at: new Date().toISOString() };
-    await sbPost("haccp_checks", body, true);
-    return { status: "ok" };
-  },
+  saveHACCPCheck: (p) => gwWrite("saveHACCPCheck", p),
 
   // ── HACCP Temp Logs ───────────────────────
-  saveHACCPTemp: async (p) => {
-    const now  = new Date();
-    const body = { log_date: now.toLocaleDateString("en-CA"),
-      log_time: now.toTimeString().slice(0,5),
-      zone: p.zone, zone_type: p.zoneType || null,
-      temp: parseFloat(p.temp),
-      min_temp: parseFloat(p.minTemp) || null, max_temp: parseFloat(p.maxTemp) || null,
-      pass_fail: (parseFloat(p.temp) >= parseFloat(p.minTemp) && parseFloat(p.temp) <= parseFloat(p.maxTemp)) ? "Pass" : "Fail",
-      notes: p.notes || null, worker: p.worker || null };
-    await sbPost("haccp_temp_logs", body, false);
-    return { status: "ok" };
-  },
+  saveHACCPTemp:  (p) => gwWrite("saveHACCPTemp", p),
   getHACCPReport: async (p) => {
     const from = p.from || p.dateFrom;
     const to   = p.to   || p.dateTo;
