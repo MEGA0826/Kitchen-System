@@ -1737,6 +1737,14 @@ function updateMepUI(data) {
   let _lastAction  = null;   // last successfully saved action
   let _undoTimer   = null;   // countdown interval
   let _redirectTimer = null; // auto-redirect timeout
+  let _lastQueued  = false;  // was the last scan only queued offline (not yet on the server)?
+
+  // Idempotency id for a scan. The same id rides the original online request
+  // and any offline retry, so the backend can recognise and skip a re-send.
+  function _newCid() {
+    try { return crypto.randomUUID(); }
+    catch (e) { return "c" + Date.now() + Math.random().toString(36).slice(2); }
+  }
 
 async function send(action) {
   const worker = getCurrentWorker();
@@ -1779,7 +1787,12 @@ async function send(action) {
   }
 
   showMsg("Saving...", "info");
-  const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}`;
+  // One idempotency id per scan — reused if this online attempt fails and the
+  // scan is queued and later retried. It lets the backend dedupe a write whose
+  // response was lost after it had already committed (the main cause of the
+  // duplicate-scan bug on flaky kitchen wifi).
+  const cid = _newCid();
+  const url = `${API_URL}?code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&action=${encodeURIComponent(action)}&cid=${encodeURIComponent(cid)}`;
 
   try {
     if (!navigator.onLine) throw new Error("offline");
@@ -1787,6 +1800,7 @@ async function send(action) {
     const data = await res.json();
     if (data.error) { showMsg("Error: " + data.error, "error"); await loadMepStatus(CURRENT_CODE); return; }
     if (data.mepMax !== undefined) updateMepUI(data);
+    _lastQueued = false;
     const successLabels = { produce:"Production started", done:"Batch finished", waste:"Waste recorded", used:"Use recorded" };
     showMsg(successLabels[action] || "OK", "success");
     if (action === "done") {
@@ -1795,7 +1809,8 @@ async function send(action) {
       startUndo(action);
     }
   } catch(err) {
-    await queueScan({ code: CURRENT_CODE, worker, action });
+    await queueScan({ code: CURRENT_CODE, worker, action, cid });
+    _lastQueued = true;
     showMsg("Offline - queued for sync", "info");
     await updateBadge();
     startUndo(action);
@@ -1829,13 +1844,38 @@ async function send(action) {
     }, 1000);
   }
 
-  function undoAction() {
+  // Remove the most recent queued (unsynced) scan matching this code/worker/action.
+  async function _removeLastQueued(code, worker, action) {
+    const queue = await getQueue();
+    const match = queue
+      .filter(s => s.code === code && s.worker === worker && s.action === action)
+      .sort((a, b) => b.id - a.id)[0];
+    if (match) await deleteQueued(match.id);
+    return !!match;
+  }
+
+  async function undoAction() {
     if (!_lastAction) return;
     clearInterval(_undoTimer);
     clearTimeout(_redirectTimer);
     document.getElementById("btnUndo").style.display = "none";
 
     const worker = document.getElementById("worker").value;
+
+    // If the scan being undone was only queued locally (never reached the
+    // server), pull it back out of the queue. Calling undoScan on the server
+    // here would instead delete an OLDER, already-synced scan of the same
+    // code/worker/action.
+    if (_lastQueued) {
+      await _removeLastQueued(CURRENT_CODE, worker, _lastAction);
+      await updateBadge();
+      _lastQueued = false;
+      _lastAction = null;
+      showMsg("Undone OK", "success");
+      setTimeout(() => goToStaffHome(), 1000);
+      return;
+    }
+
     showMsg("Undoing...", "info");
 
     fetch(`${API_URL}?action=undoScan&code=${encodeURIComponent(CURRENT_CODE)}&worker=${encodeURIComponent(worker)}&lastAction=${encodeURIComponent(_lastAction)}`)
@@ -2237,35 +2277,51 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Retry all queued scans - called when back online or badge tapped
+  let _retrying = false;
+  // Retry all queued scans - called when back online or badge tapped.
+  // Guarded against concurrent runs: the online event, the service-worker sync
+  // message, and the on-load retry can all fire at once, and two overlapping
+  // runs would each read the same queued row and POST it twice -> duplicate scans.
   async function retryQueue() {
-    const queue = await getQueue();
-    if (queue.length === 0) return;
+    if (_retrying) return;
+    _retrying = true;
+    try {
+      const queue = await getQueue();
+      if (queue.length === 0) return;
 
-    showMsg("Syncing " + queue.length + " offline scan(s)...", "info");
-    let synced = 0;
-    let failed = 0;
+      showMsg("Syncing " + queue.length + " offline scan(s)...", "info");
+      let synced = 0;
+      let failed = 0;
 
-    for (const scan of queue) {
-      try {
-        const url = `${API_URL}?code=${encodeURIComponent(scan.code)}&worker=${encodeURIComponent(scan.worker)}&action=${encodeURIComponent(scan.action)}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          await deleteQueued(scan.id);
-          synced++;
-        } else {
+      for (const scan of queue) {
+        try {
+          const cid = scan.cid || _newCid();
+          const url = `${API_URL}?code=${encodeURIComponent(scan.code)}&worker=${encodeURIComponent(scan.worker)}&action=${encodeURIComponent(scan.action)}&cid=${encodeURIComponent(cid)}`;
+          const res = await fetch(url);
+          // Only drop from the queue on a genuine success. A 200 response with
+          // an {error} body (e.g. bad code) is NOT a saved scan — keep it queued
+          // instead of silently losing it.
+          let data = null;
+          try { data = await res.json(); } catch(e) {}
+          if (res.ok && (!data || !data.error)) {
+            await deleteQueued(scan.id);
+            synced++;
+          } else {
+            failed++;
+          }
+        } catch(e) {
           failed++;
         }
-      } catch(e) {
-        failed++;
       }
-    }
 
-    await updateBadge();
-    if (failed === 0) {
-      showMsg("All " + synced + " scan(s) synced OK", "success");
-    } else {
-      showMsg(synced + " synced, " + failed + " still pending", "info");
+      await updateBadge();
+      if (failed === 0) {
+        showMsg("All " + synced + " scan(s) synced OK", "success");
+      } else {
+        showMsg(synced + " synced, " + failed + " still pending", "info");
+      }
+    } finally {
+      _retrying = false;
     }
   }
 
