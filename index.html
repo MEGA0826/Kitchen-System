@@ -2587,16 +2587,19 @@ async function checkRolePin() {
         matched = w;
       }
     } catch (e) {
-      // Supabase unreachable — legacy client-side compare.
-      // Only effective while the GAS backend still returns pins; harmless after.
-      if (!window._homeWorkerList || window._homeWorkerList.length === 0) {
-        await loadHomeWorkers();
+      // Supabase unreachable — verify via GAS server-side (no PINs on client).
+      try {
+        const data = await fetch(`${API_URL}?action=verifyPin&pin=${encodeURIComponent(pin)}`,
+                                 { cache: "no-store" }).then(r => r.json());
+        const w = (data && data.ok && data.worker && typeof data.worker === "object") ? data.worker : null;
+        if (w && (_pendingRole === 'Admin' ||
+                  (w.rolle || w.role || '').toLowerCase() === (_pendingRole || '').toLowerCase())) {
+          matched = w;
+        }
+      } catch (e2) {
+        document.getElementById("rolePinMsg").textContent = "Network error";
+        return;
       }
-      const workers = window._homeWorkerList || [];
-      matched = _pendingRole === 'Admin'
-        ? workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "")
-        : workers.find(w => typeof w === 'object' && String(w.pin) === String(pin) && w.active !== false && w.pin !== "" &&
-            (w.role === _pendingRole || w.role?.toLowerCase() === _pendingRole?.toLowerCase()));
     }
 
     if (matched) {

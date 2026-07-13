@@ -2456,24 +2456,16 @@ async function submitPin() {
 
   let matched = null;
   try {
-    matched = await sbVerifyPin(pin); // null = wrong PIN
+    // get() verifies the PIN server-side — Supabase RPC first, GAS verifyPin
+    // as automatic fallback — returning { worker: {name, role} } or { worker: null }.
+    // PINs are never sent to, stored in, or compared in the browser.
+    const res = await get({ action: "verifyPin", pin });
+    matched = (res && res.worker && typeof res.worker === "object") ? res.worker : null;
   } catch (e) {
-    // Supabase unreachable — legacy fallback against the worker list.
-    // Only effective while the GAS backend still returns pins; harmless after.
-    try {
-      if (!allWorkersAdmin.length) {
-        const data = await get({ action: "allWorkers" });
-        allWorkersAdmin = Array.isArray(data.workers) ? data.workers : [];
-      }
-      matched = allWorkersAdmin.find(w =>
-        typeof w === "object" && w.pin && String(w.pin) === String(pin) && w.active !== false
-      ) || null;
-    } catch (e2) {
-      msg.style.color = "var(--red)";
-      msg.textContent = "Network error";
-      document.getElementById("pinInput").value = "";
-      return;
-    }
+    msg.style.color = "var(--red)";
+    msg.textContent = "Network error";
+    document.getElementById("pinInput").value = "";
+    return;
   }
   msg.textContent = "";
 

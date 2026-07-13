@@ -1,72 +1,181 @@
-# code.gs security patch — stop sending worker PINs to the browser
+# code.gs — security patch + bug fixes
 
-**Status: NOT applied yet — apply in the Apps Script editor, then deploy.**
-The frontend (deployed alongside this file) no longer needs PINs client-side:
-both PIN prompts now verify against the Supabase `verify_pin` RPC first and
-only fall back to the old list-compare if Supabase is unreachable.
+Reviewed against the current `code.gs` (v16) you pasted. Apply each change in
+the Apps Script editor, then **Deploy → Manage deployments → edit → Deploy**
+(keep the same URL). Backend-first: apply and deploy these before relying on
+the frontend fallback path.
 
-Apply these three changes to `code.gs`:
+The frontend is already updated and **fail-safe** either way — both PIN prompts
+call `verifyPin` server-side and reject any response that isn't a proper
+`{worker:{name,role}}` object, so nothing escalates while the backend is still
+un-patched.
 
-## 1. `allWorkers` — strip the `pin` field
+Already correct in your code — no change needed:
+- `verifyPin` exists and checks the PIN server-side. ✅ (P3 only adds the role.)
+- `saveWorker` already treats an empty `pin` as "keep current" (`pin || existing[3]`). ✅
 
-In the handler that builds the workers response, stop including `pin`:
+---
 
+## P1 — `getAllWorkers`: stop returning the `pin` column (security, required)
+
+Every browser currently downloads every worker's PIN via `?action=allWorkers`.
+Remove the `pin` field.
+
+**Find:**
 ```javascript
-// BEFORE (leaks every PIN to every browser):
-workers.push({ name: row[0], rolle: row[1], role: row[1], aktiv: row[2], active: row[2], pin: row[3] });
-
-// AFTER:
-workers.push({ name: row[0], rolle: row[1], role: row[1], aktiv: row[2], active: row[2] });
+      .map(r => ({
+        name   : String(r[0] || "").trim(),
+        role   : String(r[1] || "").trim(),
+        active : (r[2] === false || String(r[2]).toUpperCase() === "FALSE") ? false : true,
+        pin    : String(r.length > 3 ? (r[3] || "") : "").trim(),
+      }));
+```
+**Replace:**
+```javascript
+      .map(r => ({
+        name   : String(r[0] || "").trim(),
+        role   : String(r[1] || "").trim(),
+        active : (r[2] === false || String(r[2]).toUpperCase() === "FALSE") ? false : true,
+      }));
 ```
 
-## 2. `getRolePINs` — return empty
+## P2 — `getRolePINs`: stop returning role PINs (security, required)
 
-The scan page no longer reads role PINs client-side. Keep the action so old
-cached clients don't error, but return nothing:
+The scan page no longer reads PINs client-side (`_rolePins` is now dead code in
+`index.html`). Keep the action so old cached clients don't error, but return
+nothing.
 
+**Find:**
 ```javascript
-if (action === "getRolePINs") {
-  return jsonOut({ pins: {} });
-}
+    if (action === "getRolePINs") {
+      const sett = getSheet("Settings");
+      const rows = sett.getDataRange().getValues();
+      const pins = {};
+      rows.slice(1).forEach(r => {
+        const rolle = String(r[1]).trim();
+        const pin   = String(r[3]).trim();
+        const aktiv = String(r[2]).trim();
+        if (["Teamleader","Küchenchef","Manager"].includes(rolle) && pin && aktiv !== "false") {
+          if (!pins[rolle]) pins[rolle] = pin;
+        }
+      });
+      return jsonResponse({ pins });
+    }
+```
+**Replace:**
+```javascript
+    if (action === "getRolePINs") return jsonResponse({ pins: {} });
 ```
 
-## 3. Add `verifyPin` (GAS-side equivalent of the Supabase RPC)
+## P3 — `verifyPin`: also return the worker's role (required for fallback)
 
-So PIN login keeps working even when requests fall back to GAS:
+`verifyPin` returns only the name, so the client fallback can't set the correct
+role and would default everyone to Manager. Return an object with the role too
+(same shape as the Supabase `verify_pin` RPC, which the frontend already expects).
 
+**Find:**
 ```javascript
-if (action === "verifyPin") {
-  const pin = String(e.parameter.pin || "");
-  const sheet = getOrCreateSheet("Settings");           // A=Name, B=Rolle, C=Aktiv, D=Pin
-  const rows = getDataRows(sheet, 4);
-  for (const r of rows) {
-    const active = String(r[2]).toLowerCase() !== "false";
-    if (active && r[3] !== "" && String(r[3]) === pin) {
-      return jsonOut({ worker: { name: r[0], rolle: r[1], role: r[1] } });
+      if (stored === String(pin).trim()) return jsonResponse({ ok: true, worker: name });
+```
+**Replace:**
+```javascript
+      if (stored === String(pin).trim()) {
+        const role = String(row[1] || "").trim();
+        return jsonResponse({ ok: true, worker: { name: name, role: role, rolle: role } });
+      }
+```
+
+## P4 — `deleteInventoryItem`: fix ReferenceError (bug, required)
+
+This function references `ss` and `out`, neither of which exists — it throws
+`ReferenceError: ss is not defined` every time it runs. (It survives today only
+because the frontend routes `deleteInventory` to Supabase; the GAS fallback is
+dead.)
+
+**Find:**
+```javascript
+function deleteInventoryItem(code) {
+  if (!code) return out({ error: "code required" });
+  const sheet = ss.getSheetByName("Lager");
+  const data  = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]).trim() === String(code).trim()) {
+      sheet.deleteRow(i + 1);
+      return out({ ok: true });
     }
   }
-  return jsonOut({ worker: null });
+  return out({ error: "Item not found" });
+}
+```
+**Replace:**
+```javascript
+function deleteInventoryItem(code) {
+  if (!code) return jsonResponse({ error: "code required" });
+  const sheet = getSheet("Lager");
+  const data  = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]).trim() === String(code).trim()) {
+      sheet.deleteRow(i + 1);
+      return jsonResponse({ ok: true });
+    }
+  }
+  return jsonResponse({ error: "Item not found" });
 }
 ```
 
-> Adjust `jsonOut` to whatever the existing JSON-response helper is called.
+---
 
-## 4. `saveWorker` — empty pin must mean "keep current PIN"
+## P5 — Remove dead duplicate code (maintainability, optional but recommended)
 
-The edit form can no longer prefill the PIN, so an empty `pin` parameter now
-arrives on every unchanged save. Only write column D when a pin was provided:
+`code.gs` defines the entire HACCP layer **twice** and `getHACCPChecks` three
+times. In Apps Script the **last** definition of a name wins, so today only the
+final `jsonResponse`-based copies run. The earlier copies are dead — and they
+call `jsonOut()`, **a function that is never defined anywhere**. If the file is
+ever reordered, the app breaks with `jsonOut is not defined`. Same story for the
+two stub `saveMenuMep` / `deleteMenuMep` that precede their real versions.
 
-```javascript
-if (e.parameter.pin) sheet.getRange(rowIndex, 4).setValue(e.parameter.pin);
-// (previously: always setValue, which would now wipe PINs)
-```
+Safe to delete because these copies are already shadowed (identical names,
+earlier position → overwritten):
 
-## Order of operations
+1. **Delete the first HACCP block** — everything from the first
+   ```javascript
+   function _haccpSheet(name, headers) {
+   ```
+   (the copy whose helpers call `jsonOut`) down to and including the standalone
+   5-column
+   ```javascript
+   function getHACCPChecks(e) {
+     var sh   = _haccpSheet("HACCP_Checks", ["Date","Task ID","Task","Done","Worker","Notes","Timestamp"]);
+     var rows = _haccpRows(sh, 5);
+     ...
+     return jsonResponse({ checks: checks });
+   }
+   ```
+   Keep the second block that starts at the `// ─── HACCP ───` comment — those
+   `jsonResponse` versions are the ones actually in use.
 
-1. Frontend deploy (already done) — safe on its own, PIN login uses Supabase.
-2. Apply this patch in the Apps Script editor → Deploy → keep the same URL.
-3. Verify: open the dashboard, unlock Admin with a PIN, and check the
-   Network tab — the `allWorkers` response must not contain `"pin"`.
+2. **Delete the two stubs** immediately above the real implementations:
+   ```javascript
+   // saveMenuMep / deleteMenuMep — stubs (called by router, safe to exist)
+   function saveMenuMep(p)   { return jsonResponse({ status: "ok" }); }
+   function deleteMenuMep(p) { return jsonResponse({ status: "ok" }); }
+   ```
 
-After step 3, PINs exist only in the Settings sheet and the Supabase
-`workers` table, and are checked only server-side.
+After this, `jsonOut` no longer appears anywhere and each HACCP function is
+defined exactly once. No behavior change (the deleted copies never executed).
+
+> The first copies of `saveHACCPTask` and `saveHACCPCheck` also contain
+> unreachable code (`return …; return …;`) — deleting the block in step 1
+> removes it.
+
+---
+
+## Verify after deploying
+
+1. Dashboard → unlock Admin with a real PIN → still works, correct role.
+2. DevTools → Network → the `allWorkers` response must **not** contain `"pin"`.
+3. `…/exec?action=getRolePINs` returns `{"pins":{}}`.
+4. Admin → Inventory → delete an item → returns `{"ok":true}` (not an error).
+
+After this, PINs live only in the Settings sheet and the Supabase `workers`
+table, and are checked only server-side.
