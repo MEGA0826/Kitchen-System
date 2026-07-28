@@ -1,149 +1,194 @@
-# Kitchen MEP — Architecture Review
+# Kitchen MEP — Architecture Review (v2, current state)
 
-*Senior-engineer review, 2026-07-12. Scope: full repo (`dashboard.html`, `index.html`, `onboarding.html`, `i18n.js`, `service-worker.js`) plus the GAS/Supabase backend as visible from the client. No functionality was changed; the `js/` modules added alongside this doc are inert until a page references them.*
+*Re-review after the security + reliability hardening pass. Supersedes v1 — the
+v1 P0s (client-side PIN auth, anon-writable DB, GET-writes cached by the SW,
+duplicate scans) are now **fixed**; this version re-derives the architecture as
+it stands and re-ranks what's left. No functionality changed by this document.*
 
 ---
 
-## 1. Current architecture (reverse-engineered)
+## 1. Architecture as it actually runs today
 
 ```
-┌────────────────────────── CLIENTS (GitHub Pages PWA) ──────────────────────────┐
-│                                                                                │
-│  index.html (2,681 ln)          dashboard.html (9,460 ln, 542 KB)              │
-│  Scan station:                  Management app, 10 tabs:                       │
-│  QR camera, MEP list,           KDS · Products · Inventory · Recipes/Menus     │
-│  offline IndexedDB queue        Orders · Deductions · Sales · HACCP            │
-│                                 Reports · Admin                                │
-│          │  shared: i18n.js, service-worker.js (v21), manifest.json           │
-└──────────┼─────────────────────────────────────────────────────────────────────┘
-           │ GET ?action=<name>&…            │ REST (anon key, from page source)
-           ▼                                 ▼
-   Google Apps Script (doGet router)   Supabase PostgREST  ← dual-backend,
-   hardcoded deployment URL            workers/products/inventory/HACCP migrated;
-           │                           everything else falls back to GAS
-           ▼
-   Google Sheets (14+ sheets)  ← the actual database
-   Produkt · Scan · Lager · MEP_Stock (FIFO ledger) · Menus · GR · Rezeptur
-   Deductions · Sales_History · HACCP* · Archive · Settings (workers + PINs)
+┌───────────────────────── CLIENTS (GitHub Pages PWA, SW v97) ─────────────────────────┐
+│  index.html (2,977 ln)                     dashboard.html (11,910 ln, ~646 KB)        │
+│  Scan station:                             Management app, 10 tabs, 394 fns:          │
+│  QR camera, MEP list,                      KDS·Products·Inventory·Recipes/Menus·      │
+│  IndexedDB offline queue (idempotent cid)  Orders·Deductions·Sales·HACCP·Reports·Admin│
+└─────────┬───────────────────────────┬───────────────────────────┬────────────────────┘
+          │ reads + scans             │ reads (anon key)          │ writes (PIN token)
+          │ (GET, GAS)                ▼                           ▼
+          │                  Supabase PostgREST           Supabase Edge Function
+          │                  anon = READ-ONLY (RLS)        admin-gateway (service-role)
+          │                        │                           │  login → HMAC token
+          ▼                        ▼                           ▼  12 write actions
+   Google Apps Script       Postgres (18 tables)         Postgres (service-role,
+   doGet router + Sheets     workers/products/inventory   BYPASSRLS)
+   (14+ sheets)              /haccp_* migrated;           
+          │                  scans+cid idempotency in Sheets
+          ▼
+   Google Sheets = system of record for everything not yet migrated
 ```
+
+**Three backends, one app.** This is now a *tri-backend* system:
+1. **GAS + Sheets** — still the system of record for scans, menus, GR, recipes,
+   deductions, mep_stock, sales, archive, reports, PDF/AI parsing.
+2. **Supabase PostgREST (anon, read-only)** — reads for the migrated tables.
+3. **Supabase Edge Function `admin-gateway` (service-role)** — all writes to
+   migrated tables, gated by a PIN-derived HMAC token.
 
 **Data flow, end to end**
-
-1. **Scan path:** QR → `index.html` → `GET ?action=produce|done|waste|used` → GAS appends to `Scan` sheet and read-modify-writes the `MEP_Stock` FIFO ledger. Offline scans queue in IndexedDB and replay via Background Sync.
-2. **Dashboard init:** restore `allProducts/allInventory/allScans` from `sessionStorage` → `Promise.allSettled([loadProducts, loadInventory, loadKDS, allWorkers])` → per-tab loaders. Then **poll the entire `scans` list every 60 s** and ping GAS every 4 min to keep it warm.
-3. **Routing layer:** `get(params)` checks `_sbActions[action]`; if the action is migrated it hits Supabase, on any error silently falls back to GAS (dashboard.html:2542).
-4. **State:** four mutable globals (`allScans`, `allProducts`, `allInventory`, `scanStats`) plus `window.*` mirrors and sessionStorage copies; every view re-renders sections with `innerHTML` (162 assignment sites).
-
----
-
-## 2. Critical problem areas (ranked)
-
-### P0 — Security: the auth model is decorative
-
-- **All worker PINs are downloaded to every browser.** `submitPin()` (dashboard.html:2239) compares the typed PIN against `allWorkersAdmin`, which came from `?action=allWorkers` *including the `pin` field*. `index.html` similarly fetches `getRolePINs`. Anyone can open DevTools → Network and read every PIN and role.
-- **Role gating is client-side theatre.** Access = `sessionStorage.setItem("isAdminUnlocked","true")` plus hiding tabs. One console line grants Manager access.
-- **The Supabase anon key in the page source can write the whole DB.** `sbPost/sbPatch/sbDelete` (dashboard.html:2320-2344) write directly with the anon key, so RLS must currently be wide open. Anyone who views source can deactivate all workers or wipe inventory. MIGRATION.md itself says writes belong in Edge Functions with the service-role key — the interim shortcut is the single biggest risk in the system.
-
-### P0 — Correctness: writes ride on GET through a caching service worker
-
-- All mutations (scans, saves, deletes via GAS) are `GET` requests. The service worker routes `script.google.com` through `networkFirstWithCache` with a 5-min TTL fallback (service-worker.js:46). A repeated scan URL (same worker+code+action) that fails on the network can be **answered from cache as a success** — a silently lost write. GET writes are also replayable by prefetchers and proxies.
-- The `MEP_Stock` FIFO ledger is updated read-modify-write in GAS with no locking; two scan stations hitting the same product concurrently can lose an update.
-
-### P1 — A swallowed `TypeError` in dashboard init
-
-`const saved = sessionStorage.getItem("activeTab") || "kds"` … `if (saved === "mep-overview") saved = "products"` (dashboard.html:4383-4390). Assigning to a `const` throws; the error lands in `.catch(e => console.error("Init error", e))`, so users with the old saved tab silently skip the whole post-fetch re-render block.
-
-### P1 — Stored-XSS surface across the app
-
-162 `innerHTML` sites interpolate product/worker/menu names; only ~18 do ad-hoc `replace(/"/g,'&quot;')` (attributes only, not text nodes), and there are **two competing escape helpers** (`_escM` :7842, `_hEscH` :8062). A product named `<img src=x onerror=…>` executes in every viewer's browser. Even benign names with `&` or `<` render wrong today.
-
-### P1 — Cost math is duplicated and already inconsistent
-
-CLAUDE.md's own hard rule: *pricePerKg = kostenUnit / weightUnit — never read kostenUnit as CHF/kg*. The conversion is re-implemented at 8+ sites; most divide correctly (e.g. `selectIngredientItem` :7453), but `selectEpfRm` (:5111) stores `kostenUnit` raw and `filterEpfRmSearch` (:5104) displays it as `CHF …/kg`. Duplication turned the #1 domain rule into a whack-a-mole.
-
-### P2 — The monolith itself
-
-- 9,460 lines / 542 KB in one HTML file, **317 top-level global functions**, four `<script>` blocks, modal collisions avoided only by ID-prefix convention (`epf-`, `mep-`, `eif-`).
-- `js/api.js`, `js/state.js`, `js/ui.js`, `js/main.js` exist as empty 2-byte stubs — a planned modularization that never happened; no page references them.
-- Self-monkey-patching (`window.openEditInventoryModal` wrapped at :4412), dead stubs (`setRelType(){}`), a commented-out GAS backend template pasted inside the frontend (:4480), Stripe config with placeholder keys.
-- No build, lint, tests, or types. Several CLAUDE.md rules ("Line 1 corruption", smart quotes, manual `sw.js` version bumps) are compensations for the missing toolchain.
+- **Scan:** QR → `index.html` → `GET ?action=…&cid=<uuid>` → GAS appends to `Scan`
+  + updates the `MEP_Stock` FIFO ledger. Offline scans queue in IndexedDB and
+  replay idempotently (dedupe on `cid`). Re-entrancy-guarded retry.
+- **Dashboard read:** `get()` checks `_sbActions[action]`; migrated reads hit
+  PostgREST with the anon key, everything else falls through to GAS. Cache-first
+  hydrate from sessionStorage, then `Promise.allSettled` fan-out, then a 60 s
+  full-scans poll + a 4 min GAS keep-warm ping.
+- **Dashboard write:** `_sbActions` write handlers → `gwWrite()` → `admin-gateway`
+  with the stored PIN token → service-role write. On gateway failure the call
+  falls back to GAS (writes degrade to Sheets, not to failure).
+- **Auth:** PIN → `admin-gateway/login` (or Supabase `verify_pin` RPC / GAS
+  `verifyPin` fallback) → server-side check → signed token (12 h). No PINs on
+  the client; role gates tabs.
 
 ---
 
-## 3. Duplicate logic inventory
+## 2. What's resolved since v1 (don't re-litigate)
 
-| Duplicated concern | Copies | Locations |
-|---|---|---|
-| Searchable ingredient/RM picker (filter → slice(0,40) → innerHTML rows → select → cost) | **4** | `ip-*` :7384, `epf-rm-*` :5063, GR picker :7572, PDF quick-add :8913 |
-| kostenUnit/weightUnit cost conversion | 8+ | pickers, `_enrichProducts`, `rNodeCost`, `calcIp*`, … |
-| HTML escaping | 2 helpers + 18 inline | `_escM`, `_hEscH`, scattered `replace(/"/g)` |
-| `get()` vs `adminCall()` | 2 | :2542 and :2552 are byte-identical |
-| `en-CA` date-key formatting | 11 | throughout |
-| Theme/clock/i18n/worker bootstrap | 2 | index.html re-implements dashboard's `setTheme`, `updateLiveTime`, worker loading |
-| Menu list rendering | 2 | `renderMenuList` :6944 vs `renderMenuListByCat` :7027 |
-| Today-scan aggregation | 2 parallel structures | `scanStats` + `window.todayScanStats` built in the same loop :2579 |
+- ✅ PINs never leave the server; login is server-side (RPC + gateway + GAS).
+- ✅ Anon key is **read-only** — every table's write policy revoked; writes only
+  via the service-role Edge Function behind a PIN token. Verified: anon write → 42501.
+- ✅ Service worker (v97) never answers write actions from cache.
+- ✅ Scans are idempotent (`cid`), retry is re-entrancy-guarded, and a 200-with-error
+  is no longer treated as success. Undo of a queued scan no longer deletes a synced row.
+- ✅ The swallowed `const saved` init `TypeError` and the `deleteInventoryItem`
+  `ReferenceError` are fixed; the CHF/kg picker math is corrected.
 
 ---
 
-## 4. Performance & scalability
+## 3. Critical problem areas (re-ranked for the current code)
 
-**Bottlenecks now**
-- Every poll (60 s) refetches the **entire scans table** and rebuilds stats over all rows; the table grows unbounded between manual archives.
-- `filterIngredientPicker` recomputes recipe cost for *every product* on *every keystroke* — `allRecipes.filter` × `allInventory.find` inside a map is O(products × recipes × inventory).
-- 542 KB parsed and evaluated on every load; all 10 tabs' DOM exists up front.
-- GAS: whole-sheet reads per request, 2–3 s cold starts patched by a keep-warm ping *from every open client* (which also burns GAS quota).
-- `sales_history` is already a 7.2 MB CSV, aggregated through GAS over GET.
+### C1 — The monolith is growing, not shrinking *(now the #1 risk)*
+`dashboard.html` is **11,910 lines / 394 top-level functions / ~646 KB in one
+file** — up ~3,000 lines since the start of this engagement, from concurrent
+development. There is no module boundary: every function is a global, modals
+coexist by ID-prefix convention (`epf-`/`mep-`/`eif-`), and four `<script>`
+blocks share one namespace. Every new feature enlarges the blast radius and the
+merge-conflict surface. **The `js/` modules created in v1 (`api/state/ui/main`)
+are still referenced by 0 pages** — the extraction was planned and never adopted.
+This is the root maintainability problem and it compounds daily.
 
-**Scalability ceilings**
-- Google Sheets: 10M-cell hard cap, no transactions, no indexes; GET URL-length limits already forced "chunked upload" workarounds.
-- Single hardcoded spreadsheet ID = single-tenant, while Stripe subscription scaffolding implies multi-restaurant ambitions. Multi-tenancy is impossible on this backend; it's native to the Supabase target (add `restaurant_id` FK + RLS).
-- No pagination anywhere.
+### C2 — Stored-XSS surface is unchanged
+**186 `innerHTML` assignment sites** interpolate product/worker/menu/ingredient
+names; only ~22 do an ad-hoc `replace(/"/g,'&quot;')` (attribute-only), and there
+are **two byte-identical escape helpers** (`_escM` :10067, `_hEscH` :10293). A
+product named `<img src=x onerror=…>` executes in every viewer's browser. This is
+both a security bug and a duplication/maintainability bug.
+
+### C3 — Read exposure via the public anon key
+Anon is read-only but can still **read every table** (`anon read` USING true).
+Recipes, ingredient costs, supplier prices, sales history and margins are all
+downloadable by anyone who reads the anon key from page source. Writes are locked;
+reads are wide open.
+
+### C4 — Tri-backend data divergence
+Reads for migrated tables come from Postgres; writes go through the gateway — but
+on any gateway failure the write **falls back to GAS/Sheets**, which the Postgres
+read won't reflect. The migration is half-done and the system of record is split
+per-table, so a table can legitimately disagree with itself depending on which
+backend served the last write.
+
+### C5 — Duplicated components
+- **Four hand-rolled searchable pickers** (ingredient `ip-*`, product-RM `epf-rm-*`,
+  GR picker, PDF quick-add) — same filter→slice(40)→innerHTML→select→cost logic.
+- **Cost conversion** (`kostenUnit/weightUnit`) re-implemented at 8+ sites.
+- **`get()` and `adminCall()`** remain byte-identical.
+- Two menu-list renderers; parallel `scanStats` + `window.todayScanStats`.
+
+### C6 — Performance
+60 s poll refetches the **entire** scans list; `filterIngredientPicker`
+recomputes every product's recipe cost on every keystroke (O(products×recipes×inv));
+646 KB parsed on every load with all 10 tabs' DOM up front; sales analysis pages
+the whole `sales_history` table client-side; a keep-warm ping fires from every
+open client.
+
+---
+
+## 4. Clean target architecture
+
+```
+pages (index.html / dashboard.html)  ← thin: markup + event wiring only
+        │  <script src=js/*.js>
+        ▼
+  js/api.js    Api.call()      — GAS + PostgREST + gateway routing, retry, dedupe, cache
+  js/state.js  Store           — one source of truth, subscribe(), no window.* globals
+  js/ui.js     UI + Cost       — esc(), el(), debounce, dateKey, createPicker(), pricePerKg()
+  js/main.js   Main.init*()    — boot sequence (hydrate → fan-out → subscribe → poll)
+        ▼
+  backends: GAS (legacy tables) · PostgREST reads · admin-gateway writes
+```
+Every view becomes: read from `Store`, render via `UI.el`/escaped templates,
+write via `Api.call` (which the gateway secures). No view calls another view's
+render function by name — they subscribe.
 
 ---
 
 ## 5. Refactoring strategy (incremental, zero functional change per step)
 
-The strategy is: **finish the Supabase migration you already planned (MIGRATION.md), but fix the security model as part of it, and pay down the monolith by extraction, not rewrite.**
+**Phase 1 — Adopt the modules that already exist (highest ROI).**
+`js/api.js/state.js/ui.js/main.js` are written and committed but inert. Wire them
+in additively (`<script src>` before the inline block — defines `window.Api/Store/UI/Cost/Main`,
+changes nothing), then migrate call sites in small verifiable batches:
+- Route the 8+ cost sites through `Cost.pricePerKg()` (the CHF/kg rule lives once).
+- Replace `_escM`/`_hEscH` and the 22 ad-hoc escapes with `UI.esc()`; then sweep
+  the 186 `innerHTML` sites to pass user data through it (this closes C2).
+- Collapse the four pickers into `UI.createPicker(config)`.
 
-### Phase 0 — Safety fixes inside the current code (hours)
-1. Fix the `const saved` reassignment (:4383) — change to `let`.
-2. Exclude write actions from the SW API cache: in `service-worker.js`, only apply `networkFirstWithCache` to a whitelist of *read* actions; let writes hit the network or fail loudly.
-3. Stop shipping PINs to the client: change GAS `allWorkers` to strip `pin`, add a `verifyPin` action that does the comparison server-side (the Supabase mapping table already defines it).
+**Phase 2 — Freeze monolith growth.** New features land in `js/` modules, not in
+`dashboard.html`. Add a lint/size check that fails CI if `dashboard.html` grows.
 
-### Phase 1 — Extract shared modules (1–2 days)
-Fill the existing `js/` stubs (done alongside this review — see `js/api.js`, `js/state.js`, `js/ui.js`, `js/main.js`) and load them via `<script src>` before the inline block. Then migrate call sites gradually:
-- `get`/`adminCall`/`sbGet…` → `Api` (adds timeout, retry, in-flight dedupe, read-cache; behavior-compatible signature).
-- Globals → `Store` (same data shapes; views subscribe instead of being called by name).
-- `escapeHtml`, `fmtDate`, `debounce`, `pricePerKg` → `UI`/`Cost` so the CHF/kg rule lives in exactly one function.
-Each moved function is a mechanical, testable diff. `index.html` loads the same modules and deletes its copies.
+**Phase 3 — Close read exposure (C3).** Move sensitive reads (recipes, costs,
+sales) behind the gateway too (token-gated `read` actions), or split public vs.
+private tables. Keep KDS/product reads anon if acceptable.
 
-### Phase 2 — Deduplicate components (2–3 days)
-- One `createPicker(config)` factory replaces the four pickers; each becomes ~10 lines of config (data source, cost formula, on-select).
-- One menu-list renderer parameterized by category filter.
-- Route every `innerHTML` interpolation through `UI.esc()`; delete `_escM`/`_hEscH`.
-
-### Phase 3 — Finish the backend migration with the right trust boundary (per MIGRATION.md, ~64 h)
-- Writes move to Edge Functions (service-role key server-side); RLS locks the anon key to reads (and only non-secret columns — a `workers_public` view without `pin`).
-- PIN login becomes an Edge Function that returns a short-lived signed token; role checks happen server-side.
-- Scans become `POST` with an idempotency key (solves both GET-write caching and the offline-queue replay duplicating scans).
-- `mep_stock` FIFO moves into a Postgres transaction/RPC — eliminates the lost-update race.
-
-### Phase 4 — Performance (after cutover)
-- Replace the 60 s full-table poll with Supabase Realtime on `scans` (KDS becomes push).
-- Paginate scans/deductions; aggregate sales server-side (`sales-analysis` Edge Function).
-- Delete the keep-warm ping.
-- Optional: adopt Vite so the monolith can split into per-tab modules with hashed filenames (kills manual `sw.js` version bumps).
+**Phase 4 — Converge the backends (C4).** Finish the per-table cutover so each
+table has exactly one system of record; drop the GAS write-fallback for tables
+that are fully on Postgres; replace the 60 s poll with Supabase Realtime on `scans`.
 
 ### What *not* to do
-Do not big-bang rewrite the dashboard in a framework. The app is live in a kitchen; the per-table dual-backend fallback pattern already in place is the right migration spine. Extraction keeps every step shippable.
+No framework big-bang rewrite of a live kitchen app. The tri-backend fallback is
+the migration spine; extraction-by-attrition keeps every step shippable.
 
 ---
 
-## 6. Where the improved code lives
+## 6. Improved production-grade code
 
-- `js/api.js` — unified API client: GAS+Supabase routing, timeout, retry with backoff, in-flight deduplication, read cache, and a snake→camel row mapper that replaces the hand-written per-action mapping objects.
-- `js/state.js` — single store with `get/set/subscribe`, sessionStorage hydration, and derived today-stats (replaces `allScans`/`window.todayScanStats` double bookkeeping).
-- `js/ui.js` — `esc()` (the one escape helper), `el()` safe DOM builder, `debounce`, `fmtDateKey`, toast, and the generic `createPicker()` factory.
-- `js/main.js` — reference init wiring showing the modules composed the way dashboard.html:4346-4409 works today (cache-first hydrate → parallel fetch → tab re-render → polling), minus the bugs.
+The reusable core already lives in `js/api.js`, `js/state.js`, `js/ui.js`,
+`js/main.js` (committed, still inert). Two concrete, functionality-preserving
+examples of the adoption:
 
-These files are **not yet referenced by any page** — adopting them is Phase 1 and is deliberately left as explicit, reviewable diffs to `dashboard.html`.
+**Collapse the two duplicate escapers to one (safe: identical output today).**
+```js
+// dashboard.html — replace both _escM (:10067) and _hEscH (:10293) with delegators
+function esc(v){ return UI.esc(v); }     // the single implementation lives in js/ui.js
+const _escM = esc, _hEscH = esc;         // keep old names working; one source of truth
+```
+
+**Collapse a picker to the factory (example: epf-rm picker).**
+```js
+// was ~60 lines of filter/slice/innerHTML/select; becomes config + one call
+const epfRmPicker = UI.createPicker({
+  listEl:   document.getElementById("epf-rm-results"),
+  searchEl: document.getElementById("epf-rm-search"),
+  getItems: () => allInventory.filter(r => r.code)
+                    .map(r => ({ code:r.code, name:r.name||r.code, unit:r.unit||"kg",
+                                 unitCost: Cost.pricePerKg(r) })),          // CHF/kg rule, once
+  renderMeta: i => i.unitCost ? `CHF ${i.unitCost.toFixed(2)}/kg` : "",
+  onSelect: i => selectEpfRm(i.code, i.name, i.unit),
+});
+```
+
+Each such change is a mechanical, independently-testable diff. Adoption is the
+next deliberate step — say the word and I'll start Phase 1 in small verified batches.
+```
