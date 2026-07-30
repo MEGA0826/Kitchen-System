@@ -7933,6 +7933,19 @@ async function handleSalesCsvPick(input) {
   }
 }
 
+// Exact DB row count for a set of dates, read from the SAME store the Sales
+// page reads — via the count header (cheap, no full fetch). Used to VERIFY an
+// import actually landed, so "imported OK" can never hide a silent failure.
+async function _salesRowCount(dates){
+  if(!dates || !dates.length) return null;
+  try{
+    const h = Object.assign({}, _sbH, { Prefer: "count=exact", Range: "0-0" });
+    const res = await fetch(SB_URL + "/rest/v1/sales_history?select=id&sale_date=in.(" + dates.join(",") + ")", { headers: h });
+    const total = parseInt(((res.headers.get("content-range") || "").split("/")[1] || "0"), 10);
+    return isNaN(total) ? null : total;
+  } catch(e){ return null; }
+}
+
 async function runSalesImport() {
   const msg = document.getElementById("sales-import-msg");
   if (!_salesParsed || !_salesParsed.rows || !_salesParsed.rows.length) {
@@ -7940,6 +7953,8 @@ async function runSalesImport() {
     return;
   }
   const rows = _salesParsed.rows;   // already header-mapped, validated and deduped
+  const importDates  = [...new Set(rows.map(r => r.d))];   // captured for the post-import read-back
+  const expectedPairs = rows.length;
   if (msg) { msg.style.color = "var(--muted)"; msg.textContent = `⏳ Sending ${rows.length.toLocaleString()} rows…`; }
 
   try {
@@ -7965,14 +7980,30 @@ async function runSalesImport() {
       });
     }
 
-    if (msg) {
-      msg.style.color = errors ? "var(--red)" : "var(--green)";
-      msg.textContent = `✓ ${totalImported.toLocaleString()} imported · ${totalSkipped.toLocaleString()} skipped${errors ? " · " + errors + " chunk error(s)" : ""} — refreshing…`;
-    }
+    if (msg) msg.textContent = `⏳ ${totalImported.toLocaleString()} sent — verifying…`;
     _salesParsed = null;
     renderSalesPreview(null);
     salesData = { products:[], days:[], totalDays:0 };
     await loadSalesAnalysis();
+
+    // Read the imported dates straight back from the DB and prove the data is
+    // there. This is what stops "imported OK" but the page shows nothing.
+    const actual = await _salesRowCount(importDates);
+    if (msg) {
+      if (errors && actual === 0) {
+        msg.style.color = "var(--red)";
+        msg.textContent = `⚠ Import failed — ${errors} chunk error(s) and 0 rows landed. Nothing saved.`;
+      } else if (actual === 0) {
+        msg.style.color = "var(--red)";
+        msg.textContent = `⚠ Reported ${totalImported.toLocaleString()} imported but 0 rows found for these dates — the data did NOT land. Check the column mapping in the preview.`;
+      } else if (actual !== null) {
+        msg.style.color = errors ? "var(--amber)" : "var(--green)";
+        msg.textContent = `✓ Verified: ${actual.toLocaleString()} rows across ${importDates.length} date(s) in the database (${expectedPairs.toLocaleString()} imported${errors ? ", " + errors + " chunk error(s)" : ""}).`;
+      } else {
+        msg.style.color = errors ? "var(--amber)" : "var(--green)";
+        msg.textContent = `✓ ${totalImported.toLocaleString()} imported${errors ? " · " + errors + " chunk error(s)" : ""} — refreshed (read-back unavailable).`;
+      }
+    }
   } catch(e) {
     if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Error: " + e.message; }
   }
