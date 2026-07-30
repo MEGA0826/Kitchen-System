@@ -198,33 +198,25 @@ const writers: Record<string, (p: P) => Promise<unknown>> = {
   },
 
   // Sales CSV import -> sales_history (the table the Sales page reads). Rows are
-  // the {d,p,k,m,u,wa,g} shape produced by the client CSV parser. Skips
-  // (sale_date, product_name) pairs that already exist, mirroring the old GAS
-  // dedup so re-imports are idempotent and never double-count.
+  // the {d,p,k,m,u,wa,g} shape from the client CSV parser. Delegates to the
+  // import_sales_rows() RPC, which UPSERTS by (sale_date, product_name): it
+  // replaces those pairs (so re-imports UPDATE instead of being skipped, and
+  // duplicate rows self-clean) while leaving untouched pairs alone.
   importSales: async (p) => {
     const raw: P[] = Array.isArray(p.rows) ? p.rows : [];
-    const mapped = raw.map((r) => ({
-      sale_date:    String(r.d || "").slice(0, 10),
-      product_name: String(r.p || "").trim(),
-      kategorie:    String(r.k || "").trim() || null,
-      qty:          num(r.m) ?? 0,
-      price:        num(r.u) ?? 0,               // Umsatz / revenue — as getSalesAnalysis reads it
-      wa:           Math.abs(num(r.wa) ?? 0),
-      garverlust:   num(r.g) ?? 0,
-    })).filter((r) => r.sale_date && r.product_name && r.qty > 0);
-    if (!mapped.length) return { imported: 0, skipped: 0 };
-
-    const dates = [...new Set(mapped.map((r) => r.sale_date))];
-    const existing = await sr(
-      "sales_history?select=sale_date,product_name&sale_date=in.(" + dates.join(",") + ")"
-    ) as Array<{ sale_date: string; product_name: string }> | null;
-    const seen = new Set((existing || []).map((e) => e.sale_date + "\x00" + e.product_name));
-    const toInsert = mapped.filter((r) => !seen.has(r.sale_date + "\x00" + r.product_name));
-
-    for (let i = 0; i < toInsert.length; i += 500) {
-      await sr("sales_history", { method: "POST", ...MIN, body: JSON.stringify(toInsert.slice(i, i + 500)) });
-    }
-    return { imported: toInsert.length, skipped: mapped.length - toInsert.length };
+    const clean = raw.filter((r) =>
+      /^\d{4}-\d{2}-\d{2}/.test(String(r.d || "")) &&
+      String(r.p || "").trim() !== "" &&
+      (num(r.m) ?? 0) > 0
+    );
+    if (!clean.length) return { imported: 0, replaced: 0, skipped: raw.length };
+    const res = await sr("rpc/import_sales_rows", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ rows: clean }),
+    }) as Array<{ inserted: number; replaced: number }> | null;
+    const row = Array.isArray(res) ? res[0] : (res as { inserted?: number; replaced?: number } | null);
+    return { imported: row?.inserted ?? clean.length, replaced: row?.replaced ?? 0, skipped: raw.length - clean.length };
   },
 };
 
