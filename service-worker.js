@@ -4,8 +4,8 @@
 // (e.g. a repeated produce/waste scan URL) would report success without
 // anything being saved.
 
-const CACHE_STATIC = "mep-static-v98";
-const CACHE_API    = "mep-api-v98";
+const CACHE_STATIC = "mep-static-v99";
+const CACHE_API    = "mep-api-v99";
 
 // Actions that involve slow AI processing — use a 90-second timeout
 const SLOW_ACTIONS = new Set(["parsePdfVisionChunked", "parseMenuPdf", "parseRecipePdf"]);

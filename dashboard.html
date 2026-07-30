@@ -1384,6 +1384,7 @@
         </button>
       </div>
       <div id="sales-import-msg" style="margin-top:10px;font-size:12px;color:var(--muted);min-height:18px"></div>
+      <div id="sales-import-preview" style="margin-top:10px;display:none;padding:10px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm)"></div>
     </div>
 
     <!-- Date range filter -->
@@ -7104,7 +7105,7 @@ let _salesRows = [];
 let _salesPeriodDays = 7;
 let _salesSort   = { col: null, dir: 1 };
 let _salesMetric = "qty"; // "qty" | "rev"
-let _cachedCsvText = null;
+let _salesParsed = null;
 let _salesCustomFrom = null;
 let _salesCustomTo   = null;
 let _salesHiddenNames = new Set();
@@ -7785,137 +7786,196 @@ function exportSalesCSV() {
   URL.revokeObjectURL(a.href);
 }
 
+// ─────────────────────────────────────────────
+// SALES CSV — robust header-based parser + preview
+// Maps columns by HEADER NAME (not fixed position), auto-detects the delimiter
+// and Swiss number formats, validates, and shows a preview — so a rearranged or
+// wrong file (e.g. re-importing an app export) can't silently import garbage.
+// ─────────────────────────────────────────────
+function _sEsc(v){ return String(v==null?"":v).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function _sNormHeader(h){ return String(h||"").toLowerCase().replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim(); }
+
+// Locale-aware number: strips Swiss thousands ('  space) and handles comma decimals.
+function _sNum(v){
+  let s = String(v==null?"":v).trim();
+  if(!s) return 0;
+  s = s.replace(/['’\s]/g,"");                                    // 1'234 / 1 234 -> 1234
+  if(s.indexOf(",")>=0 && s.indexOf(".")>=0) s = s.replace(/,/g,"");   // 1,234.50 -> 1234.50
+  else if(s.indexOf(",")>=0) s = s.replace(",",".");                   // 12,5 -> 12.5
+  const n = parseFloat(s.replace(/[^0-9.\-]/g,""));
+  return isNaN(n) ? 0 : n;
+}
+
+// Quote-aware split of a single CSV line (product names may contain the delimiter).
+function _sSplit(line, delim){
+  const out=[]; let cur="", q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else { if(ch==='"') q=true; else if(ch===delim){ out.push(cur); cur=""; } else cur+=ch; }
+  }
+  out.push(cur); return out;
+}
+
+const _SALES_SYNONYMS = {
+  d:  ["datum","date","tag","verkaufsdatum","sale date","saledate"],
+  p:  ["produkt","product","artikel","artikelname","bezeichnung","name","product name"],
+  k:  ["kategorie","category","gruppe","warengruppe"],
+  m:  ["menge","anzahl","qty","quantity","stk","stueck","verkauft","count"],
+  u:  ["umsatz","umsatz chf","revenue","turnover","umsatz brutto"],
+  wa: ["warenaufwand","o warenaufwand","wareneinsatz","wa","food cost"],
+  g:  ["garverlust","loss"]
+};
+
+// -> { ok, rows, idx, header, strategy, delim, warnings, totalRows, sample, dateRange } | { ok:false, error, ... }
+function parseSalesCsv(text){
+  const lines = text.replace(/\r/g,"").split("\n").filter(l => l.trim().length);
+  if(lines.length < 2) return { ok:false, error:"File has no data rows." };
+
+  const commas=(lines[0].match(/,/g)||[]).length, semis=(lines[0].match(/;/g)||[]).length, tabs=(lines[0].match(/\t/g)||[]).length;
+  const delim = (tabs>commas && tabs>semis) ? "\t" : (semis>commas ? ";" : ",");
+
+  const header = _sSplit(lines[0], delim).map(_sNormHeader);
+  const idx = {};
+  for(const [field, syns] of Object.entries(_SALES_SYNONYMS)){
+    for(let i=0;i<header.length;i++){ if(syns.includes(header[i])){ idx[field]=i; break; } }
+  }
+  const warnings = [];
+  let strategy = "header names";
+  let get;
+  if(idx.d!=null && idx.p!=null && idx.m!=null && idx.u!=null){
+    get = (c,f) => idx[f]!=null ? c[idx[f]] : "";
+  } else {
+    // Fallback: legacy Vectron fixed layout (what the old importer assumed).
+    strategy = "Vectron column positions";
+    warnings.push("Header names not recognised — using the fixed Vectron layout. Check the preview before importing.");
+    const pos = { d:0, p:3, k:2, m:4, u:5, wa:8, g:11 };
+    Object.assign(idx, pos);
+    get = (c,f) => pos[f]!=null ? c[pos[f]] : "";
+  }
+
+  const map = new Map();
+  let dropped = 0;
+  for(let li=1; li<lines.length; li++){
+    const c = _sSplit(lines[li], delim);
+    const d = String(get(c,"d")||"").trim().slice(0,10);
+    const p = String(get(c,"p")||"").replace(/^"|"$/g,"").trim();
+    const m = _sNum(get(c,"m"));
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || !p || m<=0){ dropped++; continue; }
+    const key = d+"|"+p;
+    const row = { d, p, k:String(get(c,"k")||"").trim(), m, u:_sNum(get(c,"u")), wa:Math.abs(_sNum(get(c,"wa"))), g:_sNum(get(c,"g")) };
+    const e = map.get(key);
+    if(e){ e.m+=row.m; e.u+=row.u; e.wa+=row.wa; e.g+=row.g; }   // sum duplicate lines within the same file
+    else map.set(key, row);
+  }
+  const rows = [...map.values()];
+  if(!rows.length) return { ok:false, error:"No valid rows after parsing — the column mapping looks wrong for this file.", strategy, header, idx, delim };
+  if(dropped) warnings.push(dropped.toLocaleString()+" line(s) skipped (bad date/name or qty ≤ 0).");
+  const dates = rows.map(r=>r.d);
+  return { ok:true, rows, idx, header, strategy, delim, warnings, totalRows:rows.length, sample:rows.slice(0,10),
+           dateRange:[dates.reduce((a,b)=>b<a?b:a), dates.reduce((a,b)=>b>a?b:a)] };
+}
+
+function renderSalesPreview(res){
+  const el = document.getElementById("sales-import-preview");
+  if(!el) return;
+  if(!res || (!res.ok && !res.header)){ el.style.display="none"; el.innerHTML=""; return; }
+  const labels = { d:"Date", p:"Product", k:"Category", m:"Qty", u:"Revenue", wa:"WA" };
+  const chip = (t) => `<span style="display:inline-block;padding:2px 7px;margin:2px;border-radius:5px;background:var(--surface2);border:1px solid var(--border2);font-size:10px">${t}</span>`;
+  let html = `<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Detected mapping · <b>${_sEsc(res.strategy||"")}</b> · delimiter "<b>${res.delim==="\t"?"tab":_sEsc(res.delim||",")}</b>"</div><div style="margin-bottom:8px">`;
+  for(const f of Object.keys(labels)){
+    const col = (res.idx&&res.idx[f]!=null&&res.header&&res.header[res.idx[f]]!=null) ? res.header[res.idx[f]] : (res.idx&&res.idx[f]!=null?("col "+res.idx[f]):"—");
+    html += chip(`${labels[f]} ← <b>${_sEsc(col)}</b>`);
+  }
+  html += `</div>`;
+  (res.warnings||[]).forEach(w => html += `<div style="font-size:11px;color:var(--amber);margin-bottom:4px">⚠ ${_sEsc(w)}</div>`);
+  if(res.ok){
+    html += `<div style="font-size:11px;color:var(--text);margin-bottom:6px">${res.totalRows.toLocaleString()} unique rows · ${_sEsc(res.dateRange[0])} → ${_sEsc(res.dateRange[1])}</div>`;
+    const cols = ["d","p","k","m","u","wa"];
+    const th = cols.map(f=>`<th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border2);font-weight:600">${labels[f]}</th>`).join("");
+    const tb = res.sample.map(r=>`<tr>${cols.map(f=>`<td style="padding:3px 8px;border-bottom:1px solid var(--border)">${_sEsc(r[f])}</td>`).join("")}</tr>`).join("");
+    html += `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:11px;width:100%"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table></div>`
+      + `<div style="font-size:10px;color:var(--muted);margin-top:4px">Preview of first ${res.sample.length} rows. Check Product / Qty / Revenue look right, then tap Import.</div>`;
+  }
+  el.innerHTML = html;
+  el.style.display = "block";
+}
+
 async function handleSalesCsvPick(input) {
   const msg   = document.getElementById("sales-import-msg");
   const label = document.getElementById("sales-file-label");
-  _cachedCsvText = null;
+  _salesParsed = null;
+  renderSalesPreview(null);
   const file  = input.files && input.files[0];
   if (!file) { if (msg) msg.textContent = "No file selected"; return; }
-  if (msg) msg.textContent = "⏳ Reading…";
+  if (msg) { msg.style.color = "var(--muted)"; msg.textContent = "⏳ Reading…"; }
   try {
-    const buffer       = await file.arrayBuffer();
-    const bytes        = new Uint8Array(buffer);
-    const start        = (bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF) ? 3 : 0;
-    _cachedCsvText     = new TextDecoder("utf-8").decode(bytes.slice(start));
-    const lines        = (_cachedCsvText.match(/\n/g)||[]).length;
-    if (label) label.textContent = `${file.name} · ${lines} rows`;
-    if (msg)   msg.textContent   = `✓ File ready — tap Import ↑`;
+    const buffer = await file.arrayBuffer();
+    const bytes  = new Uint8Array(buffer);
+    const start  = (bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF) ? 3 : 0;
+    const text   = new TextDecoder("utf-8").decode(bytes.slice(start));
+    const res    = parseSalesCsv(text);
+    renderSalesPreview(res);
+    if (!res.ok) {
+      _salesParsed = null;
+      if (label) label.textContent = file.name;
+      if (msg) { msg.style.color = "var(--red)"; msg.textContent = "⚠ " + res.error; }
+      return;
+    }
+    _salesParsed = res;
+    if (label) label.textContent = `${file.name} · ${res.totalRows.toLocaleString()} rows`;
+    if (msg) { msg.style.color = "var(--muted)"; msg.textContent = `✓ Parsed ${res.totalRows.toLocaleString()} rows — review the preview, then tap Import ↑`; }
   } catch(e) {
-    _cachedCsvText = null;
-    if (msg)   msg.textContent   = `⚠ Error: ${e.message}`;
+    _salesParsed = null;
+    renderSalesPreview(null);
+    if (msg) { msg.style.color = "var(--red)"; msg.textContent = `⚠ Error: ${e.message}`; }
     if (label) label.textContent = "Choose CSV file…";
   }
 }
 
 async function runSalesImport() {
   const msg = document.getElementById("sales-import-msg");
-  if (!_cachedCsvText) { if (msg) msg.textContent = "Please choose a CSV file first."; return; }
-
-  const lines = (_cachedCsvText.split("\n").filter(l => l.trim()).length) - 1;
-  if (msg) msg.textContent = `⏳ Parsing ${lines.toLocaleString()} rows…`;
+  if (!_salesParsed || !_salesParsed.rows || !_salesParsed.rows.length) {
+    if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Choose a CSV file first — and check the preview."; }
+    return;
+  }
+  const rows = _salesParsed.rows;   // already header-mapped, validated and deduped
+  if (msg) { msg.style.color = "var(--muted)"; msg.textContent = `⏳ Sending ${rows.length.toLocaleString()} rows…`; }
 
   try {
-    // Parse + deduplicate entirely in JS — instant
-    const rows = [];
-    const seen = new Set();
-    _cachedCsvText.split("\n").slice(1).forEach(line => {
-      if (!line.trim()) return;
-      const c    = line.split(",");
-      const date = (c[0] || "").trim().substring(0, 10);
-      const name = (c[3] || "").replace(/^"|"$/g, "").trim();
-      const qty  = parseFloat(c[4]) || 0;
-      if (!date || !name || qty <= 0) return;
-      const key  = date + "|" + name;
-      if (seen.has(key)) return;
-      seen.add(key);
-      rows.push({
-        d : date,
-        p : name,
-        k : (c[2] || "").trim(),
-        m : qty,
-        u : parseFloat(c[5])  || 0,
-        pr: parseFloat(c[7])  || 0,
-        wa: Math.abs(parseFloat(c[8])  || 0),
-        g : parseFloat(c[11]) || 0,
-      });
-    });
-
-    if (!rows.length) { if (msg) msg.textContent = "No valid rows found in CSV."; return; }
-    if (msg) msg.textContent = `⏳ Sending ${rows.length.toLocaleString()} unique rows…`;
-
-    // Send in parallel chunks of 500 rows each
-    const CHUNK  = 30;
+    // Gateway is a POST endpoint (no URL-length limit), so use larger chunks.
+    // Rows are globally unique by (date|product) after parsing, so parallel
+    // chunks never touch the same pair — no duplicate-insert race.
+    const CHUNK  = 200;
     const chunks = [];
     for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
 
     let totalImported = 0, totalSkipped = 0, errors = 0;
-
-    // Run max 4 parallel requests at a time
     const PARALLEL = 6;
     for (let i = 0; i < chunks.length; i += PARALLEL) {
       const batch = chunks.slice(i, i + PARALLEL);
       const pct   = Math.round((i / chunks.length) * 100);
-      if (msg) msg.textContent = `⏳ Uploading… ${pct}% (${Math.min(i * CHUNK + CHUNK * PARALLEL, rows.length).toLocaleString()} / ${rows.length.toLocaleString()})`;
-
-      // Write to the SAME store the Sales page reads (Supabase sales_history),
-      // via the admin-gateway. Previously this hit GAS -> the Google Sheet,
-      // which the Supabase-backed Sales page never reads, so imports vanished.
+      if (msg) msg.textContent = `⏳ Uploading… ${pct}%`;
       const results = await Promise.all(batch.map(chunk =>
-        gwWrite("importSales", { rows: chunk })
-          .catch(e => ({ error: e.message }))
+        gwWrite("importSales", { rows: chunk }).catch(e => ({ error: e.message }))
       ));
-
       results.forEach(r => {
         if (r.error) errors++;
         else { totalImported += r.imported || 0; totalSkipped += r.skipped || 0; }
       });
     }
 
-    if (msg) msg.textContent = `✓ ${totalImported.toLocaleString()} imported · ${totalSkipped.toLocaleString()} skipped${errors ? " · " + errors + " errors" : ""} — refreshing…`;
-    _cachedCsvText = null;
+    if (msg) {
+      msg.style.color = errors ? "var(--red)" : "var(--green)";
+      msg.textContent = `✓ ${totalImported.toLocaleString()} imported · ${totalSkipped.toLocaleString()} skipped${errors ? " · " + errors + " chunk error(s)" : ""} — refreshing…`;
+    }
+    _salesParsed = null;
+    renderSalesPreview(null);
     salesData = { products:[], days:[], totalDays:0 };
     await loadSalesAnalysis();
   } catch(e) {
-    if (msg) msg.textContent = "Error: " + e.message;
+    if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Error: " + e.message; }
   }
-}
-
-async function _salesChunkFallback(msg) {
-  try {
-    const text  = _cachedCsvText;
-    if (!text)  throw new Error("No file data");
-    const lines = text.trim().split("\n");
-    const map   = {};
-    lines.slice(1).forEach(line => {
-      const c    = line.split(",");
-      const date = (c[0]||"").trim().substring(0,10);
-      const name = (c[3]||"").replace(/^"|"$/g,"").trim();
-      const qty  = parseFloat(c[4])||0;
-      if (!date || !name || qty <= 0) return;
-      const key  = date + "|" + name;
-      if (!map[key]) map[key] = { d:date, p:name, k:(c[2]||"").trim(), m:0, u:0, pr:0, wa:0, g:0 };
-      map[key].m  += Math.round(qty);
-      map[key].u  += Math.round(parseFloat(c[5])||0);
-      map[key].pr += Math.round((parseFloat(c[7])||0) * 100) / 100;
-      map[key].wa += Math.abs(parseFloat(c[8])||0);
-      map[key].g  += Math.round(parseFloat(c[11])||0);
-    });
-    const compact = Object.values(map);
-    if (!compact.length) throw new Error("No valid rows in CSV");
-    const CHUNK = 20;
-    let totalImported = 0, totalSkipped = 0;
-    for (let i = 0; i < compact.length; i += CHUNK) {
-      if (msg) msg.textContent = `Uploading… ${Math.min(i+CHUNK,compact.length)} / ${compact.length}`;
-      const res = await gwWrite("importSales", { rows: compact.slice(i,i+CHUNK) });
-      if (res.error) throw new Error(res.error);
-      totalImported += res.imported || 0;
-      totalSkipped  += res.skipped  || 0;
-    }
-    if (msg) msg.textContent = `✓ Imported ${totalImported} rows · ${totalSkipped} skipped`;
-    _cachedCsvText = null;
-    salesData = { products:[], days:[], totalDays:0 };
-    await loadSalesAnalysis();
-  } catch(e) { if (msg) msg.textContent = "Error: " + e.message; }
 }
 
 async function importFromDriveUrl() {
