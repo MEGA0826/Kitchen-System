@@ -7923,6 +7923,7 @@ async function handleSalesCsvPick(input) {
       return;
     }
     _salesParsed = res;
+    _salesParsed.fileName = file.name;
     if (label) label.textContent = `${file.name} · ${res.totalRows.toLocaleString()} rows`;
     if (msg) { msg.style.color = "var(--muted)"; msg.textContent = `✓ Parsed ${res.totalRows.toLocaleString()} rows — review the preview, then tap Import ↑`; }
   } catch(e) {
@@ -7955,6 +7956,8 @@ async function runSalesImport() {
   const rows = _salesParsed.rows;   // already header-mapped, validated and deduped
   const importDates  = [...new Set(rows.map(r => r.d))];   // captured for the post-import read-back
   const expectedPairs = rows.length;
+  const fileName  = _salesParsed.fileName || null;
+  const dateRange = _salesParsed.dateRange || [null, null];
   if (msg) { msg.style.color = "var(--muted)"; msg.textContent = `⏳ Sending ${rows.length.toLocaleString()} rows…`; }
 
   try {
@@ -7965,19 +7968,30 @@ async function runSalesImport() {
     const chunks = [];
     for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
 
-    let totalImported = 0, totalSkipped = 0, errors = 0;
+    let totalImported = 0, totalReplaced = 0, totalSkipped = 0;
+    const failed = [];
     const PARALLEL = 6;
     for (let i = 0; i < chunks.length; i += PARALLEL) {
       const batch = chunks.slice(i, i + PARALLEL);
-      const pct   = Math.round((i / chunks.length) * 100);
-      if (msg) msg.textContent = `⏳ Uploading… ${pct}%`;
+      if (msg) msg.textContent = `⏳ Uploading… ${Math.round((i / chunks.length) * 100)}%`;
       const results = await Promise.all(batch.map(chunk =>
-        gwWrite("importSales", { rows: chunk }).catch(e => ({ error: e.message }))
+        gwWrite("importSales", { rows: chunk }).then(r => ({ ok:true, r })).catch(() => ({ ok:false, chunk }))
       ));
-      results.forEach(r => {
-        if (r.error) errors++;
-        else { totalImported += r.imported || 0; totalSkipped += r.skipped || 0; }
+      results.forEach(res => {
+        if (res.ok) { totalImported += res.r.imported||0; totalReplaced += res.r.replaced||0; totalSkipped += res.r.skipped||0; }
+        else failed.push(res.chunk);
       });
+    }
+
+    // Auto-retry failed chunks once — a transient blip mid-import shouldn't
+    // leave a partial result. (Import is idempotent, so retrying is safe.)
+    let errors = 0;
+    if (failed.length) {
+      if (msg) msg.textContent = `⏳ Retrying ${failed.length} chunk(s)…`;
+      for (const chunk of failed) {
+        try { const r = await gwWrite("importSales", { rows: chunk }); totalImported += r.imported||0; totalReplaced += r.replaced||0; totalSkipped += r.skipped||0; }
+        catch(e){ errors++; }
+      }
     }
 
     if (msg) msg.textContent = `⏳ ${totalImported.toLocaleString()} sent — verifying…`;
@@ -7992,18 +8006,25 @@ async function runSalesImport() {
     if (msg) {
       if (errors && actual === 0) {
         msg.style.color = "var(--red)";
-        msg.textContent = `⚠ Import failed — ${errors} chunk error(s) and 0 rows landed. Nothing saved.`;
+        msg.textContent = `⚠ Import failed — ${errors} chunk(s) failed after retry and 0 rows landed. Nothing saved.`;
       } else if (actual === 0) {
         msg.style.color = "var(--red)";
         msg.textContent = `⚠ Reported ${totalImported.toLocaleString()} imported but 0 rows found for these dates — the data did NOT land. Check the column mapping in the preview.`;
       } else if (actual !== null) {
         msg.style.color = errors ? "var(--amber)" : "var(--green)";
-        msg.textContent = `✓ Verified: ${actual.toLocaleString()} rows across ${importDates.length} date(s) in the database (${expectedPairs.toLocaleString()} imported${errors ? ", " + errors + " chunk error(s)" : ""}).`;
+        msg.textContent = `✓ Verified: ${actual.toLocaleString()} rows across ${importDates.length} date(s) in the database (${expectedPairs.toLocaleString()} imported${errors ? ", " + errors + " chunk(s) still failed" : ""}).`;
       } else {
         msg.style.color = errors ? "var(--amber)" : "var(--green)";
         msg.textContent = `✓ ${totalImported.toLocaleString()} imported${errors ? " · " + errors + " chunk error(s)" : ""} — refreshed (read-back unavailable).`;
       }
     }
+
+    // Audit log — fire-and-forget so the UI never blocks on it.
+    gwWrite("logImport", {
+      source: "file", fileName,
+      dateFrom: dateRange[0] || null, dateTo: dateRange[1] || null,
+      rowsSent: expectedPairs, rowsInserted: totalImported, rowsReplaced: totalReplaced, chunkErrors: errors
+    }).catch(() => {});
   } catch(e) {
     if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Error: " + e.message; }
   }
@@ -8018,14 +8039,28 @@ async function importFromDriveUrl() {
   const m1       = raw.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
   const m2       = raw.match(/id=([a-zA-Z0-9_-]{10,})/);
   if (m1) fileId = m1[1]; else if (m2) fileId = m2[1];
-  if (msg) msg.textContent = "⏳ Fetching from Drive…";
+  if (msg) { msg.style.color = "var(--muted)"; msg.textContent = "⏳ Fetching CSV from Drive…"; }
+  _salesParsed = null; renderSalesPreview(null);
   try {
-    const data = await get({ action: "importSalesFromDrive", fileId });
-    if (data.error) throw new Error(data.error);
-    if (msg) msg.textContent = `✓ Imported ${data.imported} rows · ${data.skipped} skipped — refreshing…`;
-    salesData = { products:[], days:[], totalDays:0 };
-    await loadSalesAnalysis();
-  } catch(e) { if (msg) msg.textContent = "Error: " + e.message; }
+    // GAS fetches the file server-side (the browser can't fetch Drive — CORS)
+    // and returns the RAW text; it is then parsed, previewed and imported via
+    // the SAME header-based pipeline as file upload, so Drive lands in Supabase
+    // (not the old Google Sheet). Requires the fetchDriveCsv action in code.gs.
+    const data = await get({ action: "fetchDriveCsv", fileId });
+    const csv  = data && typeof data.csv === "string" ? data.csv : null;
+    if (!csv) {
+      if (data && data.error) throw new Error(data.error);
+      throw new Error("Drive fetch needs the code.gs 'fetchDriveCsv' patch (see SALES-IMPORT-DRIVE-PATCH.md). Use file upload for now.");
+    }
+    const res = parseSalesCsv(csv);
+    renderSalesPreview(res);
+    if (!res.ok) { if (msg) { msg.style.color = "var(--red)"; msg.textContent = "⚠ " + res.error; } return; }
+    _salesParsed = res;
+    _salesParsed.fileName = "Drive:" + fileId;
+    if (msg) { msg.style.color = "var(--muted)"; msg.textContent = `✓ Fetched ${res.totalRows.toLocaleString()} rows — review the preview, then tap Import ↑`; }
+  } catch(e) {
+    if (msg) { msg.style.color = "var(--red)"; msg.textContent = "Error: " + e.message; }
+  }
 }
   
 // ─────────────────────────────────────────────

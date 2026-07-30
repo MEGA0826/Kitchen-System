@@ -218,6 +218,23 @@ const writers: Record<string, (p: P) => Promise<unknown>> = {
     const row = Array.isArray(res) ? res[0] : (res as { inserted?: number; replaced?: number } | null);
     return { imported: row?.inserted ?? clean.length, replaced: row?.replaced ?? 0, skipped: raw.length - clean.length };
   },
+
+  // Audit row for a completed import (who/when/what). Fire-and-forget from the client.
+  logImport: async (p) => {
+    const body = {
+      source:        String(p.source || "file"),
+      file_name:     p.fileName || null,
+      worker:        (p._claims && p._claims.name) || null,
+      date_from:     p.dateFrom || null,
+      date_to:       p.dateTo || null,
+      rows_sent:     int(p.rowsSent) ?? 0,
+      rows_inserted: int(p.rowsInserted) ?? 0,
+      rows_replaced: int(p.rowsReplaced) ?? 0,
+      chunk_errors:  int(p.chunkErrors) ?? 0,
+    };
+    await sr("import_log", { method: "POST", ...MIN, body: JSON.stringify(body) });
+    return { status: "ok" };
+  },
 };
 
 function json(obj: unknown, status = 200): Response {
@@ -254,6 +271,7 @@ Deno.serve(async (req) => {
   if (!writer) return json({ error: "unknown action: " + action }, 400);
   const claims = await verifyToken(p.token);
   if (!claims) return json({ error: "unauthorized" }, 401);
+  p._claims = claims;   // expose the authenticated worker to writers (e.g. import audit)
 
   try {
     return json(await writer(p));
