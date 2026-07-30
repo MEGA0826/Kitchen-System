@@ -16,7 +16,7 @@
 const SB_URL      = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SIGN_SECRET = SERVICE_KEY; // server-only HMAC secret
-const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12h — one kitchen shift
+const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days — a tablet left open all week shouldn't 401 mid-import
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",

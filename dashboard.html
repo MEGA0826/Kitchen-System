@@ -2593,6 +2593,19 @@ async function gwWrite(action, params) {
   return gwPost(Object.assign({ action, token }, params));
 }
 
+// True only if a non-expired PIN write-token is stored. Callers use this to
+// re-authenticate BEFORE firing a batch of writes that would otherwise all 401.
+function gwTokenValid() {
+  try {
+    const b = (sessionStorage.getItem(GW_TOKEN) || "").split(".")[0];
+    if (!b) return false;
+    let s = b.replace(/-/g, "+").replace(/_/g, "/");
+    s += "=".repeat((4 - s.length % 4) % 4);
+    const p = JSON.parse(atob(s));
+    return !!p && typeof p.exp === "number" && Date.now() < p.exp - 5000;
+  } catch (e) { return false; }
+}
+
 // ─────────────────────────────────────────────
 // SUPABASE ACTION HANDLERS
 // Reads use the anon key directly; writes are delegated to the gateway.
@@ -8001,6 +8014,15 @@ async function runSalesImport() {
   const expectedPairs = rows.length;
   const fileName  = _salesParsed.fileName || null;
   const dateRange = _salesParsed.dateRange || [null, null];
+
+  // A batch of writes with no valid token would just 401 on every chunk — check
+  // up front and send the user to re-enter their PIN instead of firing dozens of
+  // failing calls (this was the "N chunks failed, 0 rows landed" symptom).
+  if (!gwTokenValid()) {
+    if (msg) { msg.style.color = "var(--red)"; msg.textContent = "⚠ Your session has expired — re-enter your Admin PIN, then tap Import again."; }
+    try { if (typeof requestAdminAccess === "function") requestAdminAccess(); } catch(e){}
+    return;
+  }
   if (msg) { msg.style.color = "var(--muted)"; msg.textContent = `⏳ Sending ${rows.length.toLocaleString()} rows…`; }
 
   try {
@@ -8011,14 +8033,14 @@ async function runSalesImport() {
     const chunks = [];
     for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
 
-    let totalImported = 0, totalReplaced = 0, totalSkipped = 0;
+    let totalImported = 0, totalReplaced = 0, totalSkipped = 0, lastErr = "";
     const failed = [];
     const PARALLEL = 6;
     for (let i = 0; i < chunks.length; i += PARALLEL) {
       const batch = chunks.slice(i, i + PARALLEL);
       if (msg) msg.textContent = `⏳ Uploading… ${Math.round((i / chunks.length) * 100)}%`;
       const results = await Promise.all(batch.map(chunk =>
-        gwWrite("importSales", { rows: chunk }).then(r => ({ ok:true, r })).catch(() => ({ ok:false, chunk }))
+        gwWrite("importSales", { rows: chunk }).then(r => ({ ok:true, r })).catch(e => { lastErr = String((e && e.message) || e); return { ok:false, chunk }; })
       ));
       results.forEach(res => {
         if (res.ok) { totalImported += res.r.imported||0; totalReplaced += res.r.replaced||0; totalSkipped += res.r.skipped||0; }
@@ -8033,7 +8055,7 @@ async function runSalesImport() {
       if (msg) msg.textContent = `⏳ Retrying ${failed.length} chunk(s)…`;
       for (const chunk of failed) {
         try { const r = await gwWrite("importSales", { rows: chunk }); totalImported += r.imported||0; totalReplaced += r.replaced||0; totalSkipped += r.skipped||0; }
-        catch(e){ errors++; }
+        catch(e){ errors++; lastErr = String((e && e.message) || e); }
       }
     }
 
@@ -8046,8 +8068,13 @@ async function runSalesImport() {
     // Read the imported dates straight back from the DB and prove the data is
     // there. This is what stops "imported OK" but the page shows nothing.
     const actual = await _salesRowCount(importDates);
+    const authIssue = /unauthor|\b401\b/i.test(lastErr) || !gwTokenValid();
     if (msg) {
-      if (errors && actual === 0) {
+      if (errors && authIssue) {
+        msg.style.color = "var(--red)";
+        msg.textContent = "⚠ Session expired mid-import — re-enter your Admin PIN and tap Import again. Re-importing is safe (it replaces, never doubles).";
+        try { if (typeof requestAdminAccess === "function") requestAdminAccess(); } catch(e){}
+      } else if (errors && actual === 0) {
         msg.style.color = "var(--red)";
         msg.textContent = `⚠ Import failed — ${errors} chunk(s) failed after retry and 0 rows landed. Nothing saved.`;
       } else if (actual === 0) {
