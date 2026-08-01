@@ -164,7 +164,6 @@ const TRANSLATIONS = {
   'edit-ingredient':  { en:'Edit ingredient',               de:'Zutat bearbeiten',                th:'แก้ไขส่วนผสม',                     it:'Modifica ingrediente',            fr:'Modifier l\'ingrédient',          es:'Editar ingrediente' },
   'no-ingredients':   { en:'No ingredients yet',            de:'Noch keine Zutaten',              th:'ยังไม่มีส่วนผสม',                  it:'Nessun ingrediente',              fr:'Pas encore d\'ingrédients',       es:'Sin ingredientes aún' },
 };
-};
 
 // ─────────────────────────────────────────────
 // Core functions
