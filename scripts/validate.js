@@ -30,7 +30,7 @@ for (const file of ["dashboard.html", "index.html", "onboarding.html"]) {
 }
 
 // ── standalone JS files ─────────────────────────────────────────────────────
-for (const file of ["service-worker.js", "i18n.js", "js/product-edit.js", "js/haccp.js", "js/sales-import.js", "js/api.js", "js/state.js", "js/ui.js", "js/main.js"]) {
+for (const file of ["service-worker.js", "i18n.js", "js/inventory-edit.js", "js/product-edit.js", "js/haccp.js", "js/sales-import.js", "js/api.js", "js/state.js", "js/ui.js", "js/main.js"]) {
   const p = path.join(ROOT, file);
   if (!fs.existsSync(p)) continue;
   checkJs(file, fs.readFileSync(p, "utf8"));
