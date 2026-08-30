@@ -4,11 +4,28 @@
 // and the mep_gwt login token to the `ask` edge function. All numbers are computed
 // server-side by read-only SQL — this module only renders the answer and, for trust,
 // the exact queries that produced it.
+//
+// Auth: the `ask` endpoint requires a valid mep_gwt gateway token (so only signed-in
+// staff spend API credits). Being "admin unlocked" in the app does NOT guarantee that
+// token exists (it's only issued by the Supabase gateway login, gwLogin), so this
+// module gets its own token via a small inline PIN prompt + window.gwLogin — it does
+// not rely on requestAdminAccess(), which no-ops when already unlocked.
 (function () {
   "use strict";
   var FN_URL = (window.SB_URL || "https://clntikfffmjytexvzubq.supabase.co") + "/functions/v1/ask";
+  var GW_TOKEN = "mep_gwt";
 
-  function gwt() { try { return sessionStorage.getItem("mep_gwt") || ""; } catch (e) { return ""; } }
+  function gwt() { try { return sessionStorage.getItem(GW_TOKEN) || ""; } catch (e) { return ""; } }
+  function tokenValid() {
+    try {
+      var b = (gwt() || "").split(".")[0];
+      if (!b) return false;
+      var s = b.replace(/-/g, "+").replace(/_/g, "/");
+      s += "=".repeat((4 - s.length % 4) % 4);
+      var p = JSON.parse(atob(s));
+      return !!p && typeof p.exp === "number" && Date.now() < p.exp - 5000;
+    } catch (e) { return false; }
+  }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
@@ -22,7 +39,6 @@
     var i = 0;
     while (i < lines.length) {
       var ln = lines[i];
-      // pipe table: a header row followed by a |---|---| separator
       if (/^\s*\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
         var rows = [];
         while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(lines[i]); i++; }
@@ -41,12 +57,10 @@
     return out.join("<br>").replace(/(<br>)*(<table)/g, "$2").replace(/(<\/table>)(<br>)*/g, "$1");
   }
   function inline(s) {
-    return s
-      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-      .replace(/`([^`]+)`/g, '<code>$1</code>');
+    return s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, '<code>$1</code>');
   }
 
-  var panel, log, input, sendBtn, opened = false;
+  var panel, log, input, sendBtn, authBar, pinInput, loginBtn, opened = false, pendingQ = null;
 
   function injectUI() {
     var style = document.createElement("style");
@@ -69,10 +83,14 @@
       ".ask-sql{margin-top:6px;font-size:11.5px;opacity:.75}" +
       ".ask-sql summary{cursor:pointer}" +
       ".ask-sql pre{white-space:pre-wrap;background:rgba(0,0,0,.25);padding:6px;border-radius:6px;margin:4px 0;overflow-x:auto}" +
+      "#ask-auth{display:none;gap:8px;align-items:center;padding:10px;background:#272a3d;border-top:1px solid #3a3d55}" +
+      "#ask-auth span{font-size:12.5px;opacity:.85}" +
+      "#ask-pin{width:90px;background:#12131c;color:#e7e9f3;border:1px solid #3a3d55;border-radius:8px;padding:7px 9px;font-size:14px}" +
+      "#ask-login{background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-weight:600;cursor:pointer}" +
       "#ask-foot{display:flex;gap:8px;padding:10px;background:#272a3d}" +
       "#ask-input{flex:1;background:#12131c;color:#e7e9f3;border:1px solid #3a3d55;border-radius:10px;padding:9px 11px;font-size:14px;resize:none;max-height:90px}" +
       "#ask-send{background:#4f46e5;color:#fff;border:none;border-radius:10px;padding:0 16px;font-weight:600;cursor:pointer}" +
-      "#ask-send:disabled{opacity:.5;cursor:default}" +
+      "#ask-send:disabled,#ask-login:disabled{opacity:.5;cursor:default}" +
       ".ask-hint{opacity:.6;font-size:12px;text-align:center;padding:2px 8px}";
     document.head.appendChild(style);
 
@@ -87,7 +105,8 @@
     panel.innerHTML =
       '<div id="ask-head"><span>✨ Ask the kitchen data</span><button class="x" title="Close">✕</button></div>' +
       '<div id="ask-log"></div>' +
-      '<div class="ask-hint">e.g. "top 5 sellers in March 2026" · "low stock items" · "revenue last month"</div>' +
+      '<div class="ask-hint">e.g. "top 5 sellers in March 2026" · "how much salmon did we use" · "low stock items"</div>' +
+      '<div id="ask-auth"><span>Enter Admin PIN:</span><input id="ask-pin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off"><button id="ask-login">Sign in</button></div>' +
       '<div id="ask-foot"><textarea id="ask-input" rows="1" placeholder="Ask a question…"></textarea><button id="ask-send">Send</button></div>';
     document.body.appendChild(panel);
 
@@ -95,12 +114,19 @@
     log = panel.querySelector("#ask-log");
     input = panel.querySelector("#ask-input");
     sendBtn = panel.querySelector("#ask-send");
+    authBar = panel.querySelector("#ask-auth");
+    pinInput = panel.querySelector("#ask-pin");
+    loginBtn = panel.querySelector("#ask-login");
     sendBtn.onclick = send;
+    loginBtn.onclick = doLogin;
     input.addEventListener("keydown", function (e) {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
     });
+    pinInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); doLogin(); }
+    });
 
-    add("a", "Hi! Ask me about your sales, stock or products — in plain language. I only read the data, never change it.");
+    add("a", "Hi! Ask me about your sales, stock, menus or ingredient usage — in plain language. I only read the data, never change it.");
   }
 
   function toggle() {
@@ -118,12 +144,44 @@
     return d;
   }
 
+  function needSignIn(q) {
+    pendingQ = q || null;
+    authBar.style.display = "flex";
+    setTimeout(function () { pinInput.focus(); }, 50);
+  }
+
+  // Get a gateway token directly (bypasses requestAdminAccess, which no-ops when the
+  // app is already "admin unlocked" but the session token is missing/expired).
+  async function doLogin() {
+    var pin = (pinInput.value || "").trim();
+    if (!/^\d{4,}$/.test(pin)) { pinInput.focus(); return; }
+    if (typeof window.gwLogin !== "function") { add("e", "Login isn't available on this page."); return; }
+    loginBtn.disabled = true; loginBtn.textContent = "…";
+    try {
+      var r = await window.gwLogin(pin);
+      if (tokenValid()) {
+        authBar.style.display = "none";
+        pinInput.value = "";
+        add("a", "Signed in — thanks!");
+        var q = pendingQ; pendingQ = null;
+        if (q) { input.value = q; send(); }
+      } else {
+        add("e", (r && r.ok === false) ? "That PIN wasn't accepted. Try again." : "Sign-in failed — please try again.");
+      }
+    } catch (e) {
+      add("e", "Sign-in error: " + (e && e.message ? e.message : e));
+    } finally {
+      loginBtn.disabled = false; loginBtn.textContent = "Sign in";
+    }
+  }
+
   async function send() {
     var q = (input.value || "").trim();
     if (!q) return;
-    if (!gwt()) {
-      add("e", "Please sign in with your Admin PIN first, then ask again.");
-      if (typeof window.requestAdminAccess === "function") window.requestAdminAccess();
+    if (!tokenValid()) {
+      if (authBar.style.display !== "flex") add("a", "Quick sign-in needed — enter your Admin PIN below, then I'll answer.");
+      input.value = "";
+      needSignIn(q);
       return;
     }
     input.value = "";
@@ -138,9 +196,13 @@
       });
       var data = await res.json();
       thinking.remove();
+      if (res.status === 401) {
+        add("e", "Your session expired — please sign in again.");
+        needSignIn(q);
+        return;
+      }
       if (!res.ok || data.error) {
         add("e", data.error || ("Error " + res.status));
-        if (res.status === 401 && typeof window.requestAdminAccess === "function") window.requestAdminAccess();
         return;
       }
       var html = mdToHtml(data.answer || "(no answer)");
