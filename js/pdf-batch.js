@@ -5,8 +5,9 @@
 // _suggestPdfCode from js/pdf-import.js (classic-script globals at runtime). Batch state
 // (_batchSelectedFiles/_batchRunning/_batchUnmatched/_batchAllIngredients/_bumResolved/
 // _bumSearchItems) stays INLINE in dashboard.html (shared via the global lexical env).
-// NOTE: inline stop button onclick="_batchRunning=false" is a pre-existing quirk (hits
-// window._batchRunning, a separate binding) — unchanged here.
+// NOTE: _batchRunning is declared `var` (not `let`) in dashboard.html so this module's
+// loop and the inline stop button (onclick="_batchRunning=false") share one binding
+// (window._batchRunning) — the stop button now actually halts the loop.
 
 // Retry a GAS/network call up to maxAttempts times, waiting for online first.
 async function _batchRetry(fn, maxAttempts) {
