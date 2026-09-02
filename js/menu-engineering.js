@@ -143,15 +143,19 @@
     // dots (small first so big ones draw on top)
     var sorted = rows.slice().sort(function (a, b) { return a.total_margin - b.total_margin; });
     sorted.forEach(function (r) {
-      var rad = 4 + Math.sqrt(r.total_margin / maxTM) * 16;
+      var rad = 4 + Math.sqrt(Math.abs(r.total_margin) / maxTM) * 16;
       s += '<circle cx="' + x(Math.log10(Math.max(r.units_sold, 1))).toFixed(1) + '" cy="' + y(r.margin).toFixed(1) +
         '" r="' + rad.toFixed(1) + '" fill="' + CLASS[r.class].c + 'cc" stroke="' + CLASS[r.class].c + '" stroke-width="1"/>';
     });
-    // label the top 6 by total margin
-    rows.slice(0, 6).forEach(function (r) {
-      var cx = x(Math.log10(Math.max(r.units_sold, 1))), cy = y(r.margin);
-      var nm = r.name.length > 22 ? r.name.slice(0, 21) + "…" : r.name;
-      s += '<text x="' + (cx + 8).toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" fill="#e7e9f3" font-size="10.5">' + esc(nm) + '</text>';
+    // label the biggest-margin dish in each quadrant (spreads labels across the chart)
+    ORDER.forEach(function (cls) {
+      var top = rows.filter(function (r) { return r.class === cls; })
+        .sort(function (a, b) { return b.total_margin - a.total_margin; })[0];
+      if (!top) return;
+      var cx = x(Math.log10(Math.max(top.units_sold, 1))), cy = y(top.margin);
+      var nm = top.name.length > 20 ? top.name.slice(0, 19) + "…" : top.name;
+      var anchor = cx > W * 0.62 ? "end" : "start", dx = cx > W * 0.62 ? -9 : 9;
+      s += '<text x="' + (cx + dx).toFixed(1) + '" y="' + (cy - 9).toFixed(1) + '" fill="#fff" font-size="10.5" font-weight="600" text-anchor="' + anchor + '">' + esc(nm) + '</text>';
     });
     s += '</svg>';
     return s;
