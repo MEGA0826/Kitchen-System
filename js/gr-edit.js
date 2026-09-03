@@ -28,6 +28,7 @@ function openAddGRPopup(art) {
   editingGRCode = null;
   closeMenu();
   agrZutaten = [];
+  { const _pf=document.getElementById('agr-portions'); if(_pf){_pf.value='1';_pf.dataset.last='1';} }
   ['agr-code','agr-name','agr-rohgewicht','agr-garverlust','agr-zubereitung'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -211,6 +212,7 @@ function openEditGRPopup(grCode) {
   if (!g) return;
   editingGRCode = grCode;
   agrZutaten = [];
+  { const _pf=document.getElementById('agr-portions'); if(_pf){_pf.value='1';_pf.dataset.last='1';} }
   try { agrZutaten = JSON.parse(g.zutaten || '[]'); } catch(e) {}
   document.getElementById('agr-code').value        = g.grCode || '';
   document.getElementById('agr-name').value        = g.name || '';

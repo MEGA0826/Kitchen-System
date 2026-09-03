@@ -15,6 +15,7 @@ function openMenuPopup(menuId) {
 
   editingMenuId = menuId || null;
   menuZutaten   = [];
+  { const _pf=document.getElementById('mp-portions'); if(_pf){_pf.value='1';_pf.dataset.last='1';} }
   const existing = menuId ? allMenus.find(m => m.id === menuId) : null;
 
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };

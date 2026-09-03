@@ -19,6 +19,7 @@ function openAddMEPPopup() {
   const mepImgPrev = document.getElementById('mep-img-preview'); if (mepImgPrev) mepImgPrev.style.display = 'none';
   ['mep-img-file','mep-img-file-cam'].forEach(id => { const f = document.getElementById(id); if (f) f.value = ''; });
   mepAddZutaten = [];
+  { const _pf=document.getElementById('mep-portions'); if(_pf){_pf.value='1';_pf.dataset.last='1';} }
   renderMepAddZutaten();
   const msg = document.getElementById("mep-msg");
   if (msg) { msg.textContent = ""; msg.className = "admin-msg"; }
