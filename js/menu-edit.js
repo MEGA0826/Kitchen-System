@@ -105,10 +105,14 @@ function renderMenuZutaten(targetList, targetData) {
       const chfStr    = z.chfKgNetto ? `${_t('chf-kg-netto')}: CHF ${parseFloat(z.chfKgNetto).toFixed(2)}` : '';
       const piecesStr = (z.pieces > 0 && z.piecesTotal > 0) ? `✂️ ${z.pieces}/${z.piecesTotal} Stk` : '';
       const extras  = [piecesStr, garvStr, waStr, chfStr].filter(Boolean).join(' · ');
+      // GR sub-recipes are clickable → open that Grundrezeptur (matched by name; codes can drift)
+      const nameHtml = z.type === 'gr'
+        ? `<span class="zutat-gr-link" data-name="${(z.name||'').replace(/"/g,'&quot;')}" data-code="${z.code||''}" style="color:var(--green);text-decoration:underline;text-underline-offset:2px;cursor:pointer" title="Grundrezeptur öffnen ↗">${z.name||''} <span style="font-size:9px">↗</span></span>`
+        : (z.name||'');
       return `<div style="display:flex;align-items:flex-start;gap:7px;padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:3px">
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${typeBg[z.type]||'var(--surface)'};color:${typeColors[z.type]||'var(--text)'};font-weight:700;flex-shrink:0;margin-top:2px">${(z.type||'RM').toUpperCase()}</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:var(--text);font-weight:500">${z.name||''}${z.isDeko ? ' <span style="font-size:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🌿 deko</span>' : ''}${z.isTopping ? ' <span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🍯 topping</span>' : ''}</div>
+          <div style="font-size:12px;color:var(--text);font-weight:500">${nameHtml}${z.isDeko ? ' <span style="font-size:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🌿 deko</span>' : ''}${z.isTopping ? ' <span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🍯 topping</span>' : ''}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.6">
             ${z.gewicht ? `<span>${z.gewicht}kg</span>` : ''}
             ${z.cost    ? `<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>` : ''}
@@ -148,6 +152,18 @@ function renderMenuZutaten(targetList, targetData) {
     });
     el.querySelectorAll('.zutat-dn-btn').forEach(btn => {
       btn.addEventListener('click', () => moveMenuZutat(parseInt(btn.dataset.idx),  1, btn.dataset.isgr === 'true'));
+    });
+    // Click a GR sub-recipe ingredient → open that Grundrezeptur for editing.
+    el.querySelectorAll('.zutat-gr-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nm = link.dataset.name || '', code = link.dataset.code || '';
+        const grs = (typeof allGRs !== 'undefined' && Array.isArray(allGRs)) ? allGRs : [];
+        // match by NAME first — menu/GR zutaten GR codes can drift from the GR master
+        const gr = grs.find(g => (g.name || '') === nm) || grs.find(g => (g.grCode || '') === code);
+        if (gr && typeof openEditGRPopup === 'function') openEditGRPopup(gr.grCode);
+        else if (typeof showToast === 'function') showToast('Grundrezeptur nicht gefunden: ' + (nm || code), 'warn');
+      });
     });
   }
   if (!targetList) calcWaFromZutaten();

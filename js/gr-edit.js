@@ -106,7 +106,7 @@ function renderAgrZutaten() {
       <div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface2);border-radius:8px">
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${typeBg[z.type]||'var(--surface)'};color:${typeColors[z.type]||'var(--text)'};font-weight:700">${(z.type||'RM').toUpperCase()}</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:var(--text)">${z.name||''}</div>
+          <div style="font-size:12px;color:var(--text)">${z.type === 'gr' ? `<span class="zutat-gr-link" data-name="${(z.name||'').replace(/"/g,'&quot;')}" data-code="${z.code||''}" style="color:var(--green);text-decoration:underline;text-underline-offset:2px;cursor:pointer" title="Grundrezeptur öffnen ↗">${z.name||''} <span style="font-size:9px">↗</span></span>` : (z.name||'')}</div>
           <div style="font-size:10px;color:var(--muted)">${z.gewicht?z.gewicht+'kg':''} ${z.cost?'· CHF '+parseFloat(z.cost).toFixed(2):''}</div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
@@ -120,6 +120,16 @@ function renderAgrZutaten() {
       btn.addEventListener('click', () => editGrZutat(parseInt(btn.dataset.idx))));
     el.querySelectorAll('.agr-zutat-del-btn').forEach(btn =>
       btn.addEventListener('click', () => removeAgrZutat(parseInt(btn.dataset.idx))));
+    // Click a nested GR sub-recipe → open that Grundrezeptur (matched by name; codes can drift).
+    el.querySelectorAll('.zutat-gr-link').forEach(link =>
+      link.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nm = link.dataset.name || '', code = link.dataset.code || '';
+        const grs = (typeof allGRs !== 'undefined' && Array.isArray(allGRs)) ? allGRs : [];
+        const gr = grs.find(g => (g.name || '') === nm) || grs.find(g => (g.grCode || '') === code);
+        if (gr && typeof openEditGRPopup === 'function') openEditGRPopup(gr.grCode);
+        else if (typeof showToast === 'function') showToast('Grundrezeptur nicht gefunden: ' + (nm || code), 'warn');
+      }));
   }
   calcAgrWa();
 }
