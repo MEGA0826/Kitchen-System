@@ -564,9 +564,106 @@
   <button class="tab"        data-tab="sales"        onclick="switchTab(this)"><span class="tab-icon">📈</span>Sales</button>
   <button class="tab"        data-tab="haccp"        onclick="switchTab(this)"><span class="tab-icon">🌡</span>HACCP</button>
   <button class="tab"                                onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
+  <button class="tab" data-tab="settings" onclick="switchTab(this)"><span class="tab-icon">⚙️</span>Settings</button>
 </div>
 
 <div class="body">
+
+<!-- SETTINGS -->
+<div class="panel" id="panel-settings">
+  <div class="section-title">Settings <span class="section-title-icon">⚙️</span></div>
+  <div class="section-sub">Preferences, business profile &amp; about</div>
+  <style>
+    #panel-settings .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+    #panel-settings .set-row:last-child{border-bottom:none}
+    #panel-settings .set-label{font-size:13px;color:var(--text);font-weight:500}
+    #panel-settings .set-seg-group{display:flex;gap:6px}
+    #panel-settings .set-seg{padding:8px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:13px;cursor:pointer;transition:all .15s}
+    #panel-settings .set-seg.set-seg-active{border-color:var(--amber-brd);background:var(--amber-dim);color:var(--amber);font-weight:600}
+    #panel-settings .set-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    #panel-settings .set-field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+    #panel-settings .set-field span{font-weight:500}
+    #panel-settings .set-hint{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6}
+    #panel-settings .set-about{display:flex;flex-direction:column;gap:0}
+    #panel-settings .set-about-app{display:flex;align-items:center;gap:12px;padding:4px 0 14px}
+    #panel-settings .set-about-link{display:flex;align-items:center;justify-content:space-between;padding:14px 4px;border:none;border-bottom:1px solid var(--border);background:none;color:var(--text);font-size:14px;cursor:pointer;text-decoration:none;text-align:left;width:100%;font-family:inherit}
+    #panel-settings .set-about-link:last-child{border-bottom:none}
+    #panel-settings .set-about-link:hover{color:var(--amber)}
+    #panel-settings .set-about-link .chev{color:var(--muted);font-size:18px}
+  </style>
+
+  <div class="admin-section">
+    <div class="admin-section-title">🎨 Appearance</div>
+    <div class="set-row">
+      <div class="set-label">Theme</div>
+      <div class="set-seg-group">
+        <button id="set-theme-dark"  class="set-seg" onclick="settingsSetTheme('dark')">🌙 Dark</button>
+        <button id="set-theme-light" class="set-seg" onclick="settingsSetTheme('light')">☀️ Light</button>
+      </div>
+    </div>
+    <div class="set-row">
+      <div class="set-label">Language</div>
+      <select id="set-lang" class="form-input" style="max-width:200px">
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+        <option value="th">ไทย</option>
+        <option value="it">Italiano</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="admin-section">
+    <div class="admin-section-title">🏪 Business Profile</div>
+    <div class="set-grid">
+      <label class="set-field"><span>Business type</span>
+        <select id="set-biz-type" class="form-input">
+          <option value="restaurant">Restaurant</option>
+          <option value="foodtruck">Food truck</option>
+          <option value="bakery">Bakery</option>
+          <option value="cafe">Café</option>
+          <option value="catering">Catering</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label class="set-field"><span>Business name</span><input id="set-biz-name" class="form-input" placeholder="e.g. 212 Nooch Richti"></label>
+      <label class="set-field"><span>Currency</span><input id="set-currency" class="form-input" maxlength="4" placeholder="CHF"></label>
+      <label class="set-field"><span>VAT / tax %</span><input id="set-vat" class="form-input" type="number" step="0.1" placeholder="e.g. 8.1"></label>
+      <label class="set-field"><span>Target food-cost %</span><input id="set-target-fc" class="form-input" type="number" step="1" placeholder="33"></label>
+      <label class="set-field"><span>Contact email (feedback)</span><input id="set-contact-email" class="form-input" type="email" placeholder="owner@example.com"></label>
+    </div>
+    <div id="set-biz-hint" class="set-hint"></div>
+  </div>
+
+  <div class="admin-section">
+    <div class="admin-section-title">⚙️ Operations</div>
+    <div class="set-grid">
+      <label class="set-field"><span>KDS auto-refresh (seconds)</span><input id="set-kds-refresh" class="form-input" type="number" min="10" step="5" placeholder="60"></label>
+      <label class="set-field"><span>Order safety-stock buffer (days)</span><input id="set-order-safety" class="form-input" type="number" min="0" step="0.5" placeholder="0.5"></label>
+      <label class="set-field"><span>Default order horizon (days)</span><input id="set-order-horizon" class="form-input" type="number" min="1" step="1" placeholder="2"></label>
+    </div>
+    <div class="set-hint">Tunes the live KDS and stock ordering. Target food-cost, business name &amp; currency also feed the menu view/PDF. Changes apply on the next refresh / order calculation.</div>
+  </div>
+
+  <div class="admin-section">
+    <div class="admin-section-title">ℹ️ About</div>
+    <div class="set-about">
+      <div class="set-about-app">
+        <div style="font-size:28px">🍜</div>
+        <div>
+          <div style="font-weight:700;font-size:15px">Kitchen MEP</div>
+          <div id="set-version" class="set-hint" style="margin:0">Version …</div>
+        </div>
+      </div>
+      <a class="set-about-link" href="privacy.html" target="_blank" rel="noopener">🔒 Privacy Policy <span class="chev">›</span></a>
+      <a class="set-about-link" href="terms.html" target="_blank" rel="noopener">📜 Terms of Service <span class="chev">›</span></a>
+      <button class="set-about-link" onclick="openIntro()">🎬 View Intro <span class="chev">›</span></button>
+      <button class="set-about-link" onclick="rateApp()">⭐ Rate &amp; Feedback <span class="chev">›</span></button>
+    </div>
+  </div>
+</div>
+
 
 <!-- MORNING BRIEFING -->
 <div class="panel" id="panel-morning">
@@ -2220,9 +2317,9 @@ let mepAddZutaten = [];
 let allGRs = [];
   
 const ROLE_TABS = {
-  Teamleader : ['kds','mep-overview','inventory','deductions'],
-  Küchenchef : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','haccp'],
-  Manager    : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','sales','haccp','admin'],
+  Teamleader : ['kds','mep-overview','inventory','deductions','settings'],
+  Küchenchef : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','haccp','settings'],
+  Manager    : ['morning','kds','products','inventory','recipes','relations','orders','deductions','reports','sales','haccp','admin','settings'],
 };
 
 // Roles that can VIEW recipes but not add/edit
@@ -2360,6 +2457,7 @@ function switchTab(btn) {
   }
   if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
   if (tabId === "deductions")   loadDeductions();
+  if (tabId === "settings")     renderSettings();
   if (tabId === "reports")      loadReportsTab();
   if (tabId === "products")     { if (!Object.keys(allProducts).length) loadProducts(); else filterProducts(); if (!allRecipes.length) get({ action:"getRecipes" }).then(d => { if (Array.isArray(d.recipes)) { allRecipes = d.recipes; filterProducts(); } }).catch(() => {}); }
   if (tabId === "morning")      loadMorning();
@@ -3909,12 +4007,16 @@ Promise.allSettled([
 _initSubscriptionUI();
 setTimeout(() => { loadMenus(); loadGRs(); }, 600);
 
-// Auto-refresh KDS every 60s — re-render product grid if new scans arrived
-setInterval(async () => {
-  const prevLen = allScans.length;
-  await loadKDS();
-  if (allScans.length !== prevLen) renderProductGrid && renderProductGrid(Object.entries(allProducts));
-}, 60_000);
+// Auto-refresh KDS on a configurable interval (Settings → Operations; default 60s, min 10s)
+(function scheduleKdsRefresh(){
+  const _sec = (typeof kmepSettingNum === 'function') ? kmepSettingNum('kdsRefreshSec', 60) : 60;
+  setTimeout(async () => {
+    const prevLen = allScans.length;
+    await loadKDS();
+    if (allScans.length !== prevLen) renderProductGrid && renderProductGrid(Object.entries(allProducts));
+    scheduleKdsRefresh();
+  }, Math.max(10, _sec) * 1000);
+})();
 
 let _relType="all";
 function setRelType(){}
@@ -7622,6 +7724,7 @@ window.switchTab=function(btn){if(!btn)return;_origST.call(this,btn);if(btn.data
 })();
 </script>
 <div id="st-tooltip"></div>
+<script src="js/settings.js"></script>
 <script src="js/sales-import.js"></script>
 <script src="js/haccp.js"></script>
 <script src="js/product-edit.js"></script>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy · Kitchen MEP</title>
+<style>
+  :root{--bg:#0f0f0d;--surface:#1a1a16;--border:#2a2a24;--text:#e8e6e0;--muted:#9a978e;--amber:#e8a020;--green:#3fae6d;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;padding:0 0 60px}
+  .wrap{max-width:760px;margin:0 auto;padding:24px 20px}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 20px;position:sticky;top:0}
+  header .wrap{padding:0 20px;display:flex;align-items:center;gap:12px}
+  h1{font-size:20px;margin:0}
+  h2{font-size:15px;margin:28px 0 8px;color:var(--amber)}
+  a.back{color:var(--amber);text-decoration:none;font-size:13px}
+  p,li{font-size:14px;color:var(--text)}
+  .muted{color:var(--muted);font-size:12px}
+  .note{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:12px 14px;margin:16px 0;font-size:13px;color:var(--muted)}
+  code{background:var(--surface);padding:1px 6px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><span style="font-size:22px">🔒</span><h1>Privacy Policy</h1></div></header>
+<div class="wrap">
+  <p><a class="back" href="dashboard.html">← Back to app</a></p>
+  <p class="muted">Kitchen MEP — kitchen &amp; inventory management. Last updated: 5 September 2026.</p>
+
+  <div class="note">This is a starter policy for an internal restaurant-operations tool. Have it reviewed for your jurisdiction before relying on it publicly.</div>
+
+  <h2>What this app is</h2>
+  <p>Kitchen MEP is an operational tool used by restaurant, food-truck and bakery staff to track mise-en-place production, inventory, recipes, orders and reports. It is intended for use by a business and its staff, not for the general public.</p>
+
+  <h2>Data we handle</h2>
+  <ul>
+    <li><b>Operational data</b> — products, recipes, inventory levels, supplier orders, production scans, staff names and roles, and reports you create.</li>
+    <li><b>Device preferences</b> — theme, language and settings stored locally in your browser (<code>localStorage</code>). These stay on your device.</li>
+    <li><b>Access PIN</b> — used to authorize administrative changes; it is exchanged for a short-lived signed token kept only in your browser session.</li>
+  </ul>
+
+  <h2>Where data is stored</h2>
+  <p>Operational data is stored in the business's own backend (Google Sheets / Google Apps Script and, during migration, a Supabase Postgres database). Access is controlled by the business. Public read access is limited to non-sensitive operational data required for the app to function; write access requires the PIN token.</p>
+
+  <h2>What we do not do</h2>
+  <ul>
+    <li>We do not sell data or use it for advertising.</li>
+    <li>We do not collect payment-card or financial-account information in this app.</li>
+    <li>We do not track you across other websites.</li>
+  </ul>
+
+  <h2>Staff information</h2>
+  <p>Staff names and roles are stored so the app can attribute production and deductions. If you are a staff member and want your information corrected or removed, contact the business that operates this installation.</p>
+
+  <h2>Cookies &amp; local storage</h2>
+  <p>The app uses browser local storage for preferences and a session token. It does not use third-party advertising or analytics cookies.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy should go to the business operating this Kitchen MEP installation.</p>
+
+  <p style="margin-top:32px"><a class="back" href="dashboard.html">← Back to app</a> &nbsp;·&nbsp; <a class="back" href="terms.html">Terms of Service →</a></p>
+</div>
+</body>
+</html>

@@ -69,7 +69,11 @@ function buildMenuPdfHtml(m, interactive) {
   const wa  = parseFloat(m.wa || 0);
   const vk  = parseFloat(m.vk || 0);
   const fc  = vk > 0 ? ((wa/vk)*100).toFixed(1)+'%' : '—';
-  const fcColor = (fc!=='—' && parseFloat(fc)>33) ? '#e86050' : '#2d8a5e';
+  // Business-profile settings (js/settings.js) with safe fallbacks so print/PDF works even if unset
+  const _bn  = (typeof kmepSetting === 'function')    ? kmepSetting('bizName', '212 Nooch Richti') : '212 Nooch Richti';
+  const _cur = (typeof kmepSetting === 'function')    ? kmepSetting('currency', 'CHF') : 'CHF';
+  const _fcTarget = (typeof kmepSettingNum === 'function') ? kmepSettingNum('targetFC', 33) : 33;
+  const fcColor = (fc!=='—' && parseFloat(fc) > _fcTarget) ? '#e86050' : '#2d8a5e';
 
   const zutatRows = zutaten.map(z => {
     if (z.type === 'gr') {
@@ -80,7 +84,7 @@ function buildMenuPdfHtml(m, interactive) {
         <td style="padding:4px 6px;font-size:11px;font-weight:700">${interactive
           ? `<span class="zutat-gr-link" data-name="${(z.name||'').replace(/"/g,'&quot;')}" data-code="${z.code||''}" style="color:#2d8a5e;text-decoration:underline;text-underline-offset:2px;cursor:pointer" title="Grundrezeptur öffnen ↗">${z.name||''} <span style="font-size:9px">↗</span></span>`
           : (z.name||'')} <span style="font-weight:400;color:#888">(${z.art||''})</span></td>
-        <td style="padding:4px 6px;font-size:10px;color:#e8a020">CHF ${parseFloat(z.cost||0).toFixed(2)}</td>
+        <td style="padding:4px 6px;font-size:10px;color:#e8a020">${_cur} ${parseFloat(z.cost||0).toFixed(2)}</td>
       </tr>${grSubs.map(s=>`<tr>
         <td style="padding:2px 6px 2px 18px;font-size:9px;color:#888">↳ ${(s.type||'RM').toUpperCase()}</td>
         <td style="padding:2px 6px;font-size:9px;color:#888">${s.gewicht?s.gewicht+' kg':''}</td>
@@ -92,7 +96,7 @@ function buildMenuPdfHtml(m, interactive) {
       <td style="padding:4px 6px;font-size:10px;color:#555">${(z.type||'RM').toUpperCase()}</td>
       <td style="padding:4px 6px;font-size:10px">${z.gewicht?z.gewicht+' kg':'—'}</td>
       <td style="padding:4px 6px;font-size:11px;font-weight:500">${z.name||''}</td>
-      <td style="padding:4px 6px;font-size:10px;color:#e8a020">${z.cost?'CHF '+parseFloat(z.cost).toFixed(2):''}${z.allergie?'<br><span style="color:#888">⚠️'+z.allergie+'</span>':''}</td>
+      <td style="padding:4px 6px;font-size:10px;color:#e8a020">${z.cost?_cur+' '+parseFloat(z.cost).toFixed(2):''}${z.allergie?'<br><span style="color:#888">⚠️'+z.allergie+'</span>':''}</td>
     </tr>`;
   }).join('');
 
@@ -100,12 +104,12 @@ function buildMenuPdfHtml(m, interactive) {
     <div style="background:#1a1a16;padding:18px 24px;display:flex;align-items:center;gap:16px">
       <div style="flex:1">
         <div style="font-size:20px;font-weight:700;color:#fff">${m.name||'—'}</div>
-        <div style="font-size:10px;color:#e8a020;letter-spacing:2px;text-transform:uppercase;margin-top:3px">212 Nooch Richti · ${m.saison||'All Year'}</div>
+        <div style="font-size:10px;color:#e8a020;letter-spacing:2px;text-transform:uppercase;margin-top:3px">${_bn} · ${m.saison||'All Year'}</div>
       </div>
       ${m.imageUrl?`<img src="${toDirectImg(m.imageUrl)}" style="width:160px;height:110px;object-fit:cover;border-radius:8px">`:''}
     </div>
     <div style="background:#f7f5f0;border-bottom:2px solid #e8a020;padding:8px 24px;display:flex;gap:24px;flex-wrap:wrap">
-      ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',m.gewicht],['WA','CHF '+wa.toFixed(2)],['VK','CHF '+vk.toFixed(2)],['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
+      ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',m.gewicht],['WA',_cur+' '+wa.toFixed(2)],['VK',_cur+' '+vk.toFixed(2)],['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
     </div>
     <div style="padding:16px 20px;border-bottom:1px solid #eee">
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zutaten</div>
@@ -133,7 +137,7 @@ function buildMenuPdfHtml(m, interactive) {
     </div>`:''}
     <div style="padding:8px 24px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:9px;color:#aaa">
       <span>Mutationsdatum ${m.lastUpdate?new Date(m.lastUpdate).toLocaleDateString('de-CH'):'—'}</span>
-      <span>Kitchen MEP · 212 Nooch Richti</span>
+      <span>Kitchen MEP · ${_bn}</span>
     </div>
   </div>`;
 }

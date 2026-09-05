@@ -210,10 +210,12 @@ function renderOrders() {
   const summary   = document.getElementById("order-summary");
   if (!container) return;
 
-  const days     = parseInt(document.getElementById("order-days")?.value || "2");
+  // Order-horizon default + safety buffer come from Settings (js/settings.js) with safe fallbacks
+  const _horizon = (typeof kmepSettingNum === 'function') ? kmepSettingNum('orderHorizonDays', 2) : 2;
+  const days     = parseInt(document.getElementById("order-days")?.value || String(_horizon));
   const showMode = document.getElementById("order-show")?.value || "shortage";
   const q        = (document.getElementById("order-search")?.value || "").toLowerCase();
-  const SAFETY   = 0.5;
+  const SAFETY   = (typeof kmepSettingNum === 'function') ? kmepSettingNum('orderSafetyDays', 0.5) : 0.5;
 
   // Step 1: aggregate raw material needs from recipes × mepMax
   const rmNeeds = {};
