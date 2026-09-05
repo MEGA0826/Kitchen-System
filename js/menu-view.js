@@ -3,14 +3,32 @@
 // entry points are inline handlers (openMenuView from a menu card / recipe tree, edit/print/delete from
 // the view's buttons). Shared state _viewingMenu (top-level let, global lexical env) stays INLINE.
 // editCurrentMenu calls openMenuPopup (js/menu-edit.js); buildMenuPdfHtml calls _escM (inline) — both
-// resolve as globals at runtime. Reads shared globals allMenus, adminCall, get, loadMenus, _refreshMepList.
+// resolve as globals at runtime. In the on-screen view (interactive=true) GR ingredients render as
+// clickable links → openEditGRPopup (js/gr-edit.js); the print/PDF path keeps them as plain text.
+// Reads shared globals allMenus, allGRs, adminCall, get, loadMenus, _refreshMepList, openEditGRPopup.
 
 function openMenuView(menuId) {
   closeMenu();
   _viewingMenu = allMenus.find(m => m.id === menuId);
   if (!_viewingMenu) return;
   document.getElementById('mvp-title').textContent = _viewingMenu.name || 'Menu';
-  document.getElementById('menuViewSheet').innerHTML = buildMenuPdfHtml(_viewingMenu);
+  const sheet = document.getElementById('menuViewSheet');
+  sheet.innerHTML = buildMenuPdfHtml(_viewingMenu, true);  // interactive → GR ingredients are clickable
+  // Click a GR sub-recipe → open that Grundrezeptur (matched by NAME first; codes drift from the GR master)
+  sheet.querySelectorAll('.zutat-gr-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const nm = link.dataset.name || '', code = link.dataset.code || '';
+      const grs = (typeof allGRs !== 'undefined' && Array.isArray(allGRs)) ? allGRs : [];
+      const gr = grs.find(g => (g.name || '') === nm) || grs.find(g => (g.grCode || '') === code);
+      if (gr && typeof openEditGRPopup === 'function') {
+        document.getElementById('menuViewPopup').style.display = 'none';
+        openEditGRPopup(gr.grCode);
+      } else if (typeof showToast === 'function') {
+        showToast('Grundrezeptur nicht gefunden: ' + (nm || code), 'warn');
+      }
+    });
+  });
   document.getElementById('menuViewPopup').style.display = 'block';
   _onPopupOpen();
 }
@@ -46,7 +64,7 @@ async function deleteCurrentMenu() {
 // ─────────────────────────────────────────────
 // PDF HTML BUILDER (reused by view + print)
 // ─────────────────────────────────────────────
-function buildMenuPdfHtml(m) {
+function buildMenuPdfHtml(m, interactive) {
   const zutaten = (() => { try { return JSON.parse(m.zutaten || '[]'); } catch(e) { return []; } })();
   const wa  = parseFloat(m.wa || 0);
   const vk  = parseFloat(m.vk || 0);
@@ -59,7 +77,9 @@ function buildMenuPdfHtml(m) {
       return `<tr style="background:#f7f5f0">
         <td style="padding:4px 6px;font-size:10px;color:#2d8a5e;font-weight:700">GR</td>
         <td style="padding:4px 6px;font-size:10px;font-weight:600">${z.gewicht?z.gewicht+' kg':'—'}</td>
-        <td style="padding:4px 6px;font-size:11px;font-weight:700">${z.name||''} <span style="font-weight:400;color:#888">(${z.art||''})</span></td>
+        <td style="padding:4px 6px;font-size:11px;font-weight:700">${interactive
+          ? `<span class="zutat-gr-link" data-name="${(z.name||'').replace(/"/g,'&quot;')}" data-code="${z.code||''}" style="color:#2d8a5e;text-decoration:underline;text-underline-offset:2px;cursor:pointer" title="Grundrezeptur öffnen ↗">${z.name||''} <span style="font-size:9px">↗</span></span>`
+          : (z.name||'')} <span style="font-weight:400;color:#888">(${z.art||''})</span></td>
         <td style="padding:4px 6px;font-size:10px;color:#e8a020">CHF ${parseFloat(z.cost||0).toFixed(2)}</td>
       </tr>${grSubs.map(s=>`<tr>
         <td style="padding:2px 6px 2px 18px;font-size:9px;color:#888">↳ ${(s.type||'RM').toUpperCase()}</td>
