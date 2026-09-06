@@ -5666,67 +5666,7 @@ let _menuImgFile = null;
 // ─────────────────────────────────────────────
 // SAVE MENU
 // ─────────────────────────────────────────────
-function _slimZutaten(arr) {
-  return (arr || []).map(z => {
-    const s = { type: z.type, code: z.code, name: z.name };
-    if (z.gewicht)      s.gewicht    = z.gewicht;
-    if (z.unitCost)     s.unitCost   = z.unitCost;
-    if (z.cost)         s.cost       = z.cost;
-    if (z.allergie)     s.allergie   = z.allergie;
-    if (z.zubereitung)  s.zubereitung = z.zubereitung;
-    if (z.isDeko)       s.isDeko     = true;
-    if (z.isTopping)    s.isTopping  = true;
-    if (z.pieces)       s.pieces     = z.pieces;
-    if (z.piecesTotal)  s.piecesTotal = z.piecesTotal;
-    if (z.garverlust)   s.garverlust  = z.garverlust;
-    if (z.rohGewicht)   s.rohGewicht  = z.rohGewicht;
-    return s;
-  });
-}
-
-// Enrich zutaten with live unit costs from inventory/GRs/products.
-// Returns { enriched: Array, waTotal: number }
-function _enrichZutaten(arr) {
-  let waTotal = 0;
-  const enriched = (arr || []).map(z => {
-    const gw = parseFloat(z.gewicht) || 0;
-    const t  = (z.type || 'rm').toLowerCase();
-    let unitCost = parseFloat(z.unitCost) || 0;
-
-    if (t === 'rm') {
-      const inv = (allInventory||[]).find(i => i.code === (z.code||''));
-      if (inv) {
-        const wu = parseFloat(inv.weightUnit) || 1;
-        unitCost = (parseFloat(inv.kostenUnit) || 0) / wu;
-      }
-    } else if (t === 'gr') {
-      const gr = (allGRs||[]).find(g => (g.grCode||g.id) === (z.code||''));
-      if (gr) {
-        const grWa    = parseFloat(gr.wa||0) || (_calcLiveWA(gr.zutaten) ?? 0);
-        const netto   = _calcMenuNettoKg(gr.zutaten) || parseFloat(gr.rohgewicht||0);
-        unitCost = netto > 0 ? grWa / netto : 0;
-      }
-    } else if (t === 'mep') {
-      const mep = _calcMepWA(z.code||'');
-      if (mep && mep.waPerGN) {
-        const gnW = mep.gnWeightKg || 1;
-        unitCost = gnW > 0 ? mep.waPerGN / gnW : 0;
-      }
-    } else if (t === 'menu') {
-      const m = (allMenus||[]).find(x => (x.menuCode||x.id) === (z.code||''));
-      if (m) {
-        const mWa   = parseFloat(m.wa||0) || (_calcLiveWA(m.zutaten) ?? 0);
-        const mNetto = _calcMenuNettoKg(m.zutaten);
-        unitCost = mNetto > 0 ? mWa / mNetto : 0;
-      }
-    }
-
-    const cost = gw > 0 && unitCost > 0 ? +(gw * unitCost).toFixed(3) : (parseFloat(z.cost) || 0);
-    waTotal += cost;
-    return { ...z, unitCost: unitCost || z.unitCost || 0, cost };
-  });
-  return { enriched, waTotal: +waTotal.toFixed(2) };
-}
+// _slimZutaten + _enrichZutaten → moved to js/recipe-calc.js (module 18, shared serialization)
 
 async function saveMenuEntry() {
   const name     = document.getElementById('mp-name').value.trim();
