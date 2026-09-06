@@ -1,5 +1,5 @@
 // Kitchen MEP — Settings panel (module 16), classic script. Event-driven: renderSettings() runs
-// from the Settings tab-switch; field handlers persist on change. Appearance delegates to the existing
+// from the header gear (openSettings, in dashboard.html); field handlers persist on change. Appearance delegates to the existing
 // setTheme (dashboard) + setLangDash (i18n). Business/Operations values are stored in localStorage
 // under `kmep_settings` and read elsewhere via the global kmepSetting()/kmepSettingNum() accessors:
 //   targetFC → menu-view FC colour + menu-engineering · businessName/currency → menu view+PDF ·
@@ -7,7 +7,7 @@
 // No init-coupling: nothing here runs in the boot fan-out.
 
 const APP_VERSION = '1.0';        // human-facing app version
-const APP_BUILD   = 127;          // tracks the service-worker cache build (bump together)
+const APP_BUILD   = 128;          // tracks the service-worker cache build (bump together)
 const KMEP_SETTINGS_KEY = 'kmep_settings';
 
 // Defaults are also the fallbacks passed at each read site, kept here for the form + documentation.

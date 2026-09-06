@@ -147,6 +147,9 @@
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
     .back-btn { font-family: var(--mono); font-size: 9px; color: var(--muted); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); transition: color .15s, border-color .15s; }
     .back-btn:hover { color: var(--text); border-color: var(--amber); }
+    .header-gear { display:flex; align-items:center; justify-content:center; width:34px; height:34px; padding:0; font-size:17px; line-height:1; background:none; border:1px solid var(--border2); border-radius:var(--radius-sm); cursor:pointer; transition:border-color .15s, transform .3s; flex-shrink:0; }
+    .header-gear:hover { border-color:var(--amber); transform:rotate(45deg); }
+    .header-gear.active { border-color:var(--amber-brd); background:var(--amber-dim); }
 
     /* NAV */
 .nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 24px; background: var(--surface); overflow-x: auto; overflow-y: visible; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; }
@@ -538,6 +541,7 @@
     </div>
   </div>
   <div class="header-right">
+    <button class="header-gear" id="settingsGearBtn" onclick="openSettings()" title="Settings" aria-label="Settings">⚙️</button>
     <a href="#" class="back-btn" onclick="goBack(event)">← Back</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
     <div class="live-badge" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
@@ -564,7 +568,6 @@
   <button class="tab"        data-tab="sales"        onclick="switchTab(this)"><span class="tab-icon">📈</span>Sales</button>
   <button class="tab"        data-tab="haccp"        onclick="switchTab(this)"><span class="tab-icon">🌡</span>HACCP</button>
   <button class="tab"                                onclick="requestAdminAccess()"><span class="tab-icon">🔐</span>Admin</button>
-  <button class="tab" data-tab="settings" onclick="switchTab(this)"><span class="tab-icon">⚙️</span>Settings</button>
 </div>
 
 <div class="body">
@@ -2430,6 +2433,7 @@ document.addEventListener("click", e => {
 function switchTab(btn) {
   if (!btn) return;
   closeMenu();   // ← close + reset icon on every tab click
+  document.getElementById("settingsGearBtn")?.classList.remove("active");
   document.querySelectorAll(".tab").forEach(t => t && t.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(p => p && p.classList.remove("active"));
   btn.classList.add("active");
@@ -2463,6 +2467,18 @@ function switchTab(btn) {
   if (tabId === "morning")      loadMorning();
   if (tabId === "sales")        initSalesTab();
   if (tabId === "haccp")        loadHaccp();
+}
+
+// Settings opens as a transient overlay panel from the header gear (not a persisted tab).
+function openSettings() {
+  if (typeof closeMenu === "function") closeMenu();
+  document.querySelectorAll(".tab").forEach(t => t && t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p && p.classList.remove("active"));
+  const p = document.getElementById("panel-settings");
+  if (p) p.classList.add("active");
+  document.getElementById("settingsGearBtn")?.classList.add("active");
+  if (typeof renderSettings === "function") renderSettings();
+  window.scrollTo(0, 0);
 }
   
 function applyRoleAccess() {
