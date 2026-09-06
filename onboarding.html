@@ -634,6 +634,9 @@ const API = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_
 // ─────────────────────────────────────────────
 let currentStep = 1;
 const TOTAL_STEPS = 5;
+// Read-only intro tour (opened from Settings → About → View Intro as onboarding.html?tour=1):
+// pages advance freely without validation, sample data illustrates each step, nothing is saved.
+const OB_TOUR = new URLSearchParams(location.search).has('tour');
 
 // Step 1+2: products
 // [ { code, name, kategorie, gnSize, mepMax, tagesziel, gnWeight, shelfLife } ]
@@ -658,7 +661,7 @@ function goToStep(n) {
 }
 
 function nextStep() {
-  if (!_validateStep(currentStep)) return;
+  if (!OB_TOUR && !_validateStep(currentStep)) return;
   if (currentStep === 1) renderTargetCards();
   if (currentStep === 3) renderQRGrid();
   if (currentStep === 4) renderSummary();
@@ -984,6 +987,7 @@ function renderSummary() {
 }
 
 async function saveLaunch() {
+  if (OB_TOUR) { window.location.href = "dashboard.html"; return; }
   const btn = document.getElementById("btnSaveLaunch");
   btn.disabled = true;
   btn.innerHTML = `<span class="spin"></span> Saving…`;
@@ -1099,8 +1103,27 @@ renderProductList();
 renderWorkerList();
 _updateUI();
 
+// Read-only intro tour: seed illustrative sample data so every step shows real content,
+// let pages advance freely, and never write to the backend.
+function _initTourMode() {
+  ob_products = [
+    { code:'MEP-001', name:'Sushi-Reis',      kategorie:'Basis', gnSize:'1/1', mepMax:4, tagesziel:3, gnWeight:2.5, shelfLife:1 },
+    { code:'MEP-002', name:'Spicy Tuna Mix',  kategorie:'Fisch', gnSize:'1/6', mepMax:2, tagesziel:2, gnWeight:0.8, shelfLife:1 },
+  ];
+  ob_workers = [ { name:'Alex', role:'Küchenchef', pin:'1234' } ];
+  renderProductList(); renderWorkerList();
+  renderTargetCards(); renderQRGrid(); renderSummary();
+  const save = document.getElementById("btnSaveLaunch");
+  if (save) { save.textContent = "← Back to the app"; save.classList.remove("ob-btn-primary"); save.classList.add("ob-btn-secondary"); }
+  const banner = document.createElement("div");
+  banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:var(--amber-dim);border-bottom:1px solid var(--amber-brd);color:var(--amber);font-size:12px;padding:9px 20px;text-align:center;z-index:9999;font-family:var(--mono)";
+  banner.innerHTML = `👀 Intro tour — sample data shown, nothing is saved. <a href="dashboard.html" style="color:var(--amber);text-decoration:underline">← Back to app</a>`;
+  document.body.prepend(banner);
+}
+if (OB_TOUR) _initTourMode();
+
 // If onboarding already done, show a notice
-if (localStorage.getItem("mep_onboarding_done") === "1") {
+if (!OB_TOUR && localStorage.getItem("mep_onboarding_done") === "1") {
   const notice = document.createElement("div");
   notice.style.cssText = "position:fixed;top:0;left:0;right:0;background:#1a3d1a;border-bottom:1px solid var(--green-brd);color:var(--green);font-size:12px;padding:10px 20px;text-align:center;z-index:9999;font-family:var(--mono)";
   notice.innerHTML = `Setup previously completed. <a href="dashboard.html" style="color:var(--amber);text-decoration:underline">Open Dashboard ›</a>`;
