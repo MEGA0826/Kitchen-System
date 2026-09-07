@@ -5143,64 +5143,7 @@ function copyMenu(menuId) {
 }
 
 
-function editMepAddZutat(i) {
-  const z = mepAddZutaten[i];
-  if (!z) return;
-  _ipEditIdx = i;
-  openIngredientPicker(z.type || 'rm', 'mep-add', true);
-  const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
-  ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
-  setTimeout(() => {
-    const titleEl = document.getElementById('ip-title');
-    if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
-    document.getElementById('ip-selected-name').textContent = r.name + ' (' + r.code + ')';
-    document.getElementById('ip-detail').style.display      = 'block';
-    document.getElementById('ip-gewicht').value             = z.gewicht     || '';
-    document.getElementById('ip-allergie').value            = z.allergie    || '';
-    document.getElementById('ip-zubereitung-note').value    = z.zubereitung || '';
-    const ipG = document.getElementById('ip-garverlust');
-    if (ipG) ipG.value = z.garverlust || '';
-    calcIpCost(); calcIpWA();
-  }, 80);
-}
-
-function renderMepAddZutaten() {
-  const el = document.getElementById('mep-add-zutaten-list');
-  if (!el) return;
-  if (!mepAddZutaten.length) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">${typeof t==='function'?t('no-ingredients'):'No ingredients yet'}</div>`;
-  } else {
-    el.innerHTML = mepAddZutaten.map((z, i) => {
-      const garvStr = z.garverlust ? `🔥${z.garverlust}%` : '';
-      const waStr   = z.waTotal    ? ` WA:${parseFloat(z.waTotal).toFixed(3)}kg` : '';
-      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface2);border-radius:8px">
-        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue);font-weight:700">RM</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:var(--text);font-weight:500">${z.name||''}</div>
-          <div style="font-size:10px;color:var(--muted)">
-            ${z.gewicht?z.gewicht+'kg':''}
-            ${z.cost?`<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>`:''}
-            ${garvStr?`<span style="color:var(--blue)"> · ${garvStr}${waStr}</span>`:''}
-            ${z.allergie?`<span style="color:var(--red)"> · ⚠️${z.allergie}</span>`:''}
-          </div>
-        </div>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          <button data-idx="${i}" class="mep-zutat-edit-btn" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
-          <button data-idx="${i}" class="mep-zutat-del-btn" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
-        </div>
-      </div>`;
-    }).join('');
-    el.querySelectorAll('.mep-zutat-edit-btn').forEach(btn => btn.addEventListener('click', () => editMepAddZutat(parseInt(btn.dataset.idx))));
-    el.querySelectorAll('.mep-zutat-del-btn').forEach(btn => btn.addEventListener('click', () => { mepAddZutaten.splice(parseInt(btn.dataset.idx), 1); renderMepAddZutaten(); }));
-  }
-  // Update WA total and auto-fill GN weight from total ingredient weight
-  const total    = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.cost)   ||0), 0);
-  const totalKg  = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.gewicht)||0), 0);
-  const waEl     = document.getElementById('mep-add-wa-total');
-  const gnWtEl   = document.getElementById('mep-gnweight');
-  if (waEl) waEl.textContent = 'CHF ' + total.toFixed(2);
-  if (gnWtEl && mepAddZutaten.length) gnWtEl.value = totalKg.toFixed(3);
-}
+// MEP zutaten builder (editMepAddZutat/renderMepAddZutaten) → moved to js/mep-edit.js
 
 
 // ─────────────────────────────────────────────
@@ -5338,27 +5281,6 @@ function setRecipeCat(cat) {
   } else {
     cat ? renderMenuListByCat(cat) : renderMenuList();
   }
-}
-
-function renderMenuListByCat(cat) {
-  const el = document.getElementById("menu-list-grid");
-  if (!el) return;
-
-  let list = allMenus;
-  if (cat) list = list.filter(m =>
-    (m.category||"").toLowerCase().includes(cat.toLowerCase()) ||
-    (m.art||"").toLowerCase().includes(cat.toLowerCase()) ||
-    (m.name||"").toLowerCase().includes(cat.toLowerCase())
-  );
-
-  if (!list.length) {
-    el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">No menus found for "${cat}".</div>`;
-    return;
-  }
-
-  el.style.gridTemplateColumns = "1fr";
-  el.innerHTML = list.map(m => _renderMenuRow(m)).join("");
-  _bindMenuRowEvents(el);
 }
 
 function _renderMenuRow(m) {
@@ -5668,97 +5590,7 @@ let _menuImgFile = null;
 // ─────────────────────────────────────────────
 // _slimZutaten + _enrichZutaten → moved to js/recipe-calc.js (module 18, shared serialization)
 
-async function saveMenuEntry() {
-  const name     = document.getElementById('mp-name').value.trim();
-  const menuCode = document.getElementById('mp-code').value.trim();
-  const art      = document.getElementById('mp-art').value;
-  if (!name)     { adminMsg('mp-msg', 'Menu Name ist erforderlich', 'err'); return; }
-  if (!menuCode) { adminMsg('mp-msg', 'Menu Code ist erforderlich', 'err'); return; }
-
-  // Duplicate protection — skip check when editing existing menu
-  if (!editingMenuId) {
-    const dupCode = allMenus.find(m => (m.menuCode||'').toLowerCase() === menuCode.toLowerCase());
-    const dupName = allMenus.find(m => (m.name||'').toLowerCase() === name.toLowerCase());
-    if (dupCode) { adminMsg('mp-msg', `⚠ Menu Code "${menuCode}" already exists — use a different code`, 'err'); return; }
-    if (dupName) { adminMsg('mp-msg', `⚠ Menu name "${name}" already exists — use a different name`, 'err'); return; }
-  }
-  const btn = document.getElementById('mp-save-btn');
-  btn.disabled = true; btn.textContent = 'Speichern…';
-
-  let imageUrl = document.getElementById('mp-img-el')?.src || '';
-  // Upload local file to Supabase Storage; GAS GET URL cannot carry base64
-  if (imageUrl.startsWith('data:') && _menuImgFile) {
-    adminMsg('mp-msg', '📤 Bild wird hochgeladen…', '');
-    try {
-      imageUrl = await _uploadMenuImage(_menuImgFile);
-      _menuImgFile = null;
-    } catch(e) {
-      adminMsg('mp-msg', e.message + ' — Supabase Storage bucket "menu-images" muss existieren.', 'err');
-      btn.disabled = false; btn.textContent = '💾 Speichern';
-      return;
-    }
-  }
-  const logoUrl  = '';
-
-  // Migrate to GR sheet when art is Grundrezeptur
-  if (art === 'Grundrezeptur') {
-    try {
-      const grCode      = /^GR-/i.test(menuCode) ? menuCode : _nextBatchCode('GR');
-      const gewicht     = document.getElementById('mp-gewicht').value.trim();
-      const garverlust  = document.getElementById('mp-garverlust').value;
-      const wa          = document.getElementById('mp-wa').value;
-      const zubereitung = document.getElementById('mp-zubereitung').value.trim();
-      const grData = await adminCall({
-        action: 'saveGR', grCode, name, art,
-        rohgewicht: gewicht, garverlust, wa,
-        zutaten: JSON.stringify(_slimZutaten(menuZutaten)), zubereitung
-      });
-      if (grData.error) throw new Error(grData.error);
-      if (editingMenuId) {
-        await adminCall({ action: 'deleteMenu', menuId: editingMenuId });
-      }
-      adminMsg('mp-msg', '✓ Nach GR verschoben', 'ok');
-      await Promise.all([loadMenus(), loadGRs()]);
-      setTimeout(closeMenuPopup, 900);
-    } catch(e) {
-      adminMsg('mp-msg', 'Fehler: ' + e.message, 'err');
-    } finally {
-      btn.disabled = false; btn.textContent = '💾 Speichern';
-    }
-    return;
-  }
-
-  const payload = {
-    action        : 'saveMenu',
-    menuId        : editingMenuId || '',
-    name,
-    category      : document.getElementById('mp-category').value.trim(),
-    art,
-    saison        : document.getElementById('mp-saison').value,
-    gewicht       : document.getElementById('mp-gewicht').value.trim(),
-    menuCode      : document.getElementById('mp-code').value.trim(),
-    garverlust    : document.getElementById('mp-garverlust').value,
-    wa            : document.getElementById('mp-wa').value,
-    vk            : document.getElementById('mp-vk').value,
-    zubereitung   : document.getElementById('mp-zubereitung').value.trim(),
-    zutaten       : JSON.stringify(_slimZutaten(menuZutaten)),
-    imageUrl      : imageUrl || '',
-    logoUrl,
-    lastUpdate    : new Date().toISOString()
-  };
-
-  try {
-    const data = await adminCall(payload);
-    if (data.error) throw new Error(data.error);
-    adminMsg('mp-msg', '✓ Gespeichert', 'ok');
-    await loadMenus();
-    setTimeout(closeMenuPopup, 900);
-  } catch(e) {
-    adminMsg('mp-msg', 'Fehler: ' + e.message, 'err');
-  } finally {
-    btn.disabled = false; btn.textContent = '💾 Speichern';
-  }
-}
+// saveMenuEntry → moved to js/menu-edit.js (menu-editor save)
 
 // ─────────────────────────────────────────────
 // MENU VIEW POPUP

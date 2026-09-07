@@ -3,10 +3,10 @@
 // inline handlers (openMenuPopup from menu rows / +New Menu, editMenuZutat/removeMenuZutat/
 // moveMenuZutat from the zutaten list, calc* from oninput on the menu form).
 // Shared editor STATE stays INLINE: menuZutaten[] + editingMenuId (top-level let, global lexical
-// env) — written here and read by the inline saveMenuEntry. Shared image helpers (_uploadItemImage,
-// _uploadMenuImage), the image preview fns, saveMenuEntry, the calculators (_calcLiveWA/_calcAllergens/
-// _enrichZutaten) and the init-coupled menu display (loadMenus/renderMenuList) all stay inline and
-// resolve as globals at runtime. Reads shared globals allMenus, allGRs, allRecipes, adminCall, get.
+// env) — written here and read by saveMenuEntry (now at the bottom of this module). Image helpers
+// (_uploadItemImage/_uploadMenuImage — js/recipe-images.js), serializers (_slimZutaten/_enrichZutaten
+// — js/recipe-calc.js) and the init-coupled menu display (loadMenus/renderMenuList) resolve as globals
+// at runtime. Reads shared globals allMenus, allGRs, allRecipes, adminCall, get.
 
 function openMenuPopup(menuId) {
   closeMenu();
@@ -295,4 +295,99 @@ function editGrZutat(i) {
     if (ipT) ipT.checked = z.isTopping || false;
     calcIpCost(); calcIpWA();
   }, 80);
+}
+
+// ── saveMenuEntry — moved from dashboard.html (menu-editor save counterpart to openMenuPopup).
+// Reads inline shared state menuZutaten/editingMenuId/_menuImgFile; calls _slimZutaten/_uploadMenuImage/
+// _nextBatchCode/adminCall/loadMenus/loadGRs/closeMenuPopup (globals). Event-driven (mp-save-btn).
+async function saveMenuEntry() {
+  const name     = document.getElementById('mp-name').value.trim();
+  const menuCode = document.getElementById('mp-code').value.trim();
+  const art      = document.getElementById('mp-art').value;
+  if (!name)     { adminMsg('mp-msg', 'Menu Name ist erforderlich', 'err'); return; }
+  if (!menuCode) { adminMsg('mp-msg', 'Menu Code ist erforderlich', 'err'); return; }
+
+  // Duplicate protection — skip check when editing existing menu
+  if (!editingMenuId) {
+    const dupCode = allMenus.find(m => (m.menuCode||'').toLowerCase() === menuCode.toLowerCase());
+    const dupName = allMenus.find(m => (m.name||'').toLowerCase() === name.toLowerCase());
+    if (dupCode) { adminMsg('mp-msg', `⚠ Menu Code "${menuCode}" already exists — use a different code`, 'err'); return; }
+    if (dupName) { adminMsg('mp-msg', `⚠ Menu name "${name}" already exists — use a different name`, 'err'); return; }
+  }
+  const btn = document.getElementById('mp-save-btn');
+  btn.disabled = true; btn.textContent = 'Speichern…';
+
+  let imageUrl = document.getElementById('mp-img-el')?.src || '';
+  // Upload local file to Supabase Storage; GAS GET URL cannot carry base64
+  if (imageUrl.startsWith('data:') && _menuImgFile) {
+    adminMsg('mp-msg', '📤 Bild wird hochgeladen…', '');
+    try {
+      imageUrl = await _uploadMenuImage(_menuImgFile);
+      _menuImgFile = null;
+    } catch(e) {
+      adminMsg('mp-msg', e.message + ' — Supabase Storage bucket "menu-images" muss existieren.', 'err');
+      btn.disabled = false; btn.textContent = '💾 Speichern';
+      return;
+    }
+  }
+  const logoUrl  = '';
+
+  // Migrate to GR sheet when art is Grundrezeptur
+  if (art === 'Grundrezeptur') {
+    try {
+      const grCode      = /^GR-/i.test(menuCode) ? menuCode : _nextBatchCode('GR');
+      const gewicht     = document.getElementById('mp-gewicht').value.trim();
+      const garverlust  = document.getElementById('mp-garverlust').value;
+      const wa          = document.getElementById('mp-wa').value;
+      const zubereitung = document.getElementById('mp-zubereitung').value.trim();
+      const grData = await adminCall({
+        action: 'saveGR', grCode, name, art,
+        rohgewicht: gewicht, garverlust, wa,
+        zutaten: JSON.stringify(_slimZutaten(menuZutaten)), zubereitung
+      });
+      if (grData.error) throw new Error(grData.error);
+      if (editingMenuId) {
+        await adminCall({ action: 'deleteMenu', menuId: editingMenuId });
+      }
+      adminMsg('mp-msg', '✓ Nach GR verschoben', 'ok');
+      await Promise.all([loadMenus(), loadGRs()]);
+      setTimeout(closeMenuPopup, 900);
+    } catch(e) {
+      adminMsg('mp-msg', 'Fehler: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 Speichern';
+    }
+    return;
+  }
+
+  const payload = {
+    action        : 'saveMenu',
+    menuId        : editingMenuId || '',
+    name,
+    category      : document.getElementById('mp-category').value.trim(),
+    art,
+    saison        : document.getElementById('mp-saison').value,
+    gewicht       : document.getElementById('mp-gewicht').value.trim(),
+    menuCode      : document.getElementById('mp-code').value.trim(),
+    garverlust    : document.getElementById('mp-garverlust').value,
+    wa            : document.getElementById('mp-wa').value,
+    vk            : document.getElementById('mp-vk').value,
+    zubereitung   : document.getElementById('mp-zubereitung').value.trim(),
+    zutaten       : JSON.stringify(_slimZutaten(menuZutaten)),
+    imageUrl      : imageUrl || '',
+    logoUrl,
+    lastUpdate    : new Date().toISOString()
+  };
+
+  try {
+    const data = await adminCall(payload);
+    if (data.error) throw new Error(data.error);
+    adminMsg('mp-msg', '✓ Gespeichert', 'ok');
+    await loadMenus();
+    setTimeout(closeMenuPopup, 900);
+  } catch(e) {
+    adminMsg('mp-msg', 'Fehler: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Speichern';
+  }
 }

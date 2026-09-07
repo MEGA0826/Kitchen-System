@@ -3,10 +3,10 @@
 // inline handlers (openAddMEPPopup via +New MEP / guardedAddMEP, saveMEPFromPopup save button,
 // previewMepImg/removeMepImage/loadMepDriveImg on the image inputs). _mepImgFile (MEP image file)
 // moves with this block; copyMEP (inline) still resolves it via the global lexical env. The shared
-// working array mepAddZutaten (top-level let) stays INLINE, together with its builder
-// (editMepAddZutat/renderMepAddZutaten), the shared _uploadItemImage helper, the GR editor, and the
-// init-coupled MEP display. Reads shared globals mepAddZutaten, allProducts, adminCall, get,
-// _uploadItemImage, renderMepAddZutaten, _refreshMepList, _onPopupOpen/_onPopupClose, adminMsg.
+// working array mepAddZutaten (top-level let) stays INLINE; its builder editMepAddZutat/
+// renderMepAddZutaten now lives at the bottom of THIS module. The shared _uploadItemImage helper
+// (js/recipe-images.js), the GR editor, and the init-coupled MEP display resolve as globals. Reads
+// shared globals mepAddZutaten, allProducts, adminCall, get, _uploadItemImage, _onPopupOpen/_onPopupClose, adminMsg.
 
 function openAddMEPPopup() {
   ["mep-code","mep-name","mep-kategorie","mep-mepmax","mep-gnsize",
@@ -158,4 +158,67 @@ function loadMepDriveImg(url) {
   if (!url) return;
   document.getElementById('mep-img-el').src = url;
   document.getElementById('mep-img-preview').style.display = 'block';
+}
+
+// ── MEP zutaten builder — moved from dashboard.html (belongs with the MEP editor).
+// editMepAddZutat/renderMepAddZutaten operate on inline shared array mepAddZutaten (also used by the
+// ingredient picker + portion scaler); call openIngredientPicker/_resolveRmCost/_ipTypeBtns/calcIpCost/
+// calcIpWA + _ipEditIdx/ipSelectedItem (globals). Event-driven (edit/del buttons, picker confirm).
+function editMepAddZutat(i) {
+  const z = mepAddZutaten[i];
+  if (!z) return;
+  _ipEditIdx = i;
+  openIngredientPicker(z.type || 'rm', 'mep-add', true);
+  const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
+  ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
+  setTimeout(() => {
+    const titleEl = document.getElementById('ip-title');
+    if (titleEl) titleEl.innerHTML = _ipTypeBtns(z.type || 'rm');
+    document.getElementById('ip-selected-name').textContent = r.name + ' (' + r.code + ')';
+    document.getElementById('ip-detail').style.display      = 'block';
+    document.getElementById('ip-gewicht').value             = z.gewicht     || '';
+    document.getElementById('ip-allergie').value            = z.allergie    || '';
+    document.getElementById('ip-zubereitung-note').value    = z.zubereitung || '';
+    const ipG = document.getElementById('ip-garverlust');
+    if (ipG) ipG.value = z.garverlust || '';
+    calcIpCost(); calcIpWA();
+  }, 80);
+}
+
+function renderMepAddZutaten() {
+  const el = document.getElementById('mep-add-zutaten-list');
+  if (!el) return;
+  if (!mepAddZutaten.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);font-style:italic">${typeof t==='function'?t('no-ingredients'):'No ingredients yet'}</div>`;
+  } else {
+    el.innerHTML = mepAddZutaten.map((z, i) => {
+      const garvStr = z.garverlust ? `🔥${z.garverlust}%` : '';
+      const waStr   = z.waTotal    ? ` WA:${parseFloat(z.waTotal).toFixed(3)}kg` : '';
+      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface2);border-radius:8px">
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--blue-dim);color:var(--blue);font-weight:700">RM</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;color:var(--text);font-weight:500">${z.name||''}</div>
+          <div style="font-size:10px;color:var(--muted)">
+            ${z.gewicht?z.gewicht+'kg':''}
+            ${z.cost?`<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>`:''}
+            ${garvStr?`<span style="color:var(--blue)"> · ${garvStr}${waStr}</span>`:''}
+            ${z.allergie?`<span style="color:var(--red)"> · ⚠️${z.allergie}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button data-idx="${i}" class="mep-zutat-edit-btn" style="background:var(--amber-dim);border:1px solid var(--amber-brd);color:var(--amber);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✏️</button>
+          <button data-idx="${i}" class="mep-zutat-del-btn" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    el.querySelectorAll('.mep-zutat-edit-btn').forEach(btn => btn.addEventListener('click', () => editMepAddZutat(parseInt(btn.dataset.idx))));
+    el.querySelectorAll('.mep-zutat-del-btn').forEach(btn => btn.addEventListener('click', () => { mepAddZutaten.splice(parseInt(btn.dataset.idx), 1); renderMepAddZutaten(); }));
+  }
+  // Update WA total and auto-fill GN weight from total ingredient weight
+  const total    = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.cost)   ||0), 0);
+  const totalKg  = mepAddZutaten.reduce((s, z) => s + (parseFloat(z.gewicht)||0), 0);
+  const waEl     = document.getElementById('mep-add-wa-total');
+  const gnWtEl   = document.getElementById('mep-gnweight');
+  if (waEl) waEl.textContent = 'CHF ' + total.toFixed(2);
+  if (gnWtEl && mepAddZutaten.length) gnWtEl.value = totalKg.toFixed(3);
 }
