@@ -524,6 +524,7 @@
     .sfp-cat-btn { padding:3px 8px; font-size:10px; font-family:var(--mono); background:var(--surface2); border:1px solid var(--border2); border-radius:4px; color:var(--muted); cursor:pointer; white-space:nowrap; }
     .sfp-cat-btn.active { background:var(--amber-dim); color:var(--amber); border-color:var(--amber-brd); }
   </style>
+<script src="config.js"></script>
 <script src="i18n.js"></script>
 </head>
 <body>
@@ -967,7 +968,7 @@
         <input type="file" id="mp-logo-file" accept="image/*" style="display:none" onchange="previewMenuLogo(this)">
         <div>
           <div style="font-size:15px;font-weight:700;color:var(--text)" id="mp-popup-title">Neues Menu</div>
-          <div style="font-size:10px;color:var(--muted);letter-spacing:1px">212 Nooch Richti</div>
+          <div id="mp-popup-biz" style="font-size:10px;color:var(--muted);letter-spacing:1px">212 Nooch Richti</div>
         </div>
       </div>
       <button onclick="closeMenuPopup()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
@@ -2261,9 +2262,17 @@ function _mepMaxGN(p) {
 function _mepMaxKg(p) {
   return parseFloat(p.mepMax) || 0;
 }
-const API          = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
-const SB_URL       = "https://clntikfffmjytexvzubq.supabase.co";
-const SB_KEY       = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsbnRpa2ZmZm1qeXRleHZ6dWJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxODQwMzUsImV4cCI6MjA5NTc2MDAzNX0.6aiiiJk0hX1DrbXE1zMSYswwJT1FFkrgunJm9eznIXE";
+const _CFG         = window.KMEP_CONFIG || {};   // per-deployment config (config.js)
+const API          = _CFG.API    || "";
+const SB_URL       = _CFG.SB_URL || "";
+const SB_KEY       = _CFG.SB_KEY || "";
+// Drive the tab title + header from config so a new kitchen only edits config.js
+try {
+  document.title = (_CFG.appTitle || "Kitchen MEP") + " — " + (_CFG.businessName || "");
+  const _ls = document.querySelector(".logo-sub");
+  if (_ls && _CFG.businessName) _ls.textContent = _CFG.businessName + " — Dashboard";
+  const _pb = document.getElementById("mp-popup-biz"); if (_pb && _CFG.businessName) _pb.textContent = _CFG.businessName;
+} catch (e) {}
 
 let allScans = [], allProducts = {}, allInventory = [], scanStats = {};
 let allMepStatus = {};

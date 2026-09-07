@@ -9,13 +9,13 @@
 // No init-coupling: nothing here runs in the boot fan-out.
 
 const APP_VERSION = '1.0';        // human-facing app version
-const APP_BUILD   = 139;          // tracks the service-worker cache build (bump together)
+const APP_BUILD   = 140;          // tracks the service-worker cache build (bump together)
 const KMEP_SETTINGS_KEY = 'kmep_settings';
 
 // Defaults are also the fallbacks passed at each read site, kept here for the form + documentation.
 const KMEP_SETTINGS_DEFAULTS = {
   bizType: 'restaurant',
-  bizName: '212 Nooch Richti',
+  bizName: (typeof window !== 'undefined' && window.KMEP_CONFIG && window.KMEP_CONFIG.businessName) || '212 Nooch Richti',
   currency: 'CHF',
   vat: '',                 // % — blank = not set
   targetFC: 33,            // target food-cost %
