@@ -3,7 +3,38 @@
    live WA (cost) from current inventory prices, MEP WA, and allergen roll-up (recursive through
    GR/menu/MEP components). No DOM, no shared-state writes. Reads app globals:
    allInventory, allGRs, allMenus, allRecipes, allProducts. Every caller is post-parse
-   (render fns run post-await / on events), so loading at end of body is safe. */
+   (render fns run post-await / on events), so loading at end of body is safe.
+
+   PERF: these run per-row during list renders and recurse through GR/menu components. Raw
+   Array.find()/filter() over allInventory/allGRs/allMenus/allRecipes made that O(rows × zutaten ×
+   dataset). We index each dataset into a Map ONCE and reuse it until the array is REASSIGNED
+   (loadX does `allX = [...]`), detected by identity — so membership changes rebuild automatically
+   while in-place field edits (e.g. a price change on an existing row) stay visible via the stored
+   object reference. No memoization of results → no staleness risk, just O(1) lookups. */
+
+// Build a Map only when the source array reference changes (loads reassign; edits mutate in place).
+function _refIndex(getArr, build) {
+  let ref = null, idx = null;
+  return () => { const a = getArr() || null; if (a !== ref) { idx = build(a || []); ref = a; } return idx; };
+}
+const _idxInv = _refIndex(
+  () => (typeof allInventory !== 'undefined' ? allInventory : null),
+  arr => { const m = new Map(); for (const x of arr) if (x && x.code != null && !m.has(x.code)) m.set(x.code, x); return m; });
+const _idxGr = _refIndex(
+  () => (typeof allGRs !== 'undefined' ? allGRs : null),
+  arr => { const m = new Map(); for (const g of arr) { const k = g && (g.grCode || g.id); if (k != null && !m.has(k)) m.set(k, g); } return m; });
+const _idxMenu = _refIndex(
+  () => (typeof allMenus !== 'undefined' ? allMenus : null),
+  arr => { const m = new Map(); for (const x of arr) { const k = x && (x.menuCode || x.id); if (k != null && !m.has(k)) m.set(k, x); } return m; });
+const _idxRecipesByMep = _refIndex(
+  () => (typeof allRecipes !== 'undefined' ? allRecipes : null),
+  arr => { const m = new Map(); for (const r of arr) { if (!m.has(r.mepCode)) m.set(r.mepCode, []); m.get(r.mepCode).push(r); } return m; });
+
+const _invByCode  = code => _idxInv().get(code);
+const _grByKey    = code => _idxGr().get(code);
+const _menuByKey  = code => _idxMenu().get(code);
+const _recipesFor = code => _idxRecipesByMep().get(code) || [];
+
 // Returns total netto output weight (kg) for a recipe from its ingredient list
 function _calcMenuNettoKg(zutatenStr) {
   try {
@@ -28,7 +59,7 @@ function _calcLiveWA(zutatenStr) {
       if (!gw) continue;
       const t = (z.type||'rm').toLowerCase();
       if (t === 'rm') {
-        const inv = allInventory.find(i => i.code === (z.code||''));
+        const inv = _invByCode(z.code||'');
         if (inv) {
           const wu = parseFloat(inv.weightUnit) || 1;
           const ku = parseFloat(inv.kostenUnit) || 0;
@@ -37,7 +68,7 @@ function _calcLiveWA(zutatenStr) {
           total += gw * (parseFloat(z.unitCost) || 0);
         }
       } else if (t === 'gr') {
-        const g = (allGRs||[]).find(x => (x.grCode||x.id) === z.code);
+        const g = _grByKey(z.code);
         if (g) {
           const grWaTotal = parseFloat(g.wa||0) || (_calcLiveWA(g.zutaten) ?? 0);
           const netto = _calcMenuNettoKg(g.zutaten) || (parseFloat(g.rohgewicht||0) * (1 - (parseFloat(g.garverlust||0)/100)));
@@ -46,7 +77,7 @@ function _calcLiveWA(zutatenStr) {
           total += gw * (parseFloat(z.unitCost)||0);
         }
       } else if (t === 'menu') {
-        const m = (allMenus||[]).find(x => (x.menuCode||x.id) === z.code);
+        const m = _menuByKey(z.code);
         if (m) {
           const menuWa = parseFloat(m.wa||0) || (_calcLiveWA(m.zutaten) ?? 0);
           const nettoKg = _calcMenuNettoKg(m.zutaten);
@@ -65,11 +96,11 @@ function _calcLiveWA(zutatenStr) {
 // Compute live WA for a MEP product from allRecipes + allInventory
 // Returns { waPerGN, gnWeightKg } or null if no recipes / no cost found
 function _calcMepWA(code) {
-  const rms = (allRecipes || []).filter(r => r.mepCode === code);
+  const rms = _recipesFor(code);
   if (!rms.length) return null;
   let waPerGN = 0;
   rms.forEach(r => {
-    const inv = (allInventory || []).find(x => x.code === r.rmCode) || {};
+    const inv = _invByCode(r.rmCode) || {};
     const wu = parseFloat(inv.weightUnit) || 1;
     waPerGN += (parseFloat(r.menge) || 0) * ((parseFloat(inv.kostenUnit) || 0) / wu);
   });
@@ -87,10 +118,10 @@ function _calcAllergens(zutatenStr) {
     for (const z of zs) {
       const t = (z.type||'rm').toLowerCase();
       if (t === 'rm') {
-        const inv = (allInventory||[]).find(i => i.code === (z.code||''));
+        const inv = _invByCode(z.code||'');
         add(inv?.allergen || z.allergie || '');
       } else if (t === 'gr') {
-        const gr = (allGRs||[]).find(g => (g.grCode||g.id) === (z.code||''));
+        const gr = _grByKey(z.code||'');
         if (gr) _calcAllergens(gr.zutaten).forEach(a => seen.add(a));
         else    add(z.allergie || '');
       } else if (t === 'mep') {
@@ -98,7 +129,7 @@ function _calcAllergens(zutatenStr) {
         if (nested.length) nested.forEach(a => seen.add(a));
         else add(z.allergie || '');
       } else if (t === 'menu') {
-        const m = (allMenus||[]).find(x => (x.menuCode||x.id) === (z.code||''));
+        const m = _menuByKey(z.code||'');
         if (m) _calcAllergens(m.zutaten).forEach(a => seen.add(a));
         else   add(z.allergie || '');
       } else {
@@ -110,10 +141,10 @@ function _calcAllergens(zutatenStr) {
 }
 // Returns allergen array for a MEP product from allRecipes
 function _calcMepAllergens(code) {
-  const rms = (allRecipes||[]).filter(r => r.mepCode === code);
+  const rms = _recipesFor(code);
   const seen = new Set();
   rms.forEach(r => {
-    const inv = (allInventory||[]).find(x => x.code === r.rmCode);
+    const inv = _invByCode(r.rmCode);
     (inv?.allergen||'').split(',').forEach(a => { const tr = a.trim(); if (tr) seen.add(tr); });
   });
   return [...seen];
@@ -151,13 +182,13 @@ function _enrichZutaten(arr) {
     let unitCost = parseFloat(z.unitCost) || 0;
 
     if (t === 'rm') {
-      const inv = (allInventory||[]).find(i => i.code === (z.code||''));
+      const inv = _invByCode(z.code||'');
       if (inv) {
         const wu = parseFloat(inv.weightUnit) || 1;
         unitCost = (parseFloat(inv.kostenUnit) || 0) / wu;
       }
     } else if (t === 'gr') {
-      const gr = (allGRs||[]).find(g => (g.grCode||g.id) === (z.code||''));
+      const gr = _grByKey(z.code||'');
       if (gr) {
         const grWa    = parseFloat(gr.wa||0) || (_calcLiveWA(gr.zutaten) ?? 0);
         const netto   = _calcMenuNettoKg(gr.zutaten) || parseFloat(gr.rohgewicht||0);
@@ -170,7 +201,7 @@ function _enrichZutaten(arr) {
         unitCost = gnW > 0 ? mep.waPerGN / gnW : 0;
       }
     } else if (t === 'menu') {
-      const m = (allMenus||[]).find(x => (x.menuCode||x.id) === (z.code||''));
+      const m = _menuByKey(z.code||'');
       if (m) {
         const mWa   = parseFloat(m.wa||0) || (_calcLiveWA(m.zutaten) ?? 0);
         const mNetto = _calcMenuNettoKg(m.zutaten);
@@ -218,13 +249,13 @@ function _calcNutrition(zutatenStr) {
     const gw = parseFloat(z.gewicht) || 0; if (!gw) continue;
     const t = (z.type || 'rm').toLowerCase();
     if (t === 'rm') {
-      const inv = (allInventory || []).find(i => i.code === (z.code || ''));
+      const inv = _invByCode(z.code || '');
       if (inv) add({ kcal: inv.kcal, protein: inv.protein, fat: inv.fat, carbs: inv.carbs }, gw * 10); // per-100g × (gw kg × 10)
     } else if (t === 'gr') {
-      const gr = (allGRs || []).find(g => (g.grCode || g.id) === (z.code || ''));
+      const gr = _grByKey(z.code || '');
       if (gr) { const sub = _calcNutrition(gr.zutaten); const netto = _calcMenuNettoKg(gr.zutaten) || parseFloat(gr.rohgewicht || 0); add(sub, netto > 0 ? gw / netto : 0); }
     } else if (t === 'menu') {
-      const m = (allMenus || []).find(x => (x.menuCode || x.id) === (z.code || ''));
+      const m = _menuByKey(z.code || '');
       if (m) { const sub = _calcNutrition(m.zutaten); const netto = _calcMenuNettoKg(m.zutaten); add(sub, netto > 0 ? gw / netto : 0); }
     }
   }

@@ -9,7 +9,7 @@
 // No init-coupling: nothing here runs in the boot fan-out.
 
 const APP_VERSION = '1.0';        // human-facing app version
-const APP_BUILD   = 138;          // tracks the service-worker cache build (bump together)
+const APP_BUILD   = 139;          // tracks the service-worker cache build (bump together)
 const KMEP_SETTINGS_KEY = 'kmep_settings';
 
 // Defaults are also the fallbacks passed at each read site, kept here for the form + documentation.
@@ -29,13 +29,21 @@ const KMEP_SETTINGS_DEFAULTS = {
 // Suggested target food-cost % by business type (informational hint, not enforced).
 const _BIZ_TYPE_FC_HINT = { restaurant: 30, foodtruck: 28, bakery: 25, cafe: 24, catering: 32, other: 30 };
 
+// Cache the merged settings object so kmepSetting()/kmepSettingNum() (called in hot render paths:
+// calcFC, stockClass, buildMenuPdfHtml…) don't re-parse localStorage every call. Invalidated on our
+// own writes and on cross-tab storage events.
+let _settingsCache = null;
 function _loadSettings() {
-  try { return { ...KMEP_SETTINGS_DEFAULTS, ...(JSON.parse(localStorage.getItem(KMEP_SETTINGS_KEY) || '{}')) }; }
-  catch (e) { return { ...KMEP_SETTINGS_DEFAULTS }; }
+  if (_settingsCache) return _settingsCache;
+  try { _settingsCache = { ...KMEP_SETTINGS_DEFAULTS, ...(JSON.parse(localStorage.getItem(KMEP_SETTINGS_KEY) || '{}')) }; }
+  catch (e) { _settingsCache = { ...KMEP_SETTINGS_DEFAULTS }; }
+  return _settingsCache;
 }
 function _saveSettings(obj) {
+  _settingsCache = { ...KMEP_SETTINGS_DEFAULTS, ...obj };
   try { localStorage.setItem(KMEP_SETTINGS_KEY, JSON.stringify(obj)); } catch (e) {}
 }
+try { window.addEventListener('storage', e => { if (e.key === KMEP_SETTINGS_KEY) _settingsCache = null; }); } catch (e) {}
 
 // Global accessors used by other modules. Always tolerate a missing store.
 function kmepSetting(key, fallback) {
