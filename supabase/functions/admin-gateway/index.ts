@@ -146,6 +146,8 @@ const writers: Record<string, (p: P) => Promise<unknown>> = {
       minimum: num(p.minimum), maximum: num(p.maximum), kosten_unit: num(p.kostenUnit),
       lieferant: p.lieferant || null, last_order: p.lastOrder || null, notizen: p.notizen || null,
       allergen: p.allergen || null, image: p.image || null,
+      // Nutrition per 100g (optional; columns added by db/schema.sql). Null when unset.
+      kcal: num(p.kcal), protein: num(p.protein), fat: num(p.fat), carbs: num(p.carbs),
     };
     await sr("inventory", { method: "POST", ...UPSERT_MIN, body: JSON.stringify(body) });
     return { status: "ok" };
