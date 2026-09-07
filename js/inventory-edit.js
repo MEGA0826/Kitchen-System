@@ -24,6 +24,8 @@ function openEditInventoryModal(code) {
   document.getElementById("eif-lastorder").value = r.lastOrder || "";
   document.getElementById("eif-notizen").value = r.notizen || "";
   _renderEifAllergenChips(r.allergen || '');
+  // Nutrition per 100g (optional scaffold — feeds per-menu roll-up)
+  ['kcal','protein','fat','carbs'].forEach(k => { const el = document.getElementById('eif-'+k); if (el) el.value = (r[k] ?? '') === '' ? '' : r[k]; });
   _eifImgFile = null;
   const _eifImgEl = document.getElementById('eif-img-el');
   const _eifImgPrev = document.getElementById('eif-img-preview');
@@ -176,6 +178,10 @@ async function saveEditedInventory() {
       lastOrder: document.getElementById("eif-lastorder").value,
       notizen: document.getElementById("eif-notizen").value.trim(),
       allergen: _getEifAllergenValue(),
+      kcal:    document.getElementById("eif-kcal").value,
+      protein: document.getElementById("eif-protein").value,
+      fat:     document.getElementById("eif-fat").value,
+      carbs:   document.getElementById("eif-carbs").value,
       image: _eifSaveImg || undefined
     });
     if (data.error) throw new Error(data.error);

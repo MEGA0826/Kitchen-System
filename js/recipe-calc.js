@@ -184,3 +184,49 @@ function _enrichZutaten(arr) {
   });
   return { enriched, waTotal: +waTotal.toFixed(2) };
 }
+
+// ── Allergen labels (EU-14) + nutrition roll-up (module 18) ──────────────────
+// EU_ALLERGENS (dashboard.html) holds the 14 German allergen names; map each to its
+// standard Austrian/German menu letter code A–R for a printable label.
+const EU_ALLERGEN_CODES = {
+  'Gluten':'A','Krebstiere':'B','Eier':'C','Fisch':'D','Erdnüsse':'E','Soja':'F',
+  'Milch':'G','Nüsse':'H','Sellerie':'L','Senf':'M','Sesam':'N','SO₂/Sulfite':'O',
+  'Lupinen':'P','Weichtiere':'R'
+};
+// Returns the recipe's allergens as [{code,name}] sorted by code (uses _calcAllergens).
+function _euAllergenLabel(zutatenStr) {
+  const names = (typeof _calcAllergens === 'function') ? _calcAllergens(zutatenStr) : [];
+  return names
+    .map(n => ({ code: EU_ALLERGEN_CODES[n] || '', name: n }))
+    .filter(a => a.code)
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+// Recursive nutrition roll-up → absolute totals for the whole recipe { kcal, protein, fat, carbs, hasData }.
+// RM reads inventory per-100g fields; GR/Menu recurse and scale by (gewicht used ÷ component netto kg).
+// MEP is skipped in this scaffold (needs recipe explosion). gewicht is kg, nutrition is per 100g.
+function _calcNutrition(zutatenStr) {
+  const out = { kcal: 0, protein: 0, fat: 0, carbs: 0, hasData: false };
+  let zs; try { zs = JSON.parse(typeof zutatenStr === 'string' ? (zutatenStr || '[]') : '[]'); } catch (e) { return out; }
+  const NKEYS = ['kcal', 'protein', 'fat', 'carbs'];
+  const add = (src, factor) => {
+    let any = false;
+    NKEYS.forEach(k => { const v = parseFloat(src && src[k]); if (!isNaN(v) && v) { out[k] += v * factor; any = true; } });
+    if (any) out.hasData = true;
+  };
+  for (const z of zs) {
+    const gw = parseFloat(z.gewicht) || 0; if (!gw) continue;
+    const t = (z.type || 'rm').toLowerCase();
+    if (t === 'rm') {
+      const inv = (allInventory || []).find(i => i.code === (z.code || ''));
+      if (inv) add({ kcal: inv.kcal, protein: inv.protein, fat: inv.fat, carbs: inv.carbs }, gw * 10); // per-100g × (gw kg × 10)
+    } else if (t === 'gr') {
+      const gr = (allGRs || []).find(g => (g.grCode || g.id) === (z.code || ''));
+      if (gr) { const sub = _calcNutrition(gr.zutaten); const netto = _calcMenuNettoKg(gr.zutaten) || parseFloat(gr.rohgewicht || 0); add(sub, netto > 0 ? gw / netto : 0); }
+    } else if (t === 'menu') {
+      const m = (allMenus || []).find(x => (x.menuCode || x.id) === (z.code || ''));
+      if (m) { const sub = _calcNutrition(m.zutaten); const netto = _calcMenuNettoKg(m.zutaten); add(sub, netto > 0 ? gw / netto : 0); }
+    }
+  }
+  return out;
+}

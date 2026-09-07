@@ -77,6 +77,34 @@ function buildMenuPdfHtml(m, interactive) {
   const vkNet = _vat > 0 ? vk / (1 + _vat / 100) : vk;
   const fc  = vkNet > 0 ? ((wa/vkNet)*100).toFixed(1)+'%' + (_vat > 0 ? ' netto' : '') : '—';
   const fcColor = (fc!=='—' && parseFloat(fc) > _fcTarget) ? '#e86050' : '#2d8a5e';
+  // Allergen label (EU-14, coded A–R) + nutrition roll-up (recipe-calc.js)
+  const _allergens = (typeof _euAllergenLabel === 'function') ? _euAllergenLabel(m.zutaten) : [];
+  const _nutri     = (typeof _calcNutrition   === 'function') ? _calcNutrition(m.zutaten)   : { hasData:false, kcal:0, protein:0, fat:0, carbs:0 };
+  const _nettoKg   = (typeof _calcMenuNettoKg === 'function') ? (_calcMenuNettoKg(m.zutaten) || 0) : 0;
+  const _per100 = v => (_nettoKg > 0 ? v / (_nettoKg * 10) : 0);
+  const _allergenBox = `<div style="padding:12px 20px;border-bottom:1px solid #eee">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Allergene (EU)</div>
+    ${_allergens.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${_allergens.map(a=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;background:#fbeaea;color:#b23b3b;border:1px solid #e6c3c3;border-radius:20px;padding:2px 10px"><strong>${a.code}</strong>${a.name}</span>`).join('')}</div>
+         <div style="font-size:10px;color:#888;margin-top:6px">Enthält: <strong>${_allergens.map(a=>a.code).join(', ')}</strong></div>`
+      : `<div style="font-size:11px;color:#2d8a5e">Keine deklarationspflichtigen Allergene erfasst.</div>`}
+  </div>`;
+  const _nutriRows = [
+    ['Energie',       Math.round(_nutri.kcal)+' kcal',   _nettoKg>0?Math.round(_per100(_nutri.kcal))+' kcal':'—'],
+    ['Protein',       _nutri.protein.toFixed(1)+' g',    _nettoKg>0?_per100(_nutri.protein).toFixed(1)+' g':'—'],
+    ['Fett',          _nutri.fat.toFixed(1)+' g',        _nettoKg>0?_per100(_nutri.fat).toFixed(1)+' g':'—'],
+    ['Kohlenhydrate', _nutri.carbs.toFixed(1)+' g',      _nettoKg>0?_per100(_nutri.carbs).toFixed(1)+' g':'—'],
+  ];
+  const _nutriBox = `<div style="padding:12px 20px;border-bottom:1px solid #eee">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Nährwerte</div>
+    ${_nutri.hasData
+      ? `<table style="width:100%;border-collapse:collapse;max-width:340px">
+           <thead><tr style="background:#f0ede6"><th style="padding:3px 6px;font-size:8px;text-align:left;color:#888">Nährwert</th><th style="padding:3px 6px;font-size:8px;text-align:right;color:#888">gesamt${_nettoKg>0?' ('+_nettoKg.toFixed(2)+' kg)':''}</th><th style="padding:3px 6px;font-size:8px;text-align:right;color:#888">pro 100g</th></tr></thead>
+           <tbody>${_nutriRows.map(r=>`<tr><td style="padding:3px 6px;font-size:11px">${r[0]}</td><td style="padding:3px 6px;font-size:11px;text-align:right;font-weight:600">${r[1]}</td><td style="padding:3px 6px;font-size:11px;text-align:right;color:#555">${r[2]}</td></tr>`).join('')}</tbody>
+         </table>
+         <div style="font-size:9px;color:#aaa;margin-top:5px">Geschätzt aus erfassten Rohstoff-Nährwerten. MEP-Komponenten noch ohne Nährwerte.</div>`
+      : `<div style="font-size:11px;color:#999;font-style:italic">Noch keine Nährwertdaten — pro Rohstoff unter <strong>Inventar → 🍎 Nährwerte pro 100g</strong> erfassen.</div>`}
+  </div>`;
 
   const zutatRows = zutaten.map(z => {
     if (z.type === 'gr') {
@@ -126,6 +154,8 @@ function buildMenuPdfHtml(m, interactive) {
         <tbody>${zutatRows||`<tr><td colspan="4" style="padding:8px;font-size:11px;color:#999;font-style:italic">Keine Zutaten</td></tr>`}</tbody>
       </table>
     </div>
+    ${_allergenBox}
+    ${_nutriBox}
     ${zutaten.some(z=>z.isDeko)?`<div style="padding:12px 20px;border-bottom:1px solid #eee;background:#fafaf8">
       <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a1a16;margin-bottom:4px">🌿 Dekoration</div>
       <div style="font-size:11px;color:#444">${zutaten.filter(z=>z.isDeko).map(z=>`${z.name}${z.gewicht?' ('+z.gewicht+'kg)':''}`).join(', ')}</div>
