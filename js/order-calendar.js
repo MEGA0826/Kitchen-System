@@ -246,12 +246,13 @@ function renderOrders() {
     });
   });
 
-  // Step 3: below-minimum fallback
+  // Step 3: below-minimum fallback (low-stock threshold from Settings → Operations)
+  const _lsMult = (typeof kmepSettingNum === 'function') ? kmepSettingNum('lowStockMultiplier', 1) : 1;
   allInventory.forEach(inv => {
     if (items.find(x => x.code === inv.code)) return;
     const qty = Number(inv.quantity||0);
     const min = Number(inv.minimum||0);
-    if (min > 0 && qty < min) {
+    if (min > 0 && qty < min * _lsMult) {
       const required = min * (days + SAFETY);
       items.push({
         code:inv.code, name:inv.name||inv.code, lieferant:inv.lieferant||"",

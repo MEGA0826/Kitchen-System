@@ -645,6 +645,7 @@
       <label class="set-field"><span>KDS auto-refresh (seconds)</span><input id="set-kds-refresh" class="form-input" type="number" min="10" step="5" placeholder="60"></label>
       <label class="set-field"><span>Order safety-stock buffer (days)</span><input id="set-order-safety" class="form-input" type="number" min="0" step="0.5" placeholder="0.5"></label>
       <label class="set-field"><span>Default order horizon (days)</span><input id="set-order-horizon" class="form-input" type="number" min="1" step="1" placeholder="2"></label>
+      <label class="set-field"><span>Low-stock warning (× minimum)</span><input id="set-lowstock-mult" class="form-input" type="number" min="1" step="0.25" placeholder="1"></label>
     </div>
     <div class="set-hint">Tunes the live KDS and stock ordering. Target food-cost, business name &amp; currency also feed the menu view/PDF. Changes apply on the next refresh / order calculation.</div>
   </div>
@@ -1071,6 +1072,8 @@
           <div id="mp-fc" style="padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:14px;font-weight:600;color:var(--amber)">—</div>
         </div>
       </div>
+
+      <div id="mp-suggest" style="display:none;margin:0 0 8px;padding:10px 12px;background:var(--amber-dim);border:1px solid var(--amber-brd);border-radius:8px;font-size:12px;color:var(--text);line-height:1.7"></div>
 
       <!-- ZUTATEN -->
       <div>
@@ -3337,9 +3340,10 @@ function populateInvFilters() {
 
 function stockClass(qty, min) {
   qty = parseFloat(qty) || 0; min = parseFloat(min) || 0;
-  if (qty <= 0)   return ["out","Out of stock"];
-  if (qty <= min) return ["low","Low stock"];
-  return                  ["ok","OK"];
+  const _m = (typeof kmepSettingNum === "function") ? kmepSettingNum("lowStockMultiplier", 1) : 1;
+  if (qty <= 0)        return ["out","Out of stock"];
+  if (qty <= min * _m) return ["low","Low stock"];
+  return                       ["ok","OK"];
 }
 
 function filterInventory() {

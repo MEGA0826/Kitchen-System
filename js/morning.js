@@ -123,11 +123,12 @@ function _renderMorningLowStock() {
     return;
   }
 
+  const _lsMult = (typeof kmepSettingNum === 'function') ? kmepSettingNum('lowStockMultiplier', 1) : 1;
   const lowItems = allInventory
     .filter(r => {
       const qty = parseFloat(r.quantity) || 0;
       const min = parseFloat(r.minimum)  || 0;
-      return min > 0 && qty <= min;
+      return min > 0 && qty <= min * _lsMult;
     })
     .sort((a, b) => (parseFloat(a.quantity)||0) - (parseFloat(b.quantity)||0));
 

@@ -2,12 +2,14 @@
 // from the header gear (openSettings, in dashboard.html); field handlers persist on change. Appearance delegates to the existing
 // setTheme (dashboard) + setLangDash (i18n). Business/Operations values are stored in localStorage
 // under `kmep_settings` and read elsewhere via the global kmepSetting()/kmepSettingNum() accessors:
-//   targetFC → menu-view FC colour + menu-engineering · businessName/currency → menu view+PDF ·
-//   kdsRefreshSec → the KDS auto-refresh loop · orderSafetyDays/orderHorizonDays → order-calendar.
+//   targetFC → menu-view/editor FC colour + price optimizer · businessName/currency → menu view+PDF ·
+//   vat → net-based FC + suggested-price gross (menu editor calcFC + menu view) ·
+//   kdsRefreshSec → the KDS auto-refresh loop · orderSafetyDays/orderHorizonDays → order-calendar ·
+//   lowStockMultiplier → low-stock alerts (morning + order-calendar + stockClass).
 // No init-coupling: nothing here runs in the boot fan-out.
 
 const APP_VERSION = '1.0';        // human-facing app version
-const APP_BUILD   = 135;          // tracks the service-worker cache build (bump together)
+const APP_BUILD   = 136;          // tracks the service-worker cache build (bump together)
 const KMEP_SETTINGS_KEY = 'kmep_settings';
 
 // Defaults are also the fallbacks passed at each read site, kept here for the form + documentation.
@@ -21,6 +23,7 @@ const KMEP_SETTINGS_DEFAULTS = {
   kdsRefreshSec: 60,
   orderSafetyDays: 0.5,
   orderHorizonDays: 2,
+  lowStockMultiplier: 1,   // warn when qty <= minimum × this (1 = at minimum; 1.5 = 50% earlier)
 };
 
 // Suggested target food-cost % by business type (informational hint, not enforced).
@@ -101,6 +104,7 @@ function renderSettings() {
   set('set-kds-refresh', s.kdsRefreshSec);
   set('set-order-safety', s.orderSafetyDays);
   set('set-order-horizon', s.orderHorizonDays);
+  set('set-lowstock-mult', s.lowStockMultiplier);
 
   // About
   const ver = document.getElementById('set-version');
@@ -120,6 +124,7 @@ function renderSettings() {
     _bindSettingInput('set-kds-refresh', 'kdsRefreshSec', { num: true });
     _bindSettingInput('set-order-safety', 'orderSafetyDays', { num: true });
     _bindSettingInput('set-order-horizon', 'orderHorizonDays', { num: true });
+    _bindSettingInput('set-lowstock-mult', 'lowStockMultiplier', { num: true });
     renderSettings._bound = true;
   }
 }

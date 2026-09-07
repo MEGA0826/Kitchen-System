@@ -68,11 +68,14 @@ function buildMenuPdfHtml(m, interactive) {
   const zutaten = (() => { try { return JSON.parse(m.zutaten || '[]'); } catch(e) { return []; } })();
   const wa  = parseFloat(m.wa || 0);
   const vk  = parseFloat(m.vk || 0);
-  const fc  = vk > 0 ? ((wa/vk)*100).toFixed(1)+'%' : '—';
   // Business-profile settings (js/settings.js) with safe fallbacks so print/PDF works even if unset
   const _bn  = (typeof kmepSetting === 'function')    ? kmepSetting('bizName', '212 Nooch Richti') : '212 Nooch Richti';
   const _cur = (typeof kmepSetting === 'function')    ? kmepSetting('currency', 'CHF') : 'CHF';
   const _fcTarget = (typeof kmepSettingNum === 'function') ? kmepSettingNum('targetFC', 33) : 33;
+  const _vat = (typeof kmepSettingNum === 'function') ? kmepSettingNum('vat', 0) : 0;
+  // Food cost is measured against NET revenue (VK excl. VAT)
+  const vkNet = _vat > 0 ? vk / (1 + _vat / 100) : vk;
+  const fc  = vkNet > 0 ? ((wa/vkNet)*100).toFixed(1)+'%' + (_vat > 0 ? ' netto' : '') : '—';
   const fcColor = (fc!=='—' && parseFloat(fc) > _fcTarget) ? '#e86050' : '#2d8a5e';
 
   const zutatRows = zutaten.map(z => {
@@ -109,7 +112,7 @@ function buildMenuPdfHtml(m, interactive) {
       ${m.imageUrl?`<img src="${toDirectImg(m.imageUrl)}" style="width:160px;height:110px;object-fit:cover;border-radius:8px">`:''}
     </div>
     <div style="background:#f7f5f0;border-bottom:2px solid #e8a020;padding:8px 24px;display:flex;gap:24px;flex-wrap:wrap">
-      ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',m.gewicht],['WA',_cur+' '+wa.toFixed(2)],['VK',_cur+' '+vk.toFixed(2)],['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
+      ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',m.gewicht],['WA',_cur+' '+wa.toFixed(2)],['VK',_cur+' '+vk.toFixed(2)],...(_vat>0 && vk>0 ? [['MwSt',_vat+'%'],['VK netto',_cur+' '+vkNet.toFixed(2)]] : []),['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
     </div>
     <div style="padding:16px 20px;border-bottom:1px solid #eee">
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zutaten</div>

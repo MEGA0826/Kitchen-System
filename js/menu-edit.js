@@ -222,15 +222,48 @@ function calcFC() {
   const wa = parseFloat(document.getElementById('mp-wa')?.value) || 0;
   const vk = parseFloat(document.getElementById('mp-vk')?.value) || 0;
   const el = document.getElementById('mp-fc');
-  if (!el) return;
-  if (vk > 0) {
-    const fc = (wa / vk * 100).toFixed(1);
-    el.textContent = fc + '%';
-    el.style.color = parseFloat(fc) > 33 ? 'var(--red)' : 'var(--green)';
-  } else {
-    el.textContent = '—';
-    el.style.color = 'var(--amber)';
+  // Settings → Business Profile: target food-cost % (color threshold) + VAT % (food cost is on NET revenue)
+  const targetFC = (typeof kmepSettingNum === 'function') ? kmepSettingNum('targetFC', 33) : 33;
+  const vat      = (typeof kmepSettingNum === 'function') ? kmepSettingNum('vat', 0) : 0;
+  const vkNet = vat > 0 ? vk / (1 + vat / 100) : vk;
+  if (el) {
+    if (vkNet > 0) {
+      const fc = (wa / vkNet * 100).toFixed(1);
+      el.textContent = fc + '%' + (vat > 0 ? ' netto' : '');
+      el.style.color = parseFloat(fc) > targetFC ? 'var(--red)' : 'var(--green)';
+    } else {
+      el.textContent = '—';
+      el.style.color = 'var(--amber)';
+    }
   }
+  _renderSuggestedPrice(wa, targetFC, vat, vk);
+}
+
+// Target-price optimizer: from cost (WA) + target food-cost % → recommended net price, then + VAT = gross.
+function _renderSuggestedPrice(wa, targetFC, vat, vk) {
+  const box = document.getElementById('mp-suggest');
+  if (!box) return;
+  if (!(wa > 0) || !(targetFC > 0)) { box.style.display = 'none'; return; }
+  const cur   = (typeof kmepSetting === 'function') ? kmepSetting('currency', 'CHF') : 'CHF';
+  const net   = wa / (targetFC / 100);
+  const gross = net * (1 + vat / 100);
+  const vatNote = vat > 0 ? ` <span style="color:var(--muted)">(netto ${cur} ${net.toFixed(2)} + ${vat}% MwSt)</span>` : '';
+  let diffNote = '';
+  if (vk > 0) {
+    const diff = gross - vk;
+    const col  = diff > 0 ? 'var(--red)' : 'var(--green)';
+    diffNote = ` · aktueller VK ${cur} ${vk.toFixed(2)}` + (Math.abs(diff) >= 0.05 ? ` <span style="color:${col}">(${diff > 0 ? '+' : ''}${diff.toFixed(2)})</span>` : ' ✓');
+  }
+  box.innerHTML = `💡 Für Ziel-FC <strong>${targetFC}%</strong> empfohlener VK: <strong>${cur} ${gross.toFixed(2)}</strong>${vatNote}${diffNote}`
+    + ` <button type="button" onclick="_useSuggestedPrice(${gross.toFixed(2)})" style="margin-left:6px;padding:2px 10px;border-radius:6px;border:1px solid var(--amber-brd);background:var(--surface);color:var(--amber);font-size:11px;cursor:pointer">übernehmen</button>`;
+  box.style.display = 'block';
+}
+
+function _useSuggestedPrice(gross) {
+  const vkEl = document.getElementById('mp-vk');
+  if (!vkEl) return;
+  vkEl.value = (Math.round(gross * 20) / 20).toFixed(2); // round to nearest 0.05
+  calcFC();
 }
 
 function removeMenuZutat(i) {
