@@ -2526,7 +2526,7 @@ function applyRoleAccess() {
 }
   
 function requestAdminAccess() {
-  if (sessionStorage.getItem("isAdminUnlocked") === "true") {
+  if (sessionStorage.getItem("isAdminUnlocked") === "true" && gwTokenValid()) {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".tab").forEach(t => {
@@ -2915,8 +2915,22 @@ async function get(params) {
 async function adminCall(params) {
   const action = params.action || "";
   if (_sbActions[action]) {
+    // Gateway write. NEVER silently fall back to the legacy GAS/Sheets backend on
+    // failure: inventory/products/recipes are read from Supabase, so a Sheet write
+    // would report "Saved OK" while the value never actually changes. Fail loudly,
+    // and if the PIN write-token has expired, re-open the PIN pad so the user can
+    // re-authenticate and save again.
     try { return await _sbActions[action](params); }
-    catch(e) { console.warn("[SB] " + action + " failed, falling back to GAS:", e); }
+    catch(e) {
+      const msg = String((e && e.message) || e);
+      if (!gwTokenValid()) {
+        try { sessionStorage.removeItem(GW_TOKEN); } catch(_) {}
+        try { requestAdminAccess(); } catch(_) {}
+        return { error: "Your admin session expired — re-enter your PIN, then save again." };
+      }
+      console.warn("[SB] " + action + " failed:", e);
+      return { error: msg };
+    }
   }
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
