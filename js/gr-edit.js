@@ -200,6 +200,11 @@ async function saveGREntry() {
     }
     adminMsg('agr-msg','✓ GR gespeichert','ok');
     await loadGRs();
+    // Repaint the GR list + recipe pickers so the new/edited GR shows immediately
+    // (loadGRs only refills allGRs; deleteGR refreshes but saveGREntry did not).
+    try { _refreshGrList(); } catch(e) {}
+    try { renderMenuListByCat(); } catch(e) {}
+    try { updateRecipeAddButtons(); } catch(e) {}
     setTimeout(closeAddGRPopup, 900);
   } catch(e) {
     adminMsg('agr-msg','Fehler: '+e.message,'err');
