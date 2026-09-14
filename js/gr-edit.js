@@ -140,19 +140,36 @@ function removeAgrZutat(i) {
   renderAgrZutaten();
 }
 
+// Next free GR-### code (zero-padded to 3 digits), computed from the current allGRs.
+function _nextGrCode() {
+  let max = 0;
+  (allGRs || []).forEach(g => {
+    const m = /^GR-(\d+)$/i.exec((g.grCode || '').trim());
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return 'GR-' + String(max + 1).padStart(3, '0');
+}
 async function saveGREntry() {
   const code = document.getElementById('agr-code').value.trim();
   const name = document.getElementById('agr-name').value.trim();
   if (!code) { adminMsg('agr-msg','GR Code erforderlich','err'); return; }
   if (!name) { adminMsg('agr-msg','GR Name erforderlich','err'); return; }
 
-  // Duplicate protection — skip check when editing unchanged code
+  // Duplicate protection. Validate the code against LIVE data, not the in-memory
+  // allGRs: the old check trusted allGRs, which silently goes EMPTY whenever the
+  // large/slow getGRs load times out (loadGRs sets allGRs=[] on failure) — so a
+  // dup code (e.g. GR-006) sailed through an empty-list check. GAS saveGR always
+  // INSERTS and delete is by code (removes both), so a dup is unrecoverable in-app.
+  // Refuse to save if we cannot confirm the current list.
   const isEditing = !!editingGRCode;
   if (!isEditing) {
-    const dupCode = allGRs.find(g => (g.grCode||'').toLowerCase() === code.toLowerCase());
-    const dupName = allGRs.find(g => (g.name||'').toLowerCase() === name.toLowerCase());
-    if (dupCode) { adminMsg('agr-msg', `⚠ GR Code "${code}" already exists`, 'err'); return; }
-    if (dupName) { adminMsg('agr-msg', `⚠ GR name "${name}" already exists`, 'err'); return; }
+    let live = null;
+    try { const d = await get({ action: 'getGRs' }); if (Array.isArray(d.grs)) { live = d.grs; allGRs = d.grs; } } catch(e) {}
+    if (!live) { adminMsg('agr-msg', '⚠ GR-Liste konnte nicht geladen werden – bitte erneut versuchen', 'err'); btn.disabled=false; btn.textContent='💾 Speichern'; return; }
+    const dupCode = live.find(g => (g.grCode||'').toLowerCase() === code.toLowerCase());
+    const dupName = live.find(g => (g.name||'').toLowerCase() === name.toLowerCase());
+    if (dupCode) { adminMsg('agr-msg', `⚠ GR Code "${code}" existiert bereits (${dupCode.name||''}). Nächster freier Code: ${_nextGrCode()}`, 'err'); btn.disabled=false; btn.textContent='💾 Speichern'; return; }
+    if (dupName) { adminMsg('agr-msg', `⚠ GR Name "${name}" existiert bereits`, 'err'); btn.disabled=false; btn.textContent='💾 Speichern'; return; }
   } else {
     // Editing: block only if new code belongs to a different existing GR
     const codeChanged = code.toLowerCase() !== (editingGRCode||'').toLowerCase();
