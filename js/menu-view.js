@@ -14,19 +14,13 @@ function openMenuView(menuId) {
   document.getElementById('mvp-title').textContent = _viewingMenu.name || 'Menu';
   const sheet = document.getElementById('menuViewSheet');
   sheet.innerHTML = buildMenuPdfHtml(_viewingMenu, true);  // interactive → GR ingredients are clickable
-  // Click a GR sub-recipe → open that Grundrezeptur (matched by NAME first; codes drift from the GR master)
+  // Click a GR sub-recipe → open that Grundrezeptur as a read-only PDF view (js/recipe-view.js),
+  // stacked above this menu view (not the edit box). openGrView resolves by code then name.
   sheet.querySelectorAll('.zutat-gr-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.stopPropagation();
-      const nm = link.dataset.name || '', code = link.dataset.code || '';
-      const grs = (typeof allGRs !== 'undefined' && Array.isArray(allGRs)) ? allGRs : [];
-      const gr = grs.find(g => (g.name || '') === nm) || grs.find(g => (g.grCode || '') === code);
-      if (gr && typeof openEditGRPopup === 'function') {
-        document.getElementById('menuViewPopup').style.display = 'none';
-        openEditGRPopup(gr.grCode);
-      } else if (typeof showToast === 'function') {
-        showToast('Grundrezeptur nicht gefunden: ' + (nm || code), 'warn');
-      }
+      if (typeof openGrView === 'function') openGrView(link.dataset.code || '', link.dataset.name || '');
+      else if (typeof showToast === 'function') showToast('Grundrezeptur nicht gefunden: ' + (link.dataset.name || link.dataset.code), 'warn');
     });
   });
   document.getElementById('menuViewPopup').style.display = 'block';

@@ -1325,6 +1325,36 @@
   </div>
   </div>
 
+  <!-- ═══ GR VIEW POPUP ═══ -->
+  <div id="grViewPopup" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px">
+  <div style="max-width:720px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:600;color:#fff" id="grv-title">GR</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button onclick="editCurrentGrView()" style="padding:7px 14px;border-radius:8px;background:#1a1a16;color:var(--green);border:1px solid var(--green-brd);font-size:12px;cursor:pointer">✏️ Bearbeiten</button>
+        <button onclick="printCurrentGrView()" style="padding:7px 14px;border-radius:8px;background:#1a1a16;color:var(--blue);border:1px solid var(--blue-brd);font-size:12px;cursor:pointer">🖨 Drucken</button>
+        <button onclick="closeGrView()" style="padding:7px 12px;border-radius:8px;background:#1a1a16;color:#888;border:1px solid rgba(255,255,255,0.1);font-size:12px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div id="grViewSheet" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)"></div>
+  </div>
+  </div>
+
+  <!-- ═══ MEP VIEW POPUP ═══ -->
+  <div id="mepViewPopup" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px">
+  <div style="max-width:720px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:600;color:#fff" id="mepv-title">MEP</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button onclick="editCurrentMepView()" style="padding:7px 14px;border-radius:8px;background:#1a1a16;color:var(--amber);border:1px solid var(--amber-brd);font-size:12px;cursor:pointer">✏️ Bearbeiten</button>
+        <button onclick="printCurrentMepView()" style="padding:7px 14px;border-radius:8px;background:#1a1a16;color:var(--blue);border:1px solid var(--blue-brd);font-size:12px;cursor:pointer">🖨 Drucken</button>
+        <button onclick="closeMepView()" style="padding:7px 12px;border-radius:8px;background:#1a1a16;color:#888;border:1px solid rgba(255,255,255,0.1);font-size:12px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div id="mepViewSheet" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)"></div>
+  </div>
+  </div>
+
 <!-- ★ NEW: Menu PDF Viewer Popup -->
   <div id="menuPdfPopup" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.85);overflow-y:auto;padding:16px">
     <div style="max-width:760px;margin:0 auto">
@@ -2295,6 +2325,8 @@ function _closeTopmostPopup() {
   if (vis('menuPopup'))             { closeMenuPopup();          return; }
   if (vis('addMEPPopup'))           { closeAddMEPPopup();        return; }
   if (vis('grPopup'))               { closeGrPopup();            return; }
+  if (vis('grViewPopup'))           { closeGrView();             return; }
+  if (vis('mepViewPopup'))          { closeMepView();            return; }
   if (vis('menuViewPopup'))         { closeMenuView();           return; }
   if (cls('editProductModal'))      { closeEditProductModal();   return; }
   if (cls('editInventoryModal'))    { closeEditInventoryModal(); return; }
@@ -5359,7 +5391,7 @@ function _renderGrRow(g) {
   return `<div style="padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
       <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);font-weight:700;flex-shrink:0">GR</span>
-      <span style="font-size:13px;font-weight:500;word-break:break-word">${g.name||g.code}</span>
+      <span class="gr-name-link" data-code="${sc}" data-name="${sn}" style="font-size:13px;font-weight:500;word-break:break-word;cursor:pointer;text-decoration:underline;text-underline-offset:2px" title="Details anzeigen (PDF)">${g.name||g.code}</span>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       ${allergenStr}
@@ -5451,6 +5483,7 @@ function filterGrDisplay() {
   const limit = q.length <= 3 ? results.length : 20;
   el.innerHTML = results.slice(0, limit).map(g => _renderGrRow(g)).join("");
 
+  el.querySelectorAll('.gr-name-link').forEach(s => s.addEventListener('click', () => openGrView(s.dataset.code, s.dataset.name)));
   el.querySelectorAll('.gr-copy-btn').forEach(btn => btn.addEventListener('click', () => copyGR(btn.dataset.code)));
   // Wire up edit/delete for menu-sheet GRs
   el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => {
@@ -5494,7 +5527,7 @@ function filterMepDisplay() {
     return `<div style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">MEP</span>
-        <span style="font-size:13px;font-weight:500;word-break:break-word">${p.name||code}</span>
+        <span class="mep-name-link" data-code="${code}" style="font-size:13px;font-weight:500;word-break:break-word;cursor:pointer;text-decoration:underline;text-underline-offset:2px" title="Details anzeigen (PDF)">${p.name||code}</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--muted);white-space:nowrap">${code}</span>
@@ -5508,6 +5541,7 @@ function filterMepDisplay() {
       </div>
     </div>`;
   }).join("");
+  el.querySelectorAll('.mep-name-link').forEach(s => s.addEventListener('click', () => openMepView(s.dataset.code)));
   el.querySelectorAll('.mep-prod-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMEP(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
@@ -5537,6 +5571,7 @@ function showAllGRs() {
   combined.sort((a,b) => a.name.localeCompare(b.name));
   if (!combined.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine GR vorhanden.</div>`; return; }
   el.innerHTML = combined.map(g => _renderGrRow(g)).join('');
+  el.querySelectorAll('.gr-name-link').forEach(s => s.addEventListener('click', () => openGrView(s.dataset.code, s.dataset.name)));
   el.querySelectorAll('.gr-copy-btn').forEach(btn => btn.addEventListener('click', () => copyGR(btn.dataset.code)));
   el.querySelectorAll('.menu-gr-edit-btn').forEach(btn => btn.addEventListener('click', () => {
     if (btn.dataset.menuId) openMenuPopup(btn.dataset.menuId); else openEditGRPopup(btn.dataset.code);
@@ -5566,7 +5601,7 @@ function showAllMEPs() {
     return `<div style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-dim);color:var(--amber);font-weight:700;flex-shrink:0">MEP</span>
-        <span style="font-size:13px;font-weight:500;word-break:break-word">${p.name||code}</span>
+        <span class="mep-name-link" data-code="${code}" style="font-size:13px;font-weight:500;word-break:break-word;cursor:pointer;text-decoration:underline;text-underline-offset:2px" title="Details anzeigen (PDF)">${p.name||code}</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--muted);white-space:nowrap">${code}</span>
@@ -5581,6 +5616,7 @@ function showAllMEPs() {
       </div>
     </div>`;
   }).join('');
+  el.querySelectorAll('.mep-name-link').forEach(s => s.addEventListener('click', () => openMepView(s.dataset.code)));
   el.querySelectorAll('.mep-prod-copy-btn').forEach(btn => btn.addEventListener('click', () => copyMEP(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-edit-btn').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.code)));
   el.querySelectorAll('.mep-prod-del-btn').forEach(btn => btn.addEventListener('click', () => delProduct(btn.dataset.code)));
@@ -6885,6 +6921,7 @@ window.switchTab=function(btn){if(!btn)return;_origST.call(this,btn);if(btn.data
 <script src="js/mep-edit.js"></script>
 <script src="js/gr-edit.js"></script>
 <script src="js/menu-view.js"></script>
+<script src="js/recipe-view.js"></script>
 <script src="js/morning.js"></script>
 <script src="js/admin-workers.js"></script>
 <script src="js/order-calendar.js"></script>
