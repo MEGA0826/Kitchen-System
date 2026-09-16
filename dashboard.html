@@ -5396,6 +5396,7 @@ function _renderGrRow(g) {
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       ${allergenStr}
       <span style="font-size:11px;color:var(--muted);white-space:nowrap">${g.code}</span>
+      ${g.dupCode ? `<span style="font-size:10px;color:var(--red);background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:4px;padding:1px 6px;white-space:nowrap;flex-shrink:0" title="Doppelter GR-Code – im Google Sheet eindeutig machen">⚠ Doppelter Code</span>` : ''}
       ${wStr ? `<span style="font-size:11px;color:var(--green);white-space:nowrap">${wStr}</span>` : ''}
       ${wa > 0 ? `<span style="font-size:11px;color:var(--amber);white-space:nowrap">CHF ${wa.toFixed(2)}</span>` : ''}
       <div style="margin-left:auto;display:flex;gap:4px;flex-shrink:0">
@@ -5455,10 +5456,12 @@ function filterGrDisplay() {
   const combined = [];
   (allGRs || []).forEach(g => {
     const code = g.grCode || g.id || '';
-    if (!code || seenCodes.has(code.toLowerCase())) return; // dedupe within allGRs too
-    seenCodes.add(code.toLowerCase());
+    if (!code) return;
+    const lc = code.toLowerCase();
+    const dupCode = seenCodes.has(lc); // same code already seen in the GR sheet → flag, never hide
+    seenCodes.add(lc);
     const nettoKg = parseFloat(g.rohgewicht||0) * (1 - parseFloat(g.garverlust||0)/100);
-    combined.push({ code, name: g.name || '', wa: g.wa || 0, zutaten: g.zutaten || '[]', source: 'gr', id: null, nettoKg });
+    combined.push({ code, name: g.name || '', wa: g.wa || 0, zutaten: g.zutaten || '[]', source: 'gr', id: g.id || null, nettoKg, dupCode });
   });
   (allMenus || []).forEach(m => {
     if ((m.art || '') !== 'Grundrezeptur') return;
@@ -5556,10 +5559,12 @@ function showAllGRs() {
   const combined = [];
   (allGRs||[]).forEach(g => {
     const code = g.grCode||g.id||'';
-    if (!code || seenCodes.has(code.toLowerCase())) return; // dedupe within allGRs too
-    seenCodes.add(code.toLowerCase());
+    if (!code) return;
+    const lc = code.toLowerCase();
+    const dupCode = seenCodes.has(lc); // same code already seen in the GR sheet → flag, never hide
+    seenCodes.add(lc);
     const nettoKg = parseFloat(g.rohgewicht||0) * (1 - parseFloat(g.garverlust||0)/100);
-    combined.push({ code, name:g.name||'', wa:g.wa||0, zutaten:g.zutaten||'[]', source:'gr', id:null, nettoKg });
+    combined.push({ code, name:g.name||'', wa:g.wa||0, zutaten:g.zutaten||'[]', source:'gr', id:g.id||null, nettoKg, dupCode });
   });
   (allMenus||[]).forEach(m => {
     if ((m.art||'') !== 'Grundrezeptur') return;
