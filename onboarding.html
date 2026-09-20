@@ -621,13 +621,20 @@
 
 </div><!-- /ob-shell -->
 
+<script src="config.js"></script>
 <script>
 "use strict";
 
 // ─────────────────────────────────────────────
-// CONFIG
+// CONFIG — read from config.js (KMEP_CONFIG), like the rest of the app.
+// Writes go through the PIN-gated Supabase gateway, not the legacy GAS backend.
 // ─────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
+const CFG      = (typeof window !== "undefined" && window.KMEP_CONFIG) ? window.KMEP_CONFIG : {};
+const SB_URL   = CFG.SB_URL || "";
+const SB_KEY   = CFG.SB_KEY || "";
+const API      = CFG.API || "";                       // legacy GAS (optional; unused on a Supabase-only setup)
+const GW_URL   = SB_URL + "/functions/v1/admin-gateway";
+const GW_TOKEN = "mep_gwt";                            // sessionStorage key, shared with the dashboard
 
 // ─────────────────────────────────────────────
 // STATE
@@ -993,6 +1000,15 @@ async function saveLaunch() {
   btn.innerHTML = `<span class="spin"></span> Saving…`;
   _hideError("step5Error");
 
+  if (!SB_URL) {
+    _showError("step5Error", "Konfiguration fehlt — config.js ist nicht geladen.");
+    btn.disabled = false; btn.innerHTML = "Retry →"; return;
+  }
+  if (!(await _ensureToken())) {
+    _showError("step5Error", "Admin-PIN nötig, um zu speichern.");
+    btn.disabled = false; btn.innerHTML = "⚠ Erneut versuchen →"; return;
+  }
+
   let allOk = true;
 
   // Save products
@@ -1078,10 +1094,41 @@ function openStaffHome() {
 // ─────────────────────────────────────────────
 // API HELPER
 // ─────────────────────────────────────────────
-async function _apiCall(params) {
-  const res = await fetch(API + "?" + new URLSearchParams(params));
-  if (!res.ok) throw new Error("HTTP " + res.status);
+// All onboarding writes go through the PIN-gated Supabase gateway (same as the app).
+async function gwPost(body) {
+  const res = await fetch(GW_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SB_KEY, Authorization: "Bearer " + SB_KEY },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+function _gwToken() { try { return sessionStorage.getItem(GW_TOKEN) || ""; } catch(e) { return ""; } }
+function _gwTokenValid() {
+  try {
+    const b = _gwToken().split(".")[0]; if (!b) return false;
+    let s = b.replace(/-/g, "+").replace(/_/g, "/"); s += "=".repeat((4 - s.length % 4) % 4);
+    const p = JSON.parse(atob(s));
+    return !!p && typeof p.exp === "number" && Date.now() < p.exp - 5000;
+  } catch(e) { return false; }
+}
+// Ensure a valid gateway token before saving; prompt for the admin PIN (set at setup) if needed.
+async function _ensureToken() {
+  if (_gwTokenValid()) return true;
+  for (let i = 0; i < 3; i++) {
+    const pin = window.prompt("Admin-PIN eingeben, um die Einrichtung zu speichern:");
+    if (pin === null) return false;
+    try {
+      const r = await gwPost({ action: "login", pin: String(pin).trim() });
+      if (r && r.token) { try { sessionStorage.setItem(GW_TOKEN, r.token); } catch(e) {} return true; }
+    } catch(e) {}
+    window.alert("Falsche PIN. Bitte erneut versuchen.");
+  }
+  return false;
+}
+async function _apiCall(params) {
+  return gwPost(Object.assign({ token: _gwToken() }, params));
 }
 
 // ─────────────────────────────────────────────
