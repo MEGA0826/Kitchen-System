@@ -11,6 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kitchen MEP">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
 
   <!-- Theme color for browser chrome -->
@@ -1176,6 +1177,34 @@
 </head>
 <body>
 
+  <!-- Launch splash: logo on open (fades out once loaded) -->
+  <style>
+    #mepSplash{position:fixed;inset:0;z-index:10000;background:#0f0f0d;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:22px;transition:opacity .5s ease}
+    #mepSplash img{width:118px;height:118px;border-radius:26px;box-shadow:0 12px 44px rgba(0,0,0,.55);
+      animation:msPop .6s cubic-bezier(.2,.9,.3,1.15) both}
+    #mepSplash .ms-name{font-family:'Instrument Serif',serif;font-size:30px;color:rgba(255,255,255,.9);
+      animation:msFade .7s .22s both}
+    #mepSplash .ms-name em{font-style:italic;color:#e8a020}
+    #mepSplash.hide{opacity:0;pointer-events:none}
+    @keyframes msPop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+    @keyframes msFade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    @media (prefers-reduced-motion:reduce){#mepSplash img,#mepSplash .ms-name{animation:none}}
+  </style>
+  <div id="mepSplash">
+    <img src="icons/icon-512.png" alt="Kitchen MEP">
+    <div class="ms-name">Kitchen <em>MEP</em></div>
+  </div>
+  <script>
+    (function(){
+      var s=document.getElementById('mepSplash'); if(!s) return;
+      var start=Date.now(), MIN=1100;
+      function hide(){ var w=Math.max(0,MIN-(Date.now()-start));
+        setTimeout(function(){ s.classList.add('hide'); setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); },520); }, w); }
+      if(document.readyState==='complete') hide(); else window.addEventListener('load',hide);
+    })();
+  </script>
+
   <!-- Offline queue badge -->
   <div class="offline-badge" id="offlineBadge" onclick="retryQueue()" title="Tap to retry pending scans">
      <span id="offlineCount">0</span> pending
@@ -1199,7 +1228,10 @@
         <span></span><span></span><span></span>
       </button>
      <div style="text-align:center">
-        <div style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:9px">
+          <img src="icons/icon-192.png" alt="" width="30" height="30" style="border-radius:8px">
+          <span style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1;color:rgba(255,255,255,0.85)">Kitchen <em style="font-style:italic;color:#e8a020">MEP</em></span>
+        </div>
         <div id="homeLiveTime" style="font-size:13px;color:#888;font-family:var(--mono);letter-spacing:1px;margin-top:4px"></div>
       </div>
       <button class="home-scan-btn" onclick="openScanPage()">← Scan</button>
