@@ -3,6 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>
+    // Entry gate: first-time web visitors see the intro (welcome.html); staff, the
+    // installed app, and ?app links go straight in. Fails open (never blocks the app).
+    (function(){
+      try{
+        if (/welcome\.html$/.test(location.pathname)) return;
+        var sp = new URLSearchParams(location.search);
+        var mm = function(q){ try{ return matchMedia(q).matches; }catch(e){ return false; } };
+        var standalone = mm('(display-mode: standalone)') || mm('(display-mode: fullscreen)') || mm('(display-mode: minimal-ui)') || navigator.standalone === true;
+        var seen; try{ seen = localStorage.getItem('kmep_seen'); }catch(e){}
+        if (!standalone && !sp.has('app') && !seen){ location.replace('welcome.html'); return; }
+        try{ localStorage.setItem('kmep_seen','1'); }catch(e){}
+      }catch(e){}
+    })();
+  </script>
   <title>Kitchen MEP — 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
 

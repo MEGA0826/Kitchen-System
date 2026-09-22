@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kitchen MEP — kitchen production, live</title>
+<meta name="description" content="Scan, produce and track every prep item in real time — offline-first, HACCP-ready. The kitchen MEP system for 212 Nooch Richti.">
+<meta name="theme-color" content="#0f0f0d">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f0f0d; --surface:#1a1a16; --surface2:#242420;
+    --border:rgba(255,255,255,.09); --border2:rgba(255,255,255,.15);
+    --text:#f0ede6; --muted:#8f8f86;
+    --amber:#e8a020; --green:#5dca8a; --blue:#60a8e8;
+    --serif:'Instrument Serif',Georgia,serif; --mono:'DM Mono',ui-monospace,monospace;
+    --maxw:960px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; font-size:17px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden}
+  a{color:inherit}
+  img{max-width:100%}
+  h1,h2,h3{margin:0; font-family:var(--serif); font-weight:400; line-height:1.08}
+  p{margin:0}
+  .serif{font-family:var(--serif)} .serif em{font-style:italic; color:var(--amber)}
+  .wrap{max-width:var(--maxw); margin-inline:auto; padding-inline:clamp(20px,5vw,36px)}
+  section{padding-block:clamp(44px,7vw,76px)}
+
+  /* ambient glow */
+  .glow{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden}
+  .glow::before{content:""; position:absolute; width:480px; height:480px; border-radius:50%;
+    background:radial-gradient(circle, rgba(93,202,138,.16), transparent 65%); top:-140px; left:50%; transform:translateX(-50%)}
+  .glow::after{content:""; position:absolute; width:360px; height:360px; border-radius:50%;
+    background:radial-gradient(circle, rgba(232,160,32,.12), transparent 65%); bottom:-120px; right:-80px}
+
+  header.nav{position:sticky; top:0; z-index:20; background:rgba(15,15,13,.82); backdrop-filter:blur(10px); border-bottom:1px solid var(--border)}
+  .nav-in{display:flex; align-items:center; gap:12px; padding-block:12px}
+  .brand{display:flex; align-items:center; gap:11px; font-family:var(--serif); font-size:24px}
+  .brand img{width:34px;height:34px;border-radius:9px}
+  .brand em{font-style:italic; color:var(--amber)}
+  .nav-spacer{flex:1}
+
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; cursor:pointer;
+    font-family:var(--mono); font-weight:500; font-size:14px; letter-spacing:.3px; text-decoration:none;
+    padding:12px 22px; border-radius:12px; transition:transform .12s ease, filter .12s ease, background .12s ease}
+  .btn-primary{background:var(--amber); color:#1a1200; box-shadow:0 8px 24px rgba(232,160,32,.25)}
+  .btn-primary:hover{transform:translateY(-2px); filter:brightness(1.05)}
+  .btn-ghost{background:transparent; color:var(--text); border:1px solid var(--border2)}
+  .btn-ghost:hover{background:var(--surface); transform:translateY(-2px)}
+  .btn-sm{padding:9px 16px}
+  .btn:focus-visible{outline:2px solid var(--amber); outline-offset:3px}
+
+  /* hero */
+  .hero{text-align:center; padding-top:clamp(34px,6vw,60px)}
+  .hero .logo{width:clamp(84px,13vw,104px); height:clamp(84px,13vw,104px); border-radius:24px; box-shadow:0 14px 44px rgba(0,0,0,.6); margin-inline:auto}
+  .eyebrow{font-family:var(--mono); font-size:12.5px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-top:22px}
+  .hero h1{font-size:clamp(40px,7.5vw,72px); margin-top:12px}
+  .hero .lede{color:var(--muted); font-size:clamp(17px,2.2vw,20px); margin:20px auto 0; max-width:46ch}
+  .cta-row{display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:30px}
+  .micro{margin-top:20px; font-family:var(--mono); font-size:12.5px; letter-spacing:.5px; color:var(--muted);
+    display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:center}
+  .micro span{display:inline-flex; align-items:center; gap:7px}
+  .micro .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+  .micro .dot.a{background:var(--amber)} .micro .dot.b{background:var(--blue)}
+
+  /* what it does */
+  .does{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:clamp(40px,6vw,60px)}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px 22px; text-align:left}
+  .card .ic{width:46px;height:46px;border-radius:12px; display:grid; place-items:center; font-size:23px; margin-bottom:16px;
+    background:var(--surface2); border:1px solid var(--border)}
+  .card h3{font-family:system-ui,sans-serif; font-weight:600; font-size:18px; margin-bottom:7px; letter-spacing:.2px}
+  .card p{color:var(--muted); font-size:15px}
+  .card.a .ic{color:var(--amber)} .card.g .ic{color:var(--green)} .card.b .ic{color:var(--blue)}
+
+  /* feature list */
+  .sec-head{text-align:center; max-width:44ch; margin:0 auto clamp(26px,4vw,40px)}
+  .sec-head .kick{font-family:var(--mono); font-size:12.5px; letter-spacing:2.5px; text-transform:uppercase; color:var(--amber)}
+  .sec-head h2{font-size:clamp(30px,4.6vw,44px); margin-top:12px}
+  .feat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:16px; overflow:hidden}
+  .feat{background:var(--bg); padding:22px 20px}
+  .feat .fi{font-size:20px; margin-bottom:10px}
+  .feat h4{font-family:system-ui,sans-serif; font-weight:600; font-size:15.5px; margin:0 0 5px}
+  .feat p{color:var(--muted); font-size:13.5px; margin:0}
+
+  /* final */
+  .final{text-align:center}
+  .final h2{font-size:clamp(32px,5vw,52px)}
+  .final p{color:var(--muted); font-size:18px; margin-top:14px}
+  .final .cta-row{margin-top:26px}
+
+  footer{border-top:1px solid var(--border); background:#0c0c0a}
+  .foot{display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding-block:26px; font-family:var(--mono); font-size:13px; color:var(--muted)}
+  .foot .fmark{font-family:var(--serif); font-size:18px; color:var(--text)}
+  .foot nav{display:flex; gap:18px; margin-left:auto}
+  .foot a:hover{color:var(--amber)}
+  .foot .copy{flex-basis:100%; border-top:1px solid var(--border); padding-top:14px; font-size:12px}
+
+  @media (max-width:760px){ .does{grid-template-columns:1fr} .feat-grid{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <span class="brand"><img src="icons/icon-192.png" alt="">Kitchen <em>MEP</em></span>
+    <span class="nav-spacer"></span>
+    <a class="btn btn-primary btn-sm" href="index.html?app=1">Open the app →</a>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="wrap hero">
+    <img class="logo" src="icons/icon-512.png" alt="Kitchen MEP">
+    <div class="eyebrow">Real-time kitchen production</div>
+    <h1>Your <span class="serif"><em>mise-en-place</em></span>,<br>under control.</h1>
+    <p class="lede">Scan, produce, and track every prep item as it happens — so the whole kitchen always knows what's ready and what's still to make.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="index.html?app=1">Open the app →</a>
+      <a class="btn btn-ghost" href="#features">See what it does</a>
+    </div>
+    <div class="micro">
+      <span><span class="dot"></span> Offline-first</span>
+      <span><span class="dot a"></span> Real-time MEP</span>
+      <span><span class="dot b"></span> HACCP-ready</span>
+    </div>
+
+    <!-- what it does -->
+    <div class="does">
+      <div class="card a"><div class="ic">📷</div><h3>Scan &amp; produce</h3><p>Scan an item, log what you made — the MEP list updates for everyone, instantly.</p></div>
+      <div class="card g"><div class="ic">📊</div><h3>Live MEP overview</h3><p>See what still needs producing versus what's ready, sorted and always current.</p></div>
+      <div class="card b"><div class="ic">🌡️</div><h3>HACCP &amp; inventory</h3><p>Temperature checks, stock levels and compliance logs — kept in one place.</p></div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="wrap" id="features">
+    <div class="sec-head">
+      <div class="kick">Built for the line</div>
+      <h2>Everything a busy kitchen runs on</h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat"><div class="fi">🧾</div><h4>Recipes &amp; base preps</h4><p>Grundrezepturen and menu items, with quantities that scale.</p></div>
+      <div class="feat"><div class="fi">📈</div><h4>Sales-driven needs</h4><p>Requirements calculated from real sales history, not guesswork.</p></div>
+      <div class="feat"><div class="fi">🔑</div><h4>Roles &amp; PINs</h4><p>Staff, prep and manager views — each person sees what they need.</p></div>
+      <div class="feat"><div class="fi">🗑️</div><h4>Waste &amp; deductions</h4><p>Scan waste and deductions so stock and costs stay honest.</p></div>
+      <div class="feat"><div class="fi">📶</div><h4>Offline-first</h4><p>Keeps working with no signal; scans queue and sync when back online.</p></div>
+      <div class="feat"><div class="fi">📋</div><h4>Manager reports</h4><p>Production, inventory and HACCP at a glance for the dashboard.</p></div>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="wrap final">
+    <h2>Ready for <span class="serif"><em>service</em></span>?</h2>
+    <p>Open the app and start scanning — it installs to the home screen and works offline.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="index.html?app=1">Open the app →</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span class="fmark">Kitchen MEP</span>
+    <nav>
+      <a href="index.html?app=1">Open app</a>
+      <a href="https://apps.mylifebookapp.com">Bloom ↗</a>
+    </nav>
+    <p class="copy">Kitchen MEP · 212 Nooch Richti · part of Bloom — a small app studio.</p>
+  </div>
+</footer>
+
+</body>
+</html>
