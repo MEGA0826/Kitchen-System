@@ -6573,12 +6573,38 @@ function rDraw(){
     lL.appendChild(svgE('line',{x1:lx,y1:34,x2:lx,y2:maxY,stroke:'#1c2030','stroke-width':'1'}));
   }
 
+  // Edges that skip over a populated column (e.g. RM→Menu past MEP/GR) are routed
+  // along a "lane" in the empty gap between node rows, so they never cross an
+  // unrelated node; they're dashed so a jump reads differently from a direct link.
+  var HALF=(RG-NH)/2, CH=(CX.mep-CX.rm-NW)/2, laneUse={};
+  var maxR=Math.round((maxY-40-NH-CT)/RG)+1;
+  function laneY(y1,y2){
+    var r=Math.max(0,Math.min(maxR,Math.round(((y1+y2)/2-CT+HALF)/RG)));
+    var k=laneUse[r]||0;laneUse[r]=k+1;
+    return CT+r*RG-HALF+((k%5)-2)*3.5;
+  }
   rE.forEach(function(e){
     var fn=nb[e.from],tn=nb[e.to];if(!fn||!tn)return;
     var c=RC[e.srcType]||RC.rm;
-    var x1=fn._x+NW,y1=fn._y+NH/2,x2=tn._x,y2=tn._y+NH/2,mx=(x1+x2)/2;
-    eL.appendChild(svgE('path',{d:'M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2,fill:'none',stroke:c,'stroke-width':'1.6',opacity:'0.6','marker-end':'url(#rta-'+e.srcType+')'}));
-    if(e.weight>0){var bx=mx,by=(y1+y2)/2,lbl=fmtW(e.weight),lw=lbl.length*6+9;
+    var x1=fn._x+NW,y1=fn._y+NH/2,x2=tn._x,y2=tn._y+NH/2,mx=(x1+x2)/2,d,bx=mx,by=(y1+y2)/2,skip=false;
+    if(fn.col===tn.col){
+      // same column (e.g. GR used in a GR): loop out the right side and back in
+      var lx=x1+CH*0.8;d='M'+x1+','+y1+' C'+lx+','+y1+' '+lx+','+y2+' '+x1+','+y2;bx=lx;
+    } else {
+      skip=cols.some(function(t){return CX[t]>CX[fn.col]&&CX[t]<CX[tn.col];});
+      if(skip){
+        var ly=laneY(y1,y2),cA=x1+CH,cB=x2-CH;
+        d='M'+x1+','+y1+' C'+cA+','+y1+' '+cA+','+ly+' '+(cA+CH*0.5)+','+ly+
+          ' L'+(cB-CH*0.5)+','+ly+' C'+cB+','+ly+' '+cB+','+y2+' '+x2+','+y2;
+        bx=(cA+cB)/2;by=ly;
+      } else {
+        d='M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2;
+      }
+    }
+    var pa={d:d,fill:'none',stroke:c,'stroke-width':'1.6',opacity:skip?'0.75':'0.6','marker-end':'url(#rta-'+e.srcType+')'};
+    if(skip)pa['stroke-dasharray']='6 3';
+    eL.appendChild(svgE('path',pa));
+    if(e.weight>0){var lbl=fmtW(e.weight),lw=lbl.length*6+9;
       eL.appendChild(svgE('rect',{x:bx-lw/2,y:by-7,width:lw,height:14,rx:'3',fill:'#080a0f',stroke:c,'stroke-width':'0.7'}));
       var wt=svgE('text',{x:bx,y:by+1,'font-family':'DM Mono,monospace','font-size':'8',fill:c,'text-anchor':'middle','dominant-baseline':'middle'});wt.textContent=lbl;eL.appendChild(wt);}
   });
