@@ -1666,6 +1666,13 @@
   <!-- ADMIN Tab-->
   <div class="panel" id="panel-admin">
 
+  <!-- RECIPE DATA QUALITY: bulk relink (js/relink.js) -->
+  <div class="admin-section" id="admin-relink">
+    <div class="admin-section-title">🔗 Zutaten verknüpfen</div>
+    <div class="admin-section-sub">Findet Zutaten in Menus und GRs ohne gültigen Code (z.B. aus PDF-Import) und verknüpft sie mit RM / MEP / GR / Menu — damit Kosten, Allergene und Relations stimmen.</div>
+    <button class="btn-save" onclick="openRelinkTool()">🔍 Prüfen &amp; verknüpfen</button>
+  </div>
+
   <!-- SUBSCRIPTION & BILLING -->
   <div class="admin-section" id="admin-subscription">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
@@ -6967,5 +6974,6 @@ window.switchTab=function(btn){if(!btn)return;_origST.call(this,btn);if(btn.data
 <script src="js/order-calendar.js"></script>
 <script src="js/deductions-scan.js"></script>
 <script src="js/admin-reports.js"></script>
+<script src="js/relink.js"></script>
 </body>
 </html>

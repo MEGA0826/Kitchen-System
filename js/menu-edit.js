@@ -45,6 +45,9 @@ function openMenuPopup(menuId) {
   setDisp('mp-img-preview', 'none');
   setDisp('mp-drive-url',   'none');
   _menuImgFile = null;
+  // Clear the previous menu's image too — hiding the preview alone left its src,
+  // so saving an image-less menu copied the last-opened menu's photo onto it.
+  document.getElementById('mp-img-el')?.removeAttribute('src');
 
   const logo = document.getElementById('mp-logo-preview');
   if (logo) logo.innerHTML = '🍽️';
@@ -340,17 +343,25 @@ async function saveMenuEntry() {
   if (!name)     { adminMsg('mp-msg', 'Menu Name ist erforderlich', 'err'); return; }
   if (!menuCode) { adminMsg('mp-msg', 'Menu Code ist erforderlich', 'err'); return; }
 
-  // Duplicate protection — skip check when editing existing menu
+  // Duplicate protection. The code check also runs when editing (excluding this menu
+  // itself): menus are looked up by code, so two menus sharing one code made edits
+  // to one of them show up as the other ("saved but nothing changed").
+  const dupCode = allMenus.find(m => m.id !== editingMenuId && (m.menuCode||'').toLowerCase() === menuCode.toLowerCase());
+  if (dupCode) { adminMsg('mp-msg', `⚠ Menu Code "${menuCode}" already exists (${dupCode.name}) — use a different code`, 'err'); return; }
   if (!editingMenuId) {
-    const dupCode = allMenus.find(m => (m.menuCode||'').toLowerCase() === menuCode.toLowerCase());
     const dupName = allMenus.find(m => (m.name||'').toLowerCase() === name.toLowerCase());
-    if (dupCode) { adminMsg('mp-msg', `⚠ Menu Code "${menuCode}" already exists — use a different code`, 'err'); return; }
     if (dupName) { adminMsg('mp-msg', `⚠ Menu name "${name}" already exists — use a different name`, 'err'); return; }
   }
   const btn = document.getElementById('mp-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
 
-  let imageUrl = document.getElementById('mp-img-el')?.src || '';
+  // Read the src ATTRIBUTE, not .src: for an empty <img src=""> the .src property
+  // resolves to the page URL, which saved ".../dashboard.html" as the menu image.
+  // Only keep it while the preview is shown (i.e. this menu really has an image).
+  const imgEl   = document.getElementById('mp-img-el');
+  const imgShown = document.getElementById('mp-img-preview')?.style.display !== 'none';
+  let imageUrl = (imgShown && imgEl && imgEl.getAttribute('src')) || '';
+  if (!/^(https?:|data:)/i.test(imageUrl) || /\/dashboard\.html(?:[?#]|$)/i.test(imageUrl)) imageUrl = '';
   // Upload local file to Supabase Storage; GAS GET URL cannot carry base64
   if (imageUrl.startsWith('data:') && _menuImgFile) {
     adminMsg('mp-msg', '📤 Bild wird hochgeladen…', '');

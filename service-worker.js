@@ -1,11 +1,11 @@
-// Kitchen MEP — Service Worker v151
+// Kitchen MEP — Service Worker v152
 // Strategy: cache-first for static assets, network-first for API READS.
 // API writes are never intercepted: serving a cached response for a write
 // (e.g. a repeated produce/waste scan URL) would report success without
 // anything being saved.
 
-const CACHE_STATIC = "mep-static-v151";
-const CACHE_API    = "mep-api-v151";
+const CACHE_STATIC = "mep-static-v152";
+const CACHE_API    = "mep-api-v152";
 
 // Actions that involve slow AI processing — use a 90-second timeout
 const SLOW_ACTIONS = new Set(["parsePdfVisionChunked", "parseMenuPdf", "parseRecipePdf"]);
@@ -74,8 +74,10 @@ self.addEventListener("fetch", e => {
       return;
     }
     if (READ_ACTIONS.has(action) || SLOW_ACTIONS.has(action)) {
-      // Slow AI actions get a 90-second timeout; regular calls get 8 seconds
-      const timeoutMs = SLOW_ACTIONS.has(action) ? 90000 : 8000;
+      // Slow AI actions get 90 s. Regular GAS reads get 45 s: getMenus takes ~5 s and
+      // getRecipes/allProducts ~14 s, so the old 8 s cut-off silently served the
+      // pre-save cached copy after almost every edit ("saved but nothing changed").
+      const timeoutMs = SLOW_ACTIONS.has(action) ? 90000 : 45000;
       e.respondWith(networkFirstWithCache(e.request, CACHE_API, 300, timeoutMs));
     }
     return;
@@ -122,6 +124,10 @@ async function networkFirstWithCache(request, cacheName, maxAgeSeconds, timeoutM
   const cache = await caches.open(cacheName);
   try {
     const response = await fetch(request, { signal: AbortSignal.timeout(timeoutMs) });
+    // GAS sometimes answers 200 with a Google HTML error page — never cache that
+    // (it would be served as "data" later); treat it as a failed request instead.
+    const ct = response.headers.get("content-type") || "";
+    if (response.ok && ct.toLowerCase().includes("text/html")) throw new Error("GAS returned HTML");
     if (response.ok) {
       const toCache = response.clone();
       // Store with timestamp header for TTL checking
