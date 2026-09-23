@@ -6426,7 +6426,6 @@ function pdfQASelectRM(code, name) {
 // ═══════════════════════════════════════════════════════════
 (function(){
 'use strict';
-var APIU = typeof API !== 'undefined' ? API : '';
 var RC  = {rm:'#38bdf8',mep:'#34d399',gr:'#c084fc',menu:'#fbbf24',plate:'#f97316'};
 var RBG = {rm:'#071e2e',mep:'#071f14',gr:'#160b28',menu:'#1f1505',plate:'#1c0a00'};
 var CX  = {rm:60,mep:300,gr:540,menu:780,plate:1020};
@@ -6445,17 +6444,39 @@ var $=function(id){return document.getElementById(id);};
 function svgE(t,a){var e=document.createElementNS('http://www.w3.org/2000/svg',t);a=a||{};Object.keys(a).forEach(function(k){e.setAttribute(k,a[k]);});return e;}
 function fmtW(kg){kg=parseFloat(kg)||0;if(!kg)return'—';return kg>=1?(kg%1===0?kg:kg.toFixed(2))+' kg':Math.round(kg*1000)+' g';}
 function pZ(s){if(!s)return[];if(Array.isArray(s))return s;try{var r=JSON.parse(s);return Array.isArray(r)?r:[];}catch(e){return[];}}
-function apiG(p){return fetch(APIU+'?'+new URLSearchParams(p)).then(function(r){return r.json();});}
 
-async function ensureData(){
-  var tasks=[];
-  if(!(window.allInventory||[]).length) tasks.push(apiG({action:'inventory'}).then(function(d){if(d.inventory)window.allInventory=d.inventory;}).catch(function(){}));
-  if(!Object.keys(window.allProducts||{}).length) tasks.push(apiG({action:'allProducts'}).then(function(d){if(!d.error&&typeof d==='object'&&!Array.isArray(d))window.allProducts=d;}).catch(function(){}));
-  if(!(window.allRecipes||[]).length) tasks.push(apiG({action:'getRecipes'}).then(function(d){if(d.recipes)window.allRecipes=d.recipes;}).catch(function(){}));
-  if(!(window.allGRs||[]).length) tasks.push(apiG({action:'getGRs'}).then(function(d){if(d.grs)window.allGRs=d.grs;}).catch(function(){}));
-  if(!(window.allMenus||[]).length) tasks.push(apiG({action:'getMenus'}).then(function(d){if(d.menus)window.allMenus=d.menus;}).catch(function(){}));
-  if(tasks.length) await Promise.allSettled(tasks);
-  allPlates=loadPlates();
+// Data: reuse the dashboard's own (let-declared) globals — window.allX never saw them,
+// so every visit re-downloaded everything from GAS. inventory/allProducts come from
+// Supabase via get(); recipes/GRs/menus are still GAS-only (slow, up to ~14 s), so
+// they're kept in a localStorage cache and revalidated in the background. The view
+// renders immediately and re-renders as each dataset arrives.
+var rLoading=null,rFresh=false,RT_CACHE='rt_cache_v1';
+function rSyncWin(){window.allInventory=allInventory;window.allProducts=allProducts;window.allRecipes=allRecipes;window.allGRs=allGRs;window.allMenus=allMenus;}
+function rCacheLoad(){try{var c=JSON.parse(localStorage.getItem(RT_CACHE)||'null');if(!c)return;if(!allRecipes.length&&Array.isArray(c.recipes))allRecipes=c.recipes;if(!allGRs.length&&Array.isArray(c.grs))allGRs=c.grs;if(!allMenus.length&&Array.isArray(c.menus))allMenus=c.menus;}catch(e){}}
+function rCacheSave(){try{localStorage.setItem(RT_CACHE,JSON.stringify({recipes:allRecipes,grs:allGRs,menus:allMenus,t:Date.now()}));}catch(e){}}
+function rLoadMsg(t){var el=$('rtLoad');if(el){el.textContent=t||'';el.style.display=t?'':'none';}}
+function rRefreshView(){if(!rDOMBuilt)return;rPopMS();if(rQ)rBuild(rQ);}
+function ensureData(force){
+  if(rLoading)return rLoading;
+  // GAS data the dashboard already loaded this session is live; anything else is cache.
+  var liveGas=!!(allRecipes.length&&allGRs.length&&allMenus.length);
+  if(!force)rCacheLoad();
+  allPlates=loadPlates();rSyncWin();
+  var tasks=[],pending=0;
+  function load(need,action,apply){
+    if(!need)return;pending++;
+    tasks.push(get({action:action}).then(function(d){if(d&&!d.error)apply(d);}).catch(function(){}).then(function(){pending--;rSyncWin();rRefreshView();rLoadMsg(pending?'⏳ Lade… ('+pending+')':'');}));
+  }
+  load(force||!allInventory.length,'inventory',function(d){if(Array.isArray(d.inventory))allInventory=d.inventory;});
+  load(force||!Object.keys(allProducts).length,'allProducts',function(d){if(typeof d==='object'&&!Array.isArray(d))allProducts=d;});
+  var gas=force||!(liveGas||rFresh);
+  load(gas||!allRecipes.length,'getRecipes',function(d){if(Array.isArray(d.recipes))allRecipes=d.recipes;});
+  load(gas||!allGRs.length,'getGRs',function(d){if(Array.isArray(d.grs))allGRs=d.grs;});
+  load(gas||!allMenus.length,'getMenus',function(d){if(Array.isArray(d.menus))allMenus=d.menus;});
+  if(!tasks.length)return Promise.resolve();
+  rLoadMsg('⏳ Lade… ('+pending+')');
+  rLoading=Promise.allSettled(tasks).then(function(){rFresh=true;rCacheSave();rLoading=null;rLoadMsg('');});
+  return rLoading;
 }
 
 function rBuild(q){
@@ -6811,6 +6832,7 @@ function rBuildDOM(){
   ov.innerHTML=
   '<div class="rtbar">'+
     '<div class="rttabs"><button class="rttab active" id="rtTD">⬡ Diagram</button><button class="rttab" id="rtTC">⚖ Calculator</button></div>'+
+    '<span id="rtLoad" style="display:none;color:#6b7280;font-family:DM Mono,monospace;font-size:10px;white-space:nowrap"></span>'+
     '<button id="rtRefresh" onclick="rForceRefresh()" title="Refresh data" style="background:rgba(56,189,248,.12);border:1px solid #38bdf8;border-radius:7px;color:#38bdf8;font-family:DM Mono,monospace;font-size:11px;padding:5px 11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap">↺ Refresh</button>'+
     '<div class="rtsw" id="rtSW"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="rtSI" class="rtsi" type="text" placeholder="🔍 Search RM, MEP, GR, Menu, Plate…" autocomplete="off"><button class="rtclr" id="rtCLR">×</button></div>'+
     '<div class="rtfs" id="rtFW">'+
@@ -6894,15 +6916,11 @@ function rBuildDOM(){
 }
 window.rForceRefresh=async function(){
   var btn=$('rtRefresh');if(btn){btn.textContent='↺ …';btn.disabled=true;}
-  window.allInventory=[];window.allProducts={};window.allRecipes=[];window.allGRs=[];window.allMenus=[];
-  var ov=$('relOverlay');if(ov){ov.innerHTML='<div style="display:flex;align-items:center;justify-content:center;flex:1;color:#4b5563;font-family:DM Mono,monospace;font-size:11px;gap:8px;background:#080a0f"><span style="font-size:24px;opacity:.3">⏳</span> Lade…</div>';}
-  rDOMBuilt=false;
-  await ensureData();
-  ov.innerHTML='';
-  rBuildDOM();
-  var si=$('rtSI');if(si&&rQ){si.value=rQ;rBuild(rQ);}
+  if(rLoading)await rLoading;
+  await ensureData(true);
+  if(btn){btn.textContent='↺ Refresh';btn.disabled=false;}
 };
-window.initRelationsTab=async function(){
+window.initRelationsTab=function(){
   var ov=$('relOverlay');if(!ov)return;
   ov.style.display='flex';
   // Use getBoundingClientRect so we get the actual visible bottom edge,
@@ -6912,10 +6930,12 @@ window.initRelationsTab=async function(){
   if(hdr){top=Math.max(top,hdr.getBoundingClientRect().bottom);}
   if(nav&&nav.getBoundingClientRect().bottom>top){top=nav.getBoundingClientRect().bottom;}
   ov.style.top=Math.round(top)+'px';
-  if(!rDOMBuilt){ov.innerHTML='<div style="display:flex;align-items:center;justify-content:center;flex:1;color:#4b5563;font-family:DM Mono,monospace;font-size:11px;gap:8px;background:#080a0f"><span style="font-size:24px;opacity:.3">⏳</span> Lade…</div>';}
-  await ensureData();
-  ov.innerHTML='';
-  rBuildDOM();
+  // Build the UI once and keep it (switching tabs only hides the overlay). Previously
+  // the overlay was cleared after every load but only rebuilt the first time, so a
+  // revisit — or a second click while loading — left it blank.
+  if(!rDOMBuilt){ov.innerHTML='';rBuildDOM();}
+  ensureData();
+  rRefreshView();
 };
 
 // Hide overlay when switching away
