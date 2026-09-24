@@ -1673,6 +1673,30 @@
     <button class="btn-save" onclick="openRelinkTool()">🔍 Prüfen &amp; verknüpfen</button>
   </div>
 
+  <!-- SCAN-STATION LOCK: shared kitchen PIN (js/lock.js on index.html) -->
+  <div class="admin-section" id="admin-devicepin">
+    <div class="admin-section-title">🔒 Kitchen device PIN</div>
+    <div class="admin-section-sub">Locks the scan station so it can't be opened just by having the link. Staff enter this code once per device, then it stays unlocked for 30 days and keeps working offline. Set it once here; leave it unset and the scan station stays open to anyone.</div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label class="form-label">Your own PIN (Admin / Küchenchef / Manager)</label>
+        <input class="form-input" id="dp-admin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+      </div>
+      <div class="form-field">
+        <label class="form-label">New kitchen PIN (4 digits)</label>
+        <input class="form-input" id="dp-new" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="z.B. 4827">
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <button class="btn-save" onclick="saveDevicePin()">💾 Save kitchen PIN</button>
+      <span id="dp-state" style="font-size:12px"></span>
+    </div>
+    <div class="admin-msg" id="dp-msg"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6">
+      This keeps casual visitors out. It is not full protection — the page still contains the data addresses, so someone technical can reach them directly. Proper protection needs server-side accounts.
+    </div>
+  </div>
+
   <!-- SUBSCRIPTION & BILLING -->
   <div class="admin-section" id="admin-subscription">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
@@ -2510,7 +2534,8 @@ function switchTab(btn) {
     loadRequirements(); renderMenuList(); populateMenuFilters();
     if (!allRecipes.length) get({ action:"getRecipes" }).then(d => { if (Array.isArray(d.recipes)) allRecipes = d.recipes; }).catch(() => {});
   }
-  if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
+  if (tabId === "admin")        { if (window.refreshDevicePinState) refreshDevicePinState(); }
+    if (tabId === "relations")    { if (window.initRelationsTab) window.initRelationsTab(); }
   if (tabId === "deductions")   loadDeductions();
   if (tabId === "settings")     renderSettings();
   if (tabId === "reports")      loadReportsTab();
@@ -6599,28 +6624,55 @@ function rDraw(){
     var k=laneUse[r]||0;laneUse[r]=k+1;
     return CT+r*RG-HALF+((k%5)-2)*3.5;
   }
+  // Weight labels sit near the ARROW END (at the target), not mid-line, so it is
+  // obvious which link a weight belongs to. Several edges landing on one node would
+  // pile up at the same spot, so each is placed a little further back along its own
+  // curve (t below) — they fan out instead of overlapping.
+  function bez(p, t) {
+    var u = 1 - t, a = u*u*u, b = 3*u*u*t, c2 = 3*u*t*t, d2 = t*t*t;
+    return { x: a*p[0].x + b*p[1].x + c2*p[2].x + d2*p[3].x,
+             y: a*p[0].y + b*p[1].y + c2*p[2].y + d2*p[3].y };
+  }
+  var placed = [];                                   // label boxes already drawn
+  function hits(x,y,w){
+    for (var i=0;i<placed.length;i++){var p=placed[i];
+      if (Math.abs(x-p.x)*2 < w+p.w+6 && Math.abs(y-p.y) < 17) return true;}
+    return false;
+  }
   rE.forEach(function(e){
     var fn=nb[e.from],tn=nb[e.to];if(!fn||!tn)return;
     var c=RC[e.srcType]||RC.rm;
-    var x1=fn._x+NW,y1=fn._y+NH/2,x2=tn._x,y2=tn._y+NH/2,mx=(x1+x2)/2,d,bx=mx,by=(y1+y2)/2,skip=false;
+    var x1=fn._x+NW,y1=fn._y+NH/2,x2=tn._x,y2=tn._y+NH/2,mx=(x1+x2)/2,d,skip=false;
+    var cp, tEnd=0.80;                                // curve the label rides, and where
     if(fn.col===tn.col){
       // same column (e.g. GR used in a GR): loop out the right side and back in
-      var lx=x1+CH*0.8;d='M'+x1+','+y1+' C'+lx+','+y1+' '+lx+','+y2+' '+x1+','+y2;bx=lx;
+      var lx=x1+CH*0.8;d='M'+x1+','+y1+' C'+lx+','+y1+' '+lx+','+y2+' '+x1+','+y2;
+      cp=[{x:x1,y:y1},{x:lx,y:y1},{x:lx,y:y2},{x:x1,y:y2}];tEnd=0.5;
     } else {
-      skip=cols.some(function(t){return CX[t]>CX[fn.col]&&CX[t]<CX[tn.col];});
+      skip=cols.some(function(t2){return CX[t2]>CX[fn.col]&&CX[t2]<CX[tn.col];});
       if(skip){
         var ly=laneY(y1,y2),cA=x1+CH,cB=x2-CH;
         d='M'+x1+','+y1+' C'+cA+','+y1+' '+cA+','+ly+' '+(cA+CH*0.5)+','+ly+
           ' L'+(cB-CH*0.5)+','+ly+' C'+cB+','+ly+' '+cB+','+y2+' '+x2+','+y2;
-        bx=(cA+cB)/2;by=ly;
+        // last segment only — the label rides the final approach into the node
+        cp=[{x:cB-CH*0.5,y:ly},{x:cB,y:ly},{x:cB,y:y2},{x:x2,y:y2}];tEnd=0.72;
       } else {
         d='M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2;
+        cp=[{x:x1,y:y1},{x:mx,y:y1},{x:mx,y:y2},{x:x2,y:y2}];
       }
     }
     var pa={d:d,fill:'none',stroke:c,'stroke-width':'1.6',opacity:skip?'0.75':'0.6','marker-end':'url(#rta-'+e.srcType+')'};
     if(skip)pa['stroke-dasharray']='6 3';
     eL.appendChild(svgE('path',pa));
     if(e.weight>0){var lbl=fmtW(e.weight),lw=lbl.length*6+9;
+      // Walk back along this edge's own curve until the label has clear space.
+      var bx,by,a;
+      for(var s2=0;s2<7;s2++){
+        a=bez(cp,Math.max(0.12,tEnd-s2*0.115));
+        bx=Math.min(a.x,x2-lw/2-7);by=a.y;
+        if(!hits(bx,by,lw))break;
+      }
+      placed.push({x:bx,y:by,w:lw});
       eL.appendChild(svgE('rect',{x:bx-lw/2,y:by-7,width:lw,height:14,rx:'3',fill:'#080a0f',stroke:c,'stroke-width':'0.7'}));
       var wt=svgE('text',{x:bx,y:by+1,'font-family':'DM Mono,monospace','font-size':'8',fill:c,'text-anchor':'middle','dominant-baseline':'middle'});wt.textContent=lbl;eL.appendChild(wt);}
   });
