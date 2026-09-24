@@ -9,7 +9,7 @@
 // No init-coupling: nothing here runs in the boot fan-out.
 
 const APP_VERSION = '1.0';        // human-facing app version
-const APP_BUILD   = 153;          // tracks the service-worker cache build (bump together)
+const APP_BUILD   = 154;          // tracks the service-worker cache build (bump together)
 const KMEP_SETTINGS_KEY = 'kmep_settings';
 
 // Defaults are also the fallbacks passed at each read site, kept here for the form + documentation.
@@ -165,4 +165,43 @@ function rateApp() {
   } else {
     alert('Set a contact email in Business Profile to send feedback.');
   }
+}
+
+// ── Kitchen device PIN (scan-station lock, Admin panel) ──────────────────────
+// The PIN itself lives server-side in app_settings, which the anon key cannot read;
+// set_access_pin() requires an active Admin/Küchenchef/Manager worker PIN to change
+// it, and verify_access_pin() (used by js/lock.js on index.html) only ever answers
+// true/false. Nothing here puts the PIN in the browser or in git.
+async function refreshDevicePinState() {
+  const el = document.getElementById('dp-state');
+  if (!el) return;
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/rpc/access_pin_is_set', { method: 'POST', headers: _sbH, body: '{}' });
+    const on  = await res.json();
+    el.textContent = on
+      ? '● Lock is ON — the scan station asks for the kitchen PIN.'
+      : '○ Lock is OFF — anyone with the link can open the scan station.';
+    el.style.color = on ? 'var(--green)' : 'var(--amber)';
+  } catch (e) { el.textContent = ''; }
+}
+
+async function saveDevicePin() {
+  const adminEl = document.getElementById('dp-admin'), newEl = document.getElementById('dp-new');
+  const admin = (adminEl.value || '').trim(), pin = (newEl.value || '').trim();
+  if (!/^\d{4}$/.test(admin)) { adminMsg('dp-msg', 'Enter your own 4-digit PIN (Admin, Küchenchef or Manager)', 'err'); return; }
+  if (!/^\d{4}$/.test(pin))   { adminMsg('dp-msg', 'The kitchen PIN must be exactly 4 digits', 'err'); return; }
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/rpc/set_access_pin', {
+      method: 'POST', headers: _sbH,
+      body: JSON.stringify({ p_admin_pin: admin, p_new_pin: pin })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    if (await res.json() === true) {
+      adminMsg('dp-msg', '✓ Saved — the scan station now asks for this PIN', 'ok');
+      adminEl.value = ''; newEl.value = '';
+      refreshDevicePinState();
+    } else {
+      adminMsg('dp-msg', 'Your PIN was not accepted — it must belong to an active Admin, Küchenchef or Manager', 'err');
+    }
+  } catch (e) { adminMsg('dp-msg', 'Error: ' + (e.message || e), 'err'); }
 }
