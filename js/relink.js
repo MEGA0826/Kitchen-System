@@ -138,7 +138,7 @@ function _rlModal() {
   m.style.cssText = 'position:fixed;inset:0;z-index:1600;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto';
   m.innerHTML = `<div style="background:var(--surface,#111318);border:1px solid var(--border,#252a3a);border-radius:14px;width:min(920px,100%);box-shadow:0 20px 60px rgba(0,0,0,.5)">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border,#252a3a)">
-      <div style="font-weight:700;font-size:15px">🔗 Zutaten verknüpfen</div>
+      <div id="rlTitle" style="font-weight:700;font-size:15px">🔗 Zutaten verknüpfen</div>
       <button onclick="closeRelinkTool()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">×</button>
     </div>
     <div id="rlBody" style="padding:16px 18px;font-size:13px"></div>
@@ -156,11 +156,13 @@ async function _rlFetchFresh() {
   if (!gd || !Array.isArray(gd.grs)) throw new Error('GRs konnten nicht geladen werden' + (gd && gd.error ? ': ' + gd.error : ''));
   if (!allInventory.length) { const d = await get({ action: 'inventory' }); if (Array.isArray(d.inventory)) allInventory = d.inventory; }
   if (!Object.keys(allProducts).length) { const d = await get({ action: 'allProducts' }); if (d && !d.error && !Array.isArray(d)) allProducts = d; }
+  if (!allRecipes.length) { const d = await get({ action: 'getRecipes' }); if (Array.isArray(d.recipes)) allRecipes = d.recipes; }   // MEP prices need these
   return { menus: md.menus, grs: gd.grs };
 }
 
 async function openRelinkTool() {
   _rlModal().style.display = 'flex';
+  document.getElementById('rlTitle').textContent = '🔗 Zutaten verknüpfen';
   const body = document.getElementById('rlBody'), foot = document.getElementById('rlFoot');
   body.innerHTML = '<div style="color:var(--muted);padding:30px 0;text-align:center">⏳ Lade Menus, GRs, Inventar… (Menus/GRs kommen aus Google Sheets, bis ~15 s)</div>';
   foot.innerHTML = '';
@@ -264,12 +266,15 @@ async function _rlApply() {
   for (const m of fresh.menus) {
     const { out, n } = fixRows(m.zutaten), img = badImg.has(m.id);
     if (!n && !img) continue;
+    // A newly linked row has no price yet, so price it in the same save — otherwise
+    // the row stays at CHF 0 until someone opens and re-picks it.
+    const e2 = n ? _rlEnrichWeightRows(out) : { enriched: out, waTotal: null };
     try {
       const d = await adminCall({
         action: 'saveMenu', menuId: m.id, name: m.name, category: m.category || '', art: m.art || '',
         saison: m.saison || '', gewicht: m.gewicht ?? '', menuCode: m.menuCode, garverlust: m.garverlust ?? '',
-        wa: m.wa ?? '', vk: m.vk ?? '', deko: m.deko || '', zubereitung: m.zubereitung || '',
-        zutaten: JSON.stringify(out), imageUrl: img ? '' : (m.imageUrl || ''), logoUrl: m.logoUrl || '',
+        wa: e2.waTotal == null ? (m.wa ?? '') : e2.waTotal, vk: m.vk ?? '', deko: m.deko || '', zubereitung: m.zubereitung || '',
+        zutaten: JSON.stringify(e2.enriched), imageUrl: img ? '' : (m.imageUrl || ''), logoUrl: m.logoUrl || '',
         lastUpdate: new Date().toISOString()
       });
       if (d && d.error) throw new Error(d.error);
@@ -279,11 +284,12 @@ async function _rlApply() {
   for (const g of fresh.grs) {
     const { out, n } = fixRows(g.zutaten);
     if (!n) continue;
+    const e2 = _rlEnrichWeightRows(out);
     try {
       const d = await adminCall({
         action: 'saveGR', grCode: g.grCode, name: g.name, art: g.art || 'Grundrezeptur',
-        rohgewicht: g.rohgewicht ?? '', garverlust: g.garverlust ?? '', wa: g.wa ?? '',
-        zutaten: JSON.stringify(out), zubereitung: g.zubereitung || ''
+        rohgewicht: g.rohgewicht ?? '', garverlust: g.garverlust ?? '', wa: e2.waTotal,
+        zutaten: JSON.stringify(e2.enriched), zubereitung: g.zubereitung || ''
       });
       if (d && d.error) throw new Error(d.error);
       ok++; rowsDone += n; say(`✓ ${g.grCode} ${g.name} — ${n} Zutaten`);
@@ -295,4 +301,127 @@ async function _rlApply() {
   try { if (typeof loadGRs === 'function') await loadGRs(); } catch (e) {}
   document.getElementById('rlFoot').innerHTML =
     `<button class="rl-btn" onclick="openRelinkTool()">↺ Erneut prüfen</button><button class="rl-btn" onclick="closeRelinkTool()">Schliessen</button>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RECALCULATE PRICES / WA  (Admin → "Preise & WA neu berechnen")
+// A PDF-imported menu often stores rows that have a valid code but no price,
+// because the lookup data wasn't loaded yet when the import ran — which is why
+// re-picking the ingredient by hand makes the WA appear. This does that for every
+// menu and GR in one pass. _enrichZutaten never clears a price (a failed lookup
+// keeps the old value), so running it is safe and repeatable.
+// ═══════════════════════════════════════════════════════════
+// Count rows (Stk / Port.) hold a piece count, NOT kilograms. _enrichZutaten
+// multiplies gewicht by a CHF/kg rate, so pricing them that way explodes the cost
+// (4 Stk of a maki roll came out at CHF 7.24 instead of ~0.14, and White Torii at
+// CHF 3531). Those rows are therefore left exactly as they are; only weight rows
+// are repriced. Pricing a piece correctly needs a per-piece price, which the data
+// does not carry yet — see the note in the Admin card.
+function _rlEnrichWeightRows(arr) {
+  const src = _rlParse(arr);
+  const out = _enrichZutaten(src).enriched.map((z, i) => (_zIsCount(src[i]) ? src[i] : z));
+  const waTotal = out.reduce((s, z) => s + (parseFloat(z.cost) || 0), 0);
+  return { enriched: out, waTotal: +waTotal.toFixed(2) };
+}
+
+function _rlCostChanges(before, after) {
+  let n = 0;
+  after.forEach((z, i) => {
+    const b = +(parseFloat((before[i] || {}).cost) || 0).toFixed(3);
+    const a = +(parseFloat(z.cost) || 0).toFixed(3);
+    if (Math.abs(a - b) > 0.0005) n++;
+  });
+  return n;
+}
+
+async function openRecalcTool() {
+  _rlModal().style.display = 'flex';
+  const body = document.getElementById('rlBody'), foot = document.getElementById('rlFoot');
+  document.getElementById('rlTitle').textContent = '💰 Preise & WA neu berechnen';
+  body.innerHTML = '<div style="color:var(--muted);padding:30px 0;text-align:center">⏳ Lade Menus, GRs, Inventar, Rezepturen… (bis ~20 s)</div>';
+  foot.innerHTML = '';
+  try {
+    const fresh = await _rlFetchFresh();
+    // fresh array refs so the cost lookup indexes rebuild
+    allGRs = fresh.grs; allMenus = fresh.menus;
+    const orig = new Map();
+    fresh.grs.forEach(g => orig.set('gr:' + (g.grCode || g.id), _rlParse(g.zutaten)));
+    fresh.menus.forEach(m => orig.set('menu:' + m.id, _rlParse(m.zutaten)));
+
+    // GRs first, then menus twice: a menu can contain a GR or another menu, and
+    // each pass feeds its new prices forward.
+    const pass = (rec, key) => {
+      const r = _rlEnrichWeightRows(rec.zutaten);
+      rec.zutaten = JSON.stringify(r.enriched); rec.wa = r.waTotal;
+      return r;
+    };
+    fresh.grs.forEach(g => pass(g));
+    fresh.menus.forEach(m => pass(m));
+    fresh.menus.forEach(m => pass(m));
+
+    const plan = [];
+    const add = (rec, kind, key) => {
+      const before = orig.get(key), after = _rlParse(rec.zutaten);
+      const n = _rlCostChanges(before, after);
+      const waBefore = before.reduce((s, z) => s + (parseFloat(z.cost) || 0), 0);
+      if (n) plan.push({ kind, rec, n, waBefore: +waBefore.toFixed(2), waAfter: rec.wa });
+    };
+    fresh.grs.forEach(g => add(g, 'gr', 'gr:' + (g.grCode || g.id)));
+    fresh.menus.forEach(m => add(m, 'menu', 'menu:' + m.id));
+    _rl = { recalc: plan };
+
+    if (!plan.length) {
+      body.innerHTML = '<div style="padding:30px 0;text-align:center;color:var(--green,#34d399)">✓ Alle Preise sind aktuell.</div>';
+      foot.innerHTML = '<button class="rl-btn" onclick="closeRelinkTool()">Schliessen</button>';
+      return;
+    }
+    const rows = plan.reduce((s, p) => s + p.n, 0);
+    body.innerHTML =
+      `<div style="margin-bottom:12px">${rows} Zutat-Zeilen in ${plan.length} Rezepten bekommen einen Preis (oder einen korrigierten).</div>` +
+      `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Zeilen ohne gültigen Code behalten ihren bisherigen Wert — die zuerst über «Zutaten verknüpfen» verbinden.</div>` +
+      '<div style="max-height:300px;overflow:auto;border:1px solid var(--border,#252a3a);border-radius:8px">' +
+      plan.map(p => `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border,#252a3a);font-size:12px">
+          <span>${_rlBadge(p.kind)} ${_rlEsc((p.rec.menuCode || p.rec.grCode || '') + ' ' + (p.rec.name || ''))}</span>
+          <span style="white-space:nowrap;color:var(--muted)">${p.n} Zeilen · WA ${p.waBefore.toFixed(2)} → <b style="color:var(--amber)">${Number(p.waAfter).toFixed(2)}</b></span>
+        </div>`).join('') + '</div>' +
+      '<div id="rlLog" style="margin-top:12px;font-size:12px;font-family:DM Mono,monospace;white-space:pre-wrap;max-height:200px;overflow:auto"></div>';
+    foot.innerHTML =
+      `<span style="color:var(--muted);font-size:12px;margin-right:auto">${plan.length} Rezepte werden gespeichert</span>` +
+      `<button class="rl-btn" onclick="closeRelinkTool()">Abbrechen</button>` +
+      `<button class="rl-btn" id="rlApply" onclick="_rlApplyRecalc()" style="background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd)">✓ Übernehmen</button>`;
+  } catch (e) {
+    body.innerHTML = `<div style="color:var(--red,#f87171)">Fehler: ${_rlEsc(e.message)}</div>`;
+  }
+}
+
+async function _rlApplyRecalc() {
+  const btn = document.getElementById('rlApply'); btn.disabled = true; btn.textContent = 'Speichern…';
+  const log = document.getElementById('rlLog'), say = t => { log.textContent += t + '\n'; log.scrollTop = 1e9; };
+  let ok = 0, fail = 0;
+  for (const p of _rl.recalc) {
+    const r = p.rec;
+    try {
+      const d = p.kind === 'menu'
+        ? await adminCall({
+            action: 'saveMenu', menuId: r.id, name: r.name, category: r.category || '', art: r.art || '',
+            saison: r.saison || '', gewicht: r.gewicht ?? '', menuCode: r.menuCode, garverlust: r.garverlust ?? '',
+            wa: r.wa, vk: r.vk ?? '', deko: r.deko || '', zubereitung: r.zubereitung || '',
+            zutaten: r.zutaten, imageUrl: r.imageUrl || '', logoUrl: r.logoUrl || '',
+            lastUpdate: new Date().toISOString()
+          })
+        : await adminCall({
+            action: 'saveGR', grCode: r.grCode, name: r.name, art: r.art || 'Grundrezeptur',
+            rohgewicht: r.rohgewicht ?? '', garverlust: r.garverlust ?? '', wa: r.wa,
+            zutaten: r.zutaten, zubereitung: r.zubereitung || ''
+          });
+      if (d && d.error) throw new Error(d.error);
+      ok++; say(`✓ ${(r.menuCode || r.grCode)} ${r.name} — ${p.n} Zeilen, WA ${Number(r.wa).toFixed(2)}`);
+    } catch (e) { fail++; say(`✗ ${(r.menuCode || r.grCode)} ${r.name}: ${e.message}`); }
+  }
+  say(`\nFertig: ${ok} Rezepte aktualisiert${fail ? ', ' + fail + ' Fehler' : ''}.`);
+  try { localStorage.removeItem('rt_cache_v1'); } catch (e) {}
+  try { if (typeof loadMenus === 'function') await loadMenus(); } catch (e) {}
+  try { if (typeof loadGRs === 'function') await loadGRs(); } catch (e) {}
+  document.getElementById('rlFoot').innerHTML =
+    `<button class="rl-btn" onclick="openRecalcTool()">↺ Erneut prüfen</button><button class="rl-btn" onclick="closeRelinkTool()">Schliessen</button>`;
 }

@@ -1671,6 +1671,8 @@
     <div class="admin-section-title">🔗 Zutaten verknüpfen</div>
     <div class="admin-section-sub">Findet Zutaten in Menus und GRs ohne gültigen Code (z.B. aus PDF-Import) und verknüpft sie mit RM / MEP / GR / Menu — damit Kosten, Allergene und Relations stimmen.</div>
     <button class="btn-save" onclick="openRelinkTool()">🔍 Prüfen &amp; verknüpfen</button>
+    <button class="btn-save" onclick="openRecalcTool()" style="margin-left:8px">💰 Preise &amp; WA neu berechnen</button>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">Aus PDF importierte Menus haben oft Zutaten ohne Preis, weil beim Import die Preisdaten noch nicht geladen waren — darum erscheint der WA erst, wenn man die Zutat von Hand neu auswählt. «Preise &amp; WA neu berechnen» macht das für alle Menus und GRs auf einmal — mit Vorschau (WA vorher → nachher) vor dem Speichern. Zeilen mit Stück-Einheit (Stk/Port.) bleiben unverändert, weil dafür ein Preis pro Stück fehlt.</div>
   </div>
 
   <!-- SCAN-STATION LOCK: shared kitchen PIN (js/lock.js on index.html) -->
