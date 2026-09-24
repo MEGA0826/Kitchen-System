@@ -12,12 +12,19 @@
         var sp = new URLSearchParams(location.search);
         var mm = function(q){ try{ return matchMedia(q).matches; }catch(e){ return false; } };
         var standalone = mm('(display-mode: standalone)') || mm('(display-mode: fullscreen)') || mm('(display-mode: minimal-ui)') || navigator.standalone === true;
+        var demo = sp.has('demo');
         var seen; try{ seen = localStorage.getItem('kmep_seen'); }catch(e){}
-        if (!standalone && !sp.has('app') && !seen){ location.replace('welcome.html'); return; }
-        try{ localStorage.setItem('kmep_seen','1'); }catch(e){}
+        if (!standalone && !demo && !sp.has('app') && !seen){ location.replace('welcome.html'); return; }
+        // A demo visit must not mark the intro as seen — otherwise the next bare
+        // visit would skip welcome and open the real kitchen's data.
+        if (!demo) { try{ localStorage.setItem('kmep_seen','1'); }catch(e){} }
       }catch(e){}
     })();
   </script>
+  <!-- Demo mode (?demo=1): answers every backend call from sample data, so the
+       public intro page can show the app without exposing this kitchen. Must load
+       before any app code so its fetch/storage stubs are in place. -->
+  <script src="js/demo.js"></script>
   <title>Kitchen MEP — 212 Nooch Richti</title>
   <link rel="manifest" href="manifest.json">
 
