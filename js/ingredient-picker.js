@@ -11,6 +11,16 @@
 // ─────────────────────────────────────────────
 // INGREDIENT PICKER
 // ─────────────────────────────────────────────
+// Words worth matching on: packaging, units and concept tags carry no meaning here.
+const _IP_NOISE = new Set(('btl beutel krt karton flasche dose dosen eimer sack bidon pack packung schale ' +
+  'schalen stk stueck liter fwg ifc ifco und mit per pro nooch negishi').split(' '));
+function _ipWords(s) {
+  return String(s || '').toLowerCase()
+    .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss')
+    .split(/[^a-z0-9]+/)
+    .filter(w => w.length >= 3 && !/^\d+$/.test(w) && !_IP_NOISE.has(w));
+}
+
 function _ipTypeBtns(active) {
   const types = [
     {id:'rm',   label:'RM',   c:'var(--blue)',  bg:'var(--blue-dim)',       brd:'var(--blue-brd)'},
@@ -36,7 +46,7 @@ function setIpMode(mode) {
   filterIngredientPicker();
 }
 
-function openIngredientPicker(mode, context, keepEditIdx) {
+function openIngredientPicker(mode, context, keepEditIdx, prefill) {
   closeMenu();
   ipMode    = mode;
   ipContext = context || 'menu';
@@ -44,7 +54,10 @@ function openIngredientPicker(mode, context, keepEditIdx) {
   if (!keepEditIdx) _ipEditIdx = -1;
   const titleEl = document.getElementById('ip-title');
   if (titleEl) titleEl.innerHTML = _ipTypeBtns(mode);
-  document.getElementById('ip-search').value = '';
+  // Editing a row pre-fills the search with that ingredient's own name, so its likely
+  // match is on screen straight away (filterIngredientPicker falls back to the closest
+  // names when the stored name doesn't match an item exactly).
+  document.getElementById('ip-search').value = prefill || '';
   document.getElementById('ip-detail').style.display = 'none';
   document.getElementById('ip-gewicht').value = '';
   document.getElementById('ip-allergie').value = '';
@@ -106,10 +119,26 @@ function filterIngredientPicker() {
         })
     : allInventory.filter(r => r.code)
         .map(r => ({ code: r.code, name: r.name||r.code, unit: r.unit||'kg', unitCost: parseFloat(r.kostenUnit||r.kosten||0)||0 }));
-  const filtered = q ? items.filter(i => (i.name||'').toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q)) : items;
+  let filtered = q ? items.filter(i => (i.name||'').toLowerCase().includes(q) || (i.code||'').toLowerCase().includes(q)) : items;
+  // No exact substring hit → fall back to the closest names by shared words, so a stored
+  // name like "GR Sesam - Black & White Dekoration" still finds "GR Sesam - Black & White"
+  // instead of showing nothing.
+  let relaxed = false;
+  if (q && !filtered.length) {
+    const qw = _ipWords(q);
+    if (qw.length) {
+      const scored = items.map(i => {
+        const iw = _ipWords((i.name || '') + ' ' + (i.code || ''));
+        let hit = 0;
+        qw.forEach(w => { if (iw.some(x => x.indexOf(w) === 0 || w.indexOf(x) === 0)) hit++; });
+        return { i: i, hit: hit };
+      }).filter(x => x.hit > 0).sort((a, b) => b.hit - a.hit);
+      if (scored.length) { filtered = scored.map(x => x.i); relaxed = true; }
+    }
+  }
   const el = document.getElementById('ip-list');
   if (!filtered.length) { el.innerHTML = `<div style="font-size:12px;color:var(--muted)">Keine Ergebnisse.</div>`; return; }
-  el.innerHTML = filtered.slice(0,40).map(i => {
+  el.innerHTML = (relaxed ? `<div style="font-size:11px;color:var(--amber);padding:2px 2px 7px">Kein exakter Treffer — ähnlichste zuerst</div>` : '') + filtered.slice(0,40).map(i => {
     const sc = (i.code||'').replace(/"/g,'&quot;');
     const sn = (i.name||'').replace(/"/g,'&quot;');
     const su = (i.unit||'').replace(/"/g,'&quot;');

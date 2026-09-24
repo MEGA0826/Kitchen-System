@@ -168,7 +168,7 @@ function editMepAddZutat(i) {
   const z = mepAddZutaten[i];
   if (!z) return;
   _ipEditIdx = i;
-  openIngredientPicker(z.type || 'rm', 'mep-add', true);
+  openIngredientPicker(z.type || 'rm', 'mep-add', true, z.name || '');
   const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
   ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
   setTimeout(() => {

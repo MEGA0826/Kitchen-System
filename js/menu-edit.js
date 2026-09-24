@@ -292,7 +292,7 @@ function editMenuZutat(i) {
   const z = menuZutaten[i];
   if (!z) return;
   _ipEditIdx = i;
-  openIngredientPicker(z.type || 'rm', 'menu', true);
+  openIngredientPicker(z.type || 'rm', 'menu', true, z.name || '');
   const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
   ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
   setTimeout(() => {
@@ -317,7 +317,7 @@ function editGrZutat(i) {
   const z = agrZutaten[i];
   if (!z) return;
   _ipEditIdx = i;
-  openIngredientPicker(z.type || 'rm', 'agr', true);
+  openIngredientPicker(z.type || 'rm', 'agr', true, z.name || '');
   const r = (!z.type || z.type === 'rm') ? _resolveRmCost(z) : { code: z.code, name: z.name, unit: z.unit || '', unitCost: z.unitCost || 0 };
   ipSelectedItem = { code: r.code, name: r.name, unit: r.unit, unitCost: r.unitCost };
   setTimeout(() => {
