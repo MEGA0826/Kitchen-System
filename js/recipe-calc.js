@@ -150,6 +150,38 @@ function _calcMepAllergens(code) {
   return [...seen];
 }
 
+// ── Menu weight: menus.gewicht is stored in GRAMS ────────────────────────────
+// Ingredient rows are in kg, except count units (Stk / Stück / Port.) and menus
+// used "per piece" (integer amount, no unit, no pieces split) — those are piece
+// counts and must not be summed as kg (1 Stk garnish used to add 1000 g).
+function _zIsCount(z) {
+  const u = String(z.unit || '').toLowerCase().replace(/\./g, '').trim();
+  if (['stk', 'stück', 'stuck', 'st', 'port', 'pcs'].includes(u)) return true;
+  const g = parseFloat(z.gewicht);
+  return (z.type || '') === 'menu' && !z.piecesTotal && !u && Number.isInteger(g) && g >= 1;
+}
+// → { grams, hasCounts }: summed weight of the weighable rows only
+function _zutatenGrams(arr) {
+  let kg = 0, hasCounts = false;
+  (arr || []).forEach(z => {
+    if (_zIsCount(z)) { hasCounts = true; return; }
+    const u = String(z.unit || '').toLowerCase().trim(), g = parseFloat(z.gewicht) || 0;
+    kg += u === 'g' ? g / 1000 : g;
+  });
+  return { grams: Math.round(kg * 1000), hasCounts };
+}
+// Normalise a typed/imported weight to integer grams ('' if none).
+// "1.2 kg" → 1200, "250g" → 250. legacyKg: a bare number < 20 is kg (old/PDF data).
+function _toMenuGrams(v, legacyKg) {
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  if (!s || /pro\s*kg|%/.test(s)) return '';
+  const n = parseFloat(s.replace(',', '.').replace(/[^\d.]+/g, ' ').trim().split(' ')[0]);
+  if (!isFinite(n) || n <= 0) return '';
+  if (/kg/.test(s) || (legacyKg && !/\d\s*g\b|gr\b|gramm/.test(s) && n < 20)) return Math.round(n * 1000);
+  return Math.round(n);
+}
+function _fmtMenuGrams(v) { const n = parseFloat(v); return isFinite(n) && String(v).trim() === String(n) ? n + ' g' : (v || ''); }
+
 // ── Zutaten serialization (moved from dashboard.html, module 18) ─────────────
 // _slimZutaten: reduce a zutaten array to the compact stored form.
 // _enrichZutaten: recompute live unitCost/cost per zutat from inventory/GR/MEP/menu → { enriched, waTotal }.
@@ -158,6 +190,7 @@ function _slimZutaten(arr) {
   return (arr || []).map(z => {
     const s = { type: z.type, code: z.code, name: z.name };
     if (z.gewicht)      s.gewicht    = z.gewicht;
+    if (z.unit)         s.unit       = z.unit;   // keep "Stk"/"Port." — they mark counts, not kg
     if (z.unitCost)     s.unitCost   = z.unitCost;
     if (z.cost)         s.cost       = z.cost;
     if (z.allergie)     s.allergie   = z.allergie;

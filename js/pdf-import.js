@@ -601,7 +601,7 @@ async function confirmPdfImport() {
       zubereitung : zubereitungLine,
       wa          : computedWa || mi.warenaufwand || "",
       vk          : pdfMenuVk || mi.verkaufspreis || "",
-      gewicht     : mi.gewicht || "",
+      gewicht     : _toMenuGrams(mi.gewicht, true),
       lastUpdate  : new Date().toISOString()
     };
 

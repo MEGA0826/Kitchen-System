@@ -134,7 +134,7 @@ function buildMenuPdfHtml(m, interactive) {
       ${m.imageUrl?`<img src="${toDirectImg(m.imageUrl)}" style="width:160px;height:110px;object-fit:cover;border-radius:8px">`:''}
     </div>
     <div style="background:#f7f5f0;border-bottom:2px solid #e8a020;padding:8px 24px;display:flex;gap:24px;flex-wrap:wrap">
-      ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',m.gewicht],['WA',_cur+' '+wa.toFixed(2)],['VK',_cur+' '+vk.toFixed(2)],...(_vat>0 && vk>0 ? [['MwSt',_vat+'%'],['VK netto',_cur+' '+vkNet.toFixed(2)]] : []),['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
+      ${[['Konzept',m.category],['Art',m.art],['Saison',m.saison],['Gewicht',_fmtMenuGrams(m.gewicht)],['WA',_cur+' '+wa.toFixed(2)],['VK',_cur+' '+vk.toFixed(2)],...(_vat>0 && vk>0 ? [['MwSt',_vat+'%'],['VK netto',_cur+' '+vkNet.toFixed(2)]] : []),['FC',fc]].map(([l,v])=>`<div><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#888">${l}</div><div style="font-size:12px;font-weight:600;color:${l==='FC'?fcColor:'#1a1a16'}">${v||'—'}</div></div>`).join('')}
     </div>
     <div style="padding:16px 20px;border-bottom:1px solid #eee">
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:#1a1a16">Zutaten</div>

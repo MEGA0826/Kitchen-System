@@ -176,14 +176,19 @@ function renderMenuZutaten(targetList, targetData) {
 
 function calcWaFromZutaten() {
   const totalWa = menuZutaten.reduce((s, z) => s + (parseFloat(z.cost)   || 0), 0);
-  const totalKg = menuZutaten.reduce((s, z) => s + (parseFloat(z.gewicht)|| 0), 0);
+  const wt      = _zutatenGrams(menuZutaten);
   const waEl    = document.getElementById('mp-wa');
   const totEl   = document.getElementById('mp-wa-total');
   const rohEl   = document.getElementById('mp-gewicht');
   if (waEl)  waEl.value = totalWa.toFixed(2);
   if (totEl) totEl.textContent = 'CHF ' + totalWa.toFixed(2);
-  // mp-gewicht is in grams (placeholder "1000g"), ingredients are in kg
-  if (rohEl && menuZutaten.length) rohEl.value = Math.round(totalKg * 1000);
+  // mp-gewicht is in grams, ingredients are in kg. Only auto-fill when every row is a
+  // weight: piece-counted rows (Stk/Port.) can't be summed, so then the typed value is
+  // kept (it used to be overwritten on every open, adding 1000 g per "1 Stk").
+  if (rohEl && menuZutaten.length) {
+    if (!wt.hasCounts) rohEl.value = wt.grams;
+    rohEl.title = wt.hasCounts ? 'Enthält Stück-Zutaten — Gewicht bitte manuell in g eingeben' : 'Automatisch aus den Zutaten (g)';
+  }
   calcFC();
   calcGarverlust();
 }
@@ -411,7 +416,7 @@ async function saveMenuEntry() {
     category      : document.getElementById('mp-category').value.trim(),
     art,
     saison        : document.getElementById('mp-saison').value,
-    gewicht       : document.getElementById('mp-gewicht').value.trim(),
+    gewicht       : _toMenuGrams(document.getElementById('mp-gewicht').value, false),
     menuCode      : document.getElementById('mp-code').value.trim(),
     garverlust    : document.getElementById('mp-garverlust').value,
     wa            : document.getElementById('mp-wa').value,

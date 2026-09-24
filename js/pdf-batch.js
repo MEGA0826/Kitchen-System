@@ -210,7 +210,7 @@ async function _processBatchItem(idx) {
       zubereitung : zubereitungSafe,
       wa          : computedWa || 0,
       vk          : mi.verkaufspreis || '',
-      gewicht     : mi.gewicht || '',
+      gewicht     : _toMenuGrams(mi.gewicht, true),
       lastUpdate  : new Date().toISOString()
     }));
     if (saved && saved.error) throw new Error(saved.error);
