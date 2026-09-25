@@ -1672,6 +1672,7 @@
     <div class="admin-section-sub">Findet Zutaten in Menus und GRs ohne gültigen Code (z.B. aus PDF-Import) und verknüpft sie mit RM / MEP / GR / Menu — damit Kosten, Allergene und Relations stimmen.</div>
     <button class="btn-save" onclick="openRelinkTool()">🔍 Prüfen &amp; verknüpfen</button>
     <button class="btn-save" onclick="openRecalcTool()" style="margin-left:8px">💰 Preise &amp; WA neu berechnen</button>
+    <div style="font-size:11px;color:var(--red);margin-top:8px;line-height:1.6;border:1px solid var(--red);border-radius:6px;padding:8px">⚠️ Beide Werkzeuge speichern derzeit <b>nur Menus, keine Grundrezepturen</b>: das GAS-Backend legt bei <code>saveGR</code> eine NEUE GR-Zeile an, statt die bestehende zu aktualisieren (am 24.09. sind so 141 doppelte GR-Zeilen entstanden, 92 → 233). Erst bereinigen und saveGR korrigieren, dann wieder aktivieren.</div>
     <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">Aus PDF importierte Menus haben oft Zutaten ohne Preis, weil beim Import die Preisdaten noch nicht geladen waren — darum erscheint der WA erst, wenn man die Zutat von Hand neu auswählt. «Preise &amp; WA neu berechnen» macht das für alle Menus und GRs auf einmal — mit Vorschau (WA vorher → nachher) vor dem Speichern. Zeilen mit Stück-Einheit (Stk/Port.) bleiben unverändert, weil dafür ein Preis pro Stück fehlt.</div>
   </div>
 
