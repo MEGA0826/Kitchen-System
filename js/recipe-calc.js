@@ -47,6 +47,37 @@ function _calcMenuNettoKg(zutatenStr) {
   } catch(e) { return 0; }
 }
 
+// "1 Portion" of a GR means the whole recipe: its netto weight AND its WA. Both are
+// stored on the GR, so "1 Port. GR Papaya Salad" is 0.165 kg / CHF 1.80 — not 1 kg
+// charged at that GR's CHF/kg rate, which read CHF 10.91 and pushed the Papaya Katsu
+// Bowl to WA 40.06. Returns null for rows we cannot resolve (a menu or raw material
+// counted in pieces needs a per-piece weight the data does not carry), and those keep
+// their stored values instead of being guessed at.
+function _zPortion(z) {
+  if (!_zIsCount(z)) return null;
+  const t = (z.type || '').toLowerCase();
+  if (t === 'gr') {
+    const g = _grByKey(z.code || '');
+    if (!g) return null;
+    let kg = parseFloat(g.nettogewicht) || parseFloat(g.rohgewicht) || 0;
+    if (kg > 20) kg = kg / 1000;                 // GR weights are a mix of kg and g
+    const wa = parseFloat(g.wa) || 0;
+    // Only a portion-sized recipe can BE one portion. A bulk batch counted in pieces
+    // (GR Sesam: 2 kg, WA 13.50, written as "1 Stk." in NH200) is bad data, and
+    // charging a whole batch for a pinch of garnish would be worse than leaving it.
+    if (kg > 0.5) return null;
+    return (kg || wa) ? { kg: kg, cost: wa } : null;
+  }
+  if (t === 'menu' && /^port/i.test(String(z.unit || '').trim())) {
+    const m = _menuByKey(z.code || '');
+    if (!m) return null;
+    const kg = (parseFloat(m.gewicht) || 0) / 1000;        // menus store grams
+    const wa = parseFloat(m.wa) || 0;
+    return (kg || wa) ? { kg: kg, cost: wa } : null;
+  }
+  return null;
+}
+
 // Compute live WA from current allInventory prices (RM lookups; GR/MEP fall back to stored unitCost)
 function _calcLiveWA(zutatenStr) {
   if (!allInventory || !allInventory.length) return null;
@@ -57,6 +88,11 @@ function _calcLiveWA(zutatenStr) {
     for (const z of zs) {
       const gw = parseFloat(z.gewicht) || 0;
       if (!gw) continue;
+      const _p = _zPortion(z);                       // portion rows cost their recipe WA
+      if (_p) { total += gw * _p.cost; continue; }
+      // A piece count we cannot resolve is NOT kilograms — charging it at a CHF/kg
+      // rate turned "4 Stk maki" into 4 kg. Keep whatever cost the row already holds.
+      if (_zIsCount(z)) { total += parseFloat(z.cost) || 0; continue; }
       const t = (z.type||'rm').toLowerCase();
       if (t === 'rm') {
         const inv = _invByCode(z.code||'');
@@ -164,6 +200,8 @@ function _zIsCount(z) {
 function _zutatenGrams(arr) {
   let kg = 0, hasCounts = false;
   (arr || []).forEach(z => {
+    const p = _zPortion(z);
+    if (p) { kg += (parseFloat(z.gewicht) || 0) * p.kg; return; }   // n x netto of that recipe
     if (_zIsCount(z)) { hasCounts = true; return; }
     const u = String(z.unit || '').toLowerCase().trim(), g = parseFloat(z.gewicht) || 0;
     kg += u === 'g' ? g / 1000 : g;
@@ -212,6 +250,16 @@ function _enrichZutaten(arr) {
   const enriched = (arr || []).map(z => {
     const gw = parseFloat(z.gewicht) || 0;
     const t  = (z.type || 'rm').toLowerCase();
+    const p  = _zPortion(z);
+    if (p) {                                          // n Portionen x WA per portion
+      const c = gw > 0 && p.cost > 0 ? +(gw * p.cost).toFixed(3) : (parseFloat(z.cost) || 0);
+      waTotal += c;
+      return Object.assign({}, z, { unitCost: p.cost || z.unitCost || 0, cost: c });
+    }
+    if (_zIsCount(z)) {                               // unresolvable piece count — leave it alone
+      waTotal += parseFloat(z.cost) || 0;
+      return Object.assign({}, z);
+    }
     let unitCost = parseFloat(z.unitCost) || 0;
 
     if (t === 'rm') {

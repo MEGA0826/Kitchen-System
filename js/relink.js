@@ -325,7 +325,9 @@ async function _rlApply() {
 // does not carry yet — see the note in the Admin card.
 function _rlEnrichWeightRows(arr) {
   const src = _rlParse(arr);
-  const out = _enrichZutaten(src).enriched.map((z, i) => (_zIsCount(src[i]) ? src[i] : z));
+  // _enrichZutaten now resolves GR portion rows itself and leaves the rest untouched,
+  // so its result can be used directly.
+  const out = _enrichZutaten(src).enriched;
   const waTotal = out.reduce((s, z) => s + (parseFloat(z.cost) || 0), 0);
   return { enriched: out, waTotal: +waTotal.toFixed(2) };
 }
