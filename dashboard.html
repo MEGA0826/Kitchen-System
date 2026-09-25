@@ -6568,7 +6568,15 @@ function rBuild(q){
   });
 
   // edges
-  function addE(fi,ti,w,st){if(rNM[fi]&&rNM[ti])rE.push({from:fi,to:ti,weight:w,srcType:st});}
+  // Identical links are drawn once. Duplicate recipe rows (e.g. the same GR stored
+  // several times) otherwise stack one arrow + weight label per copy, which looked
+  // like a dozen labels on a single relation.
+  var _eSeen={};
+  function addE(fi,ti,w,st){
+    if(!(rNM[fi]&&rNM[ti]))return;
+    var k=fi+"|"+ti+"|"+w+"|"+st;if(_eSeen[k])return;_eSeen[k]=1;
+    rE.push({from:fi,to:ti,weight:w,srcType:st});
+  }
   (window.allRecipes||[]).forEach(function(r){addE('rm:'+r.rmCode,'mep:'+r.mepCode,parseFloat(r.menge)||0,'rm');});
   (window.allGRs||[]).forEach(function(g){var ti='gr:'+(g.grCode||g.id);pZ(g.zutaten).forEach(function(z){if(z.code)addE((z.type||'rm')+':'+z.code,ti,parseFloat(z.gewicht)||0,z.type||'rm');});});
   (window.allMenus||[]).forEach(function(m){var ti=(m.art==='Plate'?'plate':'menu')+':'+(m.menuCode||m.id);pZ(m.zutaten).forEach(function(z){if(z.code)addE((z.type||'rm')+':'+z.code,ti,parseFloat(z.gewicht)||0,z.type||'rm');});});
