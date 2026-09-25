@@ -6676,11 +6676,13 @@ function rDraw(){
     if(skip)pa['stroke-dasharray']='6 3';
     eL.appendChild(svgE('path',pa));
     if(e.weight>0){var lbl=fmtW(e.weight),lw=lbl.length*6+9;
-      // Walk back along this edge's own curve until the label has clear space.
-      var bx,by,a;
-      for(var s2=0;s2<7;s2++){
-        a=bez(cp,Math.max(0.12,tEnd-s2*0.115));
-        bx=Math.min(a.x,x2-lw/2-7);by=a.y;
+      // Keep the label AT the arrow head. If that spot is taken, nudge it sideways
+      // along the last bit of the curve, then vertically — never far back up the line,
+      // which is what made labels look scattered along the whole relation.
+      var bx,by,a,cand=[[tEnd,0],[tEnd-0.07,0],[tEnd-0.14,0],[tEnd,-15],[tEnd,15],[tEnd-0.07,-15],[tEnd-0.07,15],[tEnd-0.21,0]];
+      for(var s2=0;s2<cand.length;s2++){
+        a=bez(cp,Math.max(0.3,cand[s2][0]));
+        bx=Math.min(a.x,x2-lw/2-7);by=a.y+cand[s2][1];
         if(!hits(bx,by,lw))break;
       }
       placed.push({x:bx,y:by,w:lw});
