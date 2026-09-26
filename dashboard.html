@@ -6852,15 +6852,68 @@ function rRenderChips(){
     list.appendChild(chip);
   });
 }
-function rExplode(type,code,name,mult,vis){
-  vis=vis||new Set();var key=type+':'+code;if(vis.has(key))return{type:type,code:code,name:name,weight:mult,children:[]};
-  var v2=new Set(vis);v2.add(key);var z=[];
-  if(type==='mep')z=(window.allRecipes||[]).filter(function(r){return r.mepCode===code;}).map(function(r){var inv=(window.allInventory||[]).find(function(x){return x.code===r.rmCode;})||{};return{type:'rm',code:r.rmCode,name:inv.name||r.rmCode,gewicht:parseFloat(r.menge)||0};});
-  else if(type==='gr'){var git=(window.allGRs||[]).find(function(g){return g.grCode===code||g.id===code;});if(git)z=pZ(git.zutaten);}
-  else if(type==='menu'){var mit=(window.allMenus||[]).find(function(m){return m.menuCode===code||m.id===code;});if(mit)z=pZ(mit.zutaten);}
-  else if(type==='plate'){var pit=allPlates.find(function(p){return p.code===code;});if(pit)z=pit.items||[];}
-  if(!z.length)return{type:type,code:code,name:name,weight:mult,children:[]};
-  return{type:type,code:code,name:name,weight:mult,children:z.map(function(zi){return rExplode(zi.type||'rm',zi.code,zi.name||zi.code,(parseFloat(zi.gewicht||zi.menge)||0)*mult,v2);})};
+// The rows one recipe is made of.
+function rRows(type,code){
+  if(type==='mep')return (window.allRecipes||[]).filter(function(r){return r.mepCode===code;}).map(function(r){
+    var inv=(window.allInventory||[]).find(function(x){return x.code===r.rmCode;})||{};
+    return{type:'rm',code:r.rmCode,name:inv.name||r.rmCode,gewicht:parseFloat(r.menge)||0};});
+  if(type==='gr'){var g=(window.allGRs||[]).find(function(x){return x.grCode===code||x.id===code;});return g?pZ(g.zutaten):[];}
+  if(type==='menu'){var m=(window.allMenus||[]).find(function(x){return x.menuCode===code||x.id===code;});return m?pZ(m.zutaten):[];}
+  if(type==='plate'){
+    var p=allPlates.find(function(x){return x.code===code;});if(p)return p.items||[];
+    var pm=(window.allMenus||[]).find(function(x){return (x.menuCode||x.id)===code;});return pm?pZ(pm.zutaten):[];
+  }
+  return [];
+}
+// Kilograms one row contributes to ONE unit of its parent (a portion row is n x the
+// sub-recipe's netto; everything else already stores kg).
+function rRowKg(z){
+  var p=window._zPortion?_zPortion(z):null;
+  if(p)return (parseFloat(z.gewicht)||0)*p.kg;
+  // A piece count we cannot resolve is NOT kilograms. "8 Stk Rainbow Kiwi Crunch" —
+  // a row with no code — was read as 8 kg and alone made White Torii explode to
+  // 9843 g instead of 1970 g. Contribute nothing rather than eight kilos.
+  var u=String(z.unit||'').toLowerCase().replace(/\./g,'').trim();
+  if(['stk','stück','stuck','st','port','pcs'].indexOf(u)>=0)return 0;
+  return parseFloat(z.gewicht||z.menge)||0;
+}
+function rRowsKg(type,code){return rRows(type,code).reduce(function(s,z){return s+rRowKg(z);},0);}
+// What ONE unit of a recipe weighs (kg): menus store grams, GR weights mix kg and g,
+// a MEP is one GN. Falls back to the sum of its own rows.
+function rRecipeKg(type,code){
+  if(type==='gr'){
+    var g=(window.allGRs||[]).find(function(x){return x.grCode===code||x.id===code;});if(!g)return 0;
+    var n=parseFloat(g.nettogewicht)||parseFloat(g.rohgewicht)||0;if(n>20)n=n/1000;
+    return n||rRowsKg(type,code);
+  }
+  if(type==='mep'){var p=(window.allProducts||{})[code]||{};return parseFloat(p.gnWeight)||rRowsKg(type,code);}
+  if(type==='menu'||type==='plate'){
+    var m=(window.allMenus||[]).find(function(x){return x.menuCode===code||x.id===code;});
+    if(m){var mg=parseFloat(m.gewicht)||0;if(mg>0)return mg/1000;}
+    return rRowsKg(type,code);
+  }
+  return 0;
+}
+// Explode a recipe into its raw materials. `factor` is how many UNITS of this recipe
+// are wanted (1 = one portion), NOT a weight. A sub-recipe is scaled by the fraction
+// of it that is used — kg used / what one batch weighs. Multiplying its ingredients
+// by the kg used instead, as this did before, counted a whole batch per kilo: Beijing
+// Night came out at 2024 g of raw material for a 607 g dish.
+function rExplode(type,code,name,factor,vis){
+  vis=vis||new Set();var key=type+':'+code;
+  if(vis.has(key))return{type:type,code:code,name:name,weight:0,children:[]};
+  var v2=new Set(vis);v2.add(key);
+  var own=rRecipeKg(type,code);
+  var node={type:type,code:code,name:name,weight:factor*own,children:[]};
+  node.children=rRows(type,code).map(function(zi){
+    var kg=rRowKg(zi)*factor,t=(zi.type||'rm').toLowerCase();
+    if(t==='rm')return{type:'rm',code:zi.code,name:zi.name||zi.code,weight:kg,children:[]};
+    var sub=rRecipeKg(t,zi.code);
+    var ch=rExplode(t,zi.code,zi.name||zi.code,sub>0?kg/sub:0,v2);
+    ch.weight=kg;                       // show what this recipe uses, not the batch
+    return ch;
+  });
+  return node;
 }
 function rFlatRM(node,acc){acc=acc||{};if(node.type==='rm'){if(!acc[node.code])acc[node.code]={code:node.code,name:node.name,total:0};acc[node.code].total+=node.weight;}(node.children||[]).forEach(function(c){rFlatRM(c,acc);});return acc;}
 function rNodeCost(node){
