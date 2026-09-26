@@ -105,7 +105,7 @@ function buildMenuPdfHtml(m, interactive) {
       const grSubs = Array.isArray(z.zutaten) ? z.zutaten : [];
       return `<tr style="background:#f7f5f0">
         <td style="padding:4px 6px;font-size:10px;color:#2d8a5e;font-weight:700">GR</td>
-        <td style="padding:4px 6px;font-size:10px;font-weight:600">${z.gewicht?z.gewicht+' kg':'—'}</td>
+        <td style="padding:4px 6px;font-size:10px;font-weight:600">${(function(){var l=typeof _zCountLabel==='function'?_zCountLabel(z):null;return l||(z.gewicht?z.gewicht+' kg':'—');})()}</td>
         <td style="padding:4px 6px;font-size:11px;font-weight:700">${interactive
           ? `<span class="zutat-gr-link" data-name="${(z.name||'').replace(/"/g,'&quot;')}" data-code="${z.code||''}" style="color:#2d8a5e;text-decoration:underline;text-underline-offset:2px;cursor:pointer" title="Grundrezeptur öffnen ↗">${z.name||''} <span style="font-size:9px">↗</span></span>`
           : (z.name||'')} <span style="font-weight:400;color:#888">(${z.art||''})</span></td>
@@ -119,7 +119,7 @@ function buildMenuPdfHtml(m, interactive) {
     }
     return `<tr>
       <td style="padding:4px 6px;font-size:10px;color:#555">${(z.type||'RM').toUpperCase()}</td>
-      <td style="padding:4px 6px;font-size:10px">${z.gewicht?z.gewicht+' kg':'—'}</td>
+      <td style="padding:4px 6px;font-size:10px">${(function(){var l=typeof _zCountLabel==='function'?_zCountLabel(z):null;return l||(z.gewicht?z.gewicht+' kg':'—');})()}</td>
       <td style="padding:4px 6px;font-size:11px;font-weight:500">${z.name||''}</td>
       <td style="padding:4px 6px;font-size:10px;color:#e8a020">${z.cost?_cur+' '+parseFloat(z.cost).toFixed(2):''}${z.allergie?'<br><span style="color:#888">⚠️'+z.allergie+'</span>':''}</td>
     </tr>`;

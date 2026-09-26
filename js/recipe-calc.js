@@ -78,6 +78,55 @@ function _zPortion(z) {
   return null;
 }
 
+// ── Pieces on a plate ────────────────────────────────────────────────────────
+// A plate lists rolls, and a cook counts pieces, not grams. The row stores kilograms,
+// because that is what every calculation needs, so the count is derived from the
+// component's own weight and how many pieces it contains. Returns null when it cannot
+// be worked out — an unknown component, no piece count, or not a whole number.
+function _zRows(rec) {
+  try { const r = JSON.parse(typeof rec.zutaten === 'string' ? (rec.zutaten || '[]') : '[]'); return Array.isArray(r) ? r : []; }
+  catch (e) { return []; }
+}
+function _piecesInRecipe(m) {
+  const n = String(m.name || '').match(/(\d+)\s*(stk|stück|pcs)\b/i);
+  if (n) return +n[1];
+  const rice = _zRows(m).find(z => /sushi-?reis/i.test(z.name || ''));   // 160 g = 8, 90 g = 6, 20 g = 1
+  if (rice) {
+    const kg = parseFloat(rice.gewicht) || 0;
+    if (kg >= 0.15) return 8;
+    if (kg >= 0.08) return 6;
+    if (kg > 0) return 1;
+  }
+  return null;
+}
+function _zPieces(z) {
+  const t = (z.type || '').toLowerCase();
+  if (t !== 'menu' && t !== 'plate') return null;
+  const m = _menuByKey(z.code || '');
+  if (!m) return null;
+  const amount = parseFloat(z.gewicht) || 0;
+  if (!amount) return null;
+  const unit = String(z.unit || '').toLowerCase().replace(/\./g, '').trim();
+  if (['stk', 'stück', 'stuck', 'st', 'pcs'].includes(unit)) return amount;   // already a count
+  const per = _piecesInRecipe(m), grams = parseFloat(m.gewicht) || 0;
+  if (!per || !grams) return null;
+  const n = amount * 1000 / (grams / per);
+  return (Math.abs(n - Math.round(n)) < 0.06 && Math.round(n) > 0) ? Math.round(n) : null;
+}
+
+// How a row's amount should READ: pieces for a roll on a plate, a portion for a GR
+// used per portion, and null when it is a plain weight so the caller formats it its
+// own way. Shared by the printable views and the Relations line labels.
+function _zCountLabel(z) {
+  const p = _zPieces(z);
+  if (p) return p + ' Stk';
+  const u = String(z.unit || '').toLowerCase().replace(/\./g, '').trim();
+  if (['stk', 'stück', 'stuck', 'st', 'port', 'pcs'].indexOf(u) >= 0) {
+    return (parseFloat(z.gewicht) || 0) + ' ' + z.unit;
+  }
+  return null;
+}
+
 // Compute live WA from current allInventory prices (RM lookups; GR/MEP fall back to stored unitCost)
 function _calcLiveWA(zutatenStr) {
   if (!allInventory || !allInventory.length) return null;
