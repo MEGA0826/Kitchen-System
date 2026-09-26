@@ -6713,7 +6713,15 @@ function rOpenSB(node){
     if(node.type==='mep'&&window.openEditProductModal)window.openEditProductModal(node.code);
     else if(node.type==='gr'&&window.openEditGRPopup)window.openEditGRPopup(node.code);
     else if(node.type==='menu'&&window.openMenuView)window.openMenuView(node.data&&node.data.id||node.code);
-    else if(node.type==='plate')rtOpenPlate(node.code);
+    else if(node.type==='plate'){
+      // A plate node is either a Menu with art=Plate (the real sushi plates, stored
+      // in the Sheets data) or one assembled here and kept in this browser. Only the
+      // latter belongs to the plate builder — sending a menu-backed plate there found
+      // nothing in allPlates and opened a blank 'New Plate' form, which is why the
+      // 13 sushi plates could not be edited.
+      if(allPlates.some(function(p){return p.code===node.code;}))rtOpenPlate(node.code);
+      else if(window.openMenuView)window.openMenuView(node.data&&node.data.id||node.code);
+    }
   };
   calcBtn.style.display=(node.type==='menu'||node.type==='plate')?'block':'none';
   calcBtn.onclick=function(){rSwitchV('calc');rAddChip(node.code,node.name,1);};
