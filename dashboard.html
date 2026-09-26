@@ -559,8 +559,8 @@
 <div class="nav" id="main-nav">
   <button class="tab"        data-tab="morning"      onclick="switchTab(this)"><span class="tab-icon">🌅</span>Morning</button>
   <button class="tab active" data-tab="kds"          onclick="switchTab(this)"><span class="tab-icon">📺</span>KDS</button>
-  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Inventory</button>
-  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>Products</button>
+  <button class="tab"        data-tab="inventory"    onclick="switchTab(this)"><span class="tab-icon">📦</span>Products</button>
+  <button class="tab"        data-tab="products"     onclick="switchTab(this)"><span class="tab-icon">🥗</span>MEP</button>
   <button class="tab"        data-tab="recipes"      onclick="switchTab(this)"><span class="tab-icon">📋</span>Recipes</button>
   <button class="tab"        data-tab="relations"    onclick="switchTab(this)"><span class="tab-icon">🔗</span>Relations</button>
   <button class="tab"        data-tab="orders"       onclick="switchTab(this)"><span class="tab-icon">🛒</span>Orders</button>
@@ -793,7 +793,7 @@
 <!-- INVENTORY Tab-->
   <div class="panel" id="panel-inventory">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="section-title" style="margin-bottom:0"><span data-i18n="inventory">Inventory</span> <span class="section-title-icon">📦</span></div>
+      <div class="section-title" style="margin-bottom:0"><span data-i18n="products">Products</span> <span class="section-title-icon">📦</span></div>
       <button onclick="toggleInvForm()" id="inv-add-btn" style="padding:7px 14px;border-radius:var(--radius-sm);background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer">＋ Add Item</button>
     </div>
     <div class="section-sub" data-i18n="inv-sub">Select a category or supplier to load items</div>
@@ -818,7 +818,7 @@
       </datalist>
       <div class="form-grid">
         <div class="form-field"><label class="form-label" data-i18n="code">Code *</label><input class="form-input" id="if-code" placeholder="e.g. RM-001" list="dl-inv-code"></div>
-        <div class="form-field"><label class="form-label" data-i18n="name">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from inventory"></div>
+        <div class="form-field"><label class="form-label" data-i18n="name">Name</label><input class="form-input" id="if-name" placeholder="auto-filled from products"></div>
         <div class="form-field"><label class="form-label" data-i18n="category">Category</label><input class="form-input" id="if-kategorie" placeholder="e.g. Gemüse" list="dl-inv-cat"></div>
         <div class="form-field"><label class="form-label" data-i18n="unit">Unit</label><input class="form-input" id="if-unit" placeholder="kg / pcs / l" list="dl-inv-unit"></div>
         <div class="form-field"><label class="form-label" data-i18n="qty">Quantity</label><input class="form-input" type="number" id="if-qty" placeholder="12" min="0" step="0.1"></div>
@@ -847,7 +847,7 @@
       </select>
     </div>
     <div id="inv-content">
-      <div class="empty-state"><div class="empty-icon">🔍</div>Choose a category or supplier above to view inventory</div>
+      <div class="empty-state"><div class="empty-icon">🔍</div>Choose a category or supplier above to view products</div>
     </div>
   </div>
 
@@ -1722,7 +1722,7 @@
         <div class="plan-price">Free <span>/ mo</span></div>
         <div class="plan-feature">MEP scanning (up to 3 products)</div>
         <div class="plan-feature">Staff QR codes</div>
-        <div class="plan-feature locked">Inventory management</div>
+        <div class="plan-feature locked">Product management</div>
         <div class="plan-feature locked">Reports & analytics</div>
         <div class="plan-feature locked">Recipe management</div>
         <button class="upgrade-btn secondary" style="margin-top:8px" disabled>Current plan</button>
@@ -1731,7 +1731,7 @@
         <div style="font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase">Pro ⭐ Recommended</div>
         <div class="plan-price">CHF 29 <span>/ mo</span></div>
         <div class="plan-feature">Unlimited MEP products</div>
-        <div class="plan-feature">Full inventory + orders</div>
+        <div class="plan-feature">Full products + orders</div>
         <div class="plan-feature">Reports & analytics</div>
         <div class="plan-feature">Recipe management</div>
         <div class="plan-feature">Priority support</div>
@@ -1786,7 +1786,7 @@
       <!-- Features -->
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
         <div class="plan-feature">Unlimited MEP products & scanning</div>
-        <div class="plan-feature">Full inventory management</div>
+        <div class="plan-feature">Full product management</div>
         <div class="plan-feature">Reports & analytics</div>
         <div class="plan-feature">Recipe & order management</div>
         <div class="plan-feature">Priority email support</div>
@@ -5719,7 +5719,7 @@ function _escM(str) {
 <div class="edit-modal" id="editProductModal">
   <div class="edit-modal-content" style="max-width:580px">
     <div class="edit-modal-header">
-      <h3 id="editProductTitle">Edit Product</h3>
+      <h3 id="editProductTitle">Edit MEP</h3>
       <button class="edit-modal-close" onclick="closeEditProductModal()">×</button>
     </div>
     <div class="form-grid">
@@ -5837,7 +5837,7 @@ function _escM(str) {
 <div class="edit-modal" id="editInventoryModal">
   <div class="edit-modal-content">
     <div class="edit-modal-header">
-      <h3 id="editInventoryTitle">Edit Inventory</h3>
+      <h3 id="editInventoryTitle">Edit Product</h3>
       <button class="edit-modal-close" onclick="closeEditInventoryModal()">×</button>
     </div>
     <div class="form-grid">
@@ -5994,7 +5994,7 @@ function _escM(str) {
         <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="pdfqa-name" placeholder="e.g. Karotten"></div>
         <div class="form-field pdfqa-rm-only" id="pdfqa-search-wrap">
           <label class="form-label">🔍 Search existing RM</label>
-          <input class="form-input" id="pdfqa-rm-search" placeholder="Type to search inventory…"
+          <input class="form-input" id="pdfqa-rm-search" placeholder="Type to search products…"
             oninput="pdfQASearchRM(this.value)"
             style="margin-bottom:4px">
           <div id="pdfqa-rm-results" style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;display:none"></div>

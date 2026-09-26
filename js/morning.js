@@ -119,7 +119,7 @@ function _renderMorningLowStock() {
   if (!el) return;
 
   if (!allInventory.length) {
-    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">📦</div>Inventory not loaded yet. <a href="#" onclick="event.preventDefault();loadInventory().then(()=>_renderMorningLowStock())" style="color:var(--amber)">Load now</a></div>`;
+    el.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">📦</div>Products not loaded yet. <a href="#" onclick="event.preventDefault();loadInventory().then(()=>_renderMorningLowStock())" style="color:var(--amber)">Load now</a></div>`;
     return;
   }
 
