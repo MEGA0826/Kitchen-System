@@ -51,8 +51,17 @@
     document.head.appendChild(st);
 
     var fab = document.createElement("button");
-    fab.id = "me-fab"; fab.innerHTML = "📊 Menu Analysis"; fab.onclick = open;
-    document.body.appendChild(fab);
+    fab.id = "me-fab"; fab.onclick = open;
+    var meSlot = document.getElementById("headerTools");
+    if (meSlot) {
+      fab.className = "header-tool";
+      fab.title = "Menu analysis";
+      fab.innerHTML = '<span>📊</span><span class="lbl">Menu Analysis</span>';
+      meSlot.insertBefore(fab, meSlot.firstChild);   // sits left of Ask
+    } else {
+      fab.innerHTML = "📊 Menu Analysis";
+      document.body.appendChild(fab);
+    }
 
     panel = document.createElement("div");
     panel.id = "me-ov";

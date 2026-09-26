@@ -96,9 +96,17 @@
 
     var fab = document.createElement("button");
     fab.id = "ask-fab";
-    fab.innerHTML = "💬 Ask";
     fab.onclick = toggle;
-    document.body.appendChild(fab);
+    var askSlot = document.getElementById("headerTools");
+    if (askSlot) {
+      fab.className = "header-tool";
+      fab.title = "Ask the kitchen data";
+      fab.innerHTML = '<span>💬</span><span class="lbl">Ask</span>';
+      askSlot.appendChild(fab);
+    } else {
+      fab.innerHTML = "💬 Ask";
+      document.body.appendChild(fab);
+    }
 
     panel = document.createElement("div");
     panel.id = "ask-panel";

@@ -147,6 +147,16 @@
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
     .back-btn { font-family: var(--mono); font-size: 9px; color: var(--muted); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); transition: color .15s, border-color .15s; }
     .back-btn:hover { color: var(--text); border-color: var(--amber); }
+    #headerTools { display:flex; align-items:center; gap:8px; }
+    .header-tool { position:static !important; left:auto !important; right:auto !important; bottom:auto !important;
+      height:34px !important; padding:0 12px !important; border-radius:8px !important; font-size:12px !important;
+      font-weight:500 !important; box-shadow:none !important; background:var(--surface2) !important;
+      border:1px solid var(--border2) !important; color:var(--text) !important; cursor:pointer;
+      display:flex; align-items:center; gap:6px; white-space:nowrap; font-family:inherit; }
+    .header-tool:hover { border-color:var(--amber) !important; color:var(--amber) !important; }
+    /* on a narrow screen keep the icon, drop the word */
+    @media (max-width:820px) { .header-tool .lbl { display:none; } .header-tool { padding:0 10px !important; } }
+
     .header-gear { display:flex; align-items:center; justify-content:center; width:34px; height:34px; padding:0; font-size:17px; line-height:1; background:none; border:1px solid var(--border2); border-radius:var(--radius-sm); cursor:pointer; transition:border-color .15s, transform .3s; flex-shrink:0; }
     .header-gear:hover { border-color:var(--amber); transform:rotate(45deg); }
     .header-gear.active { border-color:var(--amber-brd); background:var(--amber-dim); }
@@ -542,6 +552,8 @@
     </div>
   </div>
   <div class="header-right">
+    <!-- Ask + Menu Analysis mount here (js/ask.js, js/menu-engineering.js) -->
+    <span id="headerTools"></span>
     <button class="header-gear" id="settingsGearBtn" onclick="openSettings()" title="Settings" aria-label="Settings">⚙️</button>
     <a href="#" class="back-btn" onclick="goBack(event)">← Back</a>
     <!-- FIX: live badge now stacks LIVE row + date/time row -->
