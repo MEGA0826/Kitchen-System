@@ -97,7 +97,7 @@
     return `<svg viewBox="0 0 128 104" width="132" height="108" role="img" aria-label="${label}">${inner}</svg>`;
   }
 
-  window.kmepCookStart = function (anchorId, caption) {
+  window.kmepCookStart = function (anchor, caption) {
     styles();
     window.kmepCookStop();
     const el = document.createElement('div');
@@ -106,8 +106,9 @@
     el.setAttribute('aria-live', 'polite');
     el.innerHTML = `<div class="kcBox">${svg(COOKING, 'Saving')}<div class="kcCap">${caption || 'Speichern…'}</div></div>`;
     // Sit inside the dialog when there is one, so it covers the form and not the
-    // whole screen; fixed full-screen otherwise.
-    const host = anchorId && document.getElementById(anchorId);
+    // whole screen; fixed full-screen otherwise. Takes an id or an element.
+    const host = typeof anchor === 'string' ? document.getElementById(anchor)
+               : (anchor && anchor.appendChild ? anchor : null);
     if (host) {
       const pos = getComputedStyle(host).position;
       if (pos === 'static') host.style.position = 'relative';
@@ -135,4 +136,67 @@
   };
 
   window.kmepCookFail = function () { window.kmepCookStop(); };
+
+  // ── Automatic coverage for every other Save button ──────────────────────────
+  // Every write goes through adminCall, so wrapping it once covers the workers,
+  // HACCP zones and tasks, new MEP and products, MEP recipe rows and the PDF
+  // quick-add without editing each handler. The four recipe editors still drive it
+  // themselves, because there the overlay should also cover the reload and close.
+  //
+  // Deliberately narrow: only save* actions (a delete is not "cooking"), never while
+  // a bulk tool runs (it would add ~1 s per record), never on top of an existing one.
+  function topDialog() {
+    let best = null, bz = -1;
+    document.querySelectorAll('.edit-modal, [id$="Popup"], [id$="Modal"], [id$="modal"]').forEach(el => {
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      if (!el.getBoundingClientRect().width) return;
+      const z = parseInt(cs.zIndex, 10) || 0;
+      if (z >= bz) { bz = z; best = el; }
+    });
+    return best;
+  }
+
+  function wrap() {
+    if (typeof window.adminCall !== 'function' || window.adminCall.__kmepWrapped) return;
+    const orig = window.adminCall;
+    const wrapped = async function (params) {
+      const action = String((params && params.action) || '');
+      const take = /^save/i.test(action) && !window._kmepBulk && !document.getElementById(ID);
+      if (!take) return orig.apply(this, arguments);
+      window.kmepCookStart(topDialog());
+      try {
+        const res = await orig.apply(this, arguments);
+        if (res && res.error) { window.kmepCookFail(); return res; }
+        await window.kmepCookDone();
+        return res;
+      } catch (e) { window.kmepCookFail(); throw e; }
+    };
+    wrapped.__kmepWrapped = true;
+    window.adminCall = wrapped;
+  }
+
+  // Bulk tools wrap their loop in this, so a 90-record run plays one animation, not 90.
+  window.kmepCookBulk = function (on) { window._kmepBulk = !!on; if (on) window.kmepCookStop(); };
+
+  // The PDF importers save many records in a row. Wrapping them here — rather than
+  // editing each one — means the flag is cleared in a finally, so a failed import
+  // can never leave the rest of the app without its save animation.
+  const BULK_FNS = ['startBatchPdfImport', 'applyBatchMatches', 'retryFailedBatch', 'confirmPdfImport'];
+  function wrapBulk() {
+    BULK_FNS.forEach(name => {
+      const fn = window[name];
+      if (typeof fn !== 'function' || fn.__kmepBulkWrapped) return;
+      const w = async function () {
+        window.kmepCookBulk(true);
+        try { return await fn.apply(this, arguments); }
+        finally { window.kmepCookBulk(false); }
+      };
+      w.__kmepBulkWrapped = true;
+      window[name] = w;
+    });
+  }
+
+  wrap(); wrapBulk();
+  document.addEventListener('DOMContentLoaded', function () { wrap(); wrapBulk(); });
 })();

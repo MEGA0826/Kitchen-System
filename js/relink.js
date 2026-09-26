@@ -261,6 +261,7 @@ async function _rlApply() {
     });
     return { out, n };
   };
+  kmepCookBulk(true);                                 // one run, not one animation per record
   let ok = 0, fail = 0, rowsDone = 0;
   const badImg = new Set(_rl.fixImg ? fresh.menus.filter(m => _rlBadImg(m.imageUrl)).map(m => m.id) : []);
   for (const m of fresh.menus) {
@@ -301,6 +302,7 @@ async function _rlApply() {
       ok++; rowsDone += n; say(`✓ ${g.grCode} ${g.name} — ${n} Zutaten`);
     } catch (e) { fail++; say(`✗ ${g.grCode} ${g.name}: ${e.message}`); }
   }
+  kmepCookBulk(false);
   say(`\nFertig: ${ok} Rezepte gespeichert, ${rowsDone} Zutaten verknüpft${fail ? ', ' + fail + ' Fehler' : ''}.`);
   try { localStorage.removeItem('rt_cache_v1'); } catch (e) {}
   try { if (typeof loadMenus === 'function') await loadMenus(); } catch (e) {}
@@ -405,6 +407,7 @@ async function openRecalcTool() {
 async function _rlApplyRecalc() {
   const btn = document.getElementById('rlApply'); btn.disabled = true; btn.textContent = 'Speichern…';
   const log = document.getElementById('rlLog'), say = t => { log.textContent += t + '\n'; log.scrollTop = 1e9; };
+  kmepCookBulk(true);
   let ok = 0, fail = 0;
   for (const p of _rl.recalc) {
     const r = p.rec;
@@ -428,6 +431,7 @@ async function _rlApplyRecalc() {
       ok++; say(`✓ ${(r.menuCode || r.grCode)} ${r.name} — ${p.n} Zeilen, WA ${Number(r.wa).toFixed(2)}`);
     } catch (e) { fail++; say(`✗ ${(r.menuCode || r.grCode)} ${r.name}: ${e.message}`); }
   }
+  kmepCookBulk(false);
   say(`\nFertig: ${ok} Rezepte aktualisiert${fail ? ', ' + fail + ' Fehler' : ''}.`);
   try { localStorage.removeItem('rt_cache_v1'); } catch (e) {}
   try { if (typeof loadMenus === 'function') await loadMenus(); } catch (e) {}

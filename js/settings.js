@@ -9,7 +9,7 @@
 // No init-coupling: nothing here runs in the boot fan-out.
 
 const APP_VERSION = '1.0';        // human-facing app version
-const APP_BUILD   = 165;          // tracks the service-worker cache build (bump together)
+const APP_BUILD   = 166;          // tracks the service-worker cache build (bump together)
 const KMEP_SETTINGS_KEY = 'kmep_settings';
 
 // Defaults are also the fallbacks passed at each read site, kept here for the form + documentation.
@@ -190,6 +190,7 @@ async function saveDevicePin() {
   const admin = (adminEl.value || '').trim(), pin = (newEl.value || '').trim();
   if (!/^\d{4}$/.test(admin)) { adminMsg('dp-msg', 'Enter your own 4-digit PIN (Admin, Küchenchef or Manager)', 'err'); return; }
   if (!/^\d{4}$/.test(pin))   { adminMsg('dp-msg', 'The kitchen PIN must be exactly 4 digits', 'err'); return; }
+  kmepCookStart('panel-admin');
   try {
     const res = await fetch(SB_URL + '/rest/v1/rpc/set_access_pin', {
       method: 'POST', headers: _sbH,
@@ -197,11 +198,13 @@ async function saveDevicePin() {
     });
     if (!res.ok) throw new Error(await res.text());
     if (await res.json() === true) {
-      adminMsg('dp-msg', '✓ Saved — the scan station now asks for this PIN', 'ok');
       adminEl.value = ''; newEl.value = '';
       refreshDevicePinState();
+      await kmepCookDone();
+      adminMsg('dp-msg', '✓ Saved — the scan station now asks for this PIN', 'ok');
     } else {
+      kmepCookFail();
       adminMsg('dp-msg', 'Your PIN was not accepted — it must belong to an active Admin, Küchenchef or Manager', 'err');
     }
-  } catch (e) { adminMsg('dp-msg', 'Error: ' + (e.message || e), 'err'); }
+  } catch (e) { kmepCookFail(); adminMsg('dp-msg', 'Error: ' + (e.message || e), 'err'); }
 }
