@@ -6,7 +6,7 @@
 // timers for the motion itself.
 //
 //   kmepCookStart('menuPopup')   → show over that dialog (or the screen if omitted)
-//   await kmepCookDone()         → flip to "ready", hold ~700 ms, then remove
+//   await kmepCookDone()         → flip to "ready", hold ~950 ms, then remove
 //   kmepCookFail()               → remove at once, so the error message is visible
 //
 // Safe to call twice; a second start replaces the first. Honours reduced motion.
@@ -36,9 +36,21 @@
 @keyframes kcToss{0%,100%{transform:rotate(-13deg)}45%{transform:rotate(9deg)}}
 @keyframes kcHop{0%,100%{transform:translate(0,0)}40%{transform:translate(5px,-19px)}70%{transform:translate(2px,-5px)}}
 @keyframes kcRise{0%{opacity:0;transform:translateY(4px) scaleX(.85)}25%{opacity:.85}100%{opacity:0;transform:translateY(-22px) scaleX(1.25)}}
-#${ID} .done{animation:kcPop .42s cubic-bezier(.34,1.56,.64,1) both}
-#${ID} .tick{animation:kcDraw .34s ease-out .12s both}
-@keyframes kcPop{0%{opacity:0;transform:scale(.55)}100%{opacity:1;transform:scale(1)}}
+/* the plate arrives first, then the food, the garnish and finally the tick, so the
+   eye lands on the dish rather than the badge; the steam keeps rising so the result
+   reads as just-cooked instead of a frozen success icon */
+#${ID} .plate{animation:kcPlate .5s cubic-bezier(.34,1.56,.64,1) both}
+#${ID} .food {animation:kcFood .42s cubic-bezier(.34,1.56,.64,1) .12s both}
+#${ID} .garn {animation:kcGarn .34s ease-out .3s both}
+#${ID} .wisp {animation:kcWisp 2.2s ease-out .35s infinite}
+#${ID} .wisp2{animation:kcWisp 2.2s ease-out .95s infinite}
+#${ID} .badge{animation:kcBadge .4s cubic-bezier(.34,1.56,.64,1) .34s both}
+#${ID} .tick {animation:kcDraw .3s ease-out .5s both}
+@keyframes kcPlate{0%{opacity:0;transform:translateY(9px) scale(.9)}100%{opacity:1;transform:none}}
+@keyframes kcFood {0%{opacity:0;transform:translateY(7px) scale(.7)}100%{opacity:1;transform:none}}
+@keyframes kcGarn {0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:none}}
+@keyframes kcWisp {0%{opacity:0;transform:translateY(3px) scaleX(.8)}25%{opacity:.7}100%{opacity:0;transform:translateY(-20px) scaleX(1.3)}}
+@keyframes kcBadge{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:none}}
 @keyframes kcDraw{from{stroke-dashoffset:26}to{stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){#${ID} *{animation:none!important}}
 `;
@@ -60,11 +72,25 @@
 
   const READY = `
 <g class="done">
-  <ellipse cx="64" cy="76" rx="38" ry="11" fill="#151820" stroke="#e2e8f0" stroke-width="3"/>
-  <ellipse cx="64" cy="72" rx="23" ry="7"  fill="#1f1505" stroke="#e8a020" stroke-width="2.5"/>
-  <circle cx="96" cy="44" r="15" fill="#071f14" stroke="#34d399" stroke-width="2.5"/>
-  <path class="tick" d="M89 44 l5 5 l9 -10" fill="none" stroke="#34d399" stroke-width="3.2"
-        stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="26"/>
+  <ellipse class="wisp"  cx="57" cy="60" rx="4.5" ry="7" fill="#9ca3af" opacity="0"/>
+  <ellipse class="wisp2" cx="72" cy="58" rx="4"   ry="6" fill="#9ca3af" opacity="0"/>
+  <g class="plate">
+    <ellipse cx="64" cy="82" rx="41" ry="13" fill="#151820" stroke="#e2e8f0" stroke-width="3"/>
+    <ellipse cx="64" cy="80" rx="28" ry="8.5" fill="none" stroke="#3a4152" stroke-width="1.6"/>
+  </g>
+  <g class="food">
+    <path d="M48 79 q7 -15 16 -15 q9 0 16 15 z" fill="#1f1505" stroke="#e8a020" stroke-width="2.4" stroke-linejoin="round"/>
+    <circle cx="58" cy="72" r="2.6" fill="#e8a020" opacity=".55"/>
+  </g>
+  <g class="garn">
+    <path d="M70 66 q6 -5 11 -2 q-4 6 -11 2 z" fill="#34d399"/>
+    <circle cx="55" cy="66" r="2.6" fill="#f87171"/>
+  </g>
+  <g class="badge">
+    <circle cx="100" cy="40" r="14.5" fill="#071f14" stroke="#34d399" stroke-width="2.5"/>
+    <path class="tick" d="M93.5 40 l4.5 5 l8.5 -9.5" fill="none" stroke="#34d399" stroke-width="3.2"
+          stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="26"/>
+  </g>
 </g>`;
 
   function svg(inner, label) {
@@ -104,7 +130,7 @@
     if (!el) return Promise.resolve();
     el.classList.add('ok');
     el.innerHTML = `<div class="kcBox">${svg(READY, 'Saved')}<div class="kcCap">${caption || 'Fertig'}</div></div>`;
-    const hold = typeof holdMs === 'number' ? holdMs : 700;
+    const hold = typeof holdMs === 'number' ? holdMs : 950;   // plate+food+garnish+tick ≈ 800 ms
     return new Promise(r => setTimeout(() => { window.kmepCookStop(); r(); }, hold));
   };
 
