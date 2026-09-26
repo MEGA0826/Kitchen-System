@@ -1312,7 +1312,7 @@
   </div>
   
   <!-- ═══ MENU VIEW POPUP ═══ -->
-  <div id="menuViewPopup" style="display:none;position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px">
+  <div id="menuViewPopup" style="display:none;position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px" onclick="if(event.target===this)closeMenuView()">
   <div style="max-width:720px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <div style="font-size:13px;font-weight:600;color:#fff" id="mvp-title">Menu</div>
@@ -1328,7 +1328,7 @@
   </div>
 
   <!-- ═══ GR VIEW POPUP ═══ -->
-  <div id="grViewPopup" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px">
+  <div id="grViewPopup" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px" onclick="if(event.target===this)closeGrView()">
   <div style="max-width:720px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <div style="font-size:13px;font-weight:600;color:#fff" id="grv-title">GR</div>
@@ -1343,7 +1343,7 @@
   </div>
 
   <!-- ═══ MEP VIEW POPUP ═══ -->
-  <div id="mepViewPopup" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px">
+  <div id="mepViewPopup" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,0.88);overflow-y:auto;padding:16px" onclick="if(event.target===this)closeMepView()">
   <div style="max-width:720px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <div style="font-size:13px;font-weight:600;color:#fff" id="mepv-title">MEP</div>
