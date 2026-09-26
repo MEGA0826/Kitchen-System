@@ -118,7 +118,7 @@ function renderMenuZutaten(targetList, targetData) {
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;color:var(--text);font-weight:500">${nameHtml}${z.isDeko ? ' <span style="font-size:10px;background:var(--green-dim);color:var(--green);border:1px solid var(--green-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🌿 deko</span>' : ''}${z.isTopping ? ' <span style="font-size:10px;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-brd);border-radius:10px;padding:1px 6px;margin-left:4px">🍯 topping</span>' : ''}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.6">
-            ${z.gewicht ? `<span>${z.gewicht}kg</span>` : ''}
+            ${z.gewicht ? `<span>${z.gewicht}${z.unit && !/^kg$/i.test(z.unit) ? ' ' + z.unit : 'kg'}</span>` : ''}
             ${z.cost    ? `<span style="color:var(--amber)"> · CHF ${parseFloat(z.cost).toFixed(2)}</span>` : ''}
             ${extras    ? `<span style="color:var(--blue)"> · ${extras}</span>` : ''}
             ${z.allergie? `<span style="color:var(--red)"> · ⚠️ ${_t('allergie')}: ${z.allergie}</span>` : ''}
