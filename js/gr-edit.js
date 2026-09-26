@@ -180,6 +180,7 @@ async function saveGREntry() {
   }
   const btn = document.getElementById('agr-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
+  kmepCookStart('grPopup');
   const roh   = parseFloat(document.getElementById('agr-rohgewicht').value) || 0;
   const verl  = parseFloat(document.getElementById('agr-garverlust').value) || 0;
   const wa    = parseFloat(document.getElementById('agr-wa').value) || 0;
@@ -188,7 +189,7 @@ async function saveGREntry() {
     if (_agrSaveImg.startsWith('data:') && _agrImgFile) {
       adminMsg('agr-msg', '📤 Bild wird hochgeladen…', '');
       try { _agrSaveImg = await _uploadItemImage(_agrImgFile, 'gr'); _agrImgFile = null; }
-      catch(e) { adminMsg('agr-msg', e.message, 'err'); btn.disabled = false; btn.textContent = '💾 Speichern'; return; }
+      catch(e) { kmepCookFail(); adminMsg('agr-msg', e.message, 'err'); btn.disabled = false; btn.textContent = '💾 Speichern'; return; }
     }
     if (!_agrSaveImg.startsWith('http')) _agrSaveImg = '';
     // GAS saveGR always creates a new row — delete existing entry first when editing
@@ -217,13 +218,15 @@ async function saveGREntry() {
     }
     adminMsg('agr-msg','✓ GR gespeichert','ok');
     await loadGRs();
+    await kmepCookDone();
     // Repaint the GR list + recipe pickers so the new/edited GR shows immediately
     // (loadGRs only refills allGRs; deleteGR refreshes but saveGREntry did not).
     try { _refreshGrList(); } catch(e) {}
     try { renderMenuListByCat(); } catch(e) {}
     try { updateRecipeAddButtons(); } catch(e) {}
-    setTimeout(closeAddGRPopup, 900);
+    closeAddGRPopup();
   } catch(e) {
+    kmepCookFail();
     adminMsg('agr-msg','Fehler: '+e.message,'err');
   } finally {
     btn.disabled = false; btn.textContent = '💾 Speichern';

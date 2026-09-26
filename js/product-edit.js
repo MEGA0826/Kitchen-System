@@ -511,12 +511,13 @@ async function saveEditedProduct() {
   }
   const btn = document.querySelector("#editProductModal .btn-save");
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  kmepCookStart("editProductModal");
   try {
     let _epfSaveImg = document.getElementById('epf-img-el')?.src || '';
     if (_epfSaveImg.startsWith('data:') && _epfImgFile) {
       adminMsg('epf-msg', '📤 Bild wird hochgeladen…', '');
       try { _epfSaveImg = await _uploadItemImage(_epfImgFile, 'mep'); _epfImgFile = null; }
-      catch(e) { adminMsg('epf-msg', e.message, 'err'); if (btn) { btn.disabled = false; btn.textContent = 'Save'; } return; }
+      catch(e) { kmepCookFail(); adminMsg('epf-msg', e.message, 'err'); if (btn) { btn.disabled = false; btn.textContent = 'Save'; } return; }
     }
     if (!_epfSaveImg.startsWith('http')) _epfSaveImg = v("epf-drive");
     const mepMax    = v("epf-mepmax");
@@ -540,8 +541,10 @@ async function saveEditedProduct() {
     adminMsg("epf-msg", "✓ Saved", "ok");
     await loadProducts();
     filterProducts();
-    setTimeout(() => closeEditProductModal(), 800);
+    await kmepCookDone();
+    closeEditProductModal();
   } catch(e) {
+    kmepCookFail();
     adminMsg("epf-msg", "Error: " + e.message, "err");
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = "Save"; }

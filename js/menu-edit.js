@@ -428,13 +428,16 @@ async function saveMenuEntry() {
     lastUpdate    : new Date().toISOString()
   };
 
+  kmepCookStart('menuPopup');
   try {
     const data = await adminCall(payload);
     if (data.error) throw new Error(data.error);
     adminMsg('mp-msg', '✓ Gespeichert', 'ok');
     await loadMenus();
-    setTimeout(closeMenuPopup, 900);
+    await kmepCookDone();
+    closeMenuPopup();
   } catch(e) {
+    kmepCookFail();
     adminMsg('mp-msg', 'Fehler: ' + e.message, 'err');
   } finally {
     btn.disabled = false; btn.textContent = '💾 Speichern';

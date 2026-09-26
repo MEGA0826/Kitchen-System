@@ -155,12 +155,13 @@ async function saveEditedInventory() {
   const btn = document.querySelector("#editInventoryModal .btn-save");
   btn.disabled = true;
   btn.textContent = "Saving…";
+  kmepCookStart("editInventoryModal");
   try {
     let _eifSaveImg = document.getElementById('eif-img-el')?.src || '';
     if (_eifSaveImg.startsWith('data:') && _eifImgFile) {
       adminMsg('eif-msg', '📤 Bild wird hochgeladen…', '');
       try { _eifSaveImg = await _uploadItemImage(_eifImgFile, 'rm'); _eifImgFile = null; }
-      catch(e) { adminMsg('eif-msg', e.message, 'err'); btn.disabled = false; btn.textContent = 'Save'; return; }
+      catch(e) { kmepCookFail(); adminMsg('eif-msg', e.message, 'err'); btn.disabled = false; btn.textContent = 'Save'; return; }
     }
     if (!_eifSaveImg.startsWith('http')) _eifSaveImg = '';
     const data = await adminCall({
@@ -186,6 +187,7 @@ async function saveEditedInventory() {
     });
     if (data.error) throw new Error(data.error);
     adminMsg("eif-msg", "Saved OK", "ok");
+    await kmepCookDone();
     closeEditInventoryModal();
     await loadInventory();
     try { renderAdminInventory(); } catch(e) {}
@@ -194,6 +196,7 @@ async function saveEditedInventory() {
     try { _refreshMepList(); } catch(e) {}
     try { renderMenuListByCat(); } catch(e) {}
   } catch(e) {
+    kmepCookFail();
     adminMsg("eif-msg", "Error: " + e.message, "err");
   } finally {
     btn.disabled = false;
