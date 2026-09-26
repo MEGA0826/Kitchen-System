@@ -926,6 +926,7 @@
       <button type="button" class="rcat-btn" onclick="setRecipeCat('Bowl')">🥣 Bowl</button>
       <button type="button" class="rcat-btn" onclick="setRecipeCat('Dessert')">🍮 Dessert</button>
       <button type="button" class="rcat-btn" onclick="setRecipeCat('Specials')">⭐ Specials</button>
+      <button type="button" class="rcat-btn" onclick="setRecipeCat('Kids')">🧒 Kids</button>
       <button type="button" class="rcat-btn" id="rcat-clear" onclick="setRecipeCat('')" style="display:none;background:var(--red-dim);color:var(--red);border-color:var(--red-brd)">✕ Clear</button>
     </div>
 
@@ -1006,6 +1007,7 @@
             <option>Bowl</option>
             <option>Dessert</option>
             <option>Specials</option>
+            <option>Kids</option>
             <option>Hauptgang</option>
             <option>Vorspeise</option>
             <option>Beilage</option>
@@ -6024,7 +6026,7 @@ function _escM(str) {
         <div class="form-field pdfqa-rm-mep-gr"><label class="form-label">Unit</label><input class="form-input" id="pdfqa-unit" placeholder="kg"></div>
         <div class="form-field pdfqa-rm-only"><label class="form-label">Cost/Unit CHF</label><input class="form-input" type="number" id="pdfqa-cost" placeholder="0.00" step="0.01"></div>
         <div class="form-field pdfqa-rm-only"><label class="form-label">Supplier</label><input class="form-input" id="pdfqa-sup" placeholder="Transgourmet"></div>
-        <div class="form-field pdfqa-menu-only" style="display:none"><label class="form-label">Art</label><select class="form-input" id="pdfqa-art"><option>Hauptgang</option><option>Starter</option><option>Noodle</option><option>Soup</option><option>Bowl</option><option>Dessert</option></select></div>
+        <div class="form-field pdfqa-menu-only" style="display:none"><label class="form-label">Art</label><select class="form-input" id="pdfqa-art"><option>Hauptgang</option><option>Starter</option><option>Noodle</option><option>Soup</option><option>Bowl</option><option>Dessert</option><option>Kids</option></select></div>
         <div class="form-field pdfqa-menu-only" style="display:none"><label class="form-label">VK (CHF)</label><input class="form-input" type="number" id="pdfqa-vk" placeholder="0.00" step="0.05"></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
