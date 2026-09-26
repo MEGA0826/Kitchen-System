@@ -6540,7 +6540,7 @@ function rBuild(q){
   // Search shows the matches + everything that (transitively) uses them, so the
   // only ingredients shown are ones on a path to a match (e.g. Tofu RM → GR Tofu →
   // Tofu Bowl), not every salt/oil in a menu whose NAME happens to contain the query.
-  // "+ Alle Zutaten" (rAllIng) additionally shows each match's direct ingredients.
+  // A narrow search (<=3 matches) also expands the full ingredient tree downward.
   var ing={},usedIn={};
   function link(from,to){if(!from||!to||from===to)return;(ing[to]=ing[to]||[]).push(from);(usedIn[from]=usedIn[from]||[]).push(to);}
   (window.allRecipes||[]).forEach(function(r){link('rm:'+r.rmCode,'mep:'+r.mepCode);});
@@ -6550,7 +6550,20 @@ function rBuild(q){
 
   var relevant=new Set(matched),stack=Array.from(matched);
   while(stack.length){(usedIn[stack.pop()]||[]).forEach(function(u){if(!relevant.has(u)){relevant.add(u);stack.push(u);}});}
-  if(rAllIng)matched.forEach(function(mid){(ing[mid]||[]).forEach(function(i){relevant.add(i);});});
+  // Looking up ONE dish means you want what it is made of, so a narrow search also
+  // walks DOWN the ingredients — all the way (menu -> GR -> RM), not one level. A
+  // broad search keeps the where-used view: expanding every match is what buried
+  // "Tofu" under every oil and salt of the five menus whose name contains it.
+  // "+ Alle Zutaten" forces the same expansion whatever the search matched.
+  if(rAllIng||matched.size<=3){
+    var dstack=Array.from(matched),seenDown=new Set(dstack);
+    while(dstack.length){
+      (ing[dstack.pop()]||[]).forEach(function(i){
+        relevant.add(i);
+        if(!seenDown.has(i)){seenDown.add(i);dstack.push(i);}
+      });
+    }
+  }
 
   relevant.forEach(function(rid){
     var parts=rid.split(':'),type=parts[0],code=parts.slice(1).join(':');
