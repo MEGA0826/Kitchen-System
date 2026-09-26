@@ -180,7 +180,7 @@ async function saveGREntry() {
   }
   const btn = document.getElementById('agr-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
-  kmepCookStart('grPopup');
+  kmepCookStart('addGRPopup');
   const roh   = parseFloat(document.getElementById('agr-rohgewicht').value) || 0;
   const verl  = parseFloat(document.getElementById('agr-garverlust').value) || 0;
   const wa    = parseFloat(document.getElementById('agr-wa').value) || 0;
