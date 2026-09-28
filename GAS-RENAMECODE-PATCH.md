@@ -20,29 +20,60 @@ MEP codes**, which the app cannot cascade because their code fields are read-onl
 
 ### Everywhere a code lives
 
-| Code kind | Stored again in |
-|---|---|
-| **RM** (`Lager` A) | `Rezept` C · `Deductions` rm_code · `GR.zutaten[].code` · `Menus.zutaten[].code` |
-| **MEP** (`Produkt` A) | `Rezept` A · `Scan` C · `Archive` C · `Deductions` mep_code · `MEP_Stock` product_code · `Sales_History` product_code · `GR.zutaten` · `Menus.zutaten` |
-| **GR** (`GR` grCode) | `GR.zutaten` · `Menus.zutaten` |
-| **Menu** (`Menus` menuCode) | `Menus.zutaten` · `GR.zutaten` · `menu_sales_map.menu_code` |
+Verified against the live `code.gs` (v16):
+
+| Code kind | Home | Stored again in |
+|---|---|---|
+| **RM** | `Lager` A | `MEP` C *(rows where G=Type is `rm`)* · `Deductions` D · `GR.zutaten[].code` · `Menus.zutaten[].code` |
+| **MEP** | `Produkt` A | `MEP` A · `MEP` C *(rows where G=Type is `mep`)* · `Scan` C · `Archive` C · `MEP_Stock` B · `Deductions` C · `Rezeptur` B · `GR.zutaten` · `Menus.zutaten` |
+| **GR** | `GR` B (`grCode`) | `MEP` C *(rows where G=Type is `gr`)* · `GR.zutaten` · `Menus.zutaten` |
+| **Menu** | `Menus` B (`menuCode`) | `Rezeptur` A · `Menus.zutaten` · `GR.zutaten` |
+
+Three things worth knowing about this table:
+
+- **`MEP` is the recipe sheet** — `A=MEP Code B=MEP Name C=RM Code D=RM Name E=Menge
+  F=Einheit G=Type H=Garverlust`. There is no `Rezept` sheet. Column C is **not
+  RM-only**: `G=Type` decides whether it holds an `rm`, `mep` or `gr` code, so a rename
+  of any of the three has to look there, filtered by Type.
+- **`Sales_History` has no code column at all** — its header is
+  `Datum · Produkt · Kategorie · Menge · Umsatz CHF · Preis · WA · Produktmarge ·
+  Imported`. It stores the product *name*. Nothing to rename.
+- **`Rezeptur` links Menu → MEP**, written by `saveMenuMep` as
+  `[menuCode, mepCode, step, weight, desc]`, and it has **no header row**.
 
 Plates live in the browser's `localStorage` (`rt_plates`) and cannot be reached from
-the server — the audit below reports them as unfixable so you know to re-pick them.
+the server — the audit below cannot see them either, so re-pick those by hand.
+
+---
+
+## Two bugs in the live `code.gs`, found while mapping this
+
+Neither is caused by this patch. Both are worth fixing separately.
+
+1. **`Rezeptur` is read with two different meanings.** `saveMenuMep` writes
+   `[menuCode, mepCode, …]`, but `allergenPDF` reads the same sheet as
+   `mc = row[0]` (*mepCode*) and `rc = row[1]` (*rmCode*), then looks `rc` up in the
+   Produkt allergen index. So the allergen roll-up is resolving menu codes as MEP
+   codes and MEP codes as RM codes — it will silently find nothing there.
+2. **`Rezeptur` has no header row, but is read from row 2.** `getOrCreateSheet`
+   creates it bare and `saveMenuMep` reads `getRange(2, 1, …)`, so the first link ever
+   written sits in row 1 and is invisible to every later read and to the dedupe check.
+
+Because of #2 this patch treats `Rezeptur` as headerless and addresses it by position.
 
 ---
 
 ## Before you paste anything: check the map
 
-**I could not read your live `code.gs` or your spreadsheet**, so the sheet names and
-column positions in `CODE_TARGETS` below are taken from `CLAUDE.md`, `db/schema.sql`
-and the v13 backup. Two are known to disagree: the v13 backup reads a sheet called
-**`Rezept`** while `CLAUDE.md` lists **`Rezeptur`**.
+The map below is built from your live `code.gs`, but **column positions still come from
+what the code writes, not from what your sheet currently contains** — a hand-inserted
+column would shift them. The patch therefore resolves every column **by header name
+first**, falls back to the declared position, and **skips sheets it cannot find**
+instead of throwing.
 
-So the patch resolves every column **by header name first**, falls back to the fixed
-index, and **skips sheets it cannot find** instead of throwing. Run
-`listCodeTargets()` once from the Apps Script editor and read the log — it prints what
-it actually resolved in *your* spreadsheet. Fix the map, not the logic.
+Run `listCodeTargets()` once from the Apps Script editor and read the log. It prints
+what it actually resolved in your spreadsheet, and `Rezeptur` should be the only line
+that resolves `by position`. Fix the map, not the logic.
 
 ---
 

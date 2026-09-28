@@ -27,6 +27,8 @@ function openMenuPopup(menuId) {
   setVal('mp-category',    existing?.category    || '');
   setVal('mp-art',         existing?.art         || '');
   setVal('mp-saison',      existing?.saison      || 'All Year');
+  // A new menu is on sale; an existing one keeps whatever the sheet says (empty = on).
+  setVal('mp-active',      existing ? String(_menuIsActive(existing)) : 'true');
   setVal('mp-code',        existing?.menuCode    || '');
   setVal('mp-gewicht',     existing?.gewicht     || '');
   setVal('mp-garverlust',  existing?.garverlust  || '');
@@ -444,6 +446,23 @@ async function saveMenuEntry() {
     const data = await adminCall(payload);
     if (data.error) throw new Error(data.error);
     adminMsg('mp-msg', '✓ Gespeichert', 'ok');
+    // The active flag lives in a column saveMenu does not write (it writes columns
+    // 1..16 by position), so it is set through its own action — and only when it
+    // actually changed, to save a round trip on every ordinary save.
+    const _wantActive = (document.getElementById('mp-active')?.value || 'true') !== 'false';
+    const _menuIdNow  = editingMenuId || (data && data.menuId) || '';
+    const _wasActive  = editingMenuId
+      ? _menuIsActive(allMenus.find(m => m.id === editingMenuId))
+      : true;
+    if (_menuIdNow && _wantActive !== _wasActive) {
+      try {
+        const r = await adminCall({ action: 'setMenuActive', menuId: _menuIdNow, active: String(_wantActive) });
+        if (r && r.error) throw new Error(r.error);
+      } catch (e) {
+        // The menu itself saved fine — say what did not, rather than failing the save.
+        adminMsg('mp-msg', '✓ Gespeichert, aber Verkaufs-Status nicht übernommen: ' + e.message, 'err');
+      }
+    }
     await loadMenus();
     // Move every zutaten reference onto the new code, after this menu already carries
     // it. Slow (re-reads Menus + GRs from Sheets), so say what is happening.

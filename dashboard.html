@@ -1037,6 +1037,14 @@
             <option>Frühling</option><option>Sommer</option><option>Herbst</option><option>Winter</option>
           </select>
         </div>
+        <div class="form-field">
+          <label class="form-label">Verkauf</label>
+          <select class="form-input" id="mp-active">
+            <option value="true">✅ Im Verkauf</option>
+            <option value="false">⏸ Inaktiv – nicht im Verkauf</option>
+          </select>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.5">Inaktiv = grau in allen Listen, zählt nicht im Relations-Rechner. Allergene bleiben erfasst.</div>
+        </div>
       </div>
 
       <!-- Menu Bild -->
@@ -5406,11 +5414,17 @@ function _renderMenuRow(m) {
   const art = m.art || "Menu";
   const allergens = _calcAllergens(m.zutaten);
   const allergenStr = allergens.length ? `<span style="font-size:10px;color:var(--red);white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${allergens.join(', ')}">⚠️ ${allergens.join(' · ')}</span>` : '';
+  // Not on sale: the whole row greys out and says so. Deliberately still listed and
+  // still editable — it is paused, not deleted.
+  const off = !_menuIsActive(m);
+  const offCard = off ? "opacity:0.45;filter:grayscale(1);" : "";
+  const offBadge = off ? `<span class="recipe-type-badge" style="background:var(--gray-dim);color:var(--muted);flex-shrink:0;white-space:nowrap" title="Nicht im Verkauf">⏸ INAKTIV</span>` : "";
   return `<div data-menu-id="${m.id}" class="menu-card-item"
-    style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);margin-bottom:4px"
+    style="padding:7px 10px;border-radius:8px;background:var(--surface);cursor:pointer;border:1px solid var(--border);margin-bottom:4px;${offCard}"
     onmouseover="this.style.borderColor='var(--amber-brd)'" onmouseout="this.style.borderColor='var(--border)'">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-      <span style="font-size:13px;font-weight:500;word-break:break-word">${m.name||"—"}</span>
+      <span style="font-size:13px;font-weight:500;word-break:break-word${off ? ";text-decoration:line-through;color:var(--muted)" : ""}">${m.name||"—"}</span>
+      ${offBadge}
       <span class="recipe-type-badge" style="background:${artBg[art]||"var(--gray-dim)"};color:${artColor[art]||"var(--muted)"};flex-shrink:0;white-space:nowrap;margin-left:auto">${art}</span>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -6487,6 +6501,11 @@ var rN=[],rE=[],rNM={};
 var rF=new Set(['rm','mep','gr','menu','plate']);
 var rAllIng=false,rQ='',rSel=null,rTx={x:20,y:20,scale:1},rPan=false,rPS={x:0,y:0};
 var rCM=[],rView='diagram',rDOMBuilt=false;
+// The relation line whose weight label was clicked: "from|to|weight|srcType". While it
+// is set, that line and the two items it joins are lit and everything else is dimmed,
+// so a single link is readable in a diagram full of crossing lines.
+var rSelEdge=null,rDownXY=null;
+function rEdgeKey(e){return e.from+'|'+e.to+'|'+e.weight+'|'+e.srcType;}
 
 function loadPlates(){try{return JSON.parse(localStorage.getItem('rt_plates')||'[]');}catch(e){return[];}}
 function savePlates(a){try{localStorage.setItem('rt_plates',JSON.stringify(a));}catch(e){alert('Plate save failed (storage full?): '+e.message);}}
@@ -6533,7 +6552,7 @@ function ensureData(force){
 }
 
 function rBuild(q){
-  rN=[];rE=[];rNM={};
+  rN=[];rE=[];rNM={};rSelEdge=null;   // the old edge keys mean nothing after a rebuild
   q=(q||'').trim().toLowerCase();
   if(q.length<2){rShowPrompt();return;}
 
@@ -6584,14 +6603,15 @@ function rBuild(q){
   relevant.forEach(function(rid){
     var parts=rid.split(':'),type=parts[0],code=parts.slice(1).join(':');
     if(!rF.has(type))return;
-    var name=code;
+    var name=code,inactive=false;
     if(type==='rm'){var inv=(window.allInventory||[]).find(function(x){return x.code===code;});name=inv?inv.name||code:code;}
     else if(type==='mep'){name=((window.allProducts||{})[code]||{}).name||code;}
     else if(type==='gr'){var g=(window.allGRs||[]).find(function(g){return g.grCode===code||g.id===code;});name=g?g.name||code:code;}
-    else if(type==='menu'){var m=(window.allMenus||[]).find(function(m){return m.menuCode===code||m.id===code;});name=m?m.name||code:code;}
-    else if(type==='plate'){var p=allPlates.find(function(p){return p.code===code;});if(!p){var pm2=(window.allMenus||[]).find(function(m){return (m.menuCode||m.id)===code&&m.art==='Plate';});if(pm2)p={name:pm2.name};}name=p?p.name||code:code;}
+    else if(type==='menu'){var m=(window.allMenus||[]).find(function(m){return m.menuCode===code||m.id===code;});name=m?m.name||code:code;inactive=!!m&&!_menuIsActive(m);}
+    else if(type==='plate'){var p=allPlates.find(function(p){return p.code===code;});var pm2=(window.allMenus||[]).find(function(m){return (m.menuCode||m.id)===code&&m.art==='Plate';});if(!p&&pm2)p={name:pm2.name};name=p?p.name||code:code;inactive=!!pm2&&!_menuIsActive(pm2);}
     var n=addN(type,code,name);
     n.isMatch=matched.has(rid);
+    n.inactive=inactive;              // greyed in the diagram: paused, not on sale
     if(type==='mep'){n.data={type:'mep',zutaten:(window.allRecipes||[]).filter(function(r){return r.mepCode===code;}).map(function(r){var inv=(window.allInventory||[]).find(function(x){return x.code===r.rmCode;})||{};return{type:'rm',code:r.rmCode,name:inv.name||r.rmCode,gewicht:parseFloat(r.menge)||0};})};} 
     else if(type==='gr'){n.data=(window.allGRs||[]).find(function(g){return g.grCode===code||g.id===code;})||null;}
     else if(type==='menu'){n.data=(window.allMenus||[]).find(function(m){return m.menuCode===code||m.id===code;})||null;}
@@ -6687,9 +6707,17 @@ function rDraw(){
       if (Math.abs(x-p.x)*2 < w+p.w+6 && Math.abs(y-p.y) < 17) return true;}
     return false;
   }
+  // Resolve the clicked line once. After a rebuild the edge may be gone, so drop the
+  // selection rather than dimming the whole diagram against something invisible.
+  var hiFrom=null,hiTo=null;
+  if(rSelEdge){
+    rE.forEach(function(e){if(rEdgeKey(e)===rSelEdge){hiFrom=e.from;hiTo=e.to;}});
+    if(!hiFrom)rSelEdge=null;
+  }
   rE.forEach(function(e){
     var fn=nb[e.from],tn=nb[e.to];if(!fn||!tn)return;
     var c=RC[e.srcType]||RC.rm;
+    var ekey=rEdgeKey(e),eOn=rSelEdge===ekey,eDim=!!rSelEdge&&!eOn;
     var x1=fn._x+NW,y1=fn._y+NH/2,x2=tn._x,y2=tn._y+NH/2,mx=(x1+x2)/2,d,skip=false;
     var cp, tEnd=0.80;                                // curve the label rides, and where
     if(fn.col===tn.col){
@@ -6709,7 +6737,9 @@ function rDraw(){
         cp=[{x:x1,y:y1},{x:mx,y:y1},{x:mx,y:y2},{x:x2,y:y2}];
       }
     }
-    var pa={d:d,fill:'none',stroke:c,'stroke-width':'1.6',opacity:skip?'0.75':'0.6','marker-end':'url(#rta-'+e.srcType+')'};
+    var pa={d:d,fill:'none',stroke:c,'stroke-width':eOn?'3':'1.6',
+            opacity:eDim?'0.1':(eOn?'1':(skip?'0.75':'0.6')),
+            'marker-end':'url(#rta-'+e.srcType+')'};
     if(skip)pa['stroke-dasharray']='6 3';
     eL.appendChild(svgE('path',pa));
     // a roll on a plate is counted, not weighed
@@ -6724,18 +6754,34 @@ function rDraw(){
         if(!hits(bx,by,lw))break;
       }
       placed.push({x:bx,y:by,w:lw});
-      eL.appendChild(svgE('rect',{x:bx-lw/2,y:by-7,width:lw,height:14,rx:'3',fill:'#080a0f',stroke:c,'stroke-width':'0.7'}));
-      var wt=svgE('text',{x:bx,y:by+1,'font-family':'DM Mono,monospace','font-size':'8',fill:c,'text-anchor':'middle','dominant-baseline':'middle'});wt.textContent=lbl;eL.appendChild(wt);}
+      var lr=svgE('rect',{x:bx-lw/2,y:by-7,width:lw,height:14,rx:'3',fill:eOn?c:'#080a0f',stroke:c,'stroke-width':eOn?'1.4':'0.7',opacity:eDim?'0.12':'1'});
+      eL.appendChild(lr);
+      var wt=svgE('text',{x:bx,y:by+1,'font-family':'DM Mono,monospace','font-size':'8',fill:eOn?'#080a0f':c,'text-anchor':'middle','dominant-baseline':'middle',opacity:eDim?'0.12':'1','font-weight':eOn?'700':'400'});wt.textContent=lbl;eL.appendChild(wt);
+      // Clicking the weight lights this one link; clicking it again clears it. Only the
+      // label is clickable — widening the hit area to the line itself would swallow the
+      // drag-to-pan this diagram depends on.
+      [lr,wt].forEach(function(el){
+        el.style.cursor='pointer';
+        el.addEventListener('click',function(ev){ev.stopPropagation();rSelEdge=eOn?null:ekey;rDraw();});
+      });}
   });
 
   vis.forEach(function(n){
     var sel=rSel&&rSel.id===n.id;
-    var g=svgE('g',{transform:'translate('+n._x+','+n._y+')'});g.style.cursor='pointer';
-    g.appendChild(svgE('rect',{width:NW,height:NH,rx:'6',fill:RBG[n.type],stroke:RC[n.type],'stroke-width':sel?'2.5':n.isMatch?'2':'1.2'}));
-    if(n.isMatch){var star=svgE('text',{x:NW-6,y:10,'text-anchor':'middle','font-size':'10',fill:RC[n.type]});star.textContent='★';g.appendChild(star);}
-    var ct=svgE('text',{x:NW/2,y:15,'text-anchor':'middle','dominant-baseline':'middle','font-family':'DM Mono,monospace','font-size':'8.5',fill:RC[n.type],opacity:'0.65'});ct.textContent=n.code;g.appendChild(ct);
-    var nt=svgE('text',{x:NW/2,y:33,'text-anchor':'middle','dominant-baseline':'middle','font-family':'DM Mono,monospace','font-size':'10','font-weight':'500',fill:RC[n.type]});nt.textContent=n.name.length>22?n.name.slice(0,21)+'…':n.name;g.appendChild(nt);
-    g.addEventListener('click',function(){rOpenSB(n);});nL.appendChild(g);
+    // The two items the selected weight joins stay lit; everything else fades back.
+    var lit=!!rSelEdge&&(n.id===hiFrom||n.id===hiTo);
+    var dimN=!!rSelEdge&&!lit;
+    // An inactive menu is drawn grey and dashed — visible, but plainly not on sale.
+    var nc=n.inactive?'#6b7280':RC[n.type],nbg=n.inactive?'#14161c':RBG[n.type];
+    var g=svgE('g',{transform:'translate('+n._x+','+n._y+')',opacity:dimN?'0.22':(n.inactive?'0.75':'1')});g.style.cursor='pointer';
+    var nr=svgE('rect',{width:NW,height:NH,rx:'6',fill:nbg,stroke:nc,'stroke-width':lit?'3':sel?'2.5':n.isMatch?'2':'1.2'});
+    if(n.inactive)nr.setAttribute('stroke-dasharray','5 3');
+    g.appendChild(nr);
+    if(n.inactive){var pz=svgE('text',{x:6,y:NH-6,'font-family':'DM Mono,monospace','font-size':'7',fill:'#6b7280'});pz.textContent='⏸ INAKTIV';g.appendChild(pz);}
+    if(n.isMatch){var star=svgE('text',{x:NW-6,y:10,'text-anchor':'middle','font-size':'10',fill:nc});star.textContent='★';g.appendChild(star);}
+    var ct=svgE('text',{x:NW/2,y:15,'text-anchor':'middle','dominant-baseline':'middle','font-family':'DM Mono,monospace','font-size':'8.5',fill:nc,opacity:'0.65'});ct.textContent=n.code;g.appendChild(ct);
+    var nt=svgE('text',{x:NW/2,y:33,'text-anchor':'middle','dominant-baseline':'middle','font-family':'DM Mono,monospace','font-size':'10','font-weight':'500',fill:nc});nt.textContent=n.name.length>22?n.name.slice(0,21)+'…':n.name;g.appendChild(nt);
+    g.addEventListener('click',function(){rSelEdge=null;rOpenSB(n);});nL.appendChild(g);
   });
   applyT();
 }
@@ -6924,7 +6970,12 @@ window.rtSavePlate=function(){
 };
 
 // Calculator
-function rAddChip(code,name,qty){var ex=rCM.find(function(m){return m.code===code;});if(ex)ex.qty+=qty;else rCM.push({code:code,name:name,qty:qty});rRenderChips();}
+function rAddChip(code,name,qty){
+  // Single chokepoint for the calculator, so the sidebar's "In Calculator" button
+  // cannot slip an inactive menu past the filter in rPopMS.
+  var mm=(window.allMenus||[]).find(function(m){return (m.menuCode||m.id)===code;});
+  if(mm&&!_menuIsActive(mm)){alert('"'+(mm.name||code)+'" ist inaktiv (nicht im Verkauf) und wird nicht berechnet.');return;}
+  var ex=rCM.find(function(m){return m.code===code;});if(ex)ex.qty+=qty;else rCM.push({code:code,name:name,qty:qty});rRenderChips();}
 function rRenderChips(){
   var list=$('rtML'),btn=$('rtCBTN');if(!list)return;list.innerHTML='';
   if(!rCM.length){list.innerHTML='<div style="font-size:10px;color:#4b5563;text-align:center;padding-top:24px;font-family:DM Mono,monospace">No items added</div>';if(btn)btn.disabled=true;return;}
@@ -7052,14 +7103,24 @@ function rBRow(node,depth){
 function rPopMS(){
   var sel=$('rtMS');if(!sel)return;var cur=sel.value;
   sel.innerHTML='<option value="">— Menu / Plate —</option>';
-  (window.allMenus||[]).forEach(function(m){var o=document.createElement('option');o.value=m.menuCode||m.id;o.textContent='🍽 '+(m.menuCode||'')+' – '+m.name;sel.appendChild(o);});
+  // The calculator costs what is actually on sale, so menus switched off are not
+  // offered here. Allergens are the opposite case and still include them: the recipe
+  // exists and may be switched back on.
+  (window.allMenus||[]).forEach(function(m){if(!_menuIsActive(m))return;var o=document.createElement('option');o.value=m.menuCode||m.id;o.textContent='🍽 '+(m.menuCode||'')+' – '+m.name;sel.appendChild(o);});
   allPlates.forEach(function(p){var o=document.createElement('option');o.value=p.code;o.textContent='🍽 '+p.code+' – '+p.name+' (Plate)';sel.appendChild(o);});
   if(cur)sel.value=cur;
 }
 
 function attachSvgEv(){
   var svg=$('rtSvg');if(!svg)return;
-  svg.addEventListener('mousedown',function(e){if(e.target.closest&&e.target.closest('g'))return;rPan=true;rPS={x:e.clientX-rTx.x,y:e.clientY-rTx.y};svg.classList.add('grabbing');});
+  svg.addEventListener('mousedown',function(e){rDownXY={x:e.clientX,y:e.clientY};if(e.target.closest&&e.target.closest('g'))return;rPan=true;rPS={x:e.clientX-rTx.x,y:e.clientY-rTx.y};svg.classList.add('grabbing');});
+  // Clicking bare canvas clears a highlighted line — but only a real click, not the
+  // mouse-up at the end of a pan, which would drop the selection on every drag.
+  svg.addEventListener('click',function(e){
+    if(e.target!==svg||!rSelEdge)return;
+    if(rDownXY&&(Math.abs(e.clientX-rDownXY.x)>4||Math.abs(e.clientY-rDownXY.y)>4))return;
+    rSelEdge=null;rDraw();
+  });
   svg.addEventListener('wheel',function(e){e.preventDefault();var d=e.deltaY>0?.9:1.1,r=svg.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;rTx.x=mx-(mx-rTx.x)*d;rTx.y=my-(my-rTx.y)*d;rTx.scale=Math.min(3,Math.max(0.15,rTx.scale*d));applyT();},{passive:false});
   var lt=null;
   svg.addEventListener('touchstart',function(e){if(e.touches.length===1)lt={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});

@@ -35,6 +35,20 @@ const _grByKey    = code => _idxGr().get(code);
 const _menuByKey  = code => _idxMenu().get(code);
 const _recipesFor = code => _idxRecipesByMep().get(code) || [];
 
+// Is this menu on sale? The Menus sheet's `active` column is EMPTY for every menu that
+// predates the feature, so empty MUST mean active — otherwise adding the column would
+// silently take all 126 menus off sale. Only an explicit false deactivates. GAS returns
+// the cell as a boolean; a URL round-trip returns the string "false".
+function _menuIsActive(m) {
+  if (!m) return true;
+  const v = m.active;
+  if (v === undefined || v === null || v === '') return true;
+  if (v === false) return false;
+  if (v === true) return true;
+  const s = String(v).trim().toLowerCase();
+  return !(s === 'false' || s === '0' || s === 'no' || s === 'nein' || s === 'inaktiv');
+}
+
 // Returns total netto output weight (kg) for a recipe from its ingredient list
 function _calcMenuNettoKg(zutatenStr) {
   try {
