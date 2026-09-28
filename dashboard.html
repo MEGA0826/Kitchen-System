@@ -6495,7 +6495,22 @@ function pdfQASelectRM(code, name) {
 'use strict';
 var RC  = {rm:'#38bdf8',mep:'#34d399',gr:'#c084fc',menu:'#fbbf24',plate:'#f97316'};
 var RBG = {rm:'#071e2e',mep:'#071f14',gr:'#160b28',menu:'#1f1505',plate:'#1c0a00'};
-var CX  = {rm:60,mep:300,gr:540,menu:780,plate:1020};
+// Column spacing is adjustable. It was fixed at 240px with 165px-wide nodes, leaving
+// only 75px of clear space for every line to pass through — which is why the lines
+// between Menu and Plate bundled into a noodle. Default widened to 320; the ↔ buttons
+// change it and the choice is remembered per browser.
+var R_COLS = ['rm','mep','gr','menu','plate'];
+var CX = {}, rGap = 320;
+try { var _sg = parseInt(localStorage.getItem('rt_gap'), 10); if (_sg >= 180 && _sg <= 640) rGap = _sg; } catch(e) {}
+function rSetGap(g){
+  rGap = Math.max(180, Math.min(640, Math.round(g)));
+  R_COLS.forEach(function(t,i){ CX[t] = 60 + i*rGap; });
+  try { localStorage.setItem('rt_gap', String(rGap)); } catch(e) {}
+}
+rSetGap(rGap);
+// Re-space without rebuilding: only the x positions change, so the search, the type
+// filters and a highlighted line all survive.
+function rReflow(){ rN.forEach(function(n){ n._x = CX[n.col]; }); rDraw(); }
 var NW=165, NH=50, RG=72, CT=55;
 var rN=[],rE=[],rNM={};
 var rF=new Set(['rm','mep','gr','menu','plate']);
@@ -7144,7 +7159,7 @@ function rBuildDOM(){
   '<div class="rtmain">'+
     '<div class="rtdwrap" id="rtDW">'+
       '<svg id="rtSvg" xmlns="http://www.w3.org/2000/svg" style="flex:1;display:block;width:100%"><defs id="rtDF"></defs><g id="rtZG"><g id="rtEL"></g><g id="rtNL"></g><g id="rtLL"></g></g></svg>'+
-      '<div class="rtzoom"><button class="rtzb" id="rtZI">+</button><button class="rtzb" id="rtZO">−</button><button class="rtzb" id="rtZR" style="font-size:11px">⊙</button></div>'+
+      '<div class="rtzoom"><button class="rtzb" id="rtZI">+</button><button class="rtzb" id="rtZO">−</button><button class="rtzb" id="rtZR" style="font-size:11px">⊙</button><button class="rtzb" id="rtGapP" title="Spalten weiter auseinander" style="font-size:11px">↔</button><button class="rtzb" id="rtGapM" title="Spalten enger" style="font-size:11px">&gt;&lt;</button></div>'+
       '<div class="rtleg">'+
         '<div class="rtlegi"><div class="rtlegd" style="border-color:#38bdf8;background:#071e2e"></div><span style="color:#38bdf8">Raw Material</span></div>'+
         '<div class="rtlegi"><div class="rtlegd" style="border-color:#34d399;background:#071f14"></div><span style="color:#34d399">MEP</span></div>'+
@@ -7207,6 +7222,8 @@ function rBuildDOM(){
   $('rtZI').onclick=function(){rTx.scale=Math.min(3,rTx.scale*1.2);applyT();};
   $('rtZO').onclick=function(){rTx.scale=Math.max(0.15,rTx.scale*.8);applyT();};
   $('rtZR').onclick=function(){rTx={x:20,y:20,scale:1};applyT();};
+  $('rtGapP').onclick=function(){rSetGap(rGap+50);rReflow();};
+  $('rtGapM').onclick=function(){rSetGap(rGap-50);rReflow();};
   $('rtAB').onclick=function(){var sel=$('rtMS'),qty=parseInt(($('rtQI')||{}).value)||1;if(!sel||!sel.value)return;var m=(window.allMenus||[]).find(function(x){return x.menuCode===sel.value||x.id===sel.value;});var p=allPlates.find(function(x){return x.code===sel.value;});rAddChip(sel.value,(m||p||{}).name||sel.value,qty);sel.value='';if($('rtQI'))$('rtQI').value=1;};
   $('rtCBTN').onclick=rCalc;
   $('rtEA').onclick=function(){document.querySelectorAll('.rtbck').forEach(function(e){e.style.display='';});document.querySelectorAll('.rtbexp').forEach(function(b){b.textContent='▾';});document.querySelectorAll('.rtbkids').forEach(function(c){c.classList.remove('collapsed');});document.querySelectorAll('.rtchev').forEach(function(c){c.classList.add('open');});};

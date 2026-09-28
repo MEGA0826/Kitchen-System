@@ -101,16 +101,39 @@ function _zRows(rec) {
   try { const r = JSON.parse(typeof rec.zutaten === 'string' ? (rec.zutaten || '[]') : '[]'); return Array.isArray(r) ? r : []; }
   catch (e) { return []; }
 }
+// How much sushi rice a recipe holds, following its components down. The rice is often
+// NOT a direct row: "Crispy Crayfish Roll" and "Tatar & Crunch Roll" are built from
+// GR Basis Rolle Fried, and the Uramaki rolls from the Grund Rolle Special menu. A flat
+// look found no rice in those, so the plate line fell back to grams. A component
+// contributes its rice pro rata: the amount used over the component's own yield.
+function _riceKg(rec, depth) {
+  let kg = 0;
+  for (const z of _zRows(rec)) {
+    const amt = parseFloat(z.gewicht) || 0;
+    if (!amt) continue;
+    if (/sushi[-\s]?reis/i.test(z.name || '')) { kg += amt; continue; }
+    if (depth <= 0) continue;
+    const t = (z.type || '').toLowerCase();
+    let sub = null, total = 0;
+    if (t === 'gr') {
+      sub = _grByKey(z.code || '');
+      if (sub) total = parseFloat(sub.nettogewicht) || parseFloat(sub.rohgewicht) || 0;
+    } else if (t === 'menu' || t === 'plate') {
+      sub = _menuByKey(z.code || '');
+      if (sub) total = (parseFloat(sub.gewicht) || 0) / 1000;   // menus store grams
+    }
+    if (!sub || !total) continue;
+    kg += _riceKg(sub, depth - 1) * (amt / total);
+  }
+  return kg;
+}
 function _piecesInRecipe(m) {
   const n = String(m.name || '').match(/(\d+)\s*(stk|stück|pcs)\b/i);
   if (n) return +n[1];
-  const rice = _zRows(m).find(z => /sushi-?reis/i.test(z.name || ''));   // 160 g = 8, 90 g = 6, 20 g = 1
-  if (rice) {
-    const kg = parseFloat(rice.gewicht) || 0;
-    if (kg >= 0.15) return 8;
-    if (kg >= 0.08) return 6;
-    if (kg > 0) return 1;
-  }
+  const kg = _riceKg(m, 2);                      // 160 g = 8, 90 g = 6, 20 g = 1
+  if (kg >= 0.15) return 8;
+  if (kg >= 0.08) return 6;
+  if (kg > 0) return 1;
   return null;
 }
 function _zPieces(z) {
@@ -125,7 +148,11 @@ function _zPieces(z) {
   const per = _piecesInRecipe(m), grams = parseFloat(m.gewicht) || 0;
   if (!per || !grams) return null;
   const n = amount * 1000 / (grams / per);
-  return (Math.abs(n - Math.round(n)) < 0.06 && Math.round(n) > 0) ? Math.round(n) : null;
+  // Rounding tolerance, in pieces. 0.06 was far too tight for hand-entered weights:
+  // 2 pieces of SS-032 is 66.5 g, the plate stores 64 g, which reads as 1.925 and fell
+  // back to grams. Rolls are only ever plated whole, so rounding a near-miss is right;
+  // a genuine part-weight like 2.4 pieces is still left as a weight.
+  return (Math.abs(n - Math.round(n)) < 0.15 && Math.round(n) > 0) ? Math.round(n) : null;
 }
 
 // How a row's amount should READ: pieces for a roll on a plate, a portion for a GR
