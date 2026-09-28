@@ -6763,11 +6763,80 @@ function rOpenSB(node){
   if(node.type==='plate'){z=(node.data&&node.data.items)||[];}
   else if(node.type==='mep'&&node.data&&node.data.zutaten){z=node.data.zutaten;}
   else if(node.data){z=pZ(node.data.zutaten);}
-  if(z.length){body.appendChild(rSec('Zutaten'));z.forEach(function(zi){var t=zi.type||'rm';body.appendChild(rRI(zi.name||zi.code,zi.code,t,fmtW(zi.gewicht||zi.menge||0),function(){var f=rN.find(function(n){return n.type===t&&n.code===zi.code;});if(f)rOpenSB(f);}));});}
-  var used=rE.filter(function(e){return e.from===node.id;}).map(function(e){return{node:rN.find(function(n){return n.id===e.to;}),w:e.weight};}).filter(function(u){return u.node;});
-  if(used.length){body.appendChild(rSec('Used in'));used.forEach(function(u){body.appendChild(rRI(u.node.name,u.node.code,u.node.type,fmtW(u.w),function(){rOpenSB(u.node);}));});}
+  if(z.length){body.appendChild(rSec('Zutaten'));z.forEach(function(zi){var t=zi.type||'rm';body.appendChild(rRI(zi.name||zi.code,zi.code,t,fmtW(zi.gewicht||zi.menge||0),function(){rGoto(t,zi.code);}));});}
+  // "Used in" answers "everywhere in the kitchen", not "everywhere in this view".
+  var used=rUsedInAll(node.type,node.code);
+  if(used.length){body.appendChild(rSec('Used in ('+used.length+')'));used.forEach(function(u){body.appendChild(rRI(u.name,u.code,u.type,u.label,function(){rGoto(u.type,u.code);}));});}
   $('rtSB').classList.add('open');rDraw();
 }
+// Does a code of this type actually exist? Used to spot a row whose `type` is wrong —
+// the PDF import wrote menus as type "rm" — so a mislabelled row is still counted.
+function rOwns(t,c){
+  if(!c)return false;
+  if(t==='rm')return (window.allInventory||[]).some(function(x){return x.code===c;});
+  if(t==='mep')return !!(window.allProducts||{})[c];
+  if(t==='gr')return (window.allGRs||[]).some(function(g){return (g.grCode||g.id)===c;});
+  if(t==='menu'||t==='plate')return (window.allMenus||[]).some(function(m){return (m.menuCode||m.id)===c;});
+  return false;
+}
+
+// Every recipe that uses type:code, scanned from the FULL datasets — deliberately NOT
+// from rE/rN, which hold only what the current search rendered. Looking Nori 4346 up
+// while searching one sushi roll therefore listed that single roll instead of every
+// roll that uses it. Independent of the search box, the type filters and the graph.
+function rUsedInAll(type,code){
+  code=String(code||'').trim();
+  if(!code)return[];
+  // menu and plate are the same sheet row, and zutaten rows label it either way
+  function sameKind(t){
+    if(t===type)return true;
+    if((type==='menu'||type==='plate')&&(t==='menu'||t==='plate'))return true;
+    return !rOwns(t,code);            // row's claimed type is wrong -> still ours
+  }
+  var out=[],seen={};
+  function add(t,c,name,z){
+    c=String(c||'').trim();if(!c)return;
+    var k=t+':'+c;if(seen[k])return;seen[k]=1;
+    var lbl=(z&&window._zCountLabel)?_zCountLabel(z):null;
+    out.push({type:t,code:c,name:name||c,label:lbl||fmtW(z?(parseFloat(z.gewicht)||0):0)});
+  }
+  function scan(zutaten,hostType,hostCode,hostName){
+    pZ(zutaten).forEach(function(z){
+      if(String(z.code||'').trim()!==code)return;
+      if(!sameKind(String(z.type||'rm').toLowerCase()))return;
+      add(hostType,hostCode,hostName,z);
+    });
+  }
+  // MEP recipes live in their own sheet, not in a zutaten blob
+  if(type==='rm')(window.allRecipes||[]).forEach(function(r){
+    if(String(r.rmCode||'').trim()!==code)return;
+    add('mep',r.mepCode,((window.allProducts||{})[r.mepCode]||{}).name,{gewicht:parseFloat(r.menge)||0});
+  });
+  (window.allGRs||[]).forEach(function(g){scan(g.zutaten,'gr',g.grCode||g.id,g.name);});
+  (window.allMenus||[]).forEach(function(m){scan(m.zutaten,m.art==='Plate'?'plate':'menu',m.menuCode||m.id,m.name);});
+  allPlates.forEach(function(p){(p.items||[]).forEach(function(i){
+    if(String(i.code||'').trim()!==code)return;
+    if(!sameKind(String(i.type||'menu').toLowerCase()))return;
+    add('plate',p.code,p.name,i);
+  });});
+  return out.sort(function(a,b){return (a.type+' '+a.name).localeCompare(b.type+' '+b.name);});
+}
+
+// Select an item that may not be on screen. The sidebar now lists recipes the current
+// search never rendered, so clicking one has to widen the search to it first —
+// otherwise the click silently did nothing.
+function rGoto(type,code){
+  var find=function(){return rN.find(function(n){return n.type===type&&n.code===code;});};
+  var f=find();
+  if(f){rOpenSB(f);return;}
+  var si=$('rtSI');
+  if(si){si.value=code;var clr=$('rtCLR');if(clr)clr.classList.add('vis');}
+  rQ=code;
+  rBuild(rQ);
+  var g=find();
+  if(g)rOpenSB(g);
+}
+
 function rFld(l,v,c){var w=document.createElement('div');w.className='rtfield';w.innerHTML='<span class="rtflbl">'+l+'</span><div class="rtfval'+(c?' code':'')+'">'+((v)||'—')+'</div>';return w;}
 function rSec(t){var d=document.createElement('div');d.className='rtssec';d.textContent=t;return d;}
 function rRI(name,code,type,weight,onclick){var d=document.createElement('div');d.className='rtri';d.onclick=onclick;d.innerHTML='<div style="display:flex;flex-direction:column;gap:2px;flex:1"><span class="rtrn">'+(name||code)+'</span><span class="rtrc">'+code+'</span></div><span class="rtrw '+(type||'rm')+'">'+weight+'</span>';return d;}

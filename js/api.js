@@ -30,6 +30,10 @@
     "saveHACCPZone", "deleteHACCPZone", "saveHACCPTask", "deleteHACCPTask",
     "saveHACCPCheck", "saveHACCPTemp",
     "markOrdered", "archiveNow", "reportSendNow",
+    // renameCode moves a code AND every reference to it (GAS-RENAMECODE-PATCH.md).
+    // Never retry it: after the first success oldCode no longer exists, so a retry
+    // fails confusingly instead of being a harmless no-op.
+    "renameCode",
     "importSalesCSV", "importSalesFromDrive", "importParsedRecipe", "storeChunk"
   ]);
 
