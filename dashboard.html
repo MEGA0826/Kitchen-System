@@ -2405,6 +2405,10 @@ const EU_ALLERGENS = ['Gluten','Krebstiere','Eier','Fisch','Erdnüsse','Soja','M
 let _ipEditIdx    = -1;  // index of zutat being edited, -1 = new add
 let editingMenuId = null;
 let editingGRCode = null;
+// The GR row's stable uuid. GAS saveGR only UPDATES the row whose id equals p.grId —
+// called without it, it always appends. Keeping the id is what lets an edit update in
+// place instead of delete-then-append, which threw the row id away every time.
+let editingGRId = null;
 let _viewingMenu  = null;
 let _grSelectedItem = null;
 let agrZutaten    = [];

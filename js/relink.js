@@ -294,7 +294,9 @@ async function _rlApply() {
     const e2 = _rlEnrichWeightRows(out);
     try {
       const d = await adminCall({
-        action: 'saveGR', grCode: g.grCode, name: g.name, art: g.art || 'Grundrezeptur',
+        // grId is REQUIRED: GAS saveGR updates the row with this id and appends when
+        // it is missing. Omitting it is what produced 141 duplicate GR rows in Sept.
+        action: 'saveGR', grId: g.id, grCode: g.grCode, name: g.name, art: g.art || 'Grundrezeptur',
         rohgewicht: g.rohgewicht ?? '', garverlust: g.garverlust ?? '', wa: e2.waTotal,
         zutaten: JSON.stringify(e2.enriched), zubereitung: g.zubereitung || ''
       });
@@ -421,7 +423,8 @@ async function _rlApplyRecalc() {
             lastUpdate: new Date().toISOString()
           })
         : await adminCall({
-            action: 'saveGR', grCode: r.grCode, name: r.name, art: r.art || 'Grundrezeptur',
+            // grId is REQUIRED — without it GAS saveGR appends a duplicate row.
+            action: 'saveGR', grId: r.id, grCode: r.grCode, name: r.name, art: r.art || 'Grundrezeptur',
             rohgewicht: r.rohgewicht ?? '', garverlust: r.garverlust ?? '', wa: r.wa,
             zutaten: r.zutaten, zubereitung: r.zubereitung || ''
           });
@@ -549,7 +552,8 @@ async function _ccCascade(kind, oldCode, newCode, newName, onProgress) {
     if (!r.n) continue;
     try {
       const d = await adminCall({
-        action: 'saveGR', grCode: g.grCode, name: g.name, art: g.art || 'Grundrezeptur',
+        // grId is REQUIRED — without it GAS saveGR appends a duplicate row.
+        action: 'saveGR', grId: g.id, grCode: g.grCode, name: g.name, art: g.art || 'Grundrezeptur',
         rohgewicht: g.rohgewicht == null ? '' : g.rohgewicht,
         garverlust: g.garverlust == null ? '' : g.garverlust, wa: g.wa == null ? '' : g.wa,
         zutaten: JSON.stringify(r.out), zubereitung: g.zubereitung || ''

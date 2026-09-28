@@ -397,8 +397,11 @@ async function saveMenuEntry() {
       const garverlust  = document.getElementById('mp-garverlust').value;
       const wa          = document.getElementById('mp-wa').value;
       const zubereitung = document.getElementById('mp-zubereitung').value.trim();
+      // Reuse the GR row when this code already exists, otherwise saveGR appends a
+      // second row under the same grCode (it only updates the row matching p.grId).
+      const _grExisting = (allGRs || []).find(x => (x.grCode || '') === grCode);
       const grData = await adminCall({
-        action: 'saveGR', grCode, name, art,
+        action: 'saveGR', grId: (_grExisting && _grExisting.id) || '', grCode, name, art,
         rohgewicht: gewicht, garverlust, wa,
         zutaten: JSON.stringify(_slimZutaten(menuZutaten)), zubereitung
       });

@@ -25,7 +25,7 @@ function removeAgrImage() {
 }
 
 function openAddGRPopup(art) {
-  editingGRCode = null;
+  editingGRCode = null; editingGRId = null;
   closeMenu();
   agrZutaten = [];
   { const _pf=document.getElementById('agr-portions'); if(_pf){_pf.value='1';_pf.dataset.last='1';} }
@@ -47,7 +47,7 @@ function openAddGRPopup(art) {
 }
 
 function closeAddGRPopup() {
-  editingGRCode = null;
+  editingGRCode = null; editingGRId = null;
   document.getElementById('addGRPopup').style.display = 'none';
   _onPopupClose();
 }
@@ -56,7 +56,7 @@ function closeAddGRPopup() {
 function copyGR(grCode) {
   const g = allGRs.find(x => (x.grCode||x.id) === grCode);
   if (!g) return;
-  editingGRCode = null;
+  editingGRCode = null; editingGRId = null;
   try { agrZutaten = JSON.parse(g.zutaten || '[]'); } catch(e) { agrZutaten = []; }
   const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   setV('agr-code',        grCode + '-2');
@@ -200,13 +200,20 @@ async function saveGREntry() {
       catch(e) { kmepCookFail(); adminMsg('agr-msg', e.message, 'err'); btn.disabled = false; btn.textContent = '💾 Speichern'; return; }
     }
     if (!_agrSaveImg.startsWith('http')) _agrSaveImg = '';
-    // GAS saveGR always creates a new row — delete existing entry first when editing
-    if (editingGRCode) {
+    // GAS saveGR updates the row whose id === p.grId, and APPENDS when grId is absent.
+    // So an edit passes the row's id and updates in place. It used to delete the old
+    // row and let saveGR append a replacement, which worked but threw the row id away
+    // on every save — and lost the GR outright if saveGR failed after the delete.
+    // A rename is the same call: the row keeps its id and gets the new code.
+    if (editingGRCode && !editingGRId) {
+      // No id (older cached allGRs) — fall back to the old delete-then-append, or the
+      // save would silently create a second row under the same code.
       const del = await get({ action: 'deleteGR', grCode: editingGRCode });
       if (del.error) throw new Error('Delete old GR failed: ' + del.error);
     }
     const data = await get({
       action       : 'saveGR',
+      grId         : (editingGRCode && editingGRId) ? editingGRId : '',
       grCode       : code,
       name,
       art          : document.getElementById('agr-art').value,
@@ -256,6 +263,7 @@ function openEditGRPopup(grCode) {
   const g = allGRs.find(x => (x.grCode||x.id) === grCode);
   if (!g) return;
   editingGRCode = grCode;
+  editingGRId   = g.id || null;     // needed so saveGR UPDATES this row, not appends
   agrZutaten = [];
   { const _pf=document.getElementById('agr-portions'); if(_pf){_pf.value='1';_pf.dataset.last='1';} }
   try { agrZutaten = JSON.parse(g.zutaten || '[]'); } catch(e) {}
