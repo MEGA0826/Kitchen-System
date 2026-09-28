@@ -357,6 +357,14 @@ async function saveMenuEntry() {
     const dupName = allMenus.find(m => (m.name||'').toLowerCase() === name.toLowerCase());
     if (dupName) { adminMsg('mp-msg', `⚠ Menu name "${name}" already exists — use a different name`, 'err'); return; }
   }
+  // saveMenu updates the row by menuId, so a changed code is a RENAME the sheet accepts
+  // silently — while every other recipe that lists this menu as an ingredient keeps the
+  // OLD code in its zutaten JSON and loses the link. Cascaded after the save; warn now.
+  const _mnOldCode = (allMenus.find(m => m.id === editingMenuId) || {}).menuCode || '';
+  const _mnRenamed = !!editingMenuId && !!_mnOldCode && _mnOldCode.toLowerCase() !== menuCode.toLowerCase();
+  if (_mnRenamed && typeof _ccConfirmRename === 'function' && !_ccConfirmRename('menu', _mnOldCode, menuCode)) {
+    adminMsg('mp-msg', 'Abgebrochen — Code unverändert lassen oder erneut speichern', ''); return;
+  }
   const btn = document.getElementById('mp-save-btn');
   btn.disabled = true; btn.textContent = 'Speichern…';
 
@@ -434,7 +442,18 @@ async function saveMenuEntry() {
     if (data.error) throw new Error(data.error);
     adminMsg('mp-msg', '✓ Gespeichert', 'ok');
     await loadMenus();
+    // Move every zutaten reference onto the new code, after this menu already carries
+    // it. Slow (re-reads Menus + GRs from Sheets), so say what is happening.
+    let _ccMsg = '';
+    if (_mnRenamed && typeof _ccCascade === 'function') {
+      adminMsg('mp-msg', '🔗 Verknüpfungen werden umgestellt (' + _mnOldCode + ' → ' + menuCode + ')…', '');
+      const r = await _ccCascade('menu', _mnOldCode, menuCode, name);
+      _ccMsg = _ccSummary(_mnOldCode, menuCode, r);
+      if (r.fail) { adminMsg('mp-msg', _ccMsg, 'err'); console.warn('[cascade]', r.log.join('\n')); }
+    }
     await kmepCookDone();
+    // A failed cascade leaves dangling references — keep the dialog open to show it.
+    if (_ccMsg && /^⚠/.test(_ccMsg)) return;
     closeMenuPopup();
   } catch(e) {
     kmepCookFail();

@@ -439,3 +439,158 @@ async function _rlApplyRecalc() {
   document.getElementById('rlFoot').innerHTML =
     `<button class="rl-btn" onclick="openRecalcTool()">↺ Erneut prüfen</button><button class="rl-btn" onclick="closeRelinkTool()">Schliessen</button>`;
 }
+
+// ═══════════════════════════════════════════════════════════
+// CODE CASCADE — keep zutaten references valid when a code is renamed
+// A GR or Menu is referenced from other recipes' `zutaten` JSON by its CODE, never by
+// its row id. Renaming the code therefore silently orphans every referencing row: the
+// ingredient resolves to nothing, so it costs CHF 0, the Relations diagram loses the
+// link (the dead code shows up as a bare node named after itself), and the BOM
+// calculator under-counts. That is what renumbering ~60 codes on 2026-09-26 left
+// behind — SS-059 → SS-044 in three menus, GR-111 → GR-098 in one.
+// The editors call this straight after a successful rename, so references move with
+// the code instead of being repaired by hand afterwards.
+//
+// It also refreshes the stored `name` on every row it touches. Rows keep a snapshot of
+// the name, and a stale one defeats the name-matching repair in openRelinkTool:
+// SS-041/SS-042 still carried "Grund Rolle Special Nooch & Negishi Q3 2025" while the
+// live menu had been renamed to "Grund Rolle Special", so nothing matched.
+// ═══════════════════════════════════════════════════════════
+
+// Zutaten row types that can hold a reference to a recipe of this kind. A menu with
+// art="Plate" is still a menu row in the sheet, but rows sometimes label it "plate".
+const _CC_TYPES = { gr: ['gr'], menu: ['menu', 'plate'], rm: ['rm'], mep: ['mep'] };
+
+// Does this zutaten row reference kind:oldCode? Matched by code first, because a
+// mislabelled `type` (the PDF import wrote menus as "rm") must not hide the
+// reference. A disagreeing type only blocks the match when that type really does own
+// the code — i.e. the row points somewhere else, not at us.
+function _ccRefersTo(z, kind, oldCode, owned) {
+  if (String(z.code == null ? '' : z.code).trim() !== oldCode) return false;
+  const t = String(z.type || 'rm').toLowerCase();
+  if ((_CC_TYPES[kind] || [kind]).indexOf(t) >= 0) return true;
+  return !owned(t, oldCode);
+}
+
+// Rewrite one zutaten list. Returns the new array plus how many rows changed.
+function _ccRewrite(zutaten, kind, oldCode, newCode, newName, owned) {
+  const src = _rlParse(zutaten);
+  let n = 0;
+  const out = src.map(z => {
+    if (!_ccRefersTo(z, kind, oldCode, owned)) return z;
+    n++;
+    const o = Object.assign({}, z, { code: newCode });
+    // Normalise the type while we are here: a row pointing at a menu but labelled
+    // "rm" stays invisible to Relations even once the code is right.
+    if ((_CC_TYPES[kind] || [kind]).indexOf(String(z.type || 'rm').toLowerCase()) < 0) o.type = kind;
+    if (newName) o.name = newName;
+    return o;
+  });
+  return { out, n };
+}
+
+// Count references without writing, from the data already in memory. Feeds the
+// "this also changes N recipes" confirmation, which has to be instant — the exact
+// set is re-read from the sheet at write time.
+function _ccCountRefs(kind, oldCode) {
+  const owned = () => false;              // in-memory estimate; the write pass is exact
+  const hits = [];
+  (typeof allMenus !== 'undefined' ? allMenus : []).forEach(m => {
+    const r = _ccRewrite(m.zutaten, kind, oldCode, oldCode, null, owned);
+    if (r.n) hits.push({ kind: 'menu', label: (m.menuCode || '') + ' ' + (m.name || ''), n: r.n });
+  });
+  (typeof allGRs !== 'undefined' ? allGRs : []).forEach(g => {
+    const r = _ccRewrite(g.zutaten, kind, oldCode, oldCode, null, owned);
+    if (r.n) hits.push({ kind: 'gr', label: (g.grCode || '') + ' ' + (g.name || ''), n: r.n });
+  });
+  return hits;
+}
+
+// Move every reference from kind:oldCode to kind:newCode across all Menus and GRs.
+// Reads fresh data immediately before writing so a concurrent edit is not clobbered,
+// and saves only the recipes that actually reference the old code.
+// Returns { changed, rows, fail, log }; never throws — the caller reports it.
+async function _ccCascade(kind, oldCode, newCode, newName, onProgress) {
+  oldCode = String(oldCode || '').trim();
+  newCode = String(newCode || '').trim();
+  const res = { changed: 0, rows: 0, fail: 0, log: [] };
+  const say = t => { res.log.push(t); if (onProgress) { try { onProgress(t); } catch (e) {} } };
+  if (!oldCode || !newCode || oldCode === newCode) return res;
+
+  let fresh;
+  try { fresh = await _rlFetchFresh(); }
+  catch (e) { res.fail = -1; say('✗ ' + e.message); return res; }
+
+  // Which type genuinely owns a code — so a row labelled "rm" that points at a real
+  // RM of the same code is left alone.
+  const own = { rm: new Set(), mep: new Set(), gr: new Set(), menu: new Set(), plate: new Set() };
+  (typeof allInventory !== 'undefined' ? allInventory : []).forEach(r => { if (r.code) own.rm.add(String(r.code).trim()); });
+  Object.keys(typeof allProducts !== 'undefined' ? allProducts : {}).forEach(c => own.mep.add(String(c).trim()));
+  fresh.grs.forEach(g => own.gr.add(String(g.grCode || g.id || '').trim()));
+  fresh.menus.forEach(m => { const c = String(m.menuCode || m.id || '').trim(); own.menu.add(c); own.plate.add(c); });
+  const owned = (t, c) => !!(own[t] && own[t].has(c));
+
+  for (const m of fresh.menus) {
+    const r = _ccRewrite(m.zutaten, kind, oldCode, newCode, newName, owned);
+    if (!r.n) continue;
+    try {
+      const d = await adminCall({
+        action: 'saveMenu', menuId: m.id, name: m.name, category: m.category || '', art: m.art || '',
+        saison: m.saison || '', gewicht: m.gewicht == null ? '' : m.gewicht, menuCode: m.menuCode,
+        garverlust: m.garverlust == null ? '' : m.garverlust, wa: m.wa == null ? '' : m.wa,
+        vk: m.vk == null ? '' : m.vk, deko: m.deko || '', zubereitung: m.zubereitung || '',
+        zutaten: JSON.stringify(r.out), imageUrl: m.imageUrl || '', logoUrl: m.logoUrl || '',
+        lastUpdate: new Date().toISOString()
+      });
+      if (d && d.error) throw new Error(d.error);
+      res.changed++; res.rows += r.n; say('✓ ' + m.menuCode + ' ' + m.name + ' — ' + r.n + ' Zeile(n)');
+    } catch (e) { res.fail++; say('✗ ' + m.menuCode + ' ' + m.name + ': ' + e.message); }
+  }
+  for (const g of fresh.grs) {
+    const r = _ccRewrite(g.zutaten, kind, oldCode, newCode, newName, owned);
+    if (!r.n) continue;
+    try {
+      const d = await adminCall({
+        action: 'saveGR', grCode: g.grCode, name: g.name, art: g.art || 'Grundrezeptur',
+        rohgewicht: g.rohgewicht == null ? '' : g.rohgewicht,
+        garverlust: g.garverlust == null ? '' : g.garverlust, wa: g.wa == null ? '' : g.wa,
+        zutaten: JSON.stringify(r.out), zubereitung: g.zubereitung || ''
+      });
+      if (d && d.error) throw new Error(d.error);
+      res.changed++; res.rows += r.n; say('✓ ' + g.grCode + ' ' + g.name + ' — ' + r.n + ' Zeile(n)');
+    } catch (e) { res.fail++; say('✗ ' + g.grCode + ' ' + g.name + ': ' + e.message); }
+  }
+  if (res.changed) {
+    try { localStorage.removeItem('rt_cache_v1'); } catch (e) {}
+    try { if (typeof loadMenus === 'function') await loadMenus(); } catch (e) {}
+    try { if (typeof loadGRs === 'function') await loadGRs(); } catch (e) {}
+  }
+  return res;
+}
+
+// One line for the editor's message row: what the rename did to everything else.
+function _ccSummary(oldCode, newCode, res) {
+  if (res.fail === -1) return '⚠ ' + oldCode + ' → ' + newCode + ': Referenzen konnten nicht geprüft werden — bitte Admin → «Zutaten verknüpfen» ausführen';
+  if (!res.changed && !res.fail) return '';
+  const okTxt = res.changed
+    ? oldCode + ' → ' + newCode + ' in ' + res.changed + ' Rezept' + (res.changed > 1 ? 'en' : '') + ' aktualisiert (' + res.rows + ' Zeilen)'
+    : '';
+  if (res.fail) return '⚠ ' + (okTxt || oldCode + ' → ' + newCode) + '; ' + res.fail + ' fehlgeschlagen — Admin → «Zutaten verknüpfen»';
+  return '✓ ' + okTxt;
+}
+
+// Ask before renaming, listing what else changes. Returns true to proceed.
+function _ccConfirmRename(kind, oldCode, newCode) {
+  const hits = _ccCountRefs(kind, oldCode);
+  if (!hits.length) return true;
+  const rows = hits.reduce((s, h) => s + h.n, 0);
+  const list = hits.slice(0, 12).map(h => '  • ' + h.label).join('\n')
+    + (hits.length > 12 ? '\n  • … +' + (hits.length - 12) : '');
+  return confirm(
+    'Code ' + oldCode + ' → ' + newCode + '\n\n'
+    + oldCode + ' wird als Zutat in ' + hits.length + ' Rezept' + (hits.length > 1 ? 'en' : '')
+    + ' verwendet (' + rows + ' Zeilen):\n' + list + '\n\n'
+    + 'Diese Rezepte werden mitgespeichert, damit die Verknüpfung erhalten bleibt.\n'
+    + 'Ohne das zeigen sie auf den alten Code: Kosten CHF 0 und keine Relations-Linie.'
+  );
+}

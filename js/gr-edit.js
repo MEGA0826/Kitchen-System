@@ -162,6 +162,10 @@ async function saveGREntry() {
   // INSERTS and delete is by code (removes both), so a dup is unrecoverable in-app.
   // Refuse to save if we cannot confirm the current list.
   const isEditing = !!editingGRCode;
+  // A changed code is a RENAME, not a new GR: the old row is deleted below and every
+  // other recipe that lists this GR as an ingredient still points at the old code.
+  const _grOldCode = editingGRCode || '';
+  const _grRenamed = isEditing && code.toLowerCase() !== _grOldCode.toLowerCase();
   if (!isEditing) {
     let live = null;
     try { const d = await get({ action: 'getGRs' }); if (Array.isArray(d.grs)) { live = d.grs; allGRs = d.grs; } } catch(e) {}
@@ -172,10 +176,14 @@ async function saveGREntry() {
     if (dupName) { adminMsg('agr-msg', `⚠ GR Name "${name}" existiert bereits`, 'err'); btn.disabled=false; btn.textContent='💾 Speichern'; return; }
   } else {
     // Editing: block only if new code belongs to a different existing GR
-    const codeChanged = code.toLowerCase() !== (editingGRCode||'').toLowerCase();
-    if (codeChanged) {
+    if (_grRenamed) {
       const dupCode = allGRs.find(g => (g.grCode||'').toLowerCase() === code.toLowerCase());
       if (dupCode) { adminMsg('agr-msg', `⚠ GR Code "${code}" already exists`, 'err'); return; }
+      // Other recipes reference this GR by CODE, so a rename orphans them unless they
+      // are saved too. Show what else changes before writing anything.
+      if (typeof _ccConfirmRename === 'function' && !_ccConfirmRename('gr', editingGRCode, code)) {
+        adminMsg('agr-msg', 'Abgebrochen — Code unverändert lassen oder erneut speichern', ''); return;
+      }
     }
   }
   const btn = document.getElementById('agr-save-btn');
@@ -218,12 +226,24 @@ async function saveGREntry() {
     }
     adminMsg('agr-msg','✓ GR gespeichert','ok');
     await loadGRs();
+    // Move every zutaten reference onto the new code. Runs AFTER the GR itself exists
+    // under the new code, so nothing ever points at a code that is not there yet.
+    // Slow (re-reads Menus + GRs from Sheets), so keep the dialog open and say so.
+    let _ccMsg = '';
+    if (_grRenamed && typeof _ccCascade === 'function') {
+      adminMsg('agr-msg', '🔗 Verknüpfungen werden umgestellt (' + _grOldCode + ' → ' + code + ')…', '');
+      const r = await _ccCascade('gr', _grOldCode, code, name);
+      _ccMsg = _ccSummary(_grOldCode, code, r);
+      if (r.fail) { adminMsg('agr-msg', _ccMsg, 'err'); console.warn('[cascade]', r.log.join('\n')); }
+    }
     await kmepCookDone();
     // Repaint the GR list + recipe pickers so the new/edited GR shows immediately
     // (loadGRs only refills allGRs; deleteGR refreshes but saveGREntry did not).
     try { _refreshGrList(); } catch(e) {}
     try { renderMenuListByCat(); } catch(e) {}
     try { updateRecipeAddButtons(); } catch(e) {}
+    // A failed cascade leaves dangling references, so keep the dialog open to show it.
+    if (_ccMsg && /^⚠/.test(_ccMsg)) { btn.disabled = false; btn.textContent = '💾 Speichern'; return; }
     closeAddGRPopup();
   } catch(e) {
     kmepCookFail();
