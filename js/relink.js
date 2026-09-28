@@ -282,15 +282,15 @@ async function _rlApply() {
       ok++; rowsDone += n; say(`✓ ${m.menuCode} ${m.name}${n ? ' — ' + n + ' Zutaten' : ''}${img ? ' — Bild-Link entfernt' : ''}`);
     } catch (e) { fail++; say(`✗ ${m.menuCode} ${m.name}: ${e.message}`); }
   }
-  // GR writes are disabled: the GAS saveGR endpoint APPENDS a new Grundrezeptur row
-  // instead of updating the existing one, which produced 141 duplicate GR rows on
-  // 2026-09-24 (92 -> 233). saveMenu is unaffected because it carries menuId.
-  // Re-enable only once saveGR updates in place.
-  const GR_WRITES_DISABLED = true;
+  // GR writes were disabled while the GAS saveGR endpoint APPENDED a new
+  // Grundrezeptur row instead of updating the existing one — that made 141 duplicate
+  // GR rows on 2026-09-24 (92 -> 233). Re-enabled 2026-09-28: saveGR is patched (see
+  // GAS-SAVEGR-PATCH.md) and the live sheet reads 101 rows / 101 distinct codes / 0
+  // duplicates, with pre-existing GR-002 and GR-083 both carrying lastUpdate 09-26 —
+  // an appending saveGR would have doubled them.
   for (const g of fresh.grs) {
     const { out, n } = fixRows(g.zutaten);
     if (!n) continue;
-    if (GR_WRITES_DISABLED) { say('- ' + g.grCode + ' ' + g.name + ' — übersprungen (GR-Speichern deaktiviert)'); continue; }
     const e2 = _rlEnrichWeightRows(out);
     try {
       const d = await adminCall({
@@ -411,8 +411,6 @@ async function _rlApplyRecalc() {
   let ok = 0, fail = 0;
   for (const p of _rl.recalc) {
     const r = p.rec;
-    // see GR_WRITES_DISABLED above — saveGR duplicates rows instead of updating
-    if (p.kind === 'gr') { say('- ' + r.grCode + ' ' + r.name + ' — übersprungen (GR-Speichern deaktiviert)'); continue; }
     try {
       const d = p.kind === 'menu'
         ? await adminCall({
