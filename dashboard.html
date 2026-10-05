@@ -5503,7 +5503,11 @@ function renderMenuListByCat(cat) {
   );
 
   if (!list.length) {
-    el.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">No menus found for "${cat}".</div>`;
+    // A brand-new kitchen has no menus AND no category filter, which printed the
+    // literal "No menus found for "undefined"." — the first thing a new owner saw.
+    el.innerHTML = cat
+      ? `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 0;font-style:italic">No menus found for "${cat}".</div>`
+      : `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🍽</div>Noch keine Menus. Klick «+ Add Menu», um das erste anzulegen.</div>`;
     return;
   }
 
