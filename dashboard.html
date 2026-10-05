@@ -1377,22 +1377,6 @@
   </div>
   </div>
 
-<!-- ★ NEW: Menu PDF Viewer Popup -->
-  <div id="menuPdfPopup" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.85);overflow-y:auto;padding:16px">
-    <div style="max-width:760px;margin:0 auto">
-      <!-- Action bar -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <div style="font-size:13px;font-weight:600;color:#fff" id="pdf-popup-title">Menu Preview</div>
-        <div style="display:flex;gap:8px">
-          <button onclick="downloadMenuPdf()" style="padding:8px 16px;border-radius:8px;background:#1a1a16;color:#5dca8a;border:1px solid rgba(93,202,138,0.3);font-size:12px;cursor:pointer;font-family:monospace">⬇ Save PDF</button>
-          <button onclick="printMenuPdf()" style="padding:8px 16px;border-radius:8px;background:#1a1a16;color:#60a8e8;border:1px solid rgba(96,168,232,0.3);font-size:12px;cursor:pointer;font-family:monospace">🖨 Print</button>
-          <button onclick="document.getElementById('menuPdfPopup').style.display='none'" style="padding:8px 14px;border-radius:8px;background:#1a1a16;color:#888;border:1px solid rgba(255,255,255,0.1);font-size:12px;cursor:pointer">✕</button>
-        </div>
-      </div>
-      <!-- A4 preview sheet -->
-      <div id="menuPdfSheet" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6)"></div>
-    </div>
-  </div>
 <!-- ORDERS Tab-->
   <div class="panel" id="panel-orders">
     <div class="section-title"><span data-i18n="orders">Orders</span> <span class="section-title-icon">🛒</span></div>
@@ -2220,24 +2204,6 @@
     </div>
     <div class="pin-msg" id="pinMsg"></div>
     <button class="pin-cancel" onclick="cancelPin()" data-i18n="cancel">Cancel</button>
-  </div>
-</div>
-
-<!-- Product detail modal -->
-<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <img id="m-img" class="modal-img" alt="" onerror="this.style.display='none';document.getElementById('m-img-ph').style.display='flex'">
-    <div class="modal-img-ph" id="m-img-ph">🍽</div>
-    <div class="modal-body">
-      <div class="modal-code" id="m-code"></div>
-      <div class="modal-name" id="m-name"></div>
-      <div class="modal-stats">
-        <div class="modal-stat"><div class="modal-stat-val" id="m-produce">0</div><div class="modal-stat-lbl">Produced</div></div>
-        <div class="modal-stat"><div class="modal-stat-val" id="m-done">0</div><div class="modal-stat-lbl">Finished</div></div>
-        <div class="modal-stat"><div class="modal-stat-val" id="m-waste">0</div><div class="modal-stat-lbl">Waste</div></div>
-      </div>
-    </div>
-    <button class="modal-close" onclick="closeModal()">Close</button>
   </div>
 </div>
 
@@ -4356,56 +4322,6 @@ function switchTabMobile(select) {
   }
 } 
 
-
-// Worker edit modal
-function openEditWorkerModal(name) {
-  const w = allWorkersAdmin.find(x => (typeof x === "object" ? x.name : x) === name);
-  if (!w) return;
-  const wName = typeof w === "object" ? w.name : w;
-  const wRole = typeof w === "object" ? (w.role || "") : "";
-  const wActive = typeof w === "object" ? w.active !== false : true;
-  const wPin = typeof w === "object" ? (w.pin || "") : "";
-  document.getElementById("ewf-name").value = wName;
-  document.getElementById("ewf-role").value = wRole;
-  document.getElementById("ewf-pin").value = wPin;
-  document.getElementById("ewf-active").checked = wActive;
-  document.getElementById("editWorkerTitle").textContent = "Edit Worker - " + wName;
-  document.getElementById("ewf-msg").textContent = "";
-  document.getElementById("editWorkerModal").classList.add("active");
-}
-
-function closeEditWorkerModal() {
-  document.getElementById("editWorkerModal").classList.remove("active");
-}
-
-async function saveEditedWorker() {
-  const name = document.getElementById("ewf-name").value.trim();
-  if (!name) { adminMsg("ewf-msg", "Name is required", "err"); return; }
-  const btn = document.querySelector("#editWorkerModal .btn-save");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
-  try {
-    const data = await adminCall({
-      action: "saveWorker",
-      name,
-      role: document.getElementById("ewf-role").value.trim(),
-      pin: document.getElementById("ewf-pin").value.trim(),
-      active: document.getElementById("ewf-active").checked
-    });
-    if (data.error) throw new Error(data.error);
-    adminMsg("ewf-msg", "Saved OK", "ok");
-    const workersData = await adminCall({ action: "allWorkers" });
-    allWorkersAdmin = Array.isArray(workersData.workers) ? workersData.workers : [];
-    renderAdminWorkers();
-    setTimeout(() => closeEditWorkerModal(), 800);
-  } catch(e) {
-    adminMsg("ewf-msg", "Error: " + e.message, "err");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Save";
-  }
-}
-
     async function deleteRecipeRow(mepCode, rmCode) {
   if (!confirm("Remove this ingredient from the recipe?")) return;
   const data = await adminCall({ action:"deleteRecipe", mepCode, rmCode });
@@ -5859,26 +5775,6 @@ function _escM(str) {
       <button class="btn-save" onclick="saveEditedProduct()">Save</button>
       <button class="btn-edit" onclick="closeEditProductModal()">Cancel</button>
       <button class="btn-delete" onclick="deleteProductFromModal()" style="padding:10px 16px;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;cursor:pointer;margin-left:auto">🗑 Delete</button>
-    </div>
-  </div>
-</div>
-
-<div class="edit-modal" id="editWorkerModal">
-  <div class="edit-modal-content">
-    <div class="edit-modal-header">
-      <h3 id="editWorkerTitle">Edit Worker</h3>
-      <button class="edit-modal-close" onclick="closeEditWorkerModal()">×</button>
-    </div>
-    <div class="form-grid">
-      <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="ewf-name" readonly></div>
-      <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="ewf-role"></div>
-      <div class="form-field"><label class="form-label">PIN (4 digits)</label><input class="form-input" id="ewf-pin" type="text" inputmode="numeric" maxlength="4" placeholder="Leave blank to keep"></div>
-      <div class="form-field" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ewf-active"><label class="form-label" style="margin:0">Active</label></div>
-    </div>
-    <div class="admin-msg" id="ewf-msg"></div>
-    <div class="form-actions">
-      <button class="btn-save" onclick="saveEditedWorker()">Save</button>
-      <button class="btn-edit" onclick="closeEditWorkerModal()">Cancel</button>
     </div>
   </div>
 </div>
