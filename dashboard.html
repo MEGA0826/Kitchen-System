@@ -2995,12 +2995,24 @@ const _sbActions = {
 // ─────────────────────────────────────────────
 // API FETCH — routes to Supabase or GAS
 // ─────────────────────────────────────────────
+// Only ~20 actions are served by Supabase. Menus, Grundrezepturen, recipes, scanning,
+// orders, deductions and reports still route to Google Apps Script, so a kitchen set up
+// with API:"" is not "Supabase-only" — those calls used to fetch("?action=…"), which
+// resolves against dashboard.html, returns HTML and dies in res.json() with an opaque
+// "Unexpected token '<'". Say what is actually missing instead.
+function _noGasBackend(action) {
+  return { error: '"' + action + '" needs the Google Apps Script backend, which is not '
+    + 'configured. Set API in config.js. Menus, Grundrezepturen, recipes, scanning, '
+    + 'orders and reports are still served from Google Sheets.' };
+}
+
 async function get(params) {
   const action = params.action || "";
   if (_sbActions[action]) {
     try { return await _sbActions[action](params); }
     catch(e) { console.warn("[SB] " + action + " failed, falling back to GAS:", e); }
   }
+  if (!API) { console.warn("[GAS] no API configured for action:", action); return _noGasBackend(action); }
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
 }
@@ -3025,6 +3037,7 @@ async function adminCall(params) {
       return { error: msg };
     }
   }
+  if (!API) { console.warn("[GAS] no API configured for action:", action); return _noGasBackend(action); }
   const res = await fetch(API + "?" + new URLSearchParams(params));
   return res.json();
 }

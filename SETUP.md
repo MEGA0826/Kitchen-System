@@ -53,11 +53,37 @@ Open **[`config.js`](config.js)** and set:
 window.KMEP_CONFIG = {
   SB_URL: "https://<your-ref>.supabase.co",
   SB_KEY: "<your anon public key>",
-  API: "",                       // leave empty (legacy Google Apps Script; unused on a fresh setup)
+  API: "https://script.google.com/macros/s/<your-deployment>/exec",   // ⚠️ still required — see below
   businessName: "Your Kitchen",  // shows in the header, tab title, menus & PDFs
   appTitle: "Kitchen MEP",
 };
 ```
+### ⚠️ Supabase alone is not enough yet
+
+The Sheets → Supabase migration is **partial**. Supabase currently serves about twenty
+actions; everything else still routes to Google Apps Script:
+
+| Served by **Supabase** | Still **Google Apps Script** |
+|---|---|
+| Products (MEP) · Inventory (RM) · Staff & PIN login · HACCP · Sales analysis | **Menus · Grundrezepturen · MEP recipes · Scanning (produce/done/waste/used) · Requirements & orders · Deductions · Archive · Weekly report · PDF import** |
+
+A kitchen set up with `API: ""` therefore gets products and inventory and **not** the
+recipe, menu or scanning system — most of the daily workflow. Until the migration
+finishes a new kitchen needs **both** backends:
+
+1. Copy the reference Google Sheet (tabs `Produkt`, `Lager`, `MEP`, `Menus`, `GR`,
+   `Scan`, `Archive`, `Settings`, `Deductions`, `MEP_Stock`, `Sales_History`) and
+   **delete every data row, keeping the header rows exactly as they are** — the backend
+   resolves columns by header name.
+2. Copy `code.gs` into a new Apps Script project, set `SPREADSHEET_ID` to your sheet's
+   id and `MANAGER_EMAIL` to your address.
+3. **Deploy → New deployment → Web app**, execute as *me*, access *Anyone*. Paste the
+   `/exec` URL into `API` above.
+
+> Keep exactly one deployment. "New deployment" creates a *second* web app rather than
+> updating the first, and the two then drift — the app always calls whichever URL is in
+> `config.js`. To publish changes use **Manage deployments → ✏️ → Version: New version**.
+
 That's the only file you edit. Everything else (header, tab title, menu PDFs, Settings defaults) follows it.
 
 ## 6. Deploy the static site
