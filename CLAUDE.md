@@ -2,10 +2,22 @@
 
 ## Stack
 - Frontend: Vanilla HTML/CSS/JS on GitHub Pages (mega0826.github.io/Kitchen-System)
-- Backend: Google Apps Script (code.gs)
-- Database: Google Sheets (ID: 1IMHwIGK3BTMlQksMlLksa2vTm5lXxRMqA-J-J0c9PtU)
-- GAS URL: https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec
-- Key files: dashboard.html, code.gs, i18n.js, sw.js, index.html
+- Backend: **two stores, split by data** (migration is partial — see below)
+  - Supabase `clntikfffmjytexvzubq` (NOT the Lifebook project `dcxpscskpbwzlwcayprq`): products, inventory, staff/PIN, HACCP, sales analysis, **menus, Grundrezepturen**
+  - Google Apps Script (code.gs) + Google Sheets: MEP recipes, scanning, orders, deductions, archive, weekly report, PDF vision parsing
+- Google Sheet ID: 1IMHwIGK3BTMlQksMlLksa2vTm5lXxRMqA-J-I0c9PtU
+- GAS URL (the ONE live deployment — never create a second, never repoint the app): https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec
+- Key files: dashboard.html, code.gs (+ gas/RenameCode.gs), i18n.js, service-worker.js, index.html, supabase/functions/admin-gateway/
+
+## ⚠️ Menus and Grundrezepturen live in SUPABASE (since 2026-10-07)
+- The `Menus` and `GR` tabs of the Google Sheet are a **frozen archive**. Never read them as truth, never "fix" data there, never write them. Edits made there are invisible to the app.
+- Reads: `_sbActions.getMenus/getGRs` (anon REST, adapters `sbMenuToApp/sbGrToApp` in dashboard.html). Writes: admin-gateway `saveMenu/deleteMenu/setMenuActive/saveGR/deleteGR` (PIN token, service role). These actions are in `_SB_ONLY` — **they must never fall back to GAS**.
+- `zutaten` must reach the app as a JSON **string** (many callers `JSON.parse(m.zutaten||'[]')`; `_zRows` returns `[]` for non-strings → silently zero costs). The adapters stringify the jsonb; the gateway rejects anything that is not a JSON array of objects.
+- A save carries the row **id**: with an id it UPDATEs in place, without one it INSERTs and the unique code index (`lower(menu_code)`, `lower(gr_code)`) refuses an existing code. Never delete-then-insert to "update".
+- UPDATE writes only the columns the request carries; send a field as `""` to clear it.
+- Every UPDATE/DELETE is logged to `recipe_history` (old row as jsonb). Undo = read the old row from there. Backups of the pre-migration copy: `_bak_menus_20261007`, `_bak_grs_20261007`.
+- `resync_recipe_analytics()` used to TRUNCATE menus/GRs weekly and reload them from the Sheet. It is now refresh-only. **Never reintroduce a job that copies Sheet -> Supabase for these tables.**
+- `scripts/name_mismatch.cjs` finds references that resolve but point at the wrong dish; `scripts/fix_lager.cjs` reconciles Lager vs Supabase inventory. Both are Sheet-era tools that still read GAS for MEP data.
 
 ## Hard coding rules — never break these
 - NEVER use cssText — always individual div.style.property assignments

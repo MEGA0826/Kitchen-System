@@ -1678,7 +1678,7 @@
     <div class="admin-section-sub">Findet Zutaten in Menus und GRs ohne gültigen Code (z.B. aus PDF-Import) und verknüpft sie mit RM / MEP / GR / Menu — damit Kosten, Allergene und Relations stimmen.</div>
     <button class="btn-save" onclick="openRelinkTool()">🔍 Prüfen &amp; verknüpfen</button>
     <button class="btn-save" onclick="openRecalcTool()" style="margin-left:8px">💰 Preise &amp; WA neu berechnen</button>
-    <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">Seit 28.09. speichern beide Werkzeuge auch <b>Grundrezepturen</b> (der <code>saveGR</code>-Patch aktualisiert die bestehende Zeile, statt eine neue anzulegen).</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">Seit 07.10. liegen <b>Menus und Grundrezepturen in Supabase</b>; beide Werkzeuge speichern dorthin. Eine bestehende Zeile wird über ihre ID aktualisiert, ein doppelter Code wird abgelehnt statt eine zweite Zeile anzulegen. Jede Änderung bleibt in <code>recipe_history</code> nachvollziehbar.</div>
     <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">Aus PDF importierte Menus haben oft Zutaten ohne Preis, weil beim Import die Preisdaten noch nicht geladen waren — darum erscheint der WA erst, wenn man die Zutat von Hand neu auswählt. «Preise &amp; WA neu berechnen» macht das für alle Menus und GRs auf einmal — mit Vorschau (WA vorher → nachher) vor dem Speichern. Zeilen mit Stück-Einheit (Stk/Port.) bleiben unverändert, weil dafür ein Preis pro Stück fehlt.</div>
   </div>
 
@@ -2379,9 +2379,9 @@ const EU_ALLERGENS = ['Gluten','Krebstiere','Eier','Fisch','Erdnüsse','Soja','M
 let _ipEditIdx    = -1;  // index of zutat being edited, -1 = new add
 let editingMenuId = null;
 let editingGRCode = null;
-// The GR row's stable uuid. GAS saveGR only UPDATES the row whose id equals p.grId —
-// called without it, it always appends. Keeping the id is what lets an edit update in
-// place instead of delete-then-append, which threw the row id away every time.
+// The GR row's stable uuid. saveGR updates the row whose id it is given in place and
+// inserts when none is sent, so an edit (and a rename) has to carry it — otherwise the
+// save is a second row under the same code, which the unique index refuses.
 let editingGRId = null;
 let _viewingMenu  = null;
 let _grSelectedItem = null;
@@ -2763,7 +2763,14 @@ async function gwPost(body) {
     headers: { "Content-Type": "application/json", apikey: SB_KEY, Authorization: "Bearer " + SB_KEY },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    // The gateway answers {"error":"…"}. Surface the sentence, not the JSON wrapper — a
+    // duplicate menu code should read 'Menu code "SS-016" already exists', not '{"error":…}'.
+    const t = await res.text();
+    let msg = t;
+    try { const j = JSON.parse(t); if (j && j.error) msg = j.error; } catch (e) {}
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -2798,6 +2805,64 @@ function gwTokenValid() {
 // Reads use the anon key directly; writes are delegated to the gateway.
 // All others fall through to GAS automatically.
 // ─────────────────────────────────────────────
+// ── Menus + Grundrezepturen helpers ──────────────────────────────────────────
+// PostgREST caps a response at 1000 rows. Recipes are read whole, so page through them:
+// a kitchen with more than 1000 would otherwise silently lose everything past the cap.
+async function sbGetAll(table, query) {
+  const PAGE = 1000, out = [];
+  for (let off = 0; ; off += PAGE) {
+    const rows = await sbGet(table, query + "&limit=" + PAGE + "&offset=" + off);
+    out.push.apply(out, rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
+// A Supabase row -> the shape the whole app was built around (Google Sheets column names).
+// `zutaten` MUST stay a JSON *string*: dozens of callers do JSON.parse(m.zutaten || "[]"),
+// and _zRows() returns [] for anything that is not a string — handing them the jsonb array
+// would silently zero every cost, weight and allergen without raising an error.
+function sbMenuToApp(r) {
+  return {
+    id: r.id, menuCode: r.menu_code, name: r.name,
+    category: r.category || "", art: r.art || "", saison: r.saison || "",
+    gewicht: r.gewicht == null ? "" : r.gewicht,
+    garverlust: r.garverlust == null ? 0 : r.garverlust,
+    wa: r.wa == null ? 0 : r.wa,
+    vk: r.vk == null ? 0 : r.vk,
+    deko: r.deko || "", zubereitung: r.zubereitung || "",
+    zutaten: JSON.stringify(r.zutaten || []),
+    imageUrl: r.image_url || "", logoUrl: r.logo_url || "",
+    lastUpdate: r.last_update || "",
+    active: r.active !== false,
+    editedBy: r.edited_by || ""
+  };
+}
+function sbGrToApp(r) {
+  const roh = r.rohgewicht == null ? 0 : r.rohgewicht, verl = r.garverlust == null ? 0 : r.garverlust;
+  return {
+    id: r.id, grCode: r.gr_code, name: r.name, art: r.art || "Grundrezeptur",
+    rohgewicht: roh, garverlust: verl,
+    nettogewicht: roh * (1 - verl / 100),            // derived; the Sheet stored it, Supabase computes it
+    wa: r.wa == null ? 0 : r.wa,
+    zutaten: JSON.stringify(r.zutaten || []),
+    zubereitung: r.zubereitung || "",
+    lastUpdate: r.updated_at || "",
+    editedBy: r.edited_by || ""
+  };
+}
+
+// First free PREFIX### — a port of the Apps Script getAllCodes logic.
+function _nextFreeCode(prefix, existing) {
+  const nums = existing.map(c => { const m = String(c).match(/(\d+)$/); return m ? parseInt(m[1], 10) : 0; }).filter(n => n > 0);
+  const next = (nums.length ? Math.max.apply(null, nums) : 0) + 1;
+  for (let i = 1; i <= next; i++) {
+    const cand = prefix + String(i).padStart(3, "0");
+    if (existing.indexOf(cand) === -1) return cand;
+  }
+  return prefix + String(next).padStart(3, "0");
+}
+
 const _sbActions = {
 
   // ── Workers ──────────────────────────────
@@ -2955,28 +3020,85 @@ const _sbActions = {
     })).sort((a, b) => b.totalQty - a.totalQty);
 
     return { products, days, totalDays };
+  },
+
+  // ── Menus + Grundrezepturen ───────────────────────────────────────────────
+  // Supabase is the source of truth for both. The Google Sheet copy is frozen, so these
+  // never fall back to it (see _SB_ONLY below). Reads are anon; writes go through the
+  // PIN-gated gateway, which keeps the row id stable and logs every overwrite.
+  getMenus: async () => ({ menus: (await sbGetAll("menus", "select=*&order=menu_code.asc")).map(sbMenuToApp) }),
+  getGRs:   async () => ({ grs:   (await sbGetAll("grundrezepturen", "select=*&order=gr_code.asc")).map(sbGrToApp) }),
+  saveMenu:      (p) => gwWrite("saveMenu", p),
+  deleteMenu:    (p) => gwWrite("deleteMenu", p),
+  setMenuActive: (p) => gwWrite("setMenuActive", p),
+  saveGR:        (p) => gwWrite("saveGR", p),
+  deleteGR:      (p) => gwWrite("deleteGR", p),
+
+  // Code suggestions + fuzzy-match universe for the PDF importer. These read the GR sheet,
+  // which is now frozen, so they come from Supabase too.
+  getAllCodes: async () => {
+    const [inv, prod, grs] = await Promise.all([
+      sbGetAll("inventory", "select=code&order=code.asc"),
+      sbGetAll("products", "select=code&order=code.asc"),          // incl. soft-deleted: never reuse a code
+      sbGetAll("grundrezepturen", "select=gr_code&order=gr_code.asc"),
+    ]);
+    const clean = a => a.map(v => String(v == null ? "" : v).trim()).filter(Boolean);
+    const rm = clean(inv.map(r => r.code)), mep = clean(prod.map(r => r.code)), gr = clean(grs.map(r => r.gr_code));
+    return { ok: true, rmCodes: rm, mepCodes: mep, grCodes: gr,
+             nextRM: _nextFreeCode("RM-", rm), nextMEP: _nextFreeCode("P-", mep), nextGR: _nextFreeCode("GR-", gr) };
+  },
+  getAllItemsForMatching: async () => {
+    const [inv, prod, grs] = await Promise.all([
+      sbGetAll("inventory", "select=code,name&order=code.asc"),
+      sbGetAll("products", "select=code,name,active&order=code.asc"),
+      sbGetAll("grundrezepturen", "select=gr_code,name&order=gr_code.asc"),
+    ]);
+    const items = [];
+    const add = (type, code, name) => {
+      const c = String(code == null ? "" : code).trim(), n = String(name == null ? "" : name).trim();
+      if (c && n && n !== "(deleted)") items.push({ type, code: c, name: n.toLowerCase() });
+    };
+    inv.forEach(r => add("RM", r.code, r.name));
+    prod.filter(r => r.active !== false).forEach(r => add("MEP", r.code, r.name));
+    grs.forEach(r => add("GR", r.gr_code, r.name));
+    return { ok: true, items };
   }
 };
 
 // ─────────────────────────────────────────────
 // API FETCH — routes to Supabase or GAS
 // ─────────────────────────────────────────────
-// Only ~20 actions are served by Supabase. Menus, Grundrezepturen, recipes, scanning,
-// orders, deductions and reports still route to Google Apps Script, so a kitchen set up
-// with API:"" is not "Supabase-only" — those calls used to fetch("?action=…"), which
-// resolves against dashboard.html, returns HTML and dies in res.json() with an opaque
-// "Unexpected token '<'". Say what is actually missing instead.
+// Supabase serves products, inventory, staff, HACCP, sales analysis AND menus +
+// Grundrezepturen. Recipes (MEP), scanning, orders, deductions and reports still route to
+// Google Apps Script, so a kitchen set up with API:"" is not fully "Supabase-only" — those
+// calls used to fetch("?action=…"), which resolves against dashboard.html, returns HTML and
+// dies in res.json() with an opaque "Unexpected token '<'". Say what is actually missing.
 function _noGasBackend(action) {
   return { error: '"' + action + '" needs the Google Apps Script backend, which is not '
-    + 'configured. Set API in config.js. Menus, Grundrezepturen, recipes, scanning, '
-    + 'orders and reports are still served from Google Sheets.' };
+    + 'configured. Set API in config.js. MEP recipes, scanning, orders, deductions and '
+    + 'reports are still served from Google Sheets.' };
 }
+
+// Actions whose Google Sheet copy is FROZEN. If Supabase fails for one of these, say so —
+// never fall back to the Sheet: that would show out-of-date recipes as if they were
+// current, and the next save would write them over the real ones. (For the write actions a
+// fallback would silently save into a sheet nobody reads any more.)
+const _SB_ONLY = new Set([
+  "getMenus", "getGRs", "getAllCodes", "getAllItemsForMatching",
+  "saveMenu", "deleteMenu", "setMenuActive", "saveGR", "deleteGR"
+]);
 
 async function get(params) {
   const action = params.action || "";
   if (_sbActions[action]) {
     try { return await _sbActions[action](params); }
-    catch(e) { console.warn("[SB] " + action + " failed, falling back to GAS:", e); }
+    catch(e) {
+      if (_SB_ONLY.has(action)) {
+        console.warn("[SB] " + action + " failed (no GAS fallback — the Sheet copy is frozen):", e);
+        return { error: String((e && e.message) || e) };
+      }
+      console.warn("[SB] " + action + " failed, falling back to GAS:", e);
+    }
   }
   if (!API) { console.warn("[GAS] no API configured for action:", action); return _noGasBackend(action); }
   const res = await fetch(API + "?" + new URLSearchParams(params));
@@ -6446,10 +6568,10 @@ function fmtW(kg){kg=parseFloat(kg)||0;if(!kg)return'—';return kg>=1?(kg%1===0
 function pZ(s){if(!s)return[];if(Array.isArray(s))return s;try{var r=JSON.parse(s);return Array.isArray(r)?r:[];}catch(e){return[];}}
 
 // Data: reuse the dashboard's own (let-declared) globals — window.allX never saw them,
-// so every visit re-downloaded everything from GAS. inventory/allProducts come from
-// Supabase via get(); recipes/GRs/menus are still GAS-only (slow, up to ~14 s), so
-// they're kept in a localStorage cache and revalidated in the background. The view
-// renders immediately and re-renders as each dataset arrives.
+// so every visit re-downloaded everything. inventory/allProducts/GRs/menus come from
+// Supabase via get() (fast); MEP recipes are still GAS-only (slow, up to ~14 s). All three
+// recipe datasets are kept in a localStorage cache and revalidated in the background, so
+// the view renders immediately and re-renders as each dataset arrives.
 var rLoading=null,rFresh=false,RT_CACHE='rt_cache_v1';
 function rSyncWin(){window.allInventory=allInventory;window.allProducts=allProducts;window.allRecipes=allRecipes;window.allGRs=allGRs;window.allMenus=allMenus;}
 function rCacheLoad(){try{var c=JSON.parse(localStorage.getItem(RT_CACHE)||'null');if(!c)return;if(!allRecipes.length&&Array.isArray(c.recipes))allRecipes=c.recipes;if(!allGRs.length&&Array.isArray(c.grs))allGRs=c.grs;if(!allMenus.length&&Array.isArray(c.menus))allMenus=c.menus;}catch(e){}}

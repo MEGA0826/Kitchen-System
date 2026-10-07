@@ -545,10 +545,12 @@ async function applyBatchMatches() {
       const { enriched, waTotal } = _enrichZutaten(entry.zutaten);
       if (entry.isGR) {
         const gr = (allGRs || []).find(g => (g.grCode || g.id) === savedCode);
-        // GAS saveGR always appends — delete old row first
-        await _batchRetry(() => adminCall({ action: 'deleteGR', grCode: savedCode }));
+        // Update the GR in place by its id. This used to delete the row and re-insert it
+        // (the Apps Script saveGR appended on every call), which churned the row id and
+        // lost the GR outright if the insert failed after the delete.
         await _batchRetry(() => adminCall({
           action     : 'saveGR',
+          grId       : (gr && gr.id) || '',
           grCode     : savedCode,
           name       : entry.menuName,
           art        : (gr && gr.art) || 'Grundrezeptur',

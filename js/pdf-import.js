@@ -33,8 +33,8 @@ async function startPdfImport(mode) {
   adminMsg("pdf-msg","Reading PDF…","");
 
   const [codesData, itemsData] = await Promise.all([
-    adminCall({ action: "getAllCodes" }).catch(() => ({})),
-    adminCall({ action: "getAllItemsForMatching" }).catch(() => ({}))
+    get({ action: "getAllCodes" }).catch(() => ({})),
+    get({ action: "getAllItemsForMatching" }).catch(() => ({}))
   ]);
   _allRmCodes  = codesData.rmCodes  || [];
   _allMepCodes = codesData.mepCodes || [];

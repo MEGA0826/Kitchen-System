@@ -156,11 +156,11 @@ async function saveGREntry() {
   if (!name) { adminMsg('agr-msg','GR Name erforderlich','err'); return; }
 
   // Duplicate protection. Validate the code against LIVE data, not the in-memory
-  // allGRs: the old check trusted allGRs, which silently goes EMPTY whenever the
-  // large/slow getGRs load times out (loadGRs sets allGRs=[] on failure) — so a
-  // dup code (e.g. GR-006) sailed through an empty-list check. GAS saveGR always
-  // INSERTS and delete is by code (removes both), so a dup is unrecoverable in-app.
-  // Refuse to save if we cannot confirm the current list.
+  // allGRs: that silently goes EMPTY whenever a load fails (loadGRs sets allGRs=[]), and
+  // an empty list lets a duplicate code straight through. The database's unique index is
+  // the real guard (an existing code comes back as "already exists"); checking here just
+  // gives the message before anything is sent. Refuse to save if we cannot confirm the
+  // current list.
   const isEditing = !!editingGRCode;
   // A changed code is a RENAME, not a new GR: the old row is deleted below and every
   // other recipe that lists this GR as an ingredient still points at the old code.
@@ -200,14 +200,13 @@ async function saveGREntry() {
       catch(e) { kmepCookFail(); adminMsg('agr-msg', e.message, 'err'); btn.disabled = false; btn.textContent = '💾 Speichern'; return; }
     }
     if (!_agrSaveImg.startsWith('http')) _agrSaveImg = '';
-    // GAS saveGR updates the row whose id === p.grId, and APPENDS when grId is absent.
-    // So an edit passes the row's id and updates in place. It used to delete the old
-    // row and let saveGR append a replacement, which worked but threw the row id away
-    // on every save — and lost the GR outright if saveGR failed after the delete.
-    // A rename is the same call: the row keeps its id and gets the new code.
+    // saveGR updates the row it is given the id of, IN PLACE, and inserts when no id is
+    // sent — so an edit, including a rename, carries the row's id and the row keeps it.
+    // (Delete-then-insert threw the id away on every save and lost the GR outright if the
+    // insert failed after the delete.)
     if (editingGRCode && !editingGRId) {
-      // No id (older cached allGRs) — fall back to the old delete-then-append, or the
-      // save would silently create a second row under the same code.
+      // No id (a stale cached list): delete-then-insert rather than risk a second row
+      // under the same code. The unique index would refuse it anyway.
       const del = await get({ action: 'deleteGR', grCode: editingGRCode });
       if (del.error) throw new Error('Delete old GR failed: ' + del.error);
     }

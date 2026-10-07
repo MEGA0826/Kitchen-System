@@ -60,21 +60,23 @@ window.KMEP_CONFIG = {
 ```
 ### ⚠️ Supabase alone is not enough yet
 
-The Sheets → Supabase migration is **partial**. Supabase currently serves about twenty
-actions; everything else still routes to Google Apps Script:
+The Sheets → Supabase migration is **partly done**. Supabase serves products, inventory,
+staff, HACCP, sales analysis — and, since 2026-10-07, **menus and Grundrezepturen**.
+Everything else still routes to Google Apps Script:
 
 | Served by **Supabase** | Still **Google Apps Script** |
 |---|---|
-| Products (MEP) · Inventory (RM) · Staff & PIN login · HACCP · Sales analysis | **Menus · Grundrezepturen · MEP recipes · Scanning (produce/done/waste/used) · Requirements & orders · Deductions · Archive · Weekly report · PDF import** |
+| Products (MEP) · Inventory (RM) · **Menus · Grundrezepturen** · Staff & PIN login · HACCP · Sales analysis | **MEP recipes · Scanning (produce/done/waste/used) · Requirements & orders · Deductions · Archive · Weekly report · PDF-recipe vision parsing** |
 
-A kitchen set up with `API: ""` therefore gets products and inventory and **not** the
-recipe, menu or scanning system — most of the daily workflow. Until the migration
-finishes a new kitchen needs **both** backends:
+A kitchen set up with `API: ""` therefore gets the product catalogue, raw materials, menus
+and sub-recipes — but **not** MEP recipes or scanning. Until those move too, a kitchen that
+wants them needs **both** backends:
 
-1. Copy the reference Google Sheet (tabs `Produkt`, `Lager`, `MEP`, `Menus`, `GR`,
-   `Scan`, `Archive`, `Settings`, `Deductions`, `MEP_Stock`, `Sales_History`) and
-   **delete every data row, keeping the header rows exactly as they are** — the backend
-   resolves columns by header name.
+1. Copy the reference Google Sheet (tabs `Produkt`, `Lager`, `MEP`, `Scan`, `Archive`,
+   `Settings`, `Deductions`, `MEP_Stock`, `Sales_History`) and **delete every data row,
+   keeping the header rows exactly as they are** — the backend resolves columns by header
+   name. (The `Menus` and `GR` tabs are not used any more; an existing kitchen's are a
+   frozen archive.)
 2. Copy `code.gs` into a new Apps Script project, set `SPREADSHEET_ID` to your sheet's
    id and `MANAGER_EMAIL` to your address.
 3. **Deploy → New deployment → Web app**, execute as *me*, access *Anyone*. Paste the

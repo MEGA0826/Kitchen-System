@@ -399,8 +399,9 @@ async function saveMenuEntry() {
       const garverlust  = document.getElementById('mp-garverlust').value;
       const wa          = document.getElementById('mp-wa').value;
       const zubereitung = document.getElementById('mp-zubereitung').value.trim();
-      // Reuse the GR row when this code already exists, otherwise saveGR appends a
-      // second row under the same grCode (it only updates the row matching p.grId).
+      // Reuse the GR row when this code already exists: saveGR updates the row whose id it
+      // is given and inserts otherwise, and the unique code index refuses an insert for a
+      // code that is taken.
       const _grExisting = (allGRs || []).find(x => (x.grCode || '') === grCode);
       const grData = await adminCall({
         action: 'saveGR', grId: (_grExisting && _grExisting.id) || '', grCode, name, art,
@@ -437,8 +438,11 @@ async function saveMenuEntry() {
     zubereitung   : document.getElementById('mp-zubereitung').value.trim(),
     zutaten       : JSON.stringify(_slimZutaten(menuZutaten)),
     imageUrl      : imageUrl || '',
-    logoUrl,
-    lastUpdate    : new Date().toISOString()
+    // Written in the same statement as the rest of the menu, so a save can never leave a
+    // menu "saved but still on sale". Not sent: logoUrl / deko (the editor has no field
+    // for them, and the gateway leaves any column the request does not carry alone) and
+    // lastUpdate (the server's clock is used).
+    active        : document.getElementById('mp-active')?.value || 'true'
   };
 
   kmepCookStart('menuPopup');
@@ -446,26 +450,9 @@ async function saveMenuEntry() {
     const data = await adminCall(payload);
     if (data.error) throw new Error(data.error);
     adminMsg('mp-msg', '✓ Gespeichert', 'ok');
-    // The active flag lives in a column saveMenu does not write (it writes columns
-    // 1..16 by position), so it is set through its own action — and only when it
-    // actually changed, to save a round trip on every ordinary save.
-    const _wantActive = (document.getElementById('mp-active')?.value || 'true') !== 'false';
-    const _menuIdNow  = editingMenuId || (data && data.menuId) || '';
-    const _wasActive  = editingMenuId
-      ? _menuIsActive(allMenus.find(m => m.id === editingMenuId))
-      : true;
-    if (_menuIdNow && _wantActive !== _wasActive) {
-      try {
-        const r = await adminCall({ action: 'setMenuActive', menuId: _menuIdNow, active: String(_wantActive) });
-        if (r && r.error) throw new Error(r.error);
-      } catch (e) {
-        // The menu itself saved fine — say what did not, rather than failing the save.
-        adminMsg('mp-msg', '✓ Gespeichert, aber Verkaufs-Status nicht übernommen: ' + e.message, 'err');
-      }
-    }
     await loadMenus();
     // Move every zutaten reference onto the new code, after this menu already carries
-    // it. Slow (re-reads Menus + GRs from Sheets), so say what is happening.
+    // it. Re-reads Menus + GRs, so say what is happening.
     let _ccMsg = '';
     if (_mnRenamed && typeof _ccCascade === 'function') {
       adminMsg('mp-msg', '🔗 Verknüpfungen werden umgestellt (' + _mnOldCode + ' → ' + menuCode + ')…', '');

@@ -164,7 +164,7 @@ async function openRelinkTool() {
   _rlModal().style.display = 'flex';
   document.getElementById('rlTitle').textContent = '🔗 Zutaten verknüpfen';
   const body = document.getElementById('rlBody'), foot = document.getElementById('rlFoot');
-  body.innerHTML = '<div style="color:var(--muted);padding:30px 0;text-align:center">⏳ Lade Menus, GRs, Inventar… (Menus/GRs kommen aus Google Sheets, bis ~15 s)</div>';
+  body.innerHTML = '<div style="color:var(--muted);padding:30px 0;text-align:center">⏳ Lade Menus, GRs, Inventar…</div>';
   foot.innerHTML = '';
   try {
     const fresh = await _rlFetchFresh();

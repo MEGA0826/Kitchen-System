@@ -426,3 +426,34 @@ function initMenuActiveColumn() {
   Logger.log("active column = " + columnLetter_(col) + " (" + col + ")");
   return jsonResponse({ status: "ok", column: columnLetter_(col) });
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 3 — MENUS AND GRUNDREZEPTUREN HAVE MOVED TO SUPABASE
+   From 2026-10-07 the app reads and writes menus and GRs in Supabase. The Menus and GR
+   tabs of this spreadsheet are a frozen archive. This guard makes a tablet that is still
+   running the OLD app fail loudly instead of quietly saving into a sheet nobody reads
+   any more (those edits would simply vanish).
+
+   ONE line in code.gs, inside doGet, directly after the `const action = ...` line:
+
+       const _moved = menusMovedGuard_(action); if (_moved) return _moved;
+
+   then Deploy -> Manage deployments -> pencil (the row whose URL contains 1aiIySe0)
+   -> Version: New version -> Deploy.
+
+   Reads (getMenus, getGRs) stay open: the data is frozen, not secret, and the
+   verification and rollback scripts read it.
+   To roll back to Sheets: delete that one line and redeploy.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const MENUS_MOVED_ACTIONS_ = ["saveMenu", "deleteMenu", "setMenuActive", "saveGR", "deleteGR", "allergenPDF"];
+
+function menusMovedGuard_(action) {
+  if (MENUS_MOVED_ACTIONS_.indexOf(action) < 0) return null;
+  // allergenPDF is on the list on purpose: it builds its matrix from the frozen Menus and GR
+  // tabs, so it would print an out-of-date allergen declaration. Nothing in the app opens it.
+  return jsonResponse({
+    error: "Menus and Grundrezepturen now live in Supabase - this sheet is a frozen archive. " +
+           "Reload the app (close the tab and reopen it) to get the new version.",
+    moved: true
+  });
+}

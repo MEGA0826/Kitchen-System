@@ -51,12 +51,17 @@ create table if not exists public.recipes (
   created_at timestamptz default now()
 );
 
+-- Menus and Grundrezepturen: SUPABASE IS THE SOURCE OF TRUTH (since 2026-10-07). Written only
+-- through the admin-gateway (saveMenu / saveGR ...); the Google Sheet tabs are a frozen archive.
 create table if not exists public.menus (
   id uuid primary key default gen_random_uuid(),
   menu_code text not null, name text not null,
   category text, art text, saison text,
   gewicht numeric, garverlust numeric default 0, wa numeric default 0, vk numeric default 0,
-  zutaten jsonb default '[]'::jsonb, zubereitung text, image_url text,
+  deko text,
+  zutaten jsonb default '[]'::jsonb, zubereitung text, image_url text, logo_url text,
+  active boolean not null default true,   -- false = not on sale (greyed in the app, kept out of the calculator)
+  edited_by text,
   last_update timestamptz default now(), created_at timestamptz default now()
 );
 
@@ -65,8 +70,45 @@ create table if not exists public.grundrezepturen (
   gr_code text not null, name text not null, art text default 'Grundrezeptur',
   rohgewicht numeric default 0, garverlust numeric default 0, wa numeric default 0,
   zutaten jsonb default '[]'::jsonb, zubereitung text,
+  edited_by text,
   created_at timestamptz default now(), updated_at timestamptz default now()
 );
+
+-- A code is how every other recipe refers to a menu or GR, so it must be unique — and the
+-- database, not the client, enforces it (case-insensitively, matching the app's own check).
+-- A missing id on an existing code is then a plain "already exists" error instead of a
+-- silent duplicate (the Apps Script saveGR did exactly that: 92 GRs became 233).
+create unique index if not exists menus_menu_code_uq         on public.menus (lower(menu_code));
+create unique index if not exists grundrezepturen_gr_code_uq on public.grundrezepturen (lower(gr_code));
+
+-- Undo trail: Google Sheets kept version history, Postgres does not. Every UPDATE and DELETE
+-- of a menu or GR stores the row as it was.   select old_row from recipe_history
+--   where kind='menu' and code='SS-016' order by id desc;
+create table if not exists public.recipe_history (
+  id bigserial primary key,
+  kind text not null check (kind in ('menu', 'gr')),
+  row_id uuid not null, code text, op text not null,
+  old_row jsonb not null, changed_at timestamptz not null default now()
+);
+create index if not exists recipe_history_row_idx  on public.recipe_history (kind, row_id, changed_at desc);
+create index if not exists recipe_history_code_idx on public.recipe_history (kind, code);
+alter table public.recipe_history enable row level security;      -- no policy: service role / SQL editor only
+
+create or replace function public.log_recipe_change() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'UPDATE' and to_jsonb(old) = to_jsonb(new) then return new; end if;
+  insert into public.recipe_history (kind, row_id, code, op, old_row)
+  values (tg_argv[0], old.id, coalesce(to_jsonb(old) ->> 'menu_code', to_jsonb(old) ->> 'gr_code'), tg_op, to_jsonb(old));
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end $$;
+drop trigger if exists menus_history on public.menus;
+create trigger menus_history after update or delete on public.menus
+  for each row execute function public.log_recipe_change('menu');
+drop trigger if exists grs_history on public.grundrezepturen;
+create trigger grs_history after update or delete on public.grundrezepturen
+  for each row execute function public.log_recipe_change('gr');
 
 create table if not exists public.workers (
   id uuid primary key default gen_random_uuid(),
