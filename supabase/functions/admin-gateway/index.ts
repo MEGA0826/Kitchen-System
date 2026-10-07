@@ -13,6 +13,8 @@
 // function implements its own PIN-based auth; the anon-key JWT would add nothing
 // (it is public) and only complicate CORS preflight.
 
+import { Bad, buildGrRow, buildMenuRow, friendlyDbError, isFalse, uuidOrNull } from "./recipes.ts";
+
 const SB_URL      = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SIGN_SECRET = SERVICE_KEY; // server-only HMAC secret
@@ -77,6 +79,7 @@ async function sr(path: string, init: RequestInit = {}): Promise<unknown> {
   return t ? JSON.parse(t) : null;
 }
 const MIN = { headers: { Prefer: "return=minimal" } };
+const REP = { headers: { Prefer: "return=representation" } };
 const UPSERT_MIN = { headers: { Prefer: "resolution=merge-duplicates,return=minimal" } };
 
 function num(v: unknown): number | null {
@@ -221,6 +224,74 @@ const writers: Record<string, (p: P) => Promise<unknown>> = {
     return { imported: row?.inserted ?? clean.length, replaced: row?.replaced ?? 0, skipped: raw.length - clean.length };
   },
 
+  // ── Menus + Grundrezepturen ─────────────────────────────────────────────────
+  // Supabase is the source of truth for both (the Google Sheet is frozen). The row id is
+  // what makes a save an UPDATE: with a valid id the row is patched in place, without one a
+  // new row is inserted. The old Apps Script saveGR APPENDED whenever the id was missing,
+  // which turned 92 GRs into 233 — here a missing id on an existing code is a unique-key
+  // violation that comes back as a plain error instead of a silent duplicate.
+  // Every UPDATE/DELETE is logged to recipe_history by a trigger, so nothing is unrecoverable.
+  saveMenu: async (p) => {
+    const editor = (p._claims && p._claims.name) || null;
+    const now = new Date().toISOString();
+    const id = uuidOrNull(p.menuId);
+    try {
+      if (id) {
+        const row = buildMenuRow(p, { insert: false, editor, now });
+        const res = await sr("menus?id=eq." + id, { method: "PATCH", ...REP, body: JSON.stringify(row) }) as P[] | null;
+        if (!res || !res.length) throw new Bad("Menu not found — reload the app and try again");
+        return { status: "ok", menuId: id };
+      }
+      const row = buildMenuRow(p, { insert: true, editor, now });
+      const res = await sr("menus", { method: "POST", ...REP, body: JSON.stringify(row) }) as P[] | null;
+      return { status: "ok", menuId: res && res[0] ? res[0].id : null };
+    } catch (e) { throw friendlyDbError(e, "Menu", p.menuCode); }
+  },
+  deleteMenu: async (p) => {
+    const id = uuidOrNull(p.menuId);
+    const code = id ? "" : String(p.menuCode || "").trim();
+    if (!id && !code) throw new Bad("menuId required");
+    const q = id ? "id=eq." + id : "menu_code=eq." + qenc(code);
+    const res = await sr("menus?" + q, { method: "DELETE", ...REP }) as P[] | null;
+    return res && res.length ? { status: "ok" } : { status: "not_found" };
+  },
+  // Takes a menu on or off sale without touching anything else about it.
+  setMenuActive: async (p) => {
+    const id = uuidOrNull(p.menuId);
+    if (!id) throw new Bad("menuId required");
+    const active = !isFalse(p.active);
+    const editor = (p._claims && p._claims.name) || null;
+    const res = await sr("menus?id=eq." + id, { method: "PATCH", ...REP, body: JSON.stringify({ active, edited_by: editor }) }) as P[] | null;
+    if (!res || !res.length) throw new Bad("Menu not found — reload the app and try again");
+    return { status: "ok", menuId: id, active };
+  },
+
+  saveGR: async (p) => {
+    const editor = (p._claims && p._claims.name) || null;
+    const now = new Date().toISOString();
+    const id = uuidOrNull(p.grId);
+    try {
+      if (id) {
+        const row = buildGrRow(p, { insert: false, editor, now });
+        const res = await sr("grundrezepturen?id=eq." + id, { method: "PATCH", ...REP, body: JSON.stringify(row) }) as P[] | null;
+        if (!res || !res.length) throw new Bad("GR not found — reload the app and try again");
+        return { status: "ok", grId: id };
+      }
+      const row = buildGrRow(p, { insert: true, editor, now });
+      const res = await sr("grundrezepturen", { method: "POST", ...REP, body: JSON.stringify(row) }) as P[] | null;
+      return { status: "ok", grId: res && res[0] ? res[0].id : null };
+    } catch (e) { throw friendlyDbError(e, "GR", p.grCode); }
+  },
+  // deleteGR has always accepted either the row id or the code in `grId` / `grCode`.
+  deleteGR: async (p) => {
+    const key = String(p.grId || p.grCode || "").trim();
+    if (!key) throw new Bad("grId required");
+    const id = uuidOrNull(key);
+    const q = id ? "id=eq." + id : "gr_code=eq." + qenc(key);
+    const res = await sr("grundrezepturen?" + q, { method: "DELETE", ...REP }) as P[] | null;
+    return res && res.length ? { status: "ok" } : { status: "not_found" };
+  },
+
   // Audit row for a completed import (who/when/what). Fire-and-forget from the client.
   logImport: async (p) => {
     const body = {
@@ -278,6 +349,9 @@ Deno.serve(async (req) => {
   try {
     return json(await writer(p));
   } catch (e) {
+    // The caller's mistake (bad code, malformed zutaten, duplicate): a 400 with a message
+    // a cook can read, not a 500 with a database dump.
+    if (e instanceof Bad) return json({ error: e.message }, 400);
     return json({ error: String((e as Error)?.message || e) }, 500);
   }
 });
