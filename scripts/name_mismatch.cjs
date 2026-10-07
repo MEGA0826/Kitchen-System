@@ -1,11 +1,10 @@
 // A reference can RESOLVE and still be wrong. After the Sept-26 renumbering some rows
 // kept their old code while the dish that code now names is a different one. The
 // dangling audit cannot see these — the code exists, it just points somewhere else.
-// Read-only.
-const GAS = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
+// Read-only. Reads menus + GRs from SUPABASE (the source of truth since 2026-10-07; the
+// Sheet's Menus/GR tabs are a frozen archive and would give stale answers).
 const SB = "https://clntikfffmjytexvzubq.supabase.co";
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsbnRpa2ZmZm1qeXRleHZ6dWJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxODQwMzUsImV4cCI6MjA5NTc2MDAzNX0.6aiiiJk0hX1DrbXE1zMSYswwJT1FFkrgunJm9eznIXE";
-const gas = async a => { for (let i = 0; i < 6; i++) { const t = await (await fetch(GAS + "?action=" + a)).text(); if (t.trim().startsWith("{")) return JSON.parse(t); await new Promise(r => setTimeout(r, 900)); } throw new Error("fail " + a); };
 const sbGet = (t, q) => fetch(`${SB}/rest/v1/${t}?${q}`, { headers: { apikey: KEY, Authorization: "Bearer " + KEY } }).then(r => r.json());
 const pZ = s => { try { const r = JSON.parse(s || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; } };
 const norm = s => String(s || '').toLowerCase()
@@ -14,11 +13,13 @@ const norm = s => String(s || '').toLowerCase()
   .replace(/[^a-z0-9]+/g, ' ').trim();
 
 (async () => {
-  const [inv, prod, gd, md] = await Promise.all([
+  const [inv, prod, gRows, mRows] = await Promise.all([
     sbGet('inventory', 'select=code,name'), sbGet('products', 'select=code,name,active'),
-    gas('getGRs'), gas('getMenus'),
+    sbGet('grundrezepturen', 'select=*&order=gr_code.asc&limit=5000'), sbGet('menus', 'select=*&order=menu_code.asc&limit=5000'),
   ]);
-  const grs = gd.grs || [], menus = md.menus || [];
+  // same shape the app uses: Sheet-style names, zutaten as a JSON string
+  const grs = gRows.map(r => ({ id: r.id, grCode: r.gr_code, name: r.name, zutaten: JSON.stringify(r.zutaten || []) }));
+  const menus = mRows.map(r => ({ id: r.id, menuCode: r.menu_code, name: r.name, art: r.art, zutaten: JSON.stringify(r.zutaten || []) }));
 
   // live name per type:code, and a reverse index normName -> [type:code]
   const live = { rm: {}, mep: {}, gr: {}, menu: {}, plate: {} };

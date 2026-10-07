@@ -17,7 +17,7 @@
 - UPDATE writes only the columns the request carries; send a field as `""` to clear it.
 - Every UPDATE/DELETE is logged to `recipe_history` (old row as jsonb). Undo = read the old row from there. Backups of the pre-migration copy: `_bak_menus_20261007`, `_bak_grs_20261007`.
 - `resync_recipe_analytics()` used to TRUNCATE menus/GRs weekly and reload them from the Sheet. It is now refresh-only. **Never reintroduce a job that copies Sheet -> Supabase for these tables.**
-- `scripts/name_mismatch.cjs` finds references that resolve but point at the wrong dish; `scripts/fix_lager.cjs` reconciles Lager vs Supabase inventory. Both are Sheet-era tools that still read GAS for MEP data.
+- `scripts/name_mismatch.cjs` (reads Supabase) finds references that resolve but point at the wrong dish - run it after any bulk change. `scripts/fix_lager.cjs` reconciles the Lager sheet vs Supabase inventory. `scripts/fix51.cjs` is RETIRED (it wrote the frozen Sheet).
 
 ## Hard coding rules — never break these
 - NEVER use cssText — always individual div.style.property assignments

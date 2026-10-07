@@ -1,6 +1,18 @@
 // Repoint every zutaten row whose stored NAME belongs to a different existing code.
 // The name is authoritative: "Yellow Tree mit Tofu" listing "GR Tofu, blanchiert" is
 // not meant to pull Gochujang Ketchup.  node fix51.cjs [--apply]
+//
+// RETIRED 2026-10-07. This repaired the SHEET through the Apps Script saveMenu/saveGR.
+// Menus and Grundrezepturen now live in Supabase and the Sheet's tabs are a frozen archive,
+// so running it would write into a sheet nobody reads (and the Apps Script freeze guard
+// refuses those writes anyway). Kept as the record of how the 51 wrong-dish references were
+// repaired. To repair recipe references now: Admin -> «Zutaten verknüpfen» in the app, or SQL
+// against menus / grundrezepturen (every change is kept in recipe_history).
+// scripts/name_mismatch.cjs is the live audit and reads Supabase.
+if (!process.argv.includes('--force-legacy-sheet')) {
+  console.error('fix51.cjs is retired: menus and GRs live in Supabase now. See the note at the top of this file.');
+  process.exit(1);
+}
 const fs = require('fs'), path = require('path');
 const APPLY = process.argv.includes('--apply');
 const GAS = "https://script.google.com/macros/s/AKfycbz1aiIySe0-JwsLE4Vq8GyVwxS_7aRxyX48fvAWxP1cBeeOKFUK0w0mf7WCoe-9T8IHtQ/exec";
